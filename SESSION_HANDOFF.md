@@ -36,6 +36,9 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
 - **Cloud sessions:** the environment `scan2play` (personal) allows `www.scan2play.com.pl` — the curl of a release check; the
   Default environment allows no site.
 - **Railway:** neither service sleeps; a spending limit of 15 USD (an alert at 10 USD); Healthcheck Path `/privacy`.
+- **2026-11-12 — `claude/blissful-fermi-izymid`, no PR yet (V67 → a database copy first):** item 11 B0 — the DJ's e-mail and phone
+  for bookings in "Zarezerwuj tego DJ-a" (Pro, `/dj/dashboard/booking-contact`) — and A0 — the refusal "not a song" points to the
+  dedication. The privacy policy, the terms, `/pro`, the guide with it. To try: the card on a phone, the `mailto:` on a phone.
 - **2026-11-12 — `claude/confident-bell-nf6tu7`, no PR yet:** three pictures on "Jak działa Scan2Play" (the panel on a computer — the
   landing page's —, on a phone, the evening summary; `screenshots.py --only guide`), `CLAUDE.md` (a cloud session commits to its own
   branch), `docs/ideas.md` item 10. The guide's videos wait: PR #259 a draft, not to be merged as it is (item 10).

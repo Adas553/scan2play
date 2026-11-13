@@ -186,3 +186,21 @@ piece of work or when a task names an item. A finished item stays here until its
    those faults are fixed; the captions are readable on a phone (zoom on the place of the action, or upright videos); and where the
    files live is decided — the repo (a version in the file name, a purge of Cloudflare after a change) or Cloudflare R2 on its own
    host (`media-src` in the CSP, a sentence in the privacy policy). Meanwhile the guide's text alone covers what the videos show.
+11. **A guest's message to the DJ, and the guest's contact — variants B0 and A0 of the analysis "Wiadomość gościa do DJ-a"** (the
+   artifact https://claude.ai/artifact/PccjYWtKHVmc8zWtSwLtq8; the owner, 2026-11-12: "zrób B0 i A0, Pro, e-mail i telefon") — **on
+   `claude/blissful-fermi-izymid`, not released (V67).** The analysis: of the cases (wishes, thanks, "I want to book this DJ", a remark
+   during the set, a problem) only the lead is worth a feature, and it needs no guest's data with us. **B0:** the DJ's e-mail and phone
+   for bookings (Pro with the profiles, `PlanFeature.PROFILES`; the organiser's alone; the card "Profile, kontakt i napiwki") in
+   "Zarezerwuj tego DJ-a" — under an accepted request and on "party ended", a `mailto:` with the subject filled in (the evening's date
+   under a request) and a `tel:`; the guest writes or calls outside Scan2Play, which sees nothing; the box shows with a contact alone
+   too (before: only with a profile). Not on the party page, the kiosk or the TV. Cloudflare's "Email Address Obfuscation" is off
+   (checked 2026-11-12: the addresses on `/privacy` are plain) — switched on, it would rewrite the `mailto:` links. The privacy policy
+   PL / EN (the DJ's contact, public; the message goes outside Scan2Play; kept until changed), the terms' Pro list, `/pro`, the guide.
+   **A0:** the refusal "a mood or a message, not a song" says where the words can go — "Chcesz coś przekazać DJ-owi? Wpisz piosenkę, a
+   swoje słowa dopisz w „💌 Dodaj dedykację”." (only while dedications are on; the kiosk too). **Later, only if DJs ask:** A′ — "Podziękuj
+   DJ-owi" after the party (no contact, checked by the AI, its own limit outside the Free plan's 150, read in the evening summary).
+   **Only on conditions:** B — a form with the guest's contact (the DJ the controller, Scan2Play the processor, art. 6(1)(b), "18+",
+   30 days, the owner only; no log, e-mail or AI) — once B0 shows the demand and the privacy policy names the controller, the legal
+   bases and the guests' rights (missing today, whatever this idea becomes). **Rejected:** a message during the party (A), the DJ's
+   answer on the guest's page (C), a chat (D) — they distract the DJ at work, need moderation, and C would not outlive the guest's
+   30-minute session.

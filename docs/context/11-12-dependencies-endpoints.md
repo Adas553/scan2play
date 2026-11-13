@@ -86,6 +86,7 @@ GuestQueueService          → DjService
 | POST | `/dj/dashboard/dedications` | `on`: the guests' dedications on or off (V38, permission VIBE) |
 | POST | `/dj/dashboard/party-words` | `vibeNote`, `djName`: the card "Impreza"'s words under one "Zapisz" (one line each, empty clears; until 2026-10-10 `/vibe-note` and `/dj-name`) |
 | POST | `/dj/dashboard/dj-links` | `instagram`, `facebook`, `tiktok`: the DJ's profiles (`SocialLinks`; 400 and nothing saved when one is not a profile on its site) |
+| POST | `/dj/dashboard/booking-contact` | `bookingEmail`, `bookingPhone`: the DJ's contact for bookings (V67, Pro `PROFILES`, the organiser's; `BookingContact`; empty clears; 400 and nothing saved when one is not an address or a number) |
 | POST | `/dj/dashboard/host-lists` | `blocked`, `wanted`: the hosts' lists (V29, `SongList.tidy`; empty clears) |
 | GET | `/dj/staff` | `party`: the owner's page "Obsługa" (V32; the owner's) |
 | POST | `/dj/staff/permissions` | `partyCode`, `id`, `role` (VIEWER / QUEUE / CO_ORGANISER / CUSTOM), `permissions` (with CUSTOM): what one person may do (V32; the owner's, a row of their own party only) |

@@ -21,8 +21,16 @@ nofollow"`), the QR print "Instagram @djkoko"; `POST /dj/dashboard/dj-links` tak
 keeps an https address on that site, `util/SocialLinks` — anything else, a look-alike host too, is a 400 and nothing is saved; the
 form shows why, `[data-form-error]` in `forms.js`; no "follow the DJ" on the result page, by the owner's choice of 2026-10-07 —
 but since 2026-10-16 "Zarezerwuj tego DJ-a na swoją imprezę" over the same buttons on the "party ended" page, with who played, and
-under an accepted request: `components :: djBooking`, only with a profile; an idea from Rekwest, whose guests are e-mailed after
-the party — Scan2Play keeps no guest's address), `tipUrl` (V27, ≤ 200: the
+under an accepted request: `components :: djBooking`, only with a profile or a contact for bookings; an idea from Rekwest, whose guests are e-mailed after
+the party — Scan2Play keeps no guest's address), `bookingEmail` (≤ 254) / `bookingPhone` (≤ 20) (V67, Pro with the profiles —
+`PlanService.asPlanned` clears them with the profiles: the DJ's contact for bookings, `POST /dj/dashboard/booking-contact`, a form of
+the card "Profile, kontakt i napiwki", the organiser's alone; `util/BookingContact` keeps a plain address — letters, digits, `. _ % + -`
+before the "@", a domain with a dot: nothing a `mailto:` would read as a header — in lower case, and a number as written with 6–15
+digits and a "+" only in front; anything else a 400, nothing saved, the log without the value; the guests see in `djBooking`, above
+the profiles, "Skontaktuj się prosto z DJ-em:" with a `mailto:` button — its subject "Zapytanie o rezerwację DJ-a — impreza
+14 listopada 2026" under an accepted request (the evening, `EveningSummaryService.eveningOf`), without the date on "party ended",
+opened days after too — and a `tel:` one, and "Wiadomość trafia prosto do DJ-a — Scan2Play jej nie widzi."; not on the party page,
+the kiosk (no link out) or the TV. The analysis "Wiadomość gościa do DJ-a", `docs/ideas.md` item 11), `tipUrl` (V27, ≤ 200: the
 DJ's tip link — the DJ's page on Revolut, PayPal, buycoffee.to, Suppi, Tipply, Buy Me a Coffee or Ko-fi; `POST /dj/dashboard/tip-link`,
 a field under the profiles; `util/TipLinks` keeps an https address on one of those hosts with a plain path — no query, login part or
 port; anything else is a 400 and nothing is saved; the guests see "💸 Napiwek dla DJ-a" on the party page — with "revolut.me/djkoko · prosto do DJ-a, poza

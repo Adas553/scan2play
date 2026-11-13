@@ -10,7 +10,10 @@ come first, "✓ DJ ma": `GET /p/{partyCode}/library/has?song=…` for the sugge
 library listed —, at most 120 asks a minute of an address and a party (`LibraryHintService.ASKS_A_MINUTE`, a 429 past it), waited for at most 600 ms, else the list as iTunes gave it; nothing is refused by it, `LibraryHintService`) →
 `POST /p/{partyCode}/request` (`songName`; an async `Callable`) → the result page (decision, the AI's
 comment, the votes). A request the AI reads as a mood is not saved: the guest is back at the form with the text and
-`guest.error.song_only` (the DJ sets the mood) — with the dedication too. Under the field "💌 Dodaj dedykację" (a `details`, no
+`guest.error.song_only` (the DJ sets the mood) — with the dedication too — and, while the DJ takes dedications, a second line
+under it: "Chcesz coś przekazać DJ-owi? Wpisz piosenkę, a swoje słowa dopisz w „💌 Dodaj dedykację”."
+(`guest.error.song_only.hint`, `ERROR_HINT`; the kiosk too): a wish reaches the DJ as a dedication, checked by the AI — there is no
+message to the DJ of its own (`docs/ideas.md` item 11). Under the field "💌 Dodaj dedykację" (a `details`, no
 script, V38): an optional line of ≤ 100 characters only the DJ sees; the result page says "💌 Dedykacja trafiła do DJ-a." or that
 the AI kept it out (`DjResponse.dedicationOk`); the DJ's queue shows the newest 3 under the song ("💌 „…”", "niesprawdzona", "+N
 więcej") — on a phone's folded card only "💌 3" beside the votes (the owner's screenshot, 2026-10-17: three filled half the
@@ -29,7 +32,8 @@ one request; the guest's requests are remembered in the session). The DJ's profi
 (`#djSupport`; the design review, 2026-10-09: above the form they pushed the field to the lower half of a phone's screen). The result
 page has the logo and "🎧 Gra: …" at the top (`djName`), the verdict sized to the screen (`.s2p-verdict`: "PRZEKAZANE" broke into
 "PRZEKAZAN / E") and "Zaproponuj kolejną" as its one main button; under it, for a request that reached the DJ, the DJ's profiles
-under "Zarezerwuj tego DJ-a na swoją imprezę" (`components :: djBooking`; also on the "party ended" page, under "↻ Sprawdź ponownie").
+under "Zarezerwuj tego DJ-a na swoją imprezę" (`components :: djBooking`; also on the "party ended" page, under "↻ Sprawdź ponownie"),
+with the DJ's e-mail and phone for bookings above them when given (V67, Section 4.1 `bookingEmail`).
 Until 2026-10-08 there were "🔥 Najwięcej głosów" and "Ostatnio wysłane" as well — one song showed up to three times (the owner:
 too much). Fetched again when the guest comes back to the page and on "↻ Odśwież", no timer; the keyboard's focus stays on its
 place in the new list ("↻ Odśwież", the search, the same song's 👍 — in the unfolded rest once it is in). A 👍 or a "↻ Odśwież" that does not go

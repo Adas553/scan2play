@@ -282,7 +282,7 @@
              print. "@name" or a link copied from the app; the server keeps an https address on that site (SocialLinks, TipLinks) —
              400 when it is not one, and the form says why. One "Zapisz" for the profiles, one for the tip link (two endpoints). */-->
         <details th:if="${isOwner}" class="card bg-dark border-secondary s2p-fold" id="linksCard"
-                 th:with="sites=${ {instagramUrl != null ? 'Instagram' : null, facebookUrl != null ? 'Facebook' : null, tiktokUrl != null ? 'TikTok' : null, tipUrl != null ? #messages.msg('settings.row.links.tips') : null} }">
+                 th:with="sites=${ {instagramUrl != null ? 'Instagram' : null, facebookUrl != null ? 'Facebook' : null, tiktokUrl != null ? 'TikTok' : null, bookingEmail != null or bookingPhone != null ? #messages.msg('settings.row.links.contact') : null, tipUrl != null ? #messages.msg('settings.row.links.tips') : null} }">
             <summary class="s2p-fold-summary">
                 <h2 class="s2p-card-title s2p-fold-name"><span th:text="#{dashboard.links.title}">Profiles and tips</span><th:block th:if="${plan.pro('PROFILES')}"><span th:replace="~{fragments/components :: proMark}"></span></th:block></h2>
                 <span class="s2p-fold-state" th:unless="${plan.pro('PROFILES')}" th:with="named=${#strings.listJoin(sites.?[#this != null], ' · ')}"
@@ -291,7 +291,7 @@
             <div class="s2p-fold-body">
             <p class="s2p-card-help" th:text="#{dashboard.dj.links.label}">Guests see them on their page and the print.</p>
             <th:block th:if="${plan.pro('PROFILES')}"><div
-                 th:replace="~{fragments/components :: proOffer(${instagramUrl != null or facebookUrl != null or tiktokUrl != null or tipUrl != null} ? #{plan.links.kept} : #{plan.links.offer})}"></div></th:block>
+                 th:replace="~{fragments/components :: proOffer(${instagramUrl != null or facebookUrl != null or tiktokUrl != null or bookingEmail != null or bookingPhone != null or tipUrl != null} ? #{plan.links.kept} : #{plan.links.offer})}"></div></th:block>
             <th:block th:unless="${plan.pro('PROFILES')}">
             <form th:action="@{/dj/dashboard/dj-links}" method="POST" class="m-0" id="djLinksForm">
                 <input type="hidden" name="partyCode" th:value="${partyCode}">
@@ -308,6 +308,23 @@
                 </div>
                 <button type="submit" class="btn btn-sm btn-outline-light mt-3" th:text="#{dashboard.vibe.note.save}">Save</button>
                 <div class="small text-danger mt-1" data-form-error hidden th:text="#{dashboard.dj.links.invalid}">Not a profile</div>
+            </form>
+            <!--/* The contact for bookings (V67): the guests see it under "Zarezerwuj tego DJ-a" — a request that reached the DJ, the page
+                 "party ended" — and write or call the DJ straight. On a public page: the help says to give a business one. */-->
+            <form th:action="@{/dj/dashboard/booking-contact}" method="POST" class="m-0 mt-3 pt-3 border-top border-secondary" id="bookingContactForm" novalidate>
+                <input type="hidden" name="partyCode" th:value="${partyCode}">
+                <p class="form-label d-block text-light small mb-1" th:text="#{dashboard.booking.label}">Contact for bookings</p>
+                <div class="d-flex flex-column gap-2">
+                    <input type="text" inputmode="email" id="bookingEmailInput" name="bookingEmail" maxlength="254" autocomplete="off"
+                           class="form-control form-control-sm bg-black text-light border-secondary" th:aria-label="#{dashboard.booking.email}"
+                           th:value="${bookingEmail}" th:placeholder="#{dashboard.booking.email}">
+                    <input type="tel" id="bookingPhoneInput" name="bookingPhone" maxlength="20" autocomplete="off"
+                           class="form-control form-control-sm bg-black text-light border-secondary" th:aria-label="#{dashboard.booking.phone}"
+                           th:value="${bookingPhone}" th:placeholder="#{dashboard.booking.phone}">
+                </div>
+                <div class="small text-secondary mt-1" th:text="#{dashboard.booking.help}">Guests see it under "Book this DJ".</div>
+                <button type="submit" class="btn btn-sm btn-outline-light mt-3" th:text="#{dashboard.vibe.note.save}">Save</button>
+                <div class="small text-danger mt-1" data-form-error hidden th:text="#{dashboard.booking.invalid}">Not an address</div>
             </form>
             <form th:action="@{/dj/dashboard/tip-link}" method="POST" class="m-0 mt-3 pt-3 border-top border-secondary" id="tipLinkForm">
                 <input type="hidden" name="partyCode" th:value="${partyCode}">

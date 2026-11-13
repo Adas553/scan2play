@@ -27,6 +27,7 @@
             <li>Ustawienia imprezy i preferencje konfiguracji</li>
             <li>Plan konta (Free albo Pro), skąd pochodzi (np. okres próbny) i do kiedy obowiązuje</li>
             <li>Gdy DJ je poda: adresy jego profili na Instagramie, Facebooku i TikToku — publicznie widoczne dla gości na stronie imprezy i na wydruku kodu QR</li>
+            <li>Gdy DJ je poda: jego adres e-mail i numer telefonu do rezerwacji — publicznie widoczne dla gości jego imprezy w sekcji „Zarezerwuj tego DJ-a” (pod przyjętą prośbą i na stronie zakończonej imprezy)</li>
             <li>Gdy DJ go poda: link do jego strony napiwków (Revolut, PayPal, buycoffee.to, Suppi, Tipply, Buy Me a Coffee, Ko-fi) — publicznie widoczny dla gości na stronie imprezy, pod przyjętą prośbą i na wydruku kodu QR</li>
             <li>Gdy DJ je wgra: jego logo — obraz przekodowany na naszym serwerze do pliku PNG o boku najwyżej 512 pikseli, bez danych zapisanych w pliku (np. EXIF: miejsca, aparatu, daty); publicznie widoczne dla gości na stronie imprezy, na ekranie TV, na wydruku kodu QR i w podsumowaniu wieczoru DJ-a</li>
             <li>Gdy DJ ją wgra: jego biblioteka utworów (kolekcja z rekordboxa albo plik M3U) — zapisujemy wykonawców i tytuły tak, jak są zapisane w pliku, i w uproszczonej postaci (bez wielkości liter, polskich znaków i dopisków typu „Radio Edit”), a z kolekcji rekordboxa także tempo (BPM), tonację, gatunek i rok utworów; do tego liczbę utworów, dzień wgrania i nazwę wybranej listy utworów z kolekcji. Nie zapisujemy ścieżek do plików, notatek, ocen ani liczby odtworzeń. Biblioteka służy tylko do znaczników ✓ / ? / ✗ (z tempem i tonacją utworu DJ-a) przy prośbach w kolejce jego imprezy i w jego podsumowaniu wieczoru, a jeśli DJ tego nie wyłączy — także do znaku „✓ DJ ma” przy podpowiedziach piosenek, które widzą goście jego imprezy (gość dowiaduje się tylko, czy DJ ma podpowiadaną mu piosenkę; całej biblioteki nikomu nie pokazujemy)</li>
@@ -66,6 +67,10 @@
         <p>Przyciski Instagram, Facebook i TikTok na stronie imprezy prowadzą do profili DJ-a w tych serwisach. Scan2Play nie osadza
             ich treści ani skryptów — dopiero po kliknięciu otwiera się strona serwisu, a tam obowiązują jego zasady prywatności.
         </p>
+        <p>Adres e-mail i telefon DJ-a w sekcji „Zarezerwuj tego DJ-a” otwierają Twoją pocztę albo telefon. Wiadomość lub rozmowa
+            idzie prosto do DJ-a, poza Scan2Play: nie widzimy jej i nie zapisujemy ani Twojego adresu, ani numeru. Co dzieje się z nimi
+            dalej, ustala DJ.
+        </p>
         <p>Przycisk „💸 Napiwek dla DJ-a” prowadzi na stronę DJ-a w serwisie napiwków. Płatność odbywa się wyłącznie w tym serwisie,
             prosto do DJ-a: Scan2Play nie pośredniczy w niej, nie widzi kwoty ani danych płatności i nie pobiera prowizji. Za napiwek
             i jego rozliczenie odpowiada DJ i ten serwis, na jego zasadach.
@@ -86,6 +91,7 @@
             <li>Logi serwera (w nich tekst próśb gości z kodem imprezy): przechowywane przez dostawcę hostingu przez 7 dni, potem usuwane</li>
             <li>Logo DJ-a: do wgrania nowego (zastępuje poprzednie), usunięcia go przez DJ-a albo usunięcia konta; przeglądarki gości i sieć Cloudflare mogą trzymać jego kopię jeszcze najwyżej godzinę</li>
             <li>Biblioteka utworów DJ-a: do wgrania nowej (zastępuje poprzednią), usunięcia jej przez DJ-a albo usunięcia konta</li>
+            <li>Adres e-mail i telefon DJ-a do rezerwacji: do ich zmiany lub usunięcia przez DJ-a albo usunięcia konta</li>
             <li>Zgłoszenia i plan konta: do usunięcia konta przez DJ-a</li>
             <li>Gdy konto miało okres próbny planu Pro: skrót (SHA-256) identyfikatora konta Google — bez imienia, adresu e-mail i danych imprezy — zostaje także po usunięciu konta, dopóki Scan2Play oferuje okres próbny planu Pro, żeby to samo konto nie dostało drugiego okresu próbnego (nasz prawnie uzasadniony interes: zapobieganie nadużyciom okresu próbnego)</li>
         </ul>

@@ -187,6 +187,7 @@ class StaffPermissionEndpointsTest {
         return Stream.of(
                 Arguments.of(post("/dj/dashboard/dj-links").param("partyCode", PUB).param("instagram", "@x")),
                 Arguments.of(post("/dj/dashboard/tip-link").param("partyCode", PUB).param("tip", "")),
+                Arguments.of(post("/dj/dashboard/booking-contact").param("partyCode", PUB).param("bookingEmail", "")),
                 Arguments.of(post("/dj/dashboard/clear-history").param("partyCode", PUB)),
                 Arguments.of(post("/dj/dashboard/welcome-dismiss").param("partyCode", PUB)),
                 Arguments.of(post("/dj/dashboard/party-code").param("partyCode", PUB)),

@@ -27,6 +27,7 @@
             <li>Party settings and configuration preferences</li>
             <li>The account’s plan (Free or Pro), where it comes from (e.g. a trial) and until when it lasts</li>
             <li>If the DJ gives them: the addresses of the DJ’s Instagram, Facebook and TikTok profiles — shown publicly to the guests on the party page and on the QR print</li>
+            <li>If the DJ gives them: their e-mail address and phone number for bookings — shown publicly to the guests of their party under “Book this DJ” (under an accepted request and on the page of a party that has ended)</li>
             <li>If the DJ gives it: the link to the DJ’s tip page (Revolut, PayPal, buycoffee.to, Suppi, Tipply, Buy Me a Coffee, Ko-fi) — shown publicly to the guests on the party page, under an accepted request and on the QR print</li>
             <li>When the DJ uploads it: their logo — an image re-encoded on our server into a PNG of at most 512 pixels a side, without the data stored in the file (such as EXIF: the place, the camera, the date); shown publicly to the guests on the party page, the TV screen, the QR print and in the DJ’s evening summary</li>
             <li>When the DJ uploads it: their library of songs (a rekordbox collection or an M3U file) — we keep the artists and titles as the file writes them and in a simplified form (no case, no accents and no additions such as “Radio Edit”), and from a rekordbox collection also the songs’ tempo (BPM), key, genre and year; besides, the number of songs, the day of the upload and the name of the list of songs chosen from the collection. We keep no paths to files, notes, ratings or play counts. The library serves only the ✓ / ? / ✗ marks (with the tempo and the key of the DJ’s track) at the requests in the queue of their party and in their evening summary, and, unless the DJ switches it off, the mark “✓ The DJ has it” at the song suggestions the guests of their party see (a guest learns only whether the DJ has a song suggested to them; the library as a whole is shown to no one)</li>
@@ -66,6 +67,10 @@
         <p>The Instagram, Facebook and TikTok buttons on the party page lead to the DJ’s profiles there. Scan2Play embeds none of
             their content or scripts — the site opens only when a guest clicks, and its own privacy rules apply there.
         </p>
+        <p>The DJ’s e-mail address and phone number under “Book this DJ” open your e-mail app or your phone. The message or the call
+            goes straight to the DJ, outside Scan2Play: we do not see it and keep neither your address nor your number. What happens to
+            them afterwards is the DJ’s to decide.
+        </p>
         <p>The “💸 Tip the DJ” button leads to the DJ’s page on a tipping service. The payment happens only there, straight to the
             DJ: Scan2Play takes no part in it, sees neither the amount nor any payment details and takes no commission. The tip and
             its settlement are between the guest, the DJ and that service, on its terms.
@@ -86,6 +91,7 @@
             <li>Server logs (holding the guests’ request texts with the party’s code): kept by the hosting provider for 7 days, then deleted</li>
             <li>The DJ’s logo: until a new one is uploaded (it replaces the previous one), the DJ deletes it or deletes their account; the guests’ browsers and Cloudflare’s network may keep a copy of it for one hour at most</li>
             <li>The DJ’s library of songs: until a new one is uploaded (it replaces the previous one), the DJ deletes it or deletes their account</li>
+            <li>The DJ’s e-mail address and phone number for bookings: until the DJ changes or deletes them, or deletes their account</li>
             <li>Feedback and the account’s plan: until the DJ deletes their account</li>
             <li>When the account had a trial of the Pro plan: a hash (SHA-256) of the Google account’s identifier — no name, no e-mail address, nothing of a party — stays after the account is deleted too, for as long as Scan2Play offers a trial of the Pro plan, so that the same account gets no second trial (our legitimate interest: preventing abuse of the trial)</li>
         </ul>

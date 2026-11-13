@@ -124,6 +124,16 @@ public class PartySettingsEntity {
     private String tiktokUrl;
 
     /**
+     * The DJ's contact for bookings (V67, with the profiles): an e-mail address and a phone number as {@code util.BookingContact}
+     * kept them; the guests see them under "Zarezerwuj tego DJ-a"; null = not shown.
+     */
+    @Column(length = com.scan2play.util.BookingContact.EMAIL_MAX)
+    private String bookingEmail;
+
+    @Column(length = com.scan2play.util.BookingContact.PHONE_MAX)
+    private String bookingPhone;
+
+    /**
      * The DJ's tip link (V27): the DJ's page on a service that takes tips, as {@code util.TipLinks} wrote it — the guests pay
      * there, straight to the DJ; null = no "💸 Napiwek dla DJ-a" button.
      */
