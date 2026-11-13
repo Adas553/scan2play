@@ -152,27 +152,22 @@
         <p th:if="${#lists.isEmpty(wishRows) and #lists.isEmpty(wishCheck)}" class="text-secondary" id="wishEmpty"
            th:text="#{wishes.empty}">Nobody has written a song yet…</p>
 
-        <th:block th:unless="${#lists.isEmpty(wishRows)}" th:with="first=${T(com.scan2play.controller.DjWishesController).FIRST}">
-        <!--/* the FIRST most wished; the rest under "Pokaż pozostałe" (remembered unfolded across a page load, folds.js) — the page grows,
-             no box scrolls on its own */-->
+        <th:block th:unless="${#lists.isEmpty(wishRows)}" th:with="shown=${wishShown}">
+        <!--/* the SHOWN most wished; "Pokaż więcej" the next STEP, "Zwiń" back to the first (wishes-list.js, how many remembered across a
+             page load) — the page grows, no box scrolls on its own: a box in the page is a scroll in a scroll on a phone, and a "⭐" loads
+             the page again */-->
         <!--/* the columns as the panel's queue: the number, the votes, the song */-->
         <div id="wishHead" class="d-flex gap-2 small text-secondary s2p-wish-head" aria-hidden="true">
             <span class="s2p-wish-rank" th:text="#{wishes.head.number}">No.</span>
             <span class="s2p-wish-votes" th:text="#{dashboard.table.header.votes}">Votes</span>
             <span th:text="#{dashboard.table.header.song}">Song</span>
         </div>
+        <div data-more-list th:attr="data-shown=${shown}">
         <ol class="list-group list-group-flush mb-2 s2p-wish-list" id="wishRows">
-            <th:block th:each="row, stat : ${wishRows}" th:if="${stat.index < first}"><li th:replace="~{wishes :: wishRow(${row}, ${stat.count})}"></li></th:block>
+            <th:block th:each="row, stat : ${wishRows}"><li th:replace="~{wishes :: wishRow(${row}, ${stat.count}, ${stat.index >= shown})}"></li></th:block>
         </ol>
-        <details th:if="${#lists.size(wishRows) > first}" id="wishMore" class="s2p-wish-more mb-2" data-keep-open>
-            <!--/* its line says what a tap does: show the rest, or fold it; "Zwiń" at the end folds it from there (dj-nav.js) */-->
-            <summary><span class="s2p-when-closed" th:text="#{wishes.more(${#lists.size(wishRows) - first})}">Show the rest: 5</span><span
-                    class="s2p-when-open" th:text="#{wishes.more.fold}">Fold the rest</span></summary>
-            <ol class="list-group list-group-flush s2p-wish-list" id="wishRowsMore">
-                <th:block th:each="row, stat : ${wishRows}" th:if="${stat.index >= first}"><li th:replace="~{wishes :: wishRow(${row}, ${stat.count})}"></li></th:block>
-            </ol>
-            <button type="button" class="btn btn-sm btn-outline-secondary mt-2 s2p-wish-fold" data-fold-close th:text="#{wishes.more.fold}">Fold the rest</button>
-        </details>
+        <div th:replace="~{wishes :: moreButtons(${#lists.size(wishRows) > shown})}"></div>
+        </div>
         <!--/* asks first, naming the songs: the guests wrote them, and "Koniecznie zagrać" lets them past the AI; gone when the list
              has them all */-->
         <form th:unless="${plan.pro('WISHES') or #lists.isEmpty(wishTop)}" th:action="@{/dj/wishes/{id}/must-play(id=${wishEvent.id()})}"
@@ -188,25 +183,16 @@
         <th:block th:unless="${#lists.isEmpty(wishCheck)}">
         <h3 class="h6 text-white mt-2" th:text="#{wishes.check.title}">To check</h3>
         <p class="small text-secondary mb-1" th:text="#{wishes.check.help}">Written without the artist…</p>
-        <th:block th:with="first=${T(com.scan2play.controller.DjWishesController).FIRST}">
+        <div data-more-list th:with="shown=${wishShown}" th:attr="data-shown=${shown}">
         <ul class="list-unstyled small mb-2" id="wishCheck">
-            <li th:each="row, stat : ${wishCheck}" th:if="${stat.index < first}" class="d-flex align-items-start gap-2 text-light"><span class="s2p-wish-rank" th:text="${stat.count} + '.'">1.</span><span
+            <li th:each="row, stat : ${wishCheck}" th:hidden="${stat.index >= shown}" class="d-flex align-items-start gap-2 text-light"><span
+                    class="s2p-wish-rank" th:text="${stat.count} + '.'">1.</span><span
                     class="s2p-wish-votes"><span class="badge" th:classappend="${row.wishes() > 1} ? 'text-bg-warning' : 'text-bg-secondary'"
                     th:attr="data-votes=${row.wishes()}" th:title="#{wishes.row.votes.title}" th:text="${row.wishes()}">2</span></span><span
                     class="text-break s2p-min-w-0" th:text="${row.songName()}">coś od zenka</span></li>
         </ul>
-        <details th:if="${#lists.size(wishCheck) > first}" id="wishCheckMore" class="s2p-wish-more small mb-2" data-keep-open>
-            <summary><span class="s2p-when-closed" th:text="#{wishes.more(${#lists.size(wishCheck) - first})}">Show the rest: 2</span><span
-                    class="s2p-when-open" th:text="#{wishes.more.fold}">Fold the rest</span></summary>
-            <ul class="list-unstyled mb-0">
-                <li th:each="row, stat : ${wishCheck}" th:if="${stat.index >= first}" class="d-flex align-items-start gap-2 text-light"><span class="s2p-wish-rank" th:text="${stat.count} + '.'">21.</span><span
-                        class="s2p-wish-votes"><span class="badge" th:classappend="${row.wishes() > 1} ? 'text-bg-warning' : 'text-bg-secondary'"
-                        th:attr="data-votes=${row.wishes()}" th:title="#{wishes.row.votes.title}" th:text="${row.wishes()}">1</span></span><span
-                        class="text-break s2p-min-w-0" th:text="${row.songName()}">coś</span></li>
-            </ul>
-            <button type="button" class="btn btn-sm btn-outline-secondary mt-2 s2p-wish-fold" data-fold-close th:text="#{wishes.more.fold}">Fold the rest</button>
-        </details>
-        </th:block>
+        <div th:replace="~{wishes :: moreButtons(${#lists.size(wishCheck) > shown})}"></div>
+        </div>
         </th:block>
 
         <div class="s2p-btn-row">
@@ -224,7 +210,7 @@
 <!--/* One song of the event as the list shows it: its name, how many wrote it, the library's mark and tempo, "⭐ Na liście" or the
      form "⭐ Do „Koniecznie zagrać”". Only a fragment: the two lists above take it. */-->
 <th:block th:if="${false}">
-<li th:fragment="wishRow(row, rank)" class="list-group-item bg-dark text-light border-secondary d-flex align-items-start gap-2 px-0 s2p-wish-row"
+<li th:fragment="wishRow(row, rank, folded)" th:hidden="${folded}" class="list-group-item bg-dark text-light border-secondary d-flex align-items-start gap-2 px-0 s2p-wish-row"
     th:with="mark=${row.mark() == null ? null : #strings.toLowerCase(row.mark().name())}">
     <span class="s2p-wish-rank" th:text="${rank} + '.'">1.</span>
     <!--/* how many wrote it, as the panel's queue shows a request's votes: a badge, warm from two on */-->
@@ -249,8 +235,16 @@
     </form>
     </span>
 </li>
+<!--/* "Pokaż więcej" and "Zwiń" under a long list (wishes-list.js): the next STEP shown, how many are left beside it; back to the first
+     SHOWN. Rendered only when the list has more; the script says how many are left and hides what does nothing. */-->
+<div th:fragment="moreButtons(more)" th:if="${more}" class="d-flex flex-wrap gap-2 mb-2 s2p-wish-more-row">
+    <button type="button" class="btn btn-sm btn-outline-secondary" data-more-show
+            th:attr="data-step=${wishStep}"><span th:text="#{history.more}">Show more</span>
+        <span class="text-secondary" data-more-left></span></button>
+    <button type="button" class="btn btn-sm btn-outline-secondary" data-more-fold hidden th:text="#{wishes.more.fold}">Fold</button>
+</div>
 </th:block>
-<script src="/js/folds.js" th:src="@{/js/folds.js}"></script>
+<script src="/js/wishes-list.js" th:src="@{/js/wishes-list.js}"></script>
 <div th:replace="~{fragments/components :: formRefused}"></div>
 <div th:replace="~{fragments/components :: footer}"></div>
 </body>

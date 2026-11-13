@@ -64,8 +64,12 @@ public class DjWishesController {
 
     /** "⭐ Dodaj najczęstsze": the most wished songs at once. */
     public static final int TOP = 10;
-    /** The songs listed at once, the most wished first; the rest under "Pokaż pozostałe" — the page grows, no box scrolls. */
-    public static final int FIRST = 20;
+    /**
+     * The songs listed at first, the most wished first; "Pokaż więcej" shows {@value #STEP} more each time (wishes-list.js) — the page
+     * grows, no box scrolls on its own (a scroll in a scroll on a phone, and a "⭐" loads the page again).
+     */
+    public static final int SHOWN = 10;
+    public static final int STEP = 10;
 
     private final WishService wishService;
     private final DjSessionHelper sessionHelper;
@@ -139,6 +143,8 @@ public class DjWishesController {
         // what "⭐ Dodaj 10 najczęstszych" adds, said before it does: the guests wrote them, and the list lets them past the AI
         model.addAttribute(WISH_TOP, named.stream().limit(TOP).filter(row -> !row.wanted()).map(Row::songName).toList());
         model.addAttribute(WISH_LINK, linkOf(event));
+        model.addAttribute(WISH_SHOWN, SHOWN);   // the songs listed at first, and "Pokaż więcej"'s step (wishes-list.js)
+        model.addAttribute(WISH_STEP, STEP);
     }
 
     /** The wishes against the DJ's library — none when the party has no library, or no Pro for it. */

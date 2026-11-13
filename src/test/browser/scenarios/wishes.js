@@ -98,40 +98,41 @@
 
     S2P.scenario({
         name: 'wishes-long-list',
-        title: 'the DJ\'s page of wishes with many songs: the 20 most wished shown, the rest under "Pokaż pozostałe" — no box that scrolls '
-            + 'on its own —, and unfolded it stays unfolded when the page loads again after a "⭐"',
+        title: 'the DJ\'s page of wishes with many songs: the 10 most wished, "Pokaż więcej" 10 more each time — how many left beside it —, '
+            + '"Zwiń" back to 10; no box that scrolls on its own; how many shown kept when the page loads again after a "⭐"',
         page: 'wishes-long',
         viewport: '390,844',
         run: async function (t) {
-            const more = document.getElementById('wishMore');
-            t.step('20 shown, the rest folded', [document.querySelectorAll('#wishRows > li').length, more.open,
-                document.querySelectorAll('#wishRowsMore > li').length], [20, false, 5]);
+            const list = document.querySelector('[data-more-list]');
+            const shown = function () { return Array.from(list.querySelectorAll('#wishRows > li')).filter(function (li) { return !li.hidden; }).length; };
+            const more = list.querySelector('[data-more-show]');
+            const fold = list.querySelector('[data-more-fold]');
+            t.step('10 shown, "Pokaż więcej (15)", no "Zwiń"', [shown(), more.hidden, more.textContent.replace(/\s+/g, ' ').trim(), fold.hidden],
+                [10, false, 'Pokaż więcej (15)', true]);
             t.check('no list scrolls on its own', Array.from(document.querySelectorAll('#wishEvent *')).every(function (el) {
                 const overflow = getComputedStyle(el).overflowY;
                 return overflow !== 'auto' && overflow !== 'scroll';
             }));
-            const src = document.querySelector('script[src*="folds"]').src;
-            more.querySelector('summary').click();
-            t.step('a tap shows the rest', more.open, true);
-            window.dispatchEvent(new Event('beforeunload'));   // a "⭐" of the rest sent
-            more.open = false;   // the page as it loads again
+            t.check('the buttons a finger\'s size', more.getBoundingClientRect().height >= 44);
+            more.click();
+            t.step('10 more, "Zwiń" offered', [shown(), more.textContent.replace(/\s+/g, ' ').trim(), fold.hidden], [20, 'Pokaż więcej (5)', false]);
+            more.click();
+            t.step('the last 5, "Pokaż więcej" gone', [shown(), more.hidden], [25, true]);
+
+            const src = document.querySelector('script[src*="wishes-list"]').src;
+            window.dispatchEvent(new Event('beforeunload'));   // a "⭐" sent
+            list.querySelectorAll('#wishRows > li').forEach(function (li, i) { li.hidden = i >= 10; });   // the page as the server sends it
             const again = document.createElement('script');
             again.src = src;
             await new Promise(function (resolve) { again.onload = resolve; document.body.appendChild(again); });
-            t.step('the rest unfolded again: the page lands where it was', more.open, true);
-            sessionStorage.clear();
-            // folded back: its line says so while it is open, and a "Zwiń" at the end of the rest folds it from there
-            const summary = more.querySelector('summary');
-            t.check('open, its line says "Zwiń pozostałe"', summary.querySelector('.s2p-when-open').checkVisibility()
-                && !summary.querySelector('.s2p-when-closed').checkVisibility());
-            const fold = more.querySelector('[data-fold-close]');
+            t.step('loaded again: as many shown as before', shown(), 25);
+
             fold.scrollIntoView();
-            t.check('"Zwiń" at the end of the rest, a finger\'s size', fold.getBoundingClientRect().height >= 44);
             fold.click();
-            await t.sleep(800);   // the line comes back smoothly (Bootstrap's scroll-behavior)
-            t.step('"Zwiń" folds the rest, its line on the screen', [more.open,
-                summary.getBoundingClientRect().top >= 0 && summary.getBoundingClientRect().bottom <= window.innerHeight + 2], [false, true]);   // 'nearest': its edge at the screen's, a pixel of rounding
-            t.check('folded, its line says "Pokaż pozostałe: 5" again', summary.querySelector('.s2p-when-closed').checkVisibility());
+            await t.sleep(800);   // brought back smoothly (Bootstrap's scroll-behavior)
+            t.step('"Zwiń": back to 10, its buttons on the screen', [shown(), more.hidden, fold.hidden,
+                more.getBoundingClientRect().top >= 0 && more.getBoundingClientRect().bottom <= window.innerHeight + 2], [10, false, true, true]);
+            sessionStorage.clear();
             t.check('nothing sideways', fits());
         }
     });

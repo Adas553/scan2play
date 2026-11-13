@@ -215,30 +215,32 @@ class WishesPageRenderTest {
     }
 
     /**
-     * Many songs: the 20 most wished shown, the rest under "Pokaż pozostałe" (remembered unfolded, folds.js) — the page grows, no box
-     * scrolls on its own; the same for the ones to check. The way back to the settings as on "Obsługa".
+     * Many songs: the 10 most wished shown, the rest in the same list hidden, "Pokaż więcej" under it (wishes-list.js shows 10 more
+     * each time and remembers how many) — the page grows, no box scrolls on its own; the same for the ones to check. The way back to
+     * the settings as on "Obsługa".
      */
     @Test
-    void manySongs_theFirstTwentyShown_theRestFolded() throws IOException {
+    void manySongs_theFirstTenShown_theRestOneListOnFromThere() throws IOException {
         List<WishService.Wish> many = new java.util.ArrayList<>();
         for (int i = 0; i < 25; i++) {
             many.add(new WishService.Wish("Artysta " + i + " - Piosenka " + i, 30 - i, true));
         }
-        for (int i = 0; i < 22; i++) {
+        for (int i = 0; i < 12; i++) {
             many.add(new WishService.Wish("tytuł " + i, 1, false));
         }
         when(wishes.wishes(7L)).thenReturn(many);
         String html = render(Plans.off(), 7L, Map.of());
-        String shown = html.substring(html.indexOf("id=\"wishRows\""), html.indexOf("</ol>", html.indexOf("id=\"wishRows\"")));
-        assertThat(shown.split("<li ", -1)).hasSize(21);
-        assertThat(html).contains("id=\"wishMore\"", "data-keep-open", ">Pokaż pozostałe: 5<", "id=\"wishRowsMore\"",
-                "id=\"wishCheckMore\"", ">Pokaż pozostałe: 2<", "<script src=\"/js/folds.js\">");
-        assertThat(html.indexOf("Artysta 19 - Piosenka 19")).isLessThan(html.indexOf("id=\"wishMore\""));
-        assertThat(html.indexOf("Artysta 20 - Piosenka 20")).isGreaterThan(html.indexOf("id=\"wishMore\""));
-        assertThat(html).contains("id=\"backToSettings\" class=\"s2p-back-link\"");
-        // numbered on: the rest goes on from 21
-        String rest = html.substring(html.indexOf("id=\"wishRowsMore\""), html.indexOf("</ol>", html.indexOf("id=\"wishRowsMore\"")));
-        assertThat(rest).contains(">21.<", ">25.<").doesNotContain(">20.<");
+        String rows = html.substring(html.indexOf("id=\"wishRows\""), html.indexOf("</ol>", html.indexOf("id=\"wishRows\"")));
+        assertThat(rows.split("<li ", -1)).as("every song in one list").hasSize(26);
+        assertThat(rows.split("s2p-wish-row\" hidden=\"hidden\"", -1)).as("past the first 10, hidden").hasSize(16);
+        assertThat(rows).contains(">1.<", ">11.<", ">25.<");
+        assertThat(rows.indexOf(">10.<")).isLessThan(rows.indexOf("hidden=\"hidden\""));
+        assertThat(rows.indexOf(">11.<")).isGreaterThan(rows.indexOf("hidden=\"hidden\""));
+        String check = html.substring(html.indexOf("id=\"wishCheck\""), html.indexOf("</ul>", html.indexOf("id=\"wishCheck\"")));
+        assertThat(check.split("hidden=\"hidden\"", -1)).hasSize(3);
+        assertThat(html.split("data-more-show", -1)).as("\"Pokaż więcej\" under each list").hasSize(3);
+        assertThat(html).contains("data-shown=\"10\"", "data-step=\"10\"", ">Pokaż więcej<", ">Zwiń<",
+                "<script src=\"/js/wishes-list.js\">", "id=\"backToSettings\" class=\"s2p-back-link\"").doesNotContain("folds.js");
         write("wishes-long.html", html);
     }
 

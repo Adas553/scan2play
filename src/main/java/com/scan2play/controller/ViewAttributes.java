@@ -296,6 +296,9 @@ public final class ViewAttributes {
     public static final String WISH_ROWS = "wishRows";
     /** The songs "⭐ Dodaj 10 najczęstszych" would add (the most wished named ones not on the list yet), for its question. */
     public static final String WISH_TOP = "wishTop";
+    /** The songs of an event listed at first, and how many more "Pokaż więcej" shows ({@code DjWishesController.SHOWN}, {@code STEP}). */
+    public static final String WISH_SHOWN = "wishShown";
+    public static final String WISH_STEP = "wishStep";
     public static final String WISH_CHECK = "wishCheck";
     /** How many songs the event's wishes are, and how many of them the DJ's library has not. */
     public static final String WISH_SONGS = "wishSongs";

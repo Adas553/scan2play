@@ -34,9 +34,10 @@ imprezy" leads to it, its state the events collecting now; without Pro the offer
 "Nowe wydarzenie" (name, date, "Utwórz link dla gości"; "Otwarte: 2 z 5"; at 20 kept no form, "usuń któreś"), "Twoje wydarzenia" (the opened one's button "Zwiń życzenia", as "Zwiń" in its heading — the page without it; the ones ahead first, the nearest first,
 then the past ones still kept; each its date, "życzeń: N" and "zbiera" / "zakończone" / "po imprezie"), and the event opened: its link
 to copy and open, "Drukuj zaproszenia", "Zakończ zbieranie", "Nowy link" (asks first), "życzeń: N · piosenek: M · nie masz w
-bibliotece: K", the songs the most wished first (at most `LIST_MAX` = 500; the CSV has every one; the first `DjWishesController.FIRST` = 20
-shown, the rest under "Pokaż pozostałe: N" ("Zwiń pozostałe" on its line while open, "Zwiń" at its end) — the page grows, no box scrolls; remembered unfolded across a page load, `folds.js`;
-the same for "Do sprawdzenia") — each numbered, its votes (how many wrote it) in a badge as the queue's, warm from two, in a column under "Nr · Głosy ·
+bibliotece: K", the songs the most wished first (at most `LIST_MAX` = 500; the CSV has every one; the first `DjWishesController.SHOWN` = 10
+shown, "Pokaż więcej (N)" 10 more each time, "Zwiń" back to 10 — `js/wishes-list.js`, how many shown remembered across a page
+load; the page grows, no box scrolls on its own (a scroll in a scroll on a phone, and a "⭐" loads the page again); the same for
+"Do sprawdzenia") — each numbered, its votes (how many wrote it) in a badge as the queue's, warm from two, in a column under "Nr · Głosy ·
 Piosenka", the library's mark and
 tempo as the queue shows them (Pro, a library uploaded), "⭐ Na liście" when the hosts' wish list names it already (`SongList.matches`:
 "Akcent" names every song of Akcent), else "⭐ Do „Koniecznie zagrać”" — and "⭐ Dodaj 10 najczęstszych" (asks first, naming the songs it adds — the guests wrote them and the list lets them
