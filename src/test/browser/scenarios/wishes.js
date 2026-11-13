@@ -62,6 +62,13 @@
             }).length, 0);
             const rows = Array.from(document.querySelectorAll('#wishRows > li'));
             t.step('every row inside the screen', rows.filter(function (row) { return row.getBoundingClientRect().right > width; }).length, 0);
+            // numbered and the votes in a column, as the panel's queue: every number and every badge at the same place in its row
+            const lefts = function (selector) {
+                return Array.from(new Set(rows.map(function (row) { return Math.round(row.querySelector(selector).getBoundingClientRect().left); })));
+            };
+            t.step('the numbers one under another, the votes one under another', [lefts('.s2p-wish-rank').length, lefts('.s2p-wish-votes').length], [1, 1]);
+            t.check('the heading\'s "Głosy" over the badges', Math.abs(document.querySelector('#wishHead .s2p-wish-votes').getBoundingClientRect().left
+                - rows[0].querySelector('.s2p-wish-votes').getBoundingClientRect().left) <= 2);
         }
     });
 

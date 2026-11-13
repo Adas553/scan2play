@@ -1688,6 +1688,19 @@ a.s2p-schedule-text:focus-visible { color: var(--s2p-white); text-decoration: un
 .s2p-back-link { display: inline-flex; align-items: center; min-height: 44px; align-self: flex-start; color: var(--s2p-text-muted);
     text-decoration: none; }
 .s2p-back-link:hover, .s2p-back-link:focus-visible { color: var(--s2p-light); }
+/* The wishes' songs as the panel's queue (wishes.html): the number and the votes' badge in columns of their own, one under another in
+   every row and under the heading's "Nr" / "Głosy" — the song takes the rest and wraps */
+.s2p-wish-rank { flex: 0 0 2.25rem; text-align: end; color: var(--s2p-text-muted); font-variant-numeric: tabular-nums; }
+.s2p-wish-votes { flex: 0 0 3rem; text-align: center; font-variant-numeric: tabular-nums; }
+.s2p-wish-head { padding-bottom: 0.25rem; border-bottom: 1px solid var(--bs-border-color); }
+/* "⭐ Do „Koniecznie zagrać”" on one line — but a phone of 320 px has not the room beside the two columns: there it wraps to two lines,
+   and the columns are narrower */
+.s2p-wish-star { white-space: nowrap; }
+@media (max-width: 359.98px) {
+    .s2p-wish-star { white-space: normal; text-align: start; }
+    .s2p-wish-rank { flex-basis: 1.75rem; }
+    .s2p-wish-votes { flex-basis: 2.5rem; }
+}
 /* "Pokaż pozostałe" of the wishes (wishes.html #wishMore): the rest of a long list under one line — the page grows, no box scrolls */
 .s2p-wish-more > summary { display: inline-flex; align-items: center; min-height: 44px; cursor: pointer; color: var(--s2p-light); }
 .s2p-kiosk-vote-hint { color: var(--s2p-light); font-size: 1rem; margin: -0.5rem 0 0.75rem; }

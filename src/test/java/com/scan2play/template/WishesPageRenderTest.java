@@ -236,7 +236,27 @@ class WishesPageRenderTest {
         assertThat(html.indexOf("Artysta 19 - Piosenka 19")).isLessThan(html.indexOf("id=\"wishMore\""));
         assertThat(html.indexOf("Artysta 20 - Piosenka 20")).isGreaterThan(html.indexOf("id=\"wishMore\""));
         assertThat(html).contains("id=\"backToSettings\" class=\"s2p-back-link\"");
+        // numbered on: the rest goes on from 21
+        String rest = html.substring(html.indexOf("id=\"wishRowsMore\""), html.indexOf("</ol>", html.indexOf("id=\"wishRowsMore\"")));
+        assertThat(rest).contains(">21.<", ">25.<").doesNotContain(">20.<");
         write("wishes-long.html", html);
+    }
+
+    /**
+     * The songs as the panel's queue shows its requests: each numbered, its votes in a badge — warm from two on, as the queue's —, in a
+     * column of its own under the heading "Nr · Głosy · Piosenka"; the ones to check numbered and badged too.
+     */
+    @Test
+    void theSongs_areNumbered_withTheirVotesInABadge_asInThePanel() throws IOException {
+        String html = render(Plans.off(), 7L, Map.of());
+        assertThat(html).contains("id=\"wishHead\"", ">Nr<", ">Głosy<", ">Piosenka<");
+        String rows = html.substring(html.indexOf("id=\"wishRows\""), html.indexOf("</ol>", html.indexOf("id=\"wishRows\"")));
+        assertThat(rows).contains(">1.<", ">4.<")
+                .containsPattern("class=\"badge [^\"]*text-bg-warning[^\"]*\"[^>]*data-votes=\"7\"[^>]*>7<")
+                .containsPattern("class=\"badge [^\"]*text-bg-secondary[^\"]*\"[^>]*data-votes=\"1\"[^>]*>1<")
+                .doesNotContain("×");
+        String check = html.substring(html.indexOf("id=\"wishCheck\""), html.indexOf("</ul>", html.indexOf("id=\"wishCheck\"")));
+        assertThat(check).contains(">1.<", "data-votes=\"2\"", "coś od zenka").doesNotContain("(2)");
     }
 
     /** Every one of the most wished on the list already: no "⭐ Dodaj 10 najczęstszych", it would add nothing. */
