@@ -126,7 +126,7 @@ class StaffPageRenderTest {
                         "<script src=\"/js/folds.js\">");
         assertThat(html).as("the heading and the tabs of every DJ's page, the settings' tab lit; above the heading the way back to the settings, a row of which led here")
                 .contains("id=\"djTabBar\"", "href=\"/dj/dashboard?party=HARN1#top\">Panel DJ-a</a>",
-                        "href=\"/dj/settings?party=HARN1\" id=\"backToSettings\"", ">← Ustawienia imprezy<")
+                        "href=\"/dj/settings?party=HARN1\" id=\"backToSettings\" class=\"s2p-back-link\"", ">← Ustawienia imprezy<")
                 .doesNotContain("id=\"backToPanel\"");
         assertThat(html.split("<script src=\"/js/dj-nav.js\">", -1)).as("dj-nav.js once").hasSize(2);
         assertThat(html).contains("<h1 class=\"h3 text-white mb-1\">Obsługa imprezy</h1>", "Osoby, które pomagają Ci przy imprezie. Każdej wybierasz, co może",

@@ -23,7 +23,7 @@
     <div th:replace="~{fragments/components :: dj-nav(activeTab='settings', isActive=${isActive}, partyCode=${partyCode})}"></div>
 
     <div class="s2p-mw-800 s2p-dj-page-body d-flex flex-column gap-3">
-    <a th:href="@{/dj/settings(party=${partyCode})}" class="text-secondary text-decoration-none s2p-wishes-back"
+    <a th:href="@{/dj/settings(party=${partyCode})}" id="backToSettings" class="s2p-back-link"
        th:text="#{wishes.back}">← Party settings</a>
     <div>
         <h1 class="h3 text-white mb-2"><span th:text="#{wishes.title}">Wishes before the party</span><th:block
@@ -146,29 +146,18 @@
         <p th:if="${#lists.isEmpty(wishRows) and #lists.isEmpty(wishCheck)}" class="text-secondary" id="wishEmpty"
            th:text="#{wishes.empty}">Nobody has written a song yet…</p>
 
-        <th:block th:unless="${#lists.isEmpty(wishRows)}">
+        <th:block th:unless="${#lists.isEmpty(wishRows)}" th:with="first=${T(com.scan2play.controller.DjWishesController).FIRST}">
+        <!--/* the FIRST most wished; the rest under "Pokaż pozostałe" (remembered unfolded across a page load, folds.js) — the page grows,
+             no box scrolls on its own */-->
         <ol class="list-group list-group-flush mb-2 s2p-wish-list" id="wishRows">
-            <li th:each="row : ${wishRows}" class="list-group-item bg-dark text-light border-secondary d-flex flex-wrap align-items-center gap-2 px-0"
-                th:with="mark=${row.mark() == null ? null : #strings.toLowerCase(row.mark().name())}">
-                <span class="me-auto s2p-min-w-0">
-                    <span class="fw-bold text-break" th:text="${row.songName()}">Wilki - Baśka</span>
-                    <span class="small text-secondary text-nowrap" th:text="#{wishes.row.count(${row.wishes()})}">7 guests</span><br th:if="${mark != null}">
-                    <span th:if="${mark != null}" class="badge s2p-library"
-                          th:classappend="${mark == 'have'} ? 'text-bg-success' : (${mark == 'similar'} ? 'text-bg-dark border border-warning text-warning' : 'text-bg-dark border border-secondary')"
-                          th:attr="data-library=${mark}" th:title="#{${'dashboard.library.' + mark + '.title'}}"
-                          th:text="#{${'dashboard.library.' + mark}}">✓ Masz</span>
-                    <span th:if="${row.bpm() != null or row.tonality() != null}" class="small text-secondary"
-                          th:text="${row.bpm() == null} ? ${row.tonality()} : (${row.tonality() == null} ? #{dashboard.library.bpm(${row.bpm()})}
-                                   : #{dashboard.library.bpm(${row.bpm()})} + ' · ' + ${row.tonality()})">128 BPM · 5A</span>
-                </span>
-                <span th:if="${row.wanted()}" class="small text-warning text-nowrap" th:text="#{wishes.row.wanted}">⭐ On "Must play"</span>
-                <form th:unless="${row.wanted() or plan.pro('WISHES')}" th:action="@{/dj/wishes/{id}/must-play(id=${wishEvent.id()})}" method="POST" class="m-0">
-                    <input type="hidden" name="partyCode" th:value="${partyCode}">
-                    <input type="hidden" name="song" th:value="${row.songName()}">
-                    <button type="submit" class="btn btn-sm btn-outline-warning text-nowrap s2p-wish-star" th:text="#{wishes.row.to_wanted}">⭐ To "Must play"</button>
-                </form>
-            </li>
+            <th:block th:each="row, stat : ${wishRows}" th:if="${stat.index < first}"><li th:replace="~{wishes :: wishRow(${row})}"></li></th:block>
         </ol>
+        <details th:if="${#lists.size(wishRows) > first}" id="wishMore" class="s2p-wish-more mb-2" data-keep-open>
+            <summary th:text="#{wishes.more(${#lists.size(wishRows) - first})}">Show the rest: 5</summary>
+            <ol class="list-group list-group-flush s2p-wish-list" id="wishRowsMore">
+                <th:block th:each="row, stat : ${wishRows}" th:if="${stat.index >= first}"><li th:replace="~{wishes :: wishRow(${row})}"></li></th:block>
+            </ol>
+        </details>
         <!--/* asks first, naming the songs: the guests wrote them, and "Koniecznie zagrać" lets them past the AI; gone when the list
              has them all */-->
         <form th:unless="${plan.pro('WISHES') or #lists.isEmpty(wishTop)}" th:action="@{/dj/wishes/{id}/must-play(id=${wishEvent.id()})}"
@@ -184,10 +173,19 @@
         <th:block th:unless="${#lists.isEmpty(wishCheck)}">
         <h3 class="h6 text-white mt-2" th:text="#{wishes.check.title}">To check</h3>
         <p class="small text-secondary mb-1" th:text="#{wishes.check.help}">Written without the artist…</p>
-        <ul class="list-unstyled small mb-3" id="wishCheck">
-            <li th:each="row : ${wishCheck}" class="text-break text-light"><span th:text="${row.songName()}">coś od zenka</span>
+        <th:block th:with="first=${T(com.scan2play.controller.DjWishesController).FIRST}">
+        <ul class="list-unstyled small mb-2" id="wishCheck">
+            <li th:each="row, stat : ${wishCheck}" th:if="${stat.index < first}" class="text-break text-light"><span th:text="${row.songName()}">coś od zenka</span>
                 <span class="text-secondary" th:text="'(' + ${row.wishes()} + ')'">(2)</span></li>
         </ul>
+        <details th:if="${#lists.size(wishCheck) > first}" id="wishCheckMore" class="s2p-wish-more small mb-2" data-keep-open>
+            <summary th:text="#{wishes.more(${#lists.size(wishCheck) - first})}">Show the rest: 2</summary>
+            <ul class="list-unstyled mb-0">
+                <li th:each="row, stat : ${wishCheck}" th:if="${stat.index >= first}" class="text-break text-light"><span th:text="${row.songName()}">coś</span>
+                    <span class="text-secondary" th:text="'(' + ${row.wishes()} + ')'">(1)</span></li>
+            </ul>
+        </details>
+        </th:block>
         </th:block>
 
         <div class="s2p-btn-row">
@@ -202,6 +200,31 @@
     </section>
     </div>
 </div>
+<!--/* One song of the event as the list shows it: its name, how many wrote it, the library's mark and tempo, "⭐ Na liście" or the
+     form "⭐ Do „Koniecznie zagrać”". Only a fragment: the two lists above take it. */-->
+<th:block th:if="${false}">
+<li th:fragment="wishRow(row)" class="list-group-item bg-dark text-light border-secondary d-flex flex-wrap align-items-center gap-2 px-0"
+    th:with="mark=${row.mark() == null ? null : #strings.toLowerCase(row.mark().name())}">
+    <span class="me-auto s2p-min-w-0">
+        <span class="fw-bold text-break" th:text="${row.songName()}">Wilki - Baśka</span>
+        <span class="small text-secondary text-nowrap" th:text="#{wishes.row.count(${row.wishes()})}">7 guests</span><br th:if="${mark != null}">
+        <span th:if="${mark != null}" class="badge s2p-library"
+              th:classappend="${mark == 'have'} ? 'text-bg-success' : (${mark == 'similar'} ? 'text-bg-dark border border-warning text-warning' : 'text-bg-dark border border-secondary')"
+              th:attr="data-library=${mark}" th:title="#{${'dashboard.library.' + mark + '.title'}}"
+              th:text="#{${'dashboard.library.' + mark}}">✓ Masz</span>
+        <span th:if="${row.bpm() != null or row.tonality() != null}" class="small text-secondary"
+              th:text="${row.bpm() == null} ? ${row.tonality()} : (${row.tonality() == null} ? #{dashboard.library.bpm(${row.bpm()})}
+                       : #{dashboard.library.bpm(${row.bpm()})} + ' · ' + ${row.tonality()})">128 BPM · 5A</span>
+    </span>
+    <span th:if="${row.wanted()}" class="small text-warning text-nowrap" th:text="#{wishes.row.wanted}">⭐ On "Must play"</span>
+    <form th:unless="${row.wanted() or plan.pro('WISHES')}" th:action="@{/dj/wishes/{id}/must-play(id=${wishEvent.id()})}" method="POST" class="m-0">
+        <input type="hidden" name="partyCode" th:value="${partyCode}">
+        <input type="hidden" name="song" th:value="${row.songName()}">
+        <button type="submit" class="btn btn-sm btn-outline-warning text-nowrap s2p-wish-star" th:text="#{wishes.row.to_wanted}">⭐ To "Must play"</button>
+    </form>
+</li>
+</th:block>
+<script src="/js/folds.js" th:src="@{/js/folds.js}"></script>
 <div th:replace="~{fragments/components :: formRefused}"></div>
 <div th:replace="~{fragments/components :: footer}"></div>
 </body>

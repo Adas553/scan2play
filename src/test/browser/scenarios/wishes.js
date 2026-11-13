@@ -90,6 +90,34 @@
     });
 
     S2P.scenario({
+        name: 'wishes-long-list',
+        title: 'the DJ\'s page of wishes with many songs: the 20 most wished shown, the rest under "Pokaż pozostałe" — no box that scrolls '
+            + 'on its own —, and unfolded it stays unfolded when the page loads again after a "⭐"',
+        page: 'wishes-long',
+        viewport: '390,844',
+        run: async function (t) {
+            const more = document.getElementById('wishMore');
+            t.step('20 shown, the rest folded', [document.querySelectorAll('#wishRows > li').length, more.open,
+                document.querySelectorAll('#wishRowsMore > li').length], [20, false, 5]);
+            t.check('no list scrolls on its own', Array.from(document.querySelectorAll('#wishEvent *')).every(function (el) {
+                const overflow = getComputedStyle(el).overflowY;
+                return overflow !== 'auto' && overflow !== 'scroll';
+            }));
+            const src = document.querySelector('script[src*="folds"]').src;
+            more.querySelector('summary').click();
+            t.step('a tap shows the rest', more.open, true);
+            window.dispatchEvent(new Event('beforeunload'));   // a "⭐" of the rest sent
+            more.open = false;   // the page as it loads again
+            const again = document.createElement('script');
+            again.src = src;
+            await new Promise(function (resolve) { again.onload = resolve; document.body.appendChild(again); });
+            t.step('the rest unfolded again: the page lands where it was', more.open, true);
+            sessionStorage.clear();
+            t.check('nothing sideways', fits());
+        }
+    });
+
+    S2P.scenario({
         name: 'qr-print-invitation-saves-nothing',
         title: 'the invitation\'s print: a heading typed shows on every card, the editor says nothing of "not saved" and leaving asks nothing',
         page: 'qr-print-cards-own-tables-invitation',

@@ -1683,9 +1683,13 @@ a.s2p-schedule-text:focus-visible { color: var(--s2p-white); text-decoration: un
 .s2p-kiosk-hint { color: var(--s2p-light); font-size: 1rem; margin: 0.75rem 0 0; }
 .s2p-kiosk-list { display: flex; flex-direction: column; min-height: 0; }
 .s2p-kiosk-list h2 { font-size: 1.5rem; font-weight: 700; color: var(--s2p-white); margin-bottom: 1rem; }
-/* "← Ustawienia imprezy" over the page of wishes (V68): a tap target of 44 px on a phone, the line as quiet as before */
-.s2p-wishes-back { display: inline-flex; align-items: center; min-height: 44px; align-self: flex-start; }
-.s2p-wishes-back:hover { color: var(--s2p-light) !important; }
+/* "← Ustawienia imprezy" over the pages a card of the settings leads to ("Obsługa", "Życzenia przed imprezą"): one look for both — a
+   quiet line, a tap target of 44 px on a phone */
+.s2p-back-link { display: inline-flex; align-items: center; min-height: 44px; align-self: flex-start; color: var(--s2p-text-muted);
+    text-decoration: none; }
+.s2p-back-link:hover, .s2p-back-link:focus-visible { color: var(--s2p-light); }
+/* "Pokaż pozostałe" of the wishes (wishes.html #wishMore): the rest of a long list under one line — the page grows, no box scrolls */
+.s2p-wish-more > summary { display: inline-flex; align-items: center; min-height: 44px; cursor: pointer; color: var(--s2p-light); }
 .s2p-kiosk-vote-hint { color: var(--s2p-light); font-size: 1rem; margin: -0.5rem 0 0.75rem; }
 .s2p-kiosk-songs {
     list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.5rem; counter-reset: kiosk;

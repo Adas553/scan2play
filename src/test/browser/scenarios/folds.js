@@ -195,6 +195,26 @@
     });
 
     S2P.scenario({
+        name: 'staff-back-where-it-was',
+        title: 'the page "Obsługa" after "Zaproś" or "Nowy link" (a page load): where it was (scroll-restore.js, no anchor), the cards '
+            + 'unfolded then unfolded again — no jump to a card',
+        page: 'staff',
+        viewport: '390,844',
+        run: async function (t) {
+            const src = document.querySelector('script[src*="folds"]').src;
+            t.check('the page remembers its scroll (scroll-restore.js)', !!document.querySelector('script[src*="scroll-restore"]'));
+            document.querySelector('#staffLinkCard > summary').click();
+            window.dispatchEvent(new Event('beforeunload'));   // "Nowy link" sent
+            document.getElementById('staffLinkCard').open = false;   // the page as it loads again
+            const again = document.createElement('script');
+            again.src = src;
+            await new Promise(function (resolve) { again.onload = resolve; document.body.appendChild(again); });
+            t.step('the link\'s card unfolded again', document.getElementById('staffLinkCard').open, true);
+            sessionStorage.clear();
+        }
+    });
+
+    S2P.scenario({
         name: 'staff-folded',
         title: 'the page "Obsługa": "Zaproś" and the link folded, each with its state; the link unfolds by its address (#staffLinkCard)',
         page: 'staff',

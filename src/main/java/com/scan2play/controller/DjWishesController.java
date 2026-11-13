@@ -64,6 +64,8 @@ public class DjWishesController {
 
     /** "⭐ Dodaj najczęstsze": the most wished songs at once. */
     public static final int TOP = 10;
+    /** The songs listed at once, the most wished first; the rest under "Pokaż pozostałe" — the page grows, no box scrolls. */
+    public static final int FIRST = 20;
 
     private final WishService wishService;
     private final DjSessionHelper sessionHelper;

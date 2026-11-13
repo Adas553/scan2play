@@ -214,6 +214,31 @@ class WishesPageRenderTest {
                 .contains("Wygląd strony dla gości zmieniony.");
     }
 
+    /**
+     * Many songs: the 20 most wished shown, the rest under "Pokaż pozostałe" (remembered unfolded, folds.js) — the page grows, no box
+     * scrolls on its own; the same for the ones to check. The way back to the settings as on "Obsługa".
+     */
+    @Test
+    void manySongs_theFirstTwentyShown_theRestFolded() throws IOException {
+        List<WishService.Wish> many = new java.util.ArrayList<>();
+        for (int i = 0; i < 25; i++) {
+            many.add(new WishService.Wish("Artysta " + i + " - Piosenka " + i, 30 - i, true));
+        }
+        for (int i = 0; i < 22; i++) {
+            many.add(new WishService.Wish("tytuł " + i, 1, false));
+        }
+        when(wishes.wishes(7L)).thenReturn(many);
+        String html = render(Plans.off(), 7L, Map.of());
+        String shown = html.substring(html.indexOf("id=\"wishRows\""), html.indexOf("</ol>", html.indexOf("id=\"wishRows\"")));
+        assertThat(shown.split("<li ", -1)).hasSize(21);
+        assertThat(html).contains("id=\"wishMore\"", "data-keep-open", ">Pokaż pozostałe: 5<", "id=\"wishRowsMore\"",
+                "id=\"wishCheckMore\"", ">Pokaż pozostałe: 2<", "<script src=\"/js/folds.js\">");
+        assertThat(html.indexOf("Artysta 19 - Piosenka 19")).isLessThan(html.indexOf("id=\"wishMore\""));
+        assertThat(html.indexOf("Artysta 20 - Piosenka 20")).isGreaterThan(html.indexOf("id=\"wishMore\""));
+        assertThat(html).contains("id=\"backToSettings\" class=\"s2p-back-link\"");
+        write("wishes-long.html", html);
+    }
+
     /** Every one of the most wished on the list already: no "⭐ Dodaj 10 najczęstszych", it would add nothing. */
     @Test
     void theTopButton_isGone_whenTheListHasThemAll() throws IOException {

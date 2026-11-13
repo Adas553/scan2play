@@ -10,7 +10,8 @@ same party — the one row of the settings with a page of its own, 2026-10-10): 
 unfolded with "Zapisano"; an invitation by e-mail waiting is folded the same way — the address, the role, "czeka od 10.10" —, and so
 are "Zaproś osobę" and "Albo wyślij link" (2026-10-25, `details.s2p-fold`: their lines say "Wolne miejsca: 7 z 10" and "Podgląd ·
 do 24.11"; "Zaproś" unfolded when it has an answer to show or nobody helps yet, the link after "Nowy link" / "Wyłącz" —
-`#staffLinkCard`, `js/folds.js`)); unfolded, **"Co może"**: a role (`StaffRole`: "Podgląd", "Obsługa
+remembered unfolded, `js/folds.js`; every form back to the page where it was, no anchor, `scroll-restore.js`; "← Ustawienia imprezy"
+`.s2p-back-link`, as on the wishes' page)); unfolded, **"Co może"**: a role (`StaffRole`: "Podgląd", "Obsługa
 kolejki", "Współorganizator", "Własne") and, under "Uprawnienia po kolei", a checkbox per `StaffPermission` (`js/staff.js`: a role
 ticks its set, a tick changed picks the role it makes — "Własne" when none; the server decides the same way), "Zapisz" (`POST
 /dj/staff/permissions`, "✓ Zapisano") and "Usuń dostęp" (asks first, `POST /dj/staff/remove`); under the people, **the invitations by

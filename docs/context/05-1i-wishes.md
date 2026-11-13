@@ -34,7 +34,9 @@ imprezy" leads to it, its state the events collecting now; without Pro the offer
 "Nowe wydarzenie" (name, date, "Utwórz link dla gości"; "Otwarte: 2 z 5"; at 20 kept no form, "usuń któreś"), "Twoje wydarzenia" (the ones ahead first, the nearest first,
 then the past ones still kept; each its date, "życzeń: N" and "zbiera" / "zakończone" / "po imprezie"), and the event opened: its link
 to copy and open, "Drukuj zaproszenia", "Zakończ zbieranie", "Nowy link" (asks first), "życzeń: N · piosenek: M · nie masz w
-bibliotece: K", the songs the most wished first (at most `LIST_MAX` = 500; the CSV has every one) — each "×N", the library's mark and
+bibliotece: K", the songs the most wished first (at most `LIST_MAX` = 500; the CSV has every one; the first `DjWishesController.FIRST` = 20
+shown, the rest under "Pokaż pozostałe: N" — the page grows, no box scrolls; remembered unfolded across a page load, `folds.js`;
+the same for "Do sprawdzenia") — each "×N", the library's mark and
 tempo as the queue shows them (Pro, a library uploaded), "⭐ Na liście" when the hosts' wish list names it already (`SongList.matches`:
 "Akcent" names every song of Akcent), else "⭐ Do „Koniecznie zagrać”" — and "⭐ Dodaj 10 najczęstszych" (asks first, naming the songs it adds — the guests wrote them and the list lets them
 past the AI; gone when the list has them all), "Do sprawdzenia", "Pobierz
