@@ -183,8 +183,19 @@ class WishesPageRenderTest {
         // written without the artist: apart, to check — no star, no mark
         assertThat(html).contains(">Do sprawdzenia<", ">coś od zenka<");
         assertThat(html).contains("href=\"/dj/wishes/7/csv?party=WISH1\"");
+        // "⭐ Dodaj 10 najczęstszych" says first which it adds: the guests wrote them, the list lets them past the AI — not "Akcent"'s,
+        // which the list names already
+        assertThat(html).contains("data-confirm=\"Dodać do „Koniecznie zagrać”: Wilki - Baśka; Sanah - Szampan; Dawid Podsiadło - "
+                + "Małomiasteczkowy (a long name that wraps on a phone, to see it does)?\"");
         DashboardPageRenderTest.assertNothingInline(html);
         write("wishes.html", html);
+    }
+
+    /** Every one of the most wished on the list already: no "⭐ Dodaj 10 najczęstszych", it would add nothing. */
+    @Test
+    void theTopButton_isGone_whenTheListHasThemAll() throws IOException {
+        party.setHostWanted("Akcent\nWilki\nSanah\nDawid Podsiadło");
+        assertThat(render(Plans.off(), 7L, Map.of())).doesNotContain("id=\"wishTopBtn\"").contains(">⭐ Na liście<");
     }
 
     @Test

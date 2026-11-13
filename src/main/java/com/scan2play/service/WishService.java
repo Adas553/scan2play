@@ -1,11 +1,13 @@
 package com.scan2play.service;
 
+import com.scan2play.model.LibraryMark;
 import com.scan2play.util.CodeGenerator;
 import com.scan2play.util.LibraryKey;
 import com.scan2play.util.SongNames;
 import com.scan2play.util.Times;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.MessageSource;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -13,10 +15,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.sql.Date;
+import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -248,22 +253,21 @@ public class WishService {
     /** {@link #purge}: the events dated before {@code dateBefore} or made before {@code madeBefore}. */
     int purgeBefore(LocalDate dateBefore, Instant madeBefore) {
         return jdbc.update("DELETE FROM wish_event WHERE event_date < ? OR created_at < ?", Date.valueOf(dateBefore),
-                java.sql.Timestamp.from(madeBefore));
+                Timestamp.from(madeBefore));
     }
 
     /**
      * The event's wishes as a CSV file for the DJ (Excel opens it: ";" between the columns, a byte order mark), every song — the
      * page lists {@value #LIST_MAX}: the song, how many wrote it, and the library's mark when the party has one.
      */
-    public static String toCsv(List<Wish> wishes, java.util.Map<LibraryKey, com.scan2play.model.LibraryMark> marks,
-                               org.springframework.context.MessageSource messages, java.util.Locale locale) {
+    public static String toCsv(List<Wish> wishes, Map<LibraryKey, LibraryMark> marks, MessageSource messages, Locale locale) {
         StringBuilder csv = new StringBuilder().append(EveningSummaryService.BYTE_ORDER_MARK)
                 .append(messages.getMessage("wishes.csv.header", null, locale))
                 .append(marks.isEmpty() ? "" : ";" + messages.getMessage("summary.csv.library", null, locale)).append("\r\n");
         for (Wish wish : wishes) {
             csv.append(EveningSummaryService.cell(wish.songName())).append(';').append(wish.wishes());
             if (!marks.isEmpty()) {
-                com.scan2play.model.LibraryMark mark = marks.get(wish.libraryKey());
+                LibraryMark mark = marks.get(wish.libraryKey());
                 csv.append(';').append(mark == null ? "" : EveningSummaryService.cell(
                         messages.getMessage("summary.csv.library." + mark.name(), null, locale)));
             }

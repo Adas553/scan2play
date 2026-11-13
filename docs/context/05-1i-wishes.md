@@ -1,7 +1,6 @@
 > Part of `PROJECT_CONTEXT.md` (the index, at the repo root: what is in each part) — Section 5.1 (cont.). Keep it to what is true now.
 
-**"Życzenia przed imprezą"** (V68, Pro, the permission WISHES; the owner, 2026-11-13: "nie tylko na wesela"; the analysis
-https://claude.ai/artifact/SWNHdiZB3q1MoK6Twkah77, variant A): before an event the guests open its own link — on the invitation, in an
+**"Życzenia przed imprezą"** (V68, Pro, the permission WISHES; for any event, not only weddings): before an event the guests open its own link — on the invitation, in an
 e-mail from HR, in a chat — and write the songs they want to hear; the DJ sees them counted, marked by the library, and moves the
 ones to play to the hosts' "⭐ Koniecznie zagrać" (V29). Nothing of the guest is kept: the song as typed and how many wrote it.
 
@@ -36,7 +35,8 @@ then the past ones still kept; each its date, "życzeń: N" and "zbiera" / "zako
 to copy and open, "Drukuj zaproszenia", "Zakończ zbieranie", "Nowy link" (asks first), "życzeń: N · piosenek: M · nie masz w
 bibliotece: K", the songs the most wished first (at most `LIST_MAX` = 500; the CSV has every one) — each "×N", the library's mark and
 tempo as the queue shows them (Pro, a library uploaded), "⭐ Na liście" when the hosts' wish list names it already (`SongList.matches`:
-"Akcent" names every song of Akcent), else "⭐ Do „Koniecznie zagrać”" — and "⭐ Dodaj 10 najczęstszych", "Do sprawdzenia", "Pobierz
+"Akcent" names every song of Akcent), else "⭐ Do „Koniecznie zagrać”" — and "⭐ Dodaj 10 najczęstszych" (asks first, naming the songs it adds — the guests wrote them and the list lets them
+past the AI; gone when the list has them all), "Do sprawdzenia", "Pobierz
 CSV" (`Piosenka;Ile osób;W bibliotece`), "Usuń wydarzenie" (asks first). "⭐" adds only the event's named songs, never another text, to
 `party_settings.host_wanted` as the hosts' list keeps it (`SongList.tidy`, 100 lines): what did not fit is said ("Nie zmieściło się:
 N"). The wish list is one for every event of the party: the page says to clear it before the next one. Plain forms, a page load each,
@@ -44,7 +44,7 @@ back at the event (`#wishEvent`).
 
 **The invitation** (`/dj/qr-print?party=&wish=&layout=cards`, `DjDashboardController.qrPrint`): the QR print of the event's link —
 the cards by default (eight on a sheet, the size of an invitation's insert), the poster and the tent too; its own heading "Jaką
-piosenkę chcesz usłyszeć?" / "Which song do you want to hear?", the event's name and date in the line, the look of the occasion
+piosenkę chcesz usłyszeć?" / "Which song do you want to hear?", the event's name and date in the line (≤ 60 as the print's line: a long name cut, `DjDashboardController.invitationLine`), the look of the occasion
 "Zaproszenie" (Elegancki, the script; the first of "Wzór na okazję", offered only here), the address `…/w/{token}` printed, no party
 code, no tables. The editor shows every change and saves none (`data-preview-only`, `qr-print.js`: no "Zapisz", no language, no "not
 saved" note, no question on leaving; scenario `qr-print-invitation-saves-nothing`) — the party's own print stays as the DJ saved it;

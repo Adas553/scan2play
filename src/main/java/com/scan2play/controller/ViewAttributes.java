@@ -294,6 +294,8 @@ public final class ViewAttributes {
     public static final String WISH_MAX_EVENTS = "wishMaxEvents";
     /** The event's songs on the DJ's page ({@code DjWishesController.Row}): the named ones, and the ones to check apart. */
     public static final String WISH_ROWS = "wishRows";
+    /** The songs "⭐ Dodaj 10 najczęstszych" would add (the most wished named ones not on the list yet), for its question. */
+    public static final String WISH_TOP = "wishTop";
     public static final String WISH_CHECK = "wishCheck";
     /** How many songs the event's wishes are, and how many of them the DJ's library has not. */
     public static final String WISH_SONGS = "wishSongs";

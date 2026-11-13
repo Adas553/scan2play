@@ -164,3 +164,24 @@ The branch `claude/blissful-cannon-h66za3` holds the reviewed commits with the f
 - **D6** — `wishLinks` removed.
 
 Checks after the fixes: `unit` 1289, `it` 167, `browser` 400 scenarios, `audit -t wish,wishes,qr-print,settings` — all OK.
+
+### The second round (the rest of the minor and style points)
+
+- **D1** — "⭐ Dodaj 10 najczęstszych" asks first, naming the songs it would add (the first ten named ones not on the list yet,
+  `wishes.top.confirm`), and is gone when the list has them all. Tests: `WishesPageRenderTest` (the question's text,
+  `theTopButton_isGone_whenTheListHasThemAll`).
+- **D2 — not fixed, said in the code.** A lock on the session cannot help: Spring Session (JDBC) loads the session when a request
+  starts, so a second post at once reads the count as it was before either, lock or not. A real guard would need the count outside
+  the session, which the address limit (30) and the event's ceiling (2 000) already are. `WishController.write` says so where it
+  checks the five.
+- **D3** — `DjDashboardController.invitationLine`: the event's name and day within the print's 60 — a long name cut (at a space near
+  the end when there is one, never half an emoji) and "…", the day whole. Test: `QrPrintPageTest.anInvitationsLine_fitsThePrintsLine_theDayWhole`.
+- **D5 — not fixed.** Dropping `idx_wish_event_date` takes a migration of its own for a table of at most 20 rows a party; left for
+  the next migration that touches these tables.
+- **S1** — `WishService` is a constructor dependency of `DjDashboardController` (no optional setter); the 14 tests that build the
+  controller pass a mock (or the test's own `WishService`).
+- **S2** — imports in place of the fully qualified names the branch added (`DjDashboardController`, `WishService`, `DjWishesController`).
+- **S3** — the owner's words and the analysis' link moved out of `docs/context/05-1i-wishes.md` (kept here: the owner, 2026-11-13,
+  "nie tylko na wesela"; the analysis https://claude.ai/artifact/SWNHdiZB3q1MoK6Twkah77, variant A).
+
+Checks after the second round: `unit` 1291, `it` 167, `browser` 400 scenarios, `audit -t wish,wishes,qr-print,settings` — all OK.

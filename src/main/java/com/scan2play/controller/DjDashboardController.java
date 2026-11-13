@@ -22,6 +22,7 @@ import com.scan2play.service.PartyStaffService;
 import com.scan2play.service.PlanService;
 import com.scan2play.service.StaffInvitationService;
 import com.scan2play.service.QrCodeService;
+import com.scan2play.service.WishService;
 import com.scan2play.model.PlanFeature;
 import com.scan2play.service.DjLibraryParser;
 import com.scan2play.service.DjLibraryService;
@@ -36,6 +37,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.i18n.LocaleContextHolder;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.stereotype.Controller;
@@ -44,8 +46,11 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -89,13 +94,8 @@ public class DjDashboardController {
     private final WelcomeEmailService welcomeEmailService;
     /** The Free plan's AI checks an evening: the panel's line near it, its bar at it, the organiser's note the next day. */
     private final FreeAiLimit freeAiLimit;
-    /** "Życzenia przed imprezą" (V68): the settings card's state. Set by Spring; a test that builds the controller by hand has none. */
-    private com.scan2play.service.WishService wishService;
-
-    @org.springframework.beans.factory.annotation.Autowired(required = false)
-    void setWishService(com.scan2play.service.WishService wishService) {
-        this.wishService = wishService;
-    }
+    /** "Życzenia przed imprezą" (V68): the settings card's state, the invitation's print. */
+    private final WishService wishService;
 
     /**
      * On every answer of the queue poll, 304 too: the warnings above the queue that hold now, comma-separated —
@@ -302,7 +302,7 @@ public class DjDashboardController {
         // the venue's kiosk (V56): its link to copy and open on the tablet, or none
         model.addAttribute(KIOSK_LINK, settings.kioskLink(cleanBaseUrl));
         // "Życzenia przed imprezą" (V68): the card's state, the events collecting now
-        model.addAttribute(WISH_OPEN, wishService == null ? 0 : wishService.openEvents(partyCode));
+        model.addAttribute(WISH_OPEN, wishService.openEvents(partyCode));
         model.addAttribute(REQUEST_LIMIT, planned.getRequestLimit());
         model.addAttribute(COOLDOWN_MINUTES, planned.getCooldownMinutes());
         model.addAttribute(DUPLICATE_CHECK_WINDOW, planned.getDuplicateCheckWindow());
@@ -458,17 +458,13 @@ public class DjDashboardController {
         PartySettingsEntity settings = planService.asPlanned(access.party());
         String partyCode = settings.getPartyCode();
         String guestUrl = guestUrl(partyCode);
-        com.scan2play.service.WishService.Event invitation = null;
+        WishService.Event invitation = null;
         if (wish != null) {
-            planService.require(sessionHelper.require(partyCode, StaffPermission.WISHES, authentication, session),
-                    com.scan2play.model.PlanFeature.WISHES);
-            invitation = (wishService == null ? java.util.Optional.<com.scan2play.service.WishService.Event>empty()
-                    : wishService.event(partyCode, wish)).orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
-                    org.springframework.http.HttpStatus.NOT_FOUND));
+            planService.require(sessionHelper.require(partyCode, StaffPermission.WISHES, authentication, session), PlanFeature.WISHES);
+            invitation = wishService.event(partyCode, wish).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
             guestUrl = cleanBaseUrl + "/w/" + invitation.token();
             // a copy, never saved: the invitation's heading is ours, its line the event, its look the occasion "Zaproszenie"
-            settings = settings.toBuilder().posterHeading(null)
-                    .posterLine(invitation.name() + " · " + invitation.date().format(java.time.format.DateTimeFormatter.ofPattern("dd.MM.yyyy")))
+            settings = settings.toBuilder().posterHeading(null).posterLine(invitationLine(invitation.name(), invitation.date()))
                     .posterTheme(com.scan2play.model.PosterTheme.ELEGANT).posterFont(com.scan2play.model.PosterFont.SCRIPT)
                     .posterAccent(null).posterPaper(null).posterTables(null).build();
         }
@@ -492,6 +488,25 @@ public class DjDashboardController {
         model.addAttribute(POSTER_FONTS, com.scan2play.model.PosterFont.values());
         model.addAttribute(GUEST_THEME, settings.getGuestTheme());   // the editor's line: the guests' look is set apart (V59)
         return "qr-print";
+    }
+
+    /**
+     * The invitation's line: the event's name and its day, within the print's line ({@value PartySettingsEntity#POSTER_LINE_MAX}, the
+     * cards' and the tents' room) — an event's name may be {@value WishService#NAME_MAX}: a long one is cut, at a space when one is
+     * near the end, and the day stays whole.
+     */
+    public static String invitationLine(String name, LocalDate date) {
+        String day = " · " + date.format(DateTimeFormatter.ofPattern("dd.MM.yyyy"));
+        int room = PartySettingsEntity.POSTER_LINE_MAX - day.length();
+        if (name.length() <= room) {
+            return name + day;
+        }
+        String cut = name.substring(0, room - 1);   // "…" takes the last place
+        if (Character.isHighSurrogate(cut.charAt(cut.length() - 1))) {
+            cut = cut.substring(0, cut.length() - 1);   // never half an emoji
+        }
+        int space = cut.lastIndexOf(' ');
+        return (space > room / 2 ? cut.substring(0, space) : cut).strip() + "…" + day;
     }
 
     /** The address the guests open: what the QR code holds. */

@@ -102,13 +102,12 @@ class QrPrintPageTest {
         DjSessionHelper sessionHelper = mock(DjSessionHelper.class);
         when(sessionHelper.access(any(), any(), any())).thenReturn(access);
         when(sessionHelper.require(any(), any(), any(), any())).thenReturn(party);
-        DjDashboardController controller = new DjDashboardController(mock(DjService.class), mock(PartySettingsCommandService.class),
-                new QrCodeService(), sessionHelper, mock(PlayHistoryService.class), new GuestRequestLimiter(30, 10, 300, ""),
-                mock(PushNotificationService.class), mock(PartyStaffService.class), mock(com.scan2play.service.StaffInvitationService.class), com.scan2play.service.Plans.off(), new com.scan2play.service.AiHealthMonitor(), com.scan2play.service.PartySchedules.texts(), mock(com.scan2play.service.WelcomeEmailService.class), com.scan2play.service.FreeAiLimit.off());
-        ReflectionTestUtils.setField(controller, "rawBaseUrl", "https://www.scan2play.com.pl/");
         com.scan2play.service.WishService wishes = mock(com.scan2play.service.WishService.class);
         when(wishes.event(PARTY, 7L)).thenReturn(java.util.Optional.of(INVITATION));
-        ReflectionTestUtils.setField(controller, "wishService", wishes);
+        DjDashboardController controller = new DjDashboardController(mock(DjService.class), mock(PartySettingsCommandService.class),
+                new QrCodeService(), sessionHelper, mock(PlayHistoryService.class), new GuestRequestLimiter(30, 10, 300, ""),
+                mock(PushNotificationService.class), mock(PartyStaffService.class), mock(com.scan2play.service.StaffInvitationService.class), com.scan2play.service.Plans.off(), new com.scan2play.service.AiHealthMonitor(), com.scan2play.service.PartySchedules.texts(), mock(com.scan2play.service.WelcomeEmailService.class), com.scan2play.service.FreeAiLimit.off(), wishes);
+        ReflectionTestUtils.setField(controller, "rawBaseUrl", "https://www.scan2play.com.pl/");
         controller.init();
 
         ConcurrentModel model = new ConcurrentModel();
@@ -136,6 +135,17 @@ class QrPrintPageTest {
                 + (access.owner() ? "" : "-staff") + (wish != null ? "-invitation" : "");
         Files.writeString(BROWSER_HARNESS.resolve("qr-print-" + layout + variant + ".html"), html, StandardCharsets.UTF_8);
         return html;
+    }
+
+    /** An invitation's line within the print's line whatever the event's name (80 at most): the name cut, the day whole. */
+    @Test
+    void anInvitationsLine_fitsThePrintsLine_theDayWhole() {
+        java.time.LocalDate day = java.time.LocalDate.of(2027, 6, 14);
+        assertThat(DjDashboardController.invitationLine("Wesele Ani i Kuby", day)).isEqualTo("Wesele Ani i Kuby · 14.06.2027");
+        String longest = DjDashboardController.invitationLine("W".repeat(com.scan2play.service.WishService.NAME_MAX), day);
+        assertThat(longest).hasSizeLessThanOrEqualTo(PartySettingsEntity.POSTER_LINE_MAX).startsWith("WWW").endsWith("… · 14.06.2027");
+        assertThat(DjDashboardController.invitationLine("Bal " + "x".repeat(42) + " końcowy", day)).as("cut at a space when there is one")
+                .hasSizeLessThanOrEqualTo(PartySettingsEntity.POSTER_LINE_MAX).endsWith("… · 14.06.2027").doesNotContain(" … ");
     }
 
     /**

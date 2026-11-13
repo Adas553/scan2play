@@ -74,11 +74,10 @@ class StaffPermissionEndpointsTest {
 
         PlayHistoryService history = mock(PlayHistoryService.class);
         when(history.getHistory(any(), org.mockito.ArgumentMatchers.anyInt(), any())).thenReturn(new PlayHistoryService.Page(List.of(), false));
-        DjDashboardController dashboard = new DjDashboardController(mock(DjService.class), mock(PartySettingsCommandService.class),
-                mock(QrCodeService.class), helper, history, mock(GuestRequestLimiter.class), mock(PushNotificationService.class), staff, mock(com.scan2play.service.StaffInvitationService.class), com.scan2play.service.Plans.off(), new com.scan2play.service.AiHealthMonitor(), com.scan2play.service.PartySchedules.texts(), mock(com.scan2play.service.WelcomeEmailService.class), com.scan2play.service.FreeAiLimit.off());
-        ReflectionTestUtils.setField(dashboard, "rawBaseUrl", "http://localhost:8080");
         com.scan2play.service.WishService wishes = WishControllers.wishes(PUB);
-        dashboard.setWishService(wishes);
+        DjDashboardController dashboard = new DjDashboardController(mock(DjService.class), mock(PartySettingsCommandService.class),
+                mock(QrCodeService.class), helper, history, mock(GuestRequestLimiter.class), mock(PushNotificationService.class), staff, mock(com.scan2play.service.StaffInvitationService.class), com.scan2play.service.Plans.off(), new com.scan2play.service.AiHealthMonitor(), com.scan2play.service.PartySchedules.texts(), mock(com.scan2play.service.WelcomeEmailService.class), com.scan2play.service.FreeAiLimit.off(), wishes);
+        ReflectionTestUtils.setField(dashboard, "rawBaseUrl", "http://localhost:8080");
         dashboard.init();
         mockMvc = MockMvcBuilders.standaloneSetup(
                         new DjSongController(mock(DjService.class), helper, com.scan2play.service.Plans.off(), songCommands),

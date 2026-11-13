@@ -18,6 +18,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.MessageSource;
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -126,11 +127,13 @@ public class DjWishesController {
             }
         }
         model.addAttribute(WISH_EVENT, event);
-        model.addAttribute(WISH_DATE, WishController.dateText(event.date(), org.springframework.context.i18n.LocaleContextHolder.getLocale()));
+        model.addAttribute(WISH_DATE, WishController.dateText(event.date(), LocaleContextHolder.getLocale()));
         model.addAttribute(WISH_ROWS, named);
         model.addAttribute(WISH_CHECK, check);
         model.addAttribute(WISH_SONGS, wishService.songs(event.id()));
         model.addAttribute(WISH_MISSING, matches.isEmpty() ? null : missing);
+        // what "⭐ Dodaj 10 najczęstszych" adds, said before it does: the guests wrote them, and the list lets them past the AI
+        model.addAttribute(WISH_TOP, named.stream().limit(TOP).filter(row -> !row.wanted()).map(Row::songName).toList());
         model.addAttribute(WISH_LINK, linkOf(event));
     }
 

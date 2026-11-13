@@ -84,6 +84,8 @@ public class WishController {
         party(event);
         Locale locale = LocaleContextHolder.getLocale();
         String back = "redirect:/w/" + token;
+        // the guest's own five, not a guard: two posts at once read the session as it was before either (Spring Session loads it
+        // per request) — the address's limit and the event's ceiling below are what hold
         if (written(session, event.id()) >= PER_GUEST) {
             redirectAttributes.addFlashAttribute(WISH_NOTE, messageSource.getMessage("wish.note.per_guest",
                     new Object[]{PER_GUEST}, locale));

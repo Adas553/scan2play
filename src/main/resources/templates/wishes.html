@@ -147,7 +147,10 @@
                 </form>
             </li>
         </ol>
-        <form th:unless="${plan.pro('WISHES')}" th:action="@{/dj/wishes/{id}/must-play(id=${wishEvent.id()})}" method="POST" class="m-0 mb-2">
+        <!--/* asks first, naming the songs: the guests wrote them, and "Koniecznie zagrać" lets them past the AI; gone when the list
+             has them all */-->
+        <form th:unless="${plan.pro('WISHES') or #lists.isEmpty(wishTop)}" th:action="@{/dj/wishes/{id}/must-play(id=${wishEvent.id()})}"
+              method="POST" class="m-0 mb-2" th:attr="data-confirm=#{wishes.top.confirm(${#strings.listJoin(wishTop, '; ')})}">
             <input type="hidden" name="partyCode" th:value="${partyCode}">
             <input type="hidden" name="top" value="true">
             <button type="submit" id="wishTopBtn" class="btn btn-sm btn-outline-warning" th:text="#{wishes.top(${T(com.scan2play.controller.DjWishesController).TOP})}">⭐ Add the 10 most wished</button>
