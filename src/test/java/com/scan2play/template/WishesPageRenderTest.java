@@ -259,6 +259,19 @@ class WishesPageRenderTest {
         assertThat(check).contains(">1.<", "data-votes=\"2\"", "coś od zenka").doesNotContain("(2)");
     }
 
+    /**
+     * The event opened can be folded away again: its row's button says "Zwiń życzenia" and leads to the page without it, as does
+     * "Zwiń" in the event's heading; the other events keep "Zobacz życzenia".
+     */
+    @Test
+    void theEventOpened_foldsAwayAgain() throws IOException {
+        String html = render(Plans.off(), 7L, Map.of());
+        assertThat(html).containsPattern("href=\"/dj/wishes\\?party=WISH1&amp;event=8\"\\s+class=\"btn btn-sm btn-outline-light text-nowrap\">Zobacz życzenia<")
+                .containsPattern("href=\"/dj/wishes\\?party=WISH1\"\\s+class=\"btn btn-sm btn-outline-light text-nowrap active\">Zwiń życzenia<")
+                .contains("id=\"wishEventClose\" href=\"/dj/wishes?party=WISH1\"");
+        assertThat(render(Plans.off(), null, Map.of())).doesNotContain("Zwiń życzenia", "wishEventClose");
+    }
+
     /** Every one of the most wished on the list already: no "⭐ Dodaj 10 najczęstszych", it would add nothing. */
     @Test
     void theTopButton_isGone_whenTheListHasThemAll() throws IOException {

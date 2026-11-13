@@ -31,11 +31,11 @@ an empty line goes back unsent. A form left open past the session comes back to 
 
 **The DJ's page** (`DjWishesController`, `wishes.html`, `/dj/wishes?party=&event=`; the card "Życzenia przed imprezą" on "Ustawienia
 imprezy" leads to it, its state the events collecting now; without Pro the offer, and an event made before can still be deleted):
-"Nowe wydarzenie" (name, date, "Utwórz link dla gości"; "Otwarte: 2 z 5"; at 20 kept no form, "usuń któreś"), "Twoje wydarzenia" (the ones ahead first, the nearest first,
+"Nowe wydarzenie" (name, date, "Utwórz link dla gości"; "Otwarte: 2 z 5"; at 20 kept no form, "usuń któreś"), "Twoje wydarzenia" (the opened one's button "Zwiń życzenia", as "Zwiń" in its heading — the page without it; the ones ahead first, the nearest first,
 then the past ones still kept; each its date, "życzeń: N" and "zbiera" / "zakończone" / "po imprezie"), and the event opened: its link
 to copy and open, "Drukuj zaproszenia", "Zakończ zbieranie", "Nowy link" (asks first), "życzeń: N · piosenek: M · nie masz w
 bibliotece: K", the songs the most wished first (at most `LIST_MAX` = 500; the CSV has every one; the first `DjWishesController.FIRST` = 20
-shown, the rest under "Pokaż pozostałe: N" — the page grows, no box scrolls; remembered unfolded across a page load, `folds.js`;
+shown, the rest under "Pokaż pozostałe: N" ("Zwiń pozostałe" on its line while open, "Zwiń" at its end) — the page grows, no box scrolls; remembered unfolded across a page load, `folds.js`;
 the same for "Do sprawdzenia") — each numbered, its votes (how many wrote it) in a badge as the queue's, warm from two, in a column under "Nr · Głosy ·
 Piosenka", the library's mark and
 tempo as the queue shows them (Pro, a library uploaded), "⭐ Na liście" when the hosts' wish list names it already (`SongList.matches`:

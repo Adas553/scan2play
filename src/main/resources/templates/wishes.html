@@ -90,9 +90,11 @@
                         <span th:text="${e.date().isBefore(today)} ? #{wishes.state.after} : (${e.closed()} ? #{wishes.state.closed} : #{wishes.state.open})">collecting</span>
                     </span>
                 </span>
-                <a th:href="@{/dj/wishes(party=${partyCode},event=${e.id()})}" class="btn btn-sm btn-outline-light text-nowrap"
-                   th:classappend="${wishEvent != null and wishEvent.id() == e.id()} ? 'active'"
-                   th:text="#{wishes.events.open}">Show the wishes</a>
+                <!--/* the event opened: its button folds it away again (the page without it, where it was) */-->
+                <a th:with="opened=${wishEvent != null and wishEvent.id() == e.id()}"
+                   th:href="${opened} ? @{/dj/wishes(party=${partyCode})} : @{/dj/wishes(party=${partyCode},event=${e.id()})}"
+                   class="btn btn-sm btn-outline-light text-nowrap" th:classappend="${opened} ? 'active'"
+                   th:text="${opened} ? #{wishes.events.close} : #{wishes.events.open}">Show the wishes</a>
             </li>
         </ul>
     </section>
@@ -100,7 +102,11 @@
     <!--/* the event opened: its link, its buttons, its wishes */-->
     <section th:if="${wishEvent != null}" class="card bg-dark border-secondary p-3" id="wishEvent"
              th:with="past=${wishEvent.date().isBefore(T(com.scan2play.service.WishService).today())}">
-        <h2 class="s2p-card-title mb-1" th:text="${wishEvent.name()}">Wesele Ani i Kuby</h2>
+        <div class="d-flex align-items-start justify-content-between gap-2">
+            <h2 class="s2p-card-title mb-1 text-break" th:text="${wishEvent.name()}">Wesele Ani i Kuby</h2>
+            <a id="wishEventClose" th:href="@{/dj/wishes(party=${partyCode})}" class="btn btn-sm btn-outline-secondary text-nowrap"
+               th:text="#{wishes.event.close}">Fold</a>
+        </div>
         <p class="small text-secondary mb-3" th:text="${wishDate}">14 czerwca 2027</p>
 
         <th:block th:unless="${plan.pro('WISHES') or past}">
@@ -159,10 +165,13 @@
             <th:block th:each="row, stat : ${wishRows}" th:if="${stat.index < first}"><li th:replace="~{wishes :: wishRow(${row}, ${stat.count})}"></li></th:block>
         </ol>
         <details th:if="${#lists.size(wishRows) > first}" id="wishMore" class="s2p-wish-more mb-2" data-keep-open>
-            <summary th:text="#{wishes.more(${#lists.size(wishRows) - first})}">Show the rest: 5</summary>
+            <!--/* its line says what a tap does: show the rest, or fold it; "Zwiń" at the end folds it from there (dj-nav.js) */-->
+            <summary><span class="s2p-when-closed" th:text="#{wishes.more(${#lists.size(wishRows) - first})}">Show the rest: 5</span><span
+                    class="s2p-when-open" th:text="#{wishes.more.fold}">Fold the rest</span></summary>
             <ol class="list-group list-group-flush s2p-wish-list" id="wishRowsMore">
                 <th:block th:each="row, stat : ${wishRows}" th:if="${stat.index >= first}"><li th:replace="~{wishes :: wishRow(${row}, ${stat.count})}"></li></th:block>
             </ol>
+            <button type="button" class="btn btn-sm btn-outline-secondary mt-2 s2p-wish-fold" data-fold-close th:text="#{wishes.more.fold}">Fold the rest</button>
         </details>
         <!--/* asks first, naming the songs: the guests wrote them, and "Koniecznie zagrać" lets them past the AI; gone when the list
              has them all */-->
@@ -187,13 +196,15 @@
                     class="text-break s2p-min-w-0" th:text="${row.songName()}">coś od zenka</span></li>
         </ul>
         <details th:if="${#lists.size(wishCheck) > first}" id="wishCheckMore" class="s2p-wish-more small mb-2" data-keep-open>
-            <summary th:text="#{wishes.more(${#lists.size(wishCheck) - first})}">Show the rest: 2</summary>
+            <summary><span class="s2p-when-closed" th:text="#{wishes.more(${#lists.size(wishCheck) - first})}">Show the rest: 2</span><span
+                    class="s2p-when-open" th:text="#{wishes.more.fold}">Fold the rest</span></summary>
             <ul class="list-unstyled mb-0">
                 <li th:each="row, stat : ${wishCheck}" th:if="${stat.index >= first}" class="d-flex align-items-start gap-2 text-light"><span class="s2p-wish-rank" th:text="${stat.count} + '.'">21.</span><span
                         class="s2p-wish-votes"><span class="badge" th:classappend="${row.wishes() > 1} ? 'text-bg-warning' : 'text-bg-secondary'"
                         th:attr="data-votes=${row.wishes()}" th:title="#{wishes.row.votes.title}" th:text="${row.wishes()}">1</span></span><span
                         class="text-break s2p-min-w-0" th:text="${row.songName()}">coś</span></li>
             </ul>
+            <button type="button" class="btn btn-sm btn-outline-secondary mt-2 s2p-wish-fold" data-fold-close th:text="#{wishes.more.fold}">Fold the rest</button>
         </details>
         </th:block>
         </th:block>

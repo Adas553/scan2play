@@ -120,6 +120,18 @@
             await new Promise(function (resolve) { again.onload = resolve; document.body.appendChild(again); });
             t.step('the rest unfolded again: the page lands where it was', more.open, true);
             sessionStorage.clear();
+            // folded back: its line says so while it is open, and a "Zwiń" at the end of the rest folds it from there
+            const summary = more.querySelector('summary');
+            t.check('open, its line says "Zwiń pozostałe"', summary.querySelector('.s2p-when-open').checkVisibility()
+                && !summary.querySelector('.s2p-when-closed').checkVisibility());
+            const fold = more.querySelector('[data-fold-close]');
+            fold.scrollIntoView();
+            t.check('"Zwiń" at the end of the rest, a finger\'s size', fold.getBoundingClientRect().height >= 44);
+            fold.click();
+            await t.sleep(800);   // the line comes back smoothly (Bootstrap's scroll-behavior)
+            t.step('"Zwiń" folds the rest, its line on the screen', [more.open,
+                summary.getBoundingClientRect().top >= 0 && summary.getBoundingClientRect().bottom <= window.innerHeight + 2], [false, true]);   // 'nearest': its edge at the screen's, a pixel of rounding
+            t.check('folded, its line says "Pokaż pozostałe: 5" again', summary.querySelector('.s2p-when-closed').checkVisibility());
             t.check('nothing sideways', fits());
         }
     });

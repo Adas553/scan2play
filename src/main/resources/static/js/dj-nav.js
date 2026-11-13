@@ -19,6 +19,17 @@ document.addEventListener('click', function (e) {
     if (toast) toast.hidden = true;
 });
 
+// "Zwiń" at the end of an unfolded list ("Pokaż pozostałe" of the wishes): folds it, and its line comes back on the screen — folded,
+// the page above is shorter, and the DJ would be left below it.
+document.addEventListener('click', function (e) {
+    var fold = e.target.closest ? e.target.closest('[data-fold-close]') : null;
+    var details = fold && fold.closest('details');
+    if (!details) return;
+    details.open = false;
+    var line = details.querySelector('summary');
+    if (line) line.scrollIntoView({ block: 'nearest' });
+});
+
 // ---- "Kopiuj", one for every DJ page (review 2026-10-14: four copies of it, each failing its own way): a button with
 // data-copy-target copies the value of that field (the party link, the hosts' and the staff's link), one with data-copy-text its text
 // (the address in "Pomoc i kontakt" and on /pro). "Skopiowano" (data-copied) on the button for a moment — only when it was copied.
