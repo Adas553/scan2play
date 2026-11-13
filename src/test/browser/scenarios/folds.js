@@ -82,7 +82,7 @@
             const src = document.querySelector('script[src*="folds"]').src;
             t.check('the page remembers its scroll (scroll-restore.js)', !!document.querySelector('script[src*="scroll-restore"]'));
             document.querySelector('#wishesCard > summary').click();
-            window.dispatchEvent(new Event('beforeunload'));   // the DJ follows "Wydarzenia i życzenia"
+            window.dispatchEvent(new Event('pagehide'));   // the DJ follows "Wydarzenia i życzenia" (all an iPhone's Safari says)
             document.getElementById('wishesCard').open = false;   // the page as it loads again: every card folded
             const again = document.createElement('script');   // folds.js once more, as on a page load
             again.src = src;
@@ -204,7 +204,7 @@
             const src = document.querySelector('script[src*="folds"]').src;
             t.check('the page remembers its scroll (scroll-restore.js)', !!document.querySelector('script[src*="scroll-restore"]'));
             document.querySelector('#staffLinkCard > summary').click();
-            window.dispatchEvent(new Event('beforeunload'));   // "Nowy link" sent
+            window.dispatchEvent(new Event('pagehide'));   // "Nowy link" sent (all an iPhone's Safari says)
             document.getElementById('staffLinkCard').open = false;   // the page as it loads again
             const again = document.createElement('script');
             again.src = src;

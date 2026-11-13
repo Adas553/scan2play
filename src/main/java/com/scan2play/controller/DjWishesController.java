@@ -51,7 +51,8 @@ import static com.scan2play.controller.ViewAttributes.*;
  * The DJ's page of "Życzenia przed imprezą" (V68, Pro; whoever has the permission WISHES): the party's events, each with its guests'
  * link to send or print as an invitation ({@code /dj/qr-print?wish=}), and the wishes of the one opened — counted, the most wished
  * first, each marked by the DJ's library when there is one — with "⭐ Do „Koniecznie zagrać”", which adds it to the hosts' wish
- * list (V29): the list the AI lets through and the queue marks. A full page load after each form, the page back where it was (scroll-restore.js), what was done said at the bottom of the screen.
+ * list (V29): the list the AI lets through and the queue marks. A full page load after each form, the page back where it was
+ * (scroll-restore.js), what was done said at the bottom of the screen.
  * <p>
  * Without Pro the page offers it: no event is made and the guests' links open nothing ({@link WishController}); an event made before
  * may still be deleted.
@@ -244,22 +245,21 @@ public class DjWishesController {
     }
 
     /**
-     * "⭐ Do „Koniecznie zagrać”": the songs named ({@code song}), or the {@value #TOP} most wished ({@code top}), added to the hosts'
-     * wish list — the AI lets a guest's request for one through, the queue marks it. The list keeps {@value SongList#MAX_LINES}: what
-     * does not fit is said, not dropped in silence.
+     * "⭐ Do „Koniecznie zagrać”" and "⭐ Dodaj 10 najczęstszych": the songs named ({@code song}) added to the hosts' wish list — the AI
+     * lets a guest's request for one through, the queue marks it. "Dodaj 10" sends the songs its question named, not "the ten most
+     * wished" counted again here: guests writing meanwhile would make them others than the DJ said yes to. The list keeps
+     * {@value SongList#MAX_LINES}: what does not fit is said, not dropped in silence.
      */
     @PostMapping("/{id}/must-play")
     public String mustPlay(@PathVariable long id, @RequestParam String partyCode, @RequestParam(required = false) List<String> song,
-                           @RequestParam(defaultValue = "false") boolean top, OAuth2AuthenticationToken authentication,
-                           HttpSession session, RedirectAttributes redirectAttributes) {
+                           OAuth2AuthenticationToken authentication, HttpSession session, RedirectAttributes redirectAttributes) {
         planService.require(sessionHelper.require(partyCode, StaffPermission.WISHES, authentication, session), PlanFeature.WISHES);
         WishService.Event event = wishService.event(partyCode, id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         // only songs the event has, named "Artist - Title" (the ones to check the DJ reads first): the form is no way to write to the
         // hosts' list
         List<String> eventSongs = wishService.wishes(event.id()).stream().filter(WishService.Wish::named).map(WishService.Wish::songName)
                 .toList();
-        List<String> chosen = top ? eventSongs.stream().limit(TOP).toList()
-                : (song == null ? List.<String>of() : song.stream().filter(eventSongs::contains).distinct().toList());
+        List<String> chosen = song == null ? List.of() : song.stream().filter(eventSongs::contains).distinct().toList();
         int[] counts = new int[2];   // added, did not fit
         partySettingsCommandService.updateSettings(partyCode, s -> {
             String before = s.getHostWanted();

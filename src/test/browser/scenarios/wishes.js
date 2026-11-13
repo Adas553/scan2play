@@ -72,6 +72,47 @@
         }
     });
 
+    /** The look of the event's guests' page: its select shows its value whole — not squeezed into the row of buttons. */
+    const themeSelectReadable = async function (t) {
+        const select = document.querySelector('#wishThemeForm select');
+        const probe = document.createElement('span');
+        probe.style.cssText = 'position:absolute;visibility:hidden;white-space:nowrap;font:' + getComputedStyle(select).font;
+        document.body.appendChild(probe);
+        const widest = Math.max.apply(null, Array.from(select.options).map(function (o) { probe.textContent = o.text; return probe.getBoundingClientRect().width; }));
+        probe.remove();
+        const style = getComputedStyle(select);
+        const room = select.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+        t.check('the select shows its longest look whole (' + Math.round(room) + ' px for ' + Math.round(widest) + ')', room >= widest);
+        t.check('labelled on the page, not only for a reader', !!document.querySelector('label[for="wishThemeSelect"]')
+            && document.querySelector('label[for="wishThemeSelect"]').checkVisibility());
+        t.check('"Nowy link" beside the link it makes new', !!document.getElementById('wishNewLinkBtn').closest('#wishLinkRow'));
+        t.check('nothing sideways', fits());
+    };
+
+    S2P.scenario({
+        name: 'wishes-theme-select-320',
+        title: 'the DJ\'s page of wishes (320 × 640): the event\'s look readable in a line of its own, "Nowy link" beside the link',
+        page: 'wishes',
+        viewport: '320,640',
+        run: themeSelectReadable
+    });
+
+    S2P.scenario({
+        name: 'wishes-theme-select-390',
+        title: 'the DJ\'s page of wishes (390 × 844): the event\'s look readable in a line of its own, "Nowy link" beside the link',
+        page: 'wishes',
+        viewport: '390,844',
+        run: themeSelectReadable
+    });
+
+    S2P.scenario({
+        name: 'wishes-theme-select-1280',
+        title: 'the DJ\'s page of wishes (1280 × 900): the event\'s look readable in a line of its own, "Nowy link" beside the link',
+        page: 'wishes',
+        viewport: '1280,900',
+        run: themeSelectReadable
+    });
+
     S2P.scenario({
         name: 'wishes-answer-in-place',
         title: 'the DJ\'s page of wishes after a form: the page where it was (scroll-restore.js, no anchor), what was done said at the '
@@ -80,8 +121,13 @@
         viewport: '390,844',
         run: async function (t) {
             t.check('the page remembers its scroll (scroll-restore.js)', !!document.querySelector('script[src*="scroll-restore"]'));
-            t.step('no link to the wishes or the settings jumps to an anchor', Array.from(document.querySelectorAll('a[href*="/dj/wishes"], a[href*="/dj/settings"]'))
-                .filter(function (a) { return a.getAttribute('href').indexOf('#') >= 0; }).map(function (a) { return a.getAttribute('href'); }), []);
+            t.step('no link jumps to an anchor but "Zobacz życzenia", which goes to the event it opens',
+                Array.from(document.querySelectorAll('a[href*="/dj/wishes"], a[href*="/dj/settings"]'))
+                    .filter(function (a) { return a.getAttribute('href').indexOf('#') >= 0 && !/#wishEvent$/.test(a.getAttribute('href')); })
+                    .map(function (a) { return a.getAttribute('href'); }), []);
+            t.check('"Zobacz życzenia" goes to the event it opens', Array.from(document.querySelectorAll('#wishEvents a'))
+                .filter(function (a) { return !a.classList.contains('active'); })
+                .every(function (a) { return /#wishEvent$/.test(a.getAttribute('href')); }));
             const done = document.getElementById('wishDone');
             const box = done.getBoundingClientRect();
             t.check('said on the screen, at its bottom', box.bottom <= window.innerHeight && box.top > window.innerHeight / 2);
@@ -90,9 +136,12 @@
             t.check('still on the screen at the end of the page', done.getBoundingClientRect().bottom <= window.innerHeight);
             const close = done.querySelector('[data-toast-close]');
             t.check('✕ a finger\'s size', close.getBoundingClientRect().height >= 44 && close.getBoundingClientRect().width >= 44);
+            t.check('nothing sideways', fits());
+            await t.sleep(4500);
+            t.step('a success goes by itself — it covers no "⭐" for long', done.hidden, true);
+            done.hidden = false;
             close.click();
             t.step('✕ closes it', done.hidden, true);
-            t.check('nothing sideways', fits());
         }
     });
 
@@ -118,12 +167,13 @@
             }));
             t.check('the buttons a finger\'s size', more.getBoundingClientRect().height >= 44);
             more.click();
-            t.step('10 more, "Zwiń" offered', [shown(), more.textContent.replace(/\s+/g, ' ').trim(), fold.hidden], [20, 'Pokaż więcej (5)', false]);
+            t.step('10 more, "Pokaż mniej" offered', [shown(), more.textContent.replace(/\s+/g, ' ').trim(), fold.hidden, fold.textContent.trim()],
+                [20, 'Pokaż więcej (5)', false, 'Pokaż mniej']);
             more.click();
             t.step('the last 5, "Pokaż więcej" gone', [shown(), more.hidden], [25, true]);
 
             const src = document.querySelector('script[src*="wishes-list"]').src;
-            window.dispatchEvent(new Event('beforeunload'));   // a "⭐" sent
+            window.dispatchEvent(new Event('pagehide'));   // a "⭐" sent — Safari on an iPhone says only "pagehide"
             list.querySelectorAll('#wishRows > li').forEach(function (li, i) { li.hidden = i >= 10; });   // the page as the server sends it
             const again = document.createElement('script');
             again.src = src;
@@ -133,10 +183,26 @@
             fold.scrollIntoView();
             fold.click();
             await t.sleep(800);   // brought back smoothly (Bootstrap's scroll-behavior)
-            t.step('"Zwiń": back to 10, its buttons on the screen', [shown(), more.hidden, fold.hidden,
+            t.step('"Pokaż mniej": back to 10, its buttons on the screen', [shown(), more.hidden, fold.hidden,
                 more.getBoundingClientRect().top >= 0 && more.getBoundingClientRect().bottom <= window.innerHeight + 2], [10, false, true, true]);
+            t.step('remembered by the list, not its place on the page', Object.keys(JSON.parse(sessionStorage.getItem('more_' + location.pathname + location.search) || '{}')).sort(),
+                ['wishCheck', 'wishRows']);
             sessionStorage.clear();
             t.check('nothing sideways', fits());
+        }
+    });
+
+    S2P.scenario({
+        name: 'wishes-scroll-kept-on-pagehide',
+        title: 'the DJ\'s page of wishes: where it was is kept when the page goes ("pagehide", all Safari on an iPhone says), not only on "beforeunload"',
+        page: 'wishes-long',
+        viewport: '390,844',
+        run: async function (t) {
+            sessionStorage.clear();
+            window.scrollTo({ top: 900, behavior: 'instant' });
+            window.dispatchEvent(new Event('pagehide'));
+            t.step('the scroll kept', sessionStorage.getItem('scroll_' + location.pathname), String(window.scrollY));
+            sessionStorage.clear();
         }
     });
 

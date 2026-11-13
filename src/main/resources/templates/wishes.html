@@ -17,7 +17,8 @@
 </head>
 <!--/* "Życzenia przed imprezą" (V68, DjWishesController): the party's events — each a guests' link to send or print as an invitation —
      and the wishes of the one opened, the most wished first, marked by the DJ's library, each with "⭐ Do „Koniecznie zagrać”". Plain
-     forms, a page load each (the page back where it was, scroll-restore.js; what was done said at the bottom of the screen); "Nowy link" and "Usuń" ask first (data-confirm, dj-nav.js). */-->
+     forms, a page load each (the page back where it was, scroll-restore.js; what was done said at the bottom of the screen); "Nowy link",
+     "⭐ Dodaj 10" and "Usuń" ask first (data-confirm, dj-nav.js). */-->
 <body class="page-dj">
 <div class="container mt-3 mt-md-5 p-3 p-md-4">
     <div th:replace="~{fragments/components :: dj-nav(activeTab='settings', isActive=${isActive}, partyCode=${partyCode})}"></div>
@@ -32,10 +33,12 @@
     </div>
 
     <!--/* what the last form did: at the bottom of the screen, over the page — seen wherever the page was left, and moving nothing;
-         ✕ closes it (dj-nav.js) */-->
+         ✕ closes it, a success goes by itself after a few seconds (data-toast-hide, dj-nav.js) — the page comes back where the DJ was,
+         so the "⭐" just tapped may be under it; a refusal stays until read */-->
     <div th:if="${wishDone != null}" id="wishDone" class="s2p-undo-toast s2p-done-toast" role="status"
-         th:classappend="${wishDone == 'invalid' or wishDone == 'too_many' or wishDone == 'too_many_kept' or wishDone == 'reopen_too_many'
-                          or wishDone == 'must_play_full'} ? 's2p-done-toast-warning'">
+         th:with="refused=${wishDone == 'invalid' or wishDone == 'too_many' or wishDone == 'too_many_kept' or wishDone == 'reopen_too_many'
+                          or wishDone == 'must_play_full'}"
+         th:classappend="${refused} ? 's2p-done-toast-warning'" th:attr="data-toast-hide=${refused ? null : 4000}">
         <span th:text="${#messages.msgWithParams('wishes.done.' + wishDone, wishDoneArg)}">Saved</span>
         <button type="button" class="btn-close btn-close-white flex-shrink-0" data-toast-close th:attr="aria-label=#{dashboard.form.refused.close}"></button>
     </div>
@@ -90,9 +93,11 @@
                         <span th:text="${e.date().isBefore(today)} ? #{wishes.state.after} : (${e.closed()} ? #{wishes.state.closed} : #{wishes.state.open})">collecting</span>
                     </span>
                 </span>
-                <!--/* the event opened: its button folds it away again (the page without it, where it was) */-->
+                <!--/* the event opened: its button folds it away again (the page without it, where it was); "Zobacz życzenia" goes to
+                     the event it opens (#wishEvent) — it is drawn under the whole list, out of a phone's screen: a link the DJ follows
+                     to see it, not a form that comes back where it was */-->
                 <a th:with="opened=${wishEvent != null and wishEvent.id() == e.id()}"
-                   th:href="${opened} ? @{/dj/wishes(party=${partyCode})} : @{/dj/wishes(party=${partyCode},event=${e.id()})}"
+                   th:href="${opened} ? @{/dj/wishes(party=${partyCode})} : (@{/dj/wishes(party=${partyCode},event=${e.id()})} + '#wishEvent')"
                    class="btn btn-sm btn-outline-light text-nowrap" th:classappend="${opened} ? 'active'"
                    th:text="${opened} ? #{wishes.events.close} : #{wishes.events.open}">Show the wishes</a>
             </li>
@@ -110,13 +115,20 @@
         <p class="small text-secondary mb-3" th:text="${wishDate}">14 czerwca 2027</p>
 
         <th:block th:unless="${plan.pro('WISHES') or past}">
-        <div class="input-group input-group-sm mb-2">
+        <!--/* the guests' link, and "Nowy link" beside the link it makes new (asks first: the old one dies) */-->
+        <div class="d-flex flex-wrap gap-2 mb-2" id="wishLinkRow">
+        <div class="input-group input-group-sm flex-grow-1 s2p-wish-link">
             <input type="text" class="form-control bg-dark text-light border-secondary" th:value="${wishLink}" id="wishLinkInput" readonly
                    th:attr="aria-label=#{wishes.link}">
             <button class="btn btn-outline-secondary" type="button" data-copy-target="wishLinkInput" th:text="#{dashboard.qr.copy}"
                     th:attr="data-copied=#{dashboard.qr.copied}">Copy</button>
             <a class="btn btn-outline-secondary" id="wishLinkOpen" th:href="${wishLink}" target="_blank" rel="noopener"
                th:text="#{wishes.link.open}">Open</a>
+        </div>
+        <form th:action="@{/dj/wishes/{id}/link(id=${wishEvent.id()})}" method="POST" class="m-0" th:attr="data-confirm=#{wishes.new_link.confirm}">
+            <input type="hidden" name="partyCode" th:value="${partyCode}">
+            <button type="submit" id="wishNewLinkBtn" class="btn btn-sm btn-outline-secondary text-nowrap" th:text="#{wishes.new_link}">New link</button>
+        </form>
         </div>
         <div class="s2p-btn-row mb-3">
             <a class="btn btn-sm btn-outline-light text-nowrap" id="wishPrintBtn" target="_blank" rel="noopener"
@@ -127,20 +139,20 @@
                 <button type="submit" id="wishCloseBtn" class="btn btn-sm btn-outline-light text-nowrap"
                         th:text="${wishEvent.closed()} ? #{wishes.reopen} : #{wishes.close}">Stop collecting</button>
             </form>
-            <!--/* the look of this event's guests' page (V69): its own — the party's "Motyw dla gości" changed during a party leaves it */-->
-            <form th:action="@{/dj/wishes/{id}/theme(id=${wishEvent.id()})}" method="POST" class="m-0 d-flex gap-2" id="wishThemeForm">
-                <input type="hidden" name="partyCode" th:value="${partyCode}">
-                <select name="theme" class="form-select form-select-sm bg-dark text-light border-secondary" th:attr="aria-label=#{wishes.theme}">
+        </div>
+        <!--/* the look of this event's guests' page (V69): its own — the party's "Motyw dla gości" changed during a party leaves it; a
+             line of its own, labelled: in the row of buttons a phone squeezed the select to its arrow */-->
+        <form th:action="@{/dj/wishes/{id}/theme(id=${wishEvent.id()})}" method="POST" class="m-0 mb-3" id="wishThemeForm">
+            <input type="hidden" name="partyCode" th:value="${partyCode}">
+            <label for="wishThemeSelect" class="form-label small text-secondary mb-1" th:text="#{wishes.theme}">Look of the guests' page</label>
+            <div class="d-flex flex-wrap gap-2">
+                <select id="wishThemeSelect" name="theme" class="form-select form-select-sm bg-dark text-light border-secondary s2p-wish-theme">
                     <option th:each="t : ${guestThemes}" th:value="${t.name()}" th:selected="${t == wishEvent.theme()}"
                             th:text="#{${t.messageKey()}}">Classic</option>
                 </select>
                 <button type="submit" id="wishThemeBtn" class="btn btn-sm btn-outline-light text-nowrap" th:text="#{wishes.theme.save}">Change the look</button>
-            </form>
-            <form th:action="@{/dj/wishes/{id}/link(id=${wishEvent.id()})}" method="POST" class="m-0" th:attr="data-confirm=#{wishes.new_link.confirm}">
-                <input type="hidden" name="partyCode" th:value="${partyCode}">
-                <button type="submit" id="wishNewLinkBtn" class="btn btn-sm btn-outline-light text-nowrap" th:text="#{wishes.new_link}">New link</button>
-            </form>
-        </div>
+            </div>
+        </form>
         </th:block>
 
         <p class="text-white mb-2" id="wishSummary">
@@ -153,7 +165,7 @@
            th:text="#{wishes.empty}">Nobody has written a song yet…</p>
 
         <th:block th:unless="${#lists.isEmpty(wishRows)}" th:with="shown=${wishShown}">
-        <!--/* the SHOWN most wished; "Pokaż więcej" the next STEP, "Zwiń" back to the first (wishes-list.js, how many remembered across a
+        <!--/* the SHOWN most wished; "Pokaż więcej" the next STEP, "Pokaż mniej" back to the first (wishes-list.js, how many remembered across a
              page load) — the page grows, no box scrolls on its own: a box in the page is a scroll in a scroll on a phone, and a "⭐" loads
              the page again */-->
         <!--/* the columns as the panel's queue: the number, the votes, the song */-->
@@ -162,18 +174,19 @@
             <span class="s2p-wish-votes" th:text="#{dashboard.table.header.votes}">Votes</span>
             <span th:text="#{dashboard.table.header.song}">Song</span>
         </div>
-        <div data-more-list th:attr="data-shown=${shown}">
+        <div data-more-list="wishRows" th:attr="data-shown=${shown}">
         <ol class="list-group list-group-flush mb-2 s2p-wish-list" id="wishRows">
             <th:block th:each="row, stat : ${wishRows}"><li th:replace="~{wishes :: wishRow(${row}, ${stat.count}, ${stat.index >= shown})}"></li></th:block>
         </ol>
         <div th:replace="~{wishes :: moreButtons(${#lists.size(wishRows) > shown})}"></div>
         </div>
-        <!--/* asks first, naming the songs: the guests wrote them, and "Koniecznie zagrać" lets them past the AI; gone when the list
-             has them all */-->
+        <!--/* asks first, naming the songs it sends: the guests wrote them, and "Koniecznie zagrać" lets them past the AI; gone when
+             the list has them all */-->
         <form th:unless="${plan.pro('WISHES') or #lists.isEmpty(wishTop)}" th:action="@{/dj/wishes/{id}/must-play(id=${wishEvent.id()})}"
-              method="POST" class="m-0 mb-2" th:attr="data-confirm=#{wishes.top.confirm(${#strings.listJoin(wishTop, '; ')})}">
+              method="POST" class="m-0 mb-2" id="wishTopForm" th:attr="data-confirm=#{wishes.top.confirm(${#strings.listJoin(wishTop, '; ')})}">
             <input type="hidden" name="partyCode" th:value="${partyCode}">
-            <input type="hidden" name="top" value="true">
+            <!--/* the songs the question names, as this page counted them: guests writing meanwhile change no list the DJ said yes to */-->
+            <input type="hidden" name="song" th:each="one : ${wishTop}" th:value="${one}">
             <button type="submit" id="wishTopBtn" class="btn btn-sm btn-outline-warning" th:text="#{wishes.top(${T(com.scan2play.controller.DjWishesController).TOP})}">⭐ Add the 10 most wished</button>
         </form>
         <p class="small text-secondary mb-3" th:text="#{wishes.wanted.note}">"Must play" holds 100 songs and is one for all your events…</p>
@@ -183,7 +196,7 @@
         <th:block th:unless="${#lists.isEmpty(wishCheck)}">
         <h3 class="h6 text-white mt-2" th:text="#{wishes.check.title}">To check</h3>
         <p class="small text-secondary mb-1" th:text="#{wishes.check.help}">Written without the artist…</p>
-        <div data-more-list th:with="shown=${wishShown}" th:attr="data-shown=${shown}">
+        <div data-more-list="wishCheck" th:with="shown=${wishShown}" th:attr="data-shown=${shown}">
         <ul class="list-unstyled small mb-2" id="wishCheck">
             <li th:each="row, stat : ${wishCheck}" th:hidden="${stat.index >= shown}" class="d-flex align-items-start gap-2 text-light"><span
                     class="s2p-wish-rank" th:text="${stat.count} + '.'">1.</span><span
@@ -235,13 +248,13 @@
     </form>
     </span>
 </li>
-<!--/* "Pokaż więcej" and "Zwiń" under a long list (wishes-list.js): the next STEP shown, how many are left beside it; back to the first
+<!--/* "Pokaż więcej" and "Pokaż mniej" under a long list (wishes-list.js): the next STEP shown, how many are left beside it; back to the first
      SHOWN. Rendered only when the list has more; the script says how many are left and hides what does nothing. */-->
 <div th:fragment="moreButtons(more)" th:if="${more}" class="d-flex flex-wrap gap-2 mb-2 s2p-wish-more-row">
     <button type="button" class="btn btn-sm btn-outline-secondary" data-more-show
             th:attr="data-step=${wishStep}"><span th:text="#{history.more}">Show more</span>
         <span class="text-secondary" data-more-left></span></button>
-    <button type="button" class="btn btn-sm btn-outline-secondary" data-more-fold hidden th:text="#{wishes.more.fold}">Fold</button>
+    <button type="button" class="btn btn-sm btn-outline-secondary" data-more-fold hidden th:text="#{wishes.more.fold}">Show less</button>
 </div>
 </th:block>
 <script src="/js/wishes-list.js" th:src="@{/js/wishes-list.js}"></script>

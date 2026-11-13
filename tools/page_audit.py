@@ -125,6 +125,9 @@ def audit(chrome, port, names, widths, no_sandbox, shots):
         devtools = run.DevTools(profile, time.monotonic() + 30)
         devtools.call('Page.enable')
         devtools.call('Page.addScriptToEvaluateOnNewDocument', source=RECORDER)
+        # every page is served at one address (/dj/dashboard?page=…): what one page's scripts remember for the tab (folds.js,
+        # wishes-list.js, scroll-restore.js) would reach the next — each page as on a first visit
+        devtools.call('Page.addScriptToEvaluateOnNewDocument', source='try { sessionStorage.clear(); } catch (e) {}')
         for width in widths:
             height = HEIGHT.get(width, 800)
             devtools.call('Emulation.setDeviceMetricsOverride', width=width, height=height, deviceScaleFactor=1, mobile=width < 1000)

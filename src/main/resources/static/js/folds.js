@@ -19,13 +19,16 @@
         });
     }
 
-    window.addEventListener('beforeunload', function () {
+    // "pagehide" too: Safari on an iPhone leaves a page without "beforeunload"
+    function rememberTheOpenOnes() {
         var open = Array.prototype.slice.call(document.querySelectorAll('details.s2p-fold[open]'))
             .map(function (fold) { return fold.id; }).filter(Boolean);
         try {
             sessionStorage.setItem(openKey, JSON.stringify(open));
         } catch (e) { /* storage blocked: nothing remembered */ }
-    });
+    }
+    window.addEventListener('beforeunload', rememberTheOpenOnes);
+    window.addEventListener('pagehide', rememberTheOpenOnes);
 
     function unfoldTheNamedCard() {
         var id = location.hash.slice(1);

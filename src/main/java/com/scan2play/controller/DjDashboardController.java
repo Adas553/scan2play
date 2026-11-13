@@ -3,6 +3,8 @@ package com.scan2play.controller;
 import com.scan2play.entity.PartySettingsEntity;
 import com.scan2play.entity.SongRequestEntity;
 import com.scan2play.model.HistoryFilter;
+import com.scan2play.model.PosterFont;
+import com.scan2play.model.PosterTheme;
 import com.scan2play.model.StaffPermission;
 import com.scan2play.service.AiHealthMonitor;
 import com.scan2play.service.DemoParty;
@@ -465,7 +467,7 @@ public class DjDashboardController {
             guestUrl = cleanBaseUrl + "/w/" + invitation.token();
             // a copy, never saved: the invitation's heading is ours, its line the event, its look the occasion "Zaproszenie"
             settings = settings.toBuilder().posterHeading(null).posterLine(invitationLine(invitation.name(), invitation.date()))
-                    .posterTheme(com.scan2play.model.PosterTheme.ELEGANT).posterFont(com.scan2play.model.PosterFont.SCRIPT)
+                    .posterTheme(PosterTheme.ELEGANT).posterFont(PosterFont.SCRIPT)
                     .posterAccent(null).posterPaper(null).posterTables(null).build();
         }
         model.addAttribute(PARTY_CODE, partyCode);
@@ -484,9 +486,11 @@ public class DjDashboardController {
         model.addAttribute(PRINT_LANG, settings.getPosterLanguage().printed(locale.getLanguage()));
         model.addAttribute(POSTER_EDIT, invitation != null || access.may(StaffPermission.VIBE));
         model.addAttribute(WISH_PRINT, invitation);
-        model.addAttribute(POSTER_THEMES, com.scan2play.model.PosterTheme.values());
-        model.addAttribute(POSTER_FONTS, com.scan2play.model.PosterFont.values());
-        model.addAttribute(GUEST_THEME, settings.getGuestTheme());   // the editor's line: the guests' look is set apart (V59)
+        model.addAttribute(POSTER_THEMES, PosterTheme.values());
+        model.addAttribute(POSTER_FONTS, PosterFont.values());
+        // the editor's line: the guests' look is set apart (V59) — an invitation's is its event's own (V69), changed on the event: the
+        // party's, which acts on its page tonight, is not the invitation's
+        model.addAttribute(GUEST_THEME, invitation != null ? invitation.theme() : settings.getGuestTheme());
         return "qr-print";
     }
 

@@ -1701,7 +1701,11 @@ a.s2p-schedule-text:focus-visible { color: var(--s2p-white); text-decoration: un
     .s2p-wish-rank { flex-basis: 1.75rem; }
     .s2p-wish-votes { flex-basis: 2.5rem; }
 }
-/* "Pokaż więcej" / "Zwiń" under a long list of wishes (wishes.html, wishes-list.js): a finger's size */
+/* The event opened (wishes.html): its guests' link takes the line, "Nowy link" beside it or under it on a phone; the look's select
+   as wide as its longest name — in a row of buttons a phone of 390 px squeezed it to its arrow */
+.s2p-wish-link { flex: 1 1 16rem; min-width: 0; }
+.s2p-wish-theme { flex: 0 1 12rem; min-width: 10rem; }
+/* "Pokaż więcej" / "Pokaż mniej" under a long list of wishes (wishes.html, wishes-list.js): a finger's size */
 .s2p-wish-more-row .btn { min-height: 44px; }
 /* a row past the shown ones is hidden — its d-flex (display: flex !important, Bootstrap) would draw it anyway */
 [data-more-list] li[hidden] { display: none !important; }

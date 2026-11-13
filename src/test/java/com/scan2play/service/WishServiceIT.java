@@ -2,6 +2,7 @@ package com.scan2play.service;
 
 import com.scan2play.PostgresIntegrationTest;
 import com.scan2play.entity.PartySettingsEntity;
+import com.scan2play.model.GuestTheme;
 import com.scan2play.repository.PartySettingsRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,7 +41,7 @@ class WishServiceIT extends PostgresIntegrationTest {
     }
 
     private WishService.Event event(String party) {
-        return wishes.create(party, "Wesele Ani i Kuby", WishService.today().plusDays(30), com.scan2play.model.GuestTheme.CLASSIC).orElseThrow();
+        return wishes.create(party, "Wesele Ani i Kuby", WishService.today().plusDays(30), GuestTheme.CLASSIC).orElseThrow();
     }
 
     @Test
@@ -101,11 +102,11 @@ class WishServiceIT extends PostgresIntegrationTest {
         String party = party();
         List<WishService.Event> made = new ArrayList<>();
         for (int i = 0; i < WishService.MAX_OPEN_EVENTS; i++) {
-            made.add(wishes.create(party, "Impreza " + i, WishService.today().plusDays(i), com.scan2play.model.GuestTheme.CLASSIC).orElseThrow());
+            made.add(wishes.create(party, "Impreza " + i, WishService.today().plusDays(i), GuestTheme.CLASSIC).orElseThrow());
         }
-        assertThat(wishes.create(party, "Szósta", WishService.today(), com.scan2play.model.GuestTheme.CLASSIC)).isEmpty();
+        assertThat(wishes.create(party, "Szósta", WishService.today(), GuestTheme.CLASSIC)).isEmpty();
         wishes.close(party, made.get(0).id());
-        assertThat(wishes.create(party, "Szósta", WishService.today(), com.scan2play.model.GuestTheme.CLASSIC)).isPresent();
+        assertThat(wishes.create(party, "Szósta", WishService.today(), GuestTheme.CLASSIC)).isPresent();
         assertThat(wishes.eventsOf(party)).hasSize(WishService.MAX_OPEN_EVENTS + 1);
 
         String other = party();
@@ -122,10 +123,10 @@ class WishServiceIT extends PostgresIntegrationTest {
         String party = party();
         List<WishService.Event> made = new ArrayList<>();
         for (int i = 0; i < WishService.MAX_OPEN_EVENTS; i++) {
-            made.add(wishes.create(party, "Impreza " + i, WishService.today().plusDays(i), com.scan2play.model.GuestTheme.CLASSIC).orElseThrow());
+            made.add(wishes.create(party, "Impreza " + i, WishService.today().plusDays(i), GuestTheme.CLASSIC).orElseThrow());
         }
         wishes.close(party, made.get(0).id());
-        WishService.Event sixth = wishes.create(party, "Szósta", WishService.today(), com.scan2play.model.GuestTheme.CLASSIC).orElseThrow();
+        WishService.Event sixth = wishes.create(party, "Szósta", WishService.today(), GuestTheme.CLASSIC).orElseThrow();
 
         assertThat(wishes.reopen(party, made.get(0).id())).isEqualTo(WishService.Reopened.TOO_MANY);
         assertThat(wishes.openEvents(party)).isEqualTo(WishService.MAX_OPEN_EVENTS);
@@ -142,16 +143,16 @@ class WishServiceIT extends PostgresIntegrationTest {
         String party = party();
         List<WishService.Event> made = new ArrayList<>();
         for (int i = 0; i < WishService.MAX_EVENTS; i++) {
-            WishService.Event one = wishes.create(party, "Impreza " + i, WishService.today().plusDays(i), com.scan2play.model.GuestTheme.CLASSIC).orElseThrow();
+            WishService.Event one = wishes.create(party, "Impreza " + i, WishService.today().plusDays(i), GuestTheme.CLASSIC).orElseThrow();
             wishes.close(party, one.id());
             made.add(one);
         }
-        assertThat(wishes.create(party, "Jedna za dużo", WishService.today(), com.scan2play.model.GuestTheme.CLASSIC)).isEmpty();
+        assertThat(wishes.create(party, "Jedna za dużo", WishService.today(), GuestTheme.CLASSIC)).isEmpty();
         assertThat(wishes.events(party)).isEqualTo(WishService.MAX_EVENTS);
         assertThat(wishes.eventsOf(party)).hasSize(WishService.MAX_EVENTS);
 
         wishes.delete(party, made.get(0).id());
-        assertThat(wishes.create(party, "Jedna za dużo", WishService.today(), com.scan2play.model.GuestTheme.CLASSIC)).isPresent();
+        assertThat(wishes.create(party, "Jedna za dużo", WishService.today(), GuestTheme.CLASSIC)).isPresent();
     }
 
     /** The look of the guests' page is the event's own: the party's "Motyw dla gości" changed during a party leaves it as it was. */
@@ -159,16 +160,16 @@ class WishServiceIT extends PostgresIntegrationTest {
     void theEventsLook_isItsOwn_keptAndChanged_notTheParties() {
         String party = party();
         WishService.Event event = wishes.create(party, "Wesele Ani i Kuby", WishService.today().plusDays(30),
-                com.scan2play.model.GuestTheme.WEDDING).orElseThrow();
-        assertThat(wishes.event(party, event.id()).orElseThrow().theme()).isEqualTo(com.scan2play.model.GuestTheme.WEDDING);
+                GuestTheme.WEDDING).orElseThrow();
+        assertThat(wishes.event(party, event.id()).orElseThrow().theme()).isEqualTo(GuestTheme.WEDDING);
         jdbc.update("UPDATE party_settings SET guest_theme = 'SCARY' WHERE party_code = ?", party);
         assertThat(wishes.byToken(event.token()).orElseThrow().theme()).as("the party's look changed, the event's not")
-                .isEqualTo(com.scan2play.model.GuestTheme.WEDDING);
+                .isEqualTo(GuestTheme.WEDDING);
 
-        assertThat(wishes.setTheme(party, event.id(), com.scan2play.model.GuestTheme.CONFETTI)).isTrue();
-        assertThat(wishes.eventsOf(party)).extracting(WishService.Event::theme).containsExactly(com.scan2play.model.GuestTheme.CONFETTI);
-        assertThat(wishes.setTheme(party(), event.id(), com.scan2play.model.GuestTheme.SCARY)).as("another party's").isFalse();
-        assertThat(wishes.event(party, event.id()).orElseThrow().theme()).isEqualTo(com.scan2play.model.GuestTheme.CONFETTI);
+        assertThat(wishes.setTheme(party, event.id(), GuestTheme.CONFETTI)).isTrue();
+        assertThat(wishes.eventsOf(party)).extracting(WishService.Event::theme).containsExactly(GuestTheme.CONFETTI);
+        assertThat(wishes.setTheme(party(), event.id(), GuestTheme.SCARY)).as("another party's").isFalse();
+        assertThat(wishes.event(party, event.id()).orElseThrow().theme()).isEqualTo(GuestTheme.CONFETTI);
     }
 
     @Test
@@ -205,8 +206,8 @@ class WishServiceIT extends PostgresIntegrationTest {
     void thePurge_deletesTheEventsAWeekAfterTheirDay() {
         String party = party();
         WishService.Event kept = event(party);
-        WishService.Event past = wishes.create(party, "Po imprezie", WishService.today(), com.scan2play.model.GuestTheme.CLASSIC).orElseThrow();
-        WishService.Event old = wishes.create(party, "Dawno", WishService.today().plusDays(10), com.scan2play.model.GuestTheme.CLASSIC).orElseThrow();
+        WishService.Event past = wishes.create(party, "Po imprezie", WishService.today(), GuestTheme.CLASSIC).orElseThrow();
+        WishService.Event old = wishes.create(party, "Dawno", WishService.today().plusDays(10), GuestTheme.CLASSIC).orElseThrow();
         wishes.add(past.token(), "Wilki - Baśka");
         LocalDate today = WishService.today();
         jdbc.update("UPDATE wish_event SET event_date = ? WHERE id = ?", java.sql.Date.valueOf(today.minusDays(WishService.KEPT_DAYS_AFTER + 1)), past.id());
@@ -223,9 +224,9 @@ class WishServiceIT extends PostgresIntegrationTest {
     @Test
     void theEvents_areListedTheNearestFirst_thePastOnesLast() {
         String party = party();
-        WishService.Event later = wishes.create(party, "Później", WishService.today().plusDays(20), com.scan2play.model.GuestTheme.CLASSIC).orElseThrow();
-        WishService.Event sooner = wishes.create(party, "Wcześniej", WishService.today().plusDays(2), com.scan2play.model.GuestTheme.CLASSIC).orElseThrow();
-        WishService.Event past = wishes.create(party, "Było", WishService.today(), com.scan2play.model.GuestTheme.CLASSIC).orElseThrow();
+        WishService.Event later = wishes.create(party, "Później", WishService.today().plusDays(20), GuestTheme.CLASSIC).orElseThrow();
+        WishService.Event sooner = wishes.create(party, "Wcześniej", WishService.today().plusDays(2), GuestTheme.CLASSIC).orElseThrow();
+        WishService.Event past = wishes.create(party, "Było", WishService.today(), GuestTheme.CLASSIC).orElseThrow();
         jdbc.update("UPDATE wish_event SET event_date = ? WHERE id = ?", java.sql.Date.valueOf(WishService.today().minusDays(3)), past.id());
         assertThat(wishes.eventsOf(party)).extracting(WishService.Event::id).containsExactly(sooner.id(), later.id(), past.id());
         assertThat(wishes.openEvents(party)).isEqualTo(2);

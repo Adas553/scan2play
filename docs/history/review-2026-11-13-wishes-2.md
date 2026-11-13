@@ -170,3 +170,35 @@ hint for guests, an event's own guests' look V69, the list as the panel's queue,
 **Merge after fixes:** I1 (the select on a phone) and I2 (the invitation's look) — both small; I3 tried on an iPhone first (a
 `pagehide` beside `beforeunload` is cheap enough to do anyway). The rest can go in the same change or later; nothing found is reachable
 by a guest or another party.
+
+## Fixed (2026-11-13, the same session, on `claude/quirky-faraday-mhc53m`)
+
+The branch holds `claude/blissful-cannon-h66za3` (merged) with the fixes on top. Each new test and scenario was seen red before the
+fix (D4's test excepted: it guards what is right today).
+
+- **I1** — the event's link with "Nowy link" beside it (`#wishLinkRow`), "Drukuj zaproszenia" and "Zakończ zbieranie" in the row, the
+  look on a line of its own, labelled ("Wygląd strony dla gości", `#wishThemeSelect`, `.s2p-wish-theme` 10–12 rem). Scenarios
+  `wishes-theme-select-320 / -390 / -1280` (red: at 390 px 0 px of room for a name of 76 px).
+- **I2** — with `wish`, `qrPrint` puts the event's look in the editor's line and "Zmień" leads to `/dj/wishes?party=…&event=…`; the
+  party's own print as before. Test `QrPrintPageTest.anInvitation_namesTheEventsLook_andChangesItOnTheEvent_notTheParties`.
+- **I3** — `scroll-restore.js`, `folds.js` and `wishes-list.js` save on `pagehide` as well as `beforeunload`. Scenarios
+  `wishes-scroll-kept-on-pagehide`; `wishes-long-list`, `settings-back-where-it-was`, `staff-back-where-it-was` now leave by `pagehide`
+  alone. Still to try on a real iPhone.
+- **D1** — the form of "⭐ Dodaj 10 najczęstszych" (`#wishTopForm`) sends the songs its question names as `song` fields; `top` is gone
+  from `mustPlay`. Test `WishesPageRenderTest.theTopButton_sendsTheSongsItsQuestionNames`.
+- **D2** — a success's toast has `data-toast-hide="4000"` and goes by itself (`dj-nav.js`, after the page is parsed); a refusal stays.
+  Scenario `wishes-answer-in-place`.
+- **D3** — "Zobacz życzenia" leads to `…&event=N#wishEvent`; the forms keep no anchor. The list's "Zwiń" is "Pokaż mniej" / "Show
+  less". Scenario `wishes-answer-in-place`, `wishes-long-list`; `WishesPageRenderTest.theEventOpened_foldsAwayAgain`.
+- **D4** — `GuestThemeTest.theMigrationsCheck_isTheEnum` reads V59 and V69.
+- **D5** — `10-2-migrations.md` says `idx_wish_event_date` is unused and the next migration on `wish_event` drops it (V69 left as it is).
+- **D6** — `wish.privacy`: "DJ zobaczy wszystkie życzenia przed imprezą, najczęstsze na górze listy. …" (EN alike) — to reword in the
+  owner's words if wanted.
+- **D7** — `page_audit.py` clears the session storage at the start of every page.
+- **S1** — `staff.html`'s comment, `WishService.newLink`'s Javadoc in its place, `DjWishesController`'s long line. **S2** — imports
+  for `PosterTheme` / `PosterFont` and `GuestTheme` in `WishServiceIT`. **S3** — `data-more-list="wishRows"` / `"wishCheck"`, the
+  memory by that name (scenario `wishes-long-list`).
+- Docs: `05-1i-wishes.md`, `06-3`, `10-2`, `SESSION_HANDOFF.md`.
+
+Checks after the fixes: `unit` 1304, `it` 168, `browser` 408 scenarios, `audit -t wish,wishes,staff,settings,qr-print` (41 pages × 3
+widths) — all OK.

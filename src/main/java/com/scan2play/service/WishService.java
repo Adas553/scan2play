@@ -194,12 +194,12 @@ public class WishService {
         return events == null ? 0 : events;
     }
 
-    /** "Nowy link": a new secret — the old link (on a photo of an invitation online, say) opens nothing now. The wishes stay. */
     /** The look of the event's guests' page: its own, whatever the party's "Motyw dla gości" is. */
     public boolean setTheme(String partyCode, long id, GuestTheme theme) {
         return jdbc.update("UPDATE wish_event SET guest_theme = ? WHERE party_code = ? AND id = ?", theme.name(), partyCode, id) == 1;
     }
 
+    /** "Nowy link": a new secret — the old link (on a photo of an invitation online, say) opens nothing now. The wishes stay. */
     public boolean newLink(String partyCode, long id) {
         return jdbc.update("UPDATE wish_event SET token = ? WHERE party_code = ? AND id = ?", CodeGenerator.generateSecret(), partyCode,
                 id) == 1;

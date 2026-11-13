@@ -94,7 +94,7 @@ class QrPrintPageTest {
 
     /** An event of "Życzenia przed imprezą" (V68): the invitation the print makes of its guests' link. */
     private static final com.scan2play.service.WishService.Event INVITATION = new com.scan2play.service.WishService.Event(7L, PARTY,
-            "Wish_tok3n-AbCdEfGhIjKl", "Wesele Ani i Kuby", java.time.LocalDate.of(2027, 6, 14), false, 0, java.time.Instant.now(), com.scan2play.model.GuestTheme.CLASSIC);
+            "Wish_tok3n-AbCdEfGhIjKl", "Wesele Ani i Kuby", java.time.LocalDate.of(2027, 6, 14), false, 0, java.time.Instant.now(), com.scan2play.model.GuestTheme.WEDDING);
 
     /** {@code wish}: the invitation of {@link #INVITATION}, or the party's own print (null). */
     private static String render(String layout, Locale locale, PartySettingsEntity party, PartyStaffService.Access access, Long wish)
@@ -172,6 +172,22 @@ class QrPrintPageTest {
         }
         assertThat(render("cards", Locale.forLanguageTag("pl"))).as("the party's own print offers no invitation")
                 .doesNotContain("INVITATION", "data-preview-only").contains("id=\"posterSave\"");
+    }
+
+    /**
+     * The invitation's editor names the look of the event's guests' page (V69) and changes it on the event — never the party's
+     * "Motyw dla gości", which acts on the party's page tonight.
+     */
+    @Test
+    void anInvitation_namesTheEventsLook_andChangesItOnTheEvent_notTheParties() throws IOException {
+        PartySettingsEntity party = PartySettingsEntity.builder().partyCode(PARTY).guestTheme(com.scan2play.model.GuestTheme.SCARY).build();
+        String html = render("cards", Locale.forLanguageTag("pl"), party, new PartyStaffService.Access(party, true, StaffPermission.all()), 7L);
+        java.util.regex.Matcher line = java.util.regex.Pattern.compile("<small[^>]*id=\"posterGuestTheme\"[\\s\\S]*?</small>").matcher(html);
+        assertThat(line.find()).as("the line of the guests' look").isTrue();
+        assertThat(line.group()).contains("Strona gościa: Weselny", "href=\"/dj/wishes?party=PRNT1&amp;event=7\"")
+                .doesNotContain("Straszny", "guestThemeCard");
+        String own = render("cards", Locale.forLanguageTag("pl"), party, new PartyStaffService.Access(party, true, StaffPermission.all()));
+        assertThat(own).as("the party's own print: the party's look, changed in the settings").contains("Strona gościa: Straszny", "#guestThemeCard");
     }
 
     @Test

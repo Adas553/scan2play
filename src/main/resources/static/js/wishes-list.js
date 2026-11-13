@@ -1,8 +1,9 @@
 // The long lists of "Życzenia przed imprezą" (wishes.html, [data-more-list]): the server shows the first data-shown rows, the rest
-// hidden; "Pokaż więcej" shows data-step more (how many are left beside it), "Zwiń" goes back to the first ones and brings its buttons
-// back on the screen. How many are shown is remembered for the tab (session storage, by the page's address with its event): a "⭐"
-// loads the page again, and it must come back as long as it was, or scroll-restore.js would put the DJ somewhere else. A plain script
-// at the end of the body: it runs before DOMContentLoaded, when scroll-restore.js puts the page back where it was.
+// hidden; "Pokaż więcej" shows data-step more (how many are left beside it), "Pokaż mniej" goes back to the first ones and brings its
+// buttons back on the screen. How many are shown is remembered for the tab (session storage, by the page's address with its event,
+// each list by its name — data-more-list): a "⭐" loads the page again, and it must come back as long as it was, or scroll-restore.js
+// would put the DJ somewhere else. A plain script at the end of the body: it runs before DOMContentLoaded, when scroll-restore.js puts
+// the page back where it was.
 (function () {
     var lists = Array.prototype.slice.call(document.querySelectorAll('[data-more-list]'));
     if (!lists.length) return;
@@ -38,8 +39,14 @@
         remembered = JSON.parse(sessionStorage.getItem(key) || '{}') || {};
     } catch (e) { /* storage blocked or a stray value: the first ones */ }
 
+    /** A list's name in the memory: its own, so a list that appears later ("Do sprawdzenia" first, the named ones after) takes no other's. */
+    function nameOf(list, i) {
+        return list.getAttribute('data-more-list') || String(i);
+    }
+
     lists.forEach(function (list, i) {
-        show(list, typeof remembered[i] === 'number' ? remembered[i] : first(list));
+        var kept = remembered[nameOf(list, i)];
+        show(list, typeof kept === 'number' ? kept : first(list));
         list.addEventListener('click', function (e) {
             if (e.target.closest('[data-more-show]')) {
                 var step = parseInt(e.target.closest('[data-more-show]').getAttribute('data-step'), 10) || 10;
@@ -53,11 +60,14 @@
         });
     });
 
-    window.addEventListener('beforeunload', function () {
+    // "pagehide" too: Safari on an iPhone leaves a page without "beforeunload"
+    function remember() {
         var shown = {};
-        lists.forEach(function (list, i) { shown[i] = list.s2pShown; });
+        lists.forEach(function (list, i) { shown[nameOf(list, i)] = list.s2pShown; });
         try {
             sessionStorage.setItem(key, JSON.stringify(shown));
         } catch (e) { /* storage blocked: nothing remembered */ }
-    });
+    }
+    window.addEventListener('beforeunload', remember);
+    window.addEventListener('pagehide', remember);
 })();

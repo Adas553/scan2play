@@ -239,7 +239,7 @@ class WishesPageRenderTest {
         String check = html.substring(html.indexOf("id=\"wishCheck\""), html.indexOf("</ul>", html.indexOf("id=\"wishCheck\"")));
         assertThat(check.split("hidden=\"hidden\"", -1)).hasSize(3);
         assertThat(html.split("data-more-show", -1)).as("\"Pokaż więcej\" under each list").hasSize(3);
-        assertThat(html).contains("data-shown=\"10\"", "data-step=\"10\"", ">Pokaż więcej<", ">Zwiń<",
+        assertThat(html).contains("data-shown=\"10\"", "data-step=\"10\"", ">Pokaż więcej<", ">Pokaż mniej<",
                 "<script src=\"/js/wishes-list.js\">", "id=\"backToSettings\" class=\"s2p-back-link\"").doesNotContain("folds.js");
         write("wishes-long.html", html);
     }
@@ -263,12 +263,13 @@ class WishesPageRenderTest {
 
     /**
      * The event opened can be folded away again: its row's button says "Zwiń życzenia" and leads to the page without it, as does
-     * "Zwiń" in the event's heading; the other events keep "Zobacz życzenia".
+     * "Zwiń" in the event's heading; the other events keep "Zobacz życzenia", which goes to the event it opens (#wishEvent: it is drawn
+     * under the whole list).
      */
     @Test
     void theEventOpened_foldsAwayAgain() throws IOException {
         String html = render(Plans.off(), 7L, Map.of());
-        assertThat(html).containsPattern("href=\"/dj/wishes\\?party=WISH1&amp;event=8\"\\s+class=\"btn btn-sm btn-outline-light text-nowrap\">Zobacz życzenia<")
+        assertThat(html).containsPattern("href=\"/dj/wishes\\?party=WISH1&amp;event=8#wishEvent\"\\s+class=\"btn btn-sm btn-outline-light text-nowrap\">Zobacz życzenia<")
                 .containsPattern("href=\"/dj/wishes\\?party=WISH1\"\\s+class=\"btn btn-sm btn-outline-light text-nowrap active\">Zwiń życzenia<")
                 .contains("id=\"wishEventClose\" href=\"/dj/wishes?party=WISH1\"");
         assertThat(render(Plans.off(), null, Map.of())).doesNotContain("Zwiń życzenia", "wishEventClose");
@@ -279,6 +280,22 @@ class WishesPageRenderTest {
     void theTopButton_isGone_whenTheListHasThemAll() throws IOException {
         party.setHostWanted("Akcent\nWilki\nSanah\nDawid Podsiadło");
         assertThat(render(Plans.off(), 7L, Map.of())).doesNotContain("id=\"wishTopBtn\"").contains(">⭐ Na liście<");
+    }
+
+    /**
+     * "⭐ Dodaj 10 najczęstszych" sends the songs its question names, as the page counted them — not "the ten most wished" counted
+     * again at the click, when guests may have written more and the ten are others than the DJ said yes to.
+     */
+    @Test
+    void theTopButton_sendsTheSongsItsQuestionNames() throws IOException {
+        String html = render(Plans.off(), 7L, Map.of());
+        int start = html.indexOf("id=\"wishTopForm\"");
+        assertThat(start).as("the form of \"⭐ Dodaj 10 najczęstszych\"").isPositive();
+        String form = html.substring(start, html.indexOf("</form>", start));
+        assertThat(form).contains("name=\"song\" value=\"Wilki - Baśka\"", "name=\"song\" value=\"Sanah - Szampan\"",
+                "name=\"song\" value=\"Dawid Podsiadło - Małomiasteczkowy (a long name that wraps on a phone, to see it does)\"")
+                .doesNotContain("name=\"top\"", "Akcent");
+        assertThat(form.split("name=\"song\"", -1)).as("the three the question names").hasSize(4);
     }
 
     @Test
@@ -361,13 +378,14 @@ class WishesPageRenderTest {
     void mustPlay_addsTheEventsSongs_neverAnotherText_andSaysWhatDidNotFit() {
         DjWishesController controller = controller(Plans.off());
         RedirectAttributesModelMap answer = new RedirectAttributesModelMap();
-        controller.mustPlay(7L, PARTY, List.of("Wilki - Baśka", "Some text the event never had", "Akcent - Przekorny los"), false,
+        controller.mustPlay(7L, PARTY, List.of("Wilki - Baśka", "Some text the event never had", "Akcent - Przekorny los"),
                 user("owner"), new MockHttpSession(), answer);
         assertThat(party.getHostWanted()).isEqualTo("Akcent\nWilki - Baśka");
         assertThat(answer.getFlashAttributes().get(ViewAttributes.WISH_DONE)).isEqualTo("must_play");
         assertThat((String[]) answer.getFlashAttributes().get(ViewAttributes.WISH_DONE_ARG)).containsExactly("1", "0");
 
-        controller.mustPlay(7L, PARTY, null, true, user("owner"), new MockHttpSession(), answer);
+        controller.mustPlay(7L, PARTY, List.of("Wilki - Baśka", "Sanah - Szampan", "Akcent - Przekorny los",
+                "Dawid Podsiadło - Małomiasteczkowy (a long name that wraps on a phone, to see it does)"), user("owner"), new MockHttpSession(), answer);
         assertThat(party.getHostWanted().split("\n")).containsExactly("Akcent", "Wilki - Baśka", "Sanah - Szampan",
                 "Dawid Podsiadło - Małomiasteczkowy (a long name that wraps on a phone, to see it does)");
 
@@ -378,7 +396,8 @@ class WishesPageRenderTest {
         }
         party.setHostWanted(full.toString().strip());
         RedirectAttributesModelMap later = new RedirectAttributesModelMap();
-        controller.mustPlay(7L, PARTY, null, true, user("owner"), new MockHttpSession(), later);
+        controller.mustPlay(7L, PARTY, List.of("Wilki - Baśka", "Sanah - Szampan", "Akcent - Przekorny los",
+                "Dawid Podsiadło - Małomiasteczkowy (a long name that wraps on a phone, to see it does)"), user("owner"), new MockHttpSession(), later);
         assertThat(party.getHostWanted().split("\n")).hasSize(100);
         assertThat(later.getFlashAttributes().get(ViewAttributes.WISH_DONE)).isEqualTo("must_play_full");
         assertThat((String[]) later.getFlashAttributes().get(ViewAttributes.WISH_DONE_ARG)).containsExactly("1", "3");

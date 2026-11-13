@@ -43,6 +43,10 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
   answer in a bar at the bottom, the settings' folds remembered), the guests' hint shorter, and an event's own look (V69). Waits for the owner: the three older Polish texts with "DJ" and a masculine verb (`guest.vote.gone`,
   `party.ended.subtitle`, `party.tip.title`, listed in `ImpersonalPolishTextsTest`). Item 13 waits for the owner's picks. To try: an
   invitation printed, its link on a phone, "⭐" from the wishes before a party.
+- **2026-11-13 — the second review's fixes on `claude/quirky-faraday-mhc53m`** (that branch = `claude/blissful-cannon-h66za3` + the fixes;
+  `docs/history/review-2026-11-13-wishes-2.md`): the look on a line of its own, the invitation's look the event's, `pagehide`, "Dodaj 10"
+  sends what it names, the toast goes by itself, "Zobacz życzenia" to the event. To try on an **iPhone**: "⭐" and "Nowy link" in
+  "Obsługa" come back where they were.
 
 ## Pricing and the Free plan's limit (the owner's picks, 2026-11-05)
 
