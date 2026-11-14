@@ -58,7 +58,8 @@
             theme: (document.body.className.match(/\btheme-(\w+)/) || [])[1] || 'classic',
             gold: style.getPropertyValue('--gold').trim() || '#a8842c',
             headingScale: parseFloat(style.getPropertyValue('--heading-scale')) || 1,   // "Rozmiar nagłówka" (V54)
-            badge: document.body.classList.contains('theme-club') || document.body.classList.contains('paper-own'),
+            // the white badge as the print has it (the papers' rule, or the DJ's choice, V70)
+            badge: !!djLogo && getComputedStyle(djLogo).backgroundColor === 'rgb(255, 255, 255)',
             font: paperFont,
             headingFont: heading.length ? getComputedStyle(heading[0].el).fontFamily : paperFont,
             // the DJ's line in its own font (the serif on the elegant theme), never the heading's script
@@ -264,10 +265,11 @@
             if (item.kind === 'gap') {
                 y += item.height;
             } else if (item.kind === 'logo') {
-                if (item.badge) {   // the club's dark paper: the logo on a white badge, as on the print
+                if (item.badge) {   // the logo on a white badge, as on the print
                     ctx.fillStyle = '#ffffff';
                     roundRect(ctx, centre - item.w / 2 - 18, y - 12, item.w + 36, item.h + 24, 16);
                     ctx.fill();
+                    layout.badge = true;
                 }
                 ctx.drawImage(item.image, Math.round(centre - item.w / 2), y, item.w, item.h);
                 reach(item.w);

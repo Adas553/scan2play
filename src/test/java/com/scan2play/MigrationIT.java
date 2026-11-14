@@ -265,6 +265,21 @@ class MigrationIT extends PostgresIntegrationTest {
                 .hasMessageContaining("party_settings_poster_size_check");
     }
 
+    /** V70: the white badge behind the DJ's logo on the print — automatic by default, and only a known choice. */
+    @Test
+    void theQrPrint_hasALogoBadge_automaticByDefault() {
+        String code = "V70" + (System.nanoTime() % 100);
+        jdbc.update("INSERT INTO party_settings (party_code, owner_id, active, global_vibe, request_limit, cooldown_minutes,"
+                + " duplicate_check_window) VALUES (?, ?, true, 'ANY', 2, 3, 15)", code, "owner-" + code);
+        assertThat(jdbc.queryForObject("SELECT poster_logo_badge FROM party_settings WHERE party_code = ?", String.class, code))
+                .isEqualTo("AUTO");
+        for (String badge : List.of("ALWAYS", "NEVER", "AUTO")) {
+            jdbc.update("UPDATE party_settings SET poster_logo_badge = ? WHERE party_code = ?", badge, code);
+        }
+        assertThatThrownBy(() -> jdbc.update("UPDATE party_settings SET poster_logo_badge = 'PINK' WHERE party_code = ?", code))
+                .hasMessageContaining("party_settings_poster_logo_badge_check");
+    }
+
     /**
      * V55: when the party opens and closes by itself — two moments, none by default, each with a partial index the job of every minute
      * finds the due ones by (nearly every party has none). The planner uses them when it may not read the whole table.

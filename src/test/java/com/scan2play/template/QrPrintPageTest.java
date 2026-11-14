@@ -361,7 +361,7 @@ class QrPrintPageTest {
                 "maxlength=\"" + PartySettingsEntity.POSTER_HEADING_MAX + "\"", "maxlength=\"" + PartySettingsEntity.POSTER_LINE_MAX + "\"",
                 "value=\"Osiemnastka Dawida\"", "<option value=\"BOTH\" selected=\"selected\">Polski + English</option>",
                 "name=\"showAddress\" value=\"true\" data-poster-toggle=\"address\" checked=\"checked\"");
-        assertThat(html).as("no \"as the panel\": the panel's language picked until the DJ picks another").doesNotContain("value=\"AUTO\"");
+        assertThat(html).as("no \"as the panel\": the panel's language picked until the DJ picks another").doesNotContain("<option value=\"AUTO\"");
         assertThat(html).as("no logo, no profiles, no tip: no box for them, what was saved sent as it is")
                 .doesNotContain("data-poster-toggle=\"logo\"", "data-poster-toggle=\"tip\"")
                 .contains("<input type=\"hidden\" name=\"showLogo\" value=\"true\">");
@@ -454,6 +454,37 @@ class QrPrintPageTest {
                 "<option value=\"SANS\">Bezszeryfowy</option>", "<option value=\"SERIF\">Szeryfowy</option>");
         assertThat(render("poster", Locale.ENGLISH).replaceAll("\\s+", " ")).contains("class=\"layout-poster theme-classic has-editor\"",
                 "<option value=\"THEME\" selected=\"selected\">The theme&#39;s</option>").doesNotContain("font-");
+    }
+
+    /**
+     * The white badge behind the DJ's logo (V70): the page's class and the picked radio, the choice only with a logo — without one the
+     * saved choice is sent as it is; the automatic one has no class. With tables (and a line), so the pages written for the browser
+     * tests are new variants, never the "-logo" ones their scenarios read.
+     */
+    @Test
+    void theLogosBadge_isTheOneTheDjPicked() throws IOException {
+        PartySettingsEntity withLogo = PartySettingsEntity.builder().partyCode(PARTY).logoVersion("0123456789abcdef".repeat(4))
+                .posterTables(3).posterLogoBadge(com.scan2play.model.PosterLogoBadge.ALWAYS).build();
+        // first: the page it writes is the next one's name too, which keeps the logo shown
+        assertThat(render("cards", Locale.ENGLISH, withLogo.toBuilder().posterShowLogo(false).build()).replaceAll("\\s+", " "))
+                .as("the logo left off: the choice hidden with it, still sent")
+                .contains("<fieldset class=\"editor-colors\" data-poster-part=\"logo\" aria-describedby=\"posterBadgeHint\" hidden=\"hidden\">", "name=\"badge\" value=\"ALWAYS\" checked=\"checked\"");
+        String always = render("cards", Locale.forLanguageTag("pl"), withLogo).replaceAll("\\s+", " ");
+        assertThat(always).contains("class=\"layout-cards theme-classic badge-always has-editor\"",
+                "name=\"badge\" value=\"ALWAYS\" checked=\"checked\"", ">Białe tło pod logo</legend>", ">Automatycznie</span>",
+                ">Zawsze</span>", ">Nigdy</span>",
+                "<fieldset class=\"editor-colors\" data-poster-part=\"logo\" aria-describedby=\"posterBadgeHint\">")
+                .doesNotContain("type=\"hidden\" name=\"badge\"");
+
+        String automatic = render("poster", Locale.ENGLISH, withLogo.toBuilder().posterLogoBadge(com.scan2play.model.PosterLogoBadge.AUTO)
+                .build()).replaceAll("\\s+", " ");
+        assertThat(automatic).contains("name=\"badge\" value=\"AUTO\" checked=\"checked\"", ">White behind the logo</legend>")
+                .doesNotContain("badge-");
+
+        String noLogo = render("poster", Locale.ENGLISH, PartySettingsEntity.builder().partyCode(PARTY).posterLine("Wesele")
+                .posterTables(3).posterLogoBadge(com.scan2play.model.PosterLogoBadge.NEVER).build()).replaceAll("\\s+", " ");
+        assertThat(noLogo).contains("<input type=\"hidden\" name=\"badge\" value=\"NEVER\">")
+                .doesNotContain("type=\"radio\" name=\"badge\"", "White behind the logo");
     }
 
     /** The heading's size (V54): the page's class and the picked radio; as the theme has it no class. */
