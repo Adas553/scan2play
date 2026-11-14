@@ -90,6 +90,30 @@
         }
     });
 
+    // "Białe tło pod logo" (V70) goes along as the other choices: kept by the switch, and the next page — the script loaded again — has it
+    // picked and on the paper
+    S2P.scenario({
+        name: 'poster-switch-badge',
+        page: 'qr-print-poster-logo',
+        title: '"Białe tło pod logo" not saved: kept by the switch, picked and shown on the next page',
+        run: async function (t) {
+            sessionStorage.removeItem(stashKey());
+            const radio = function (value) { return document.querySelector('#posterForm input[name="badge"][value="' + value + '"]'); };
+            radio('ALWAYS').checked = true;
+            radio('ALWAYS').dispatchEvent(new Event('change', { bubbles: true }));
+            clickSwitch();
+            t.step('kept for the tab', (JSON.parse(sessionStorage.getItem(stashKey()) || '{}').fields || {}).badge, 'ALWAYS');
+            // the next page as it comes from the server: automatic
+            radio('AUTO').checked = true;
+            document.body.classList.remove('badge-always');
+            const script = document.createElement('script');
+            script.src = document.querySelector('script[src*="qr-print.js"]').src;
+            await new Promise(function (resolve, reject) { script.onload = resolve; script.onerror = reject; document.body.appendChild(script); });
+            t.step('the next page: picked, on the paper, the stash gone', [radio('ALWAYS').checked, document.body.classList.contains('badge-always'),
+                sessionStorage.getItem(stashKey())], [true, true, null]);
+        }
+    });
+
     // "Numer pierwszego stołu" is never saved, but goes along with the switch — the DJ compares the layouts —, also with nothing else
     // changed; a reload (no switch) starts from 1 again.
     function firstKey() { return 's2p-poster-first-' + document.querySelector('#posterForm input[name="partyCode"]').value; }

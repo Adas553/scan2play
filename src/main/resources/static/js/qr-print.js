@@ -125,6 +125,33 @@
         });
         fitPoster();
         fitPreview();
+        checkMargins();
+    }
+
+    // A card is cut out, a tent folded: a part nearer than this to the card's or the face's edge may be cut off (a cut a little off
+    // its line), or is already clipped by it. Said in the editor under "Pokaż", never changed — the DJ decides what to leave off.
+    const SAFE = 3 * 96 / 25.4;
+
+    function checkMargins() {
+        const note = document.getElementById('posterTightNote');
+        if (!note) return;
+        const item = Array.prototype.find.call(document.querySelectorAll('.card, .face-lower'), visible);
+        let tight = false;
+        if (item) {
+            const box = item.getBoundingClientRect();
+            // the preview made smaller (zoom): the rectangles are the screen's, the safe margin the paper's
+            const scale = box.width / parseFloat(getComputedStyle(item).width) || 1;
+            tight = Array.prototype.some.call(item.querySelectorAll('.side > *, .text > *, :scope > .table-no'), function (part) {
+                if (!visible(part)) return false;
+                const r = part.getBoundingClientRect();
+                // half a pixel spared: a part set exactly 3 mm in measures a hair less
+                return Math.min(r.left - box.left, r.top - box.top, box.right - r.right, box.bottom - r.bottom) < (SAFE - 0.5) * scale;
+            });
+        }
+        // set only when it changes: called at every keystroke and colour dragged, a new text would lay the editor out again each time
+        if (note.hidden !== tight) return;
+        note.hidden = !tight;
+        note.textContent = tight ? note.dataset.tight : '';
     }
 
     // The poster fills its page (qr-print.css .poster: as high as the printable page): the room its words and parts leave goes to the
@@ -275,6 +302,7 @@
             all('.poster, .card, .face').forEach(function (el) { el.classList.toggle('with-logo', box.checked); });
         }
         fitPoster();   // a part more or less: the code's room
+        checkMargins();
     }
 
     const MAX_TABLES = Number(form.elements.tables.max) || 50;
@@ -355,9 +383,19 @@
         return checked ? checked.value : '';
     }
 
+    // the white badge behind the DJ's logo (V70): AUTO has no class (qr-print.css: the club's paper and the DJ's own), ALWAYS, NEVER
+    function showBadge() {
+        const checked = form.querySelector('input[name="badge"]:checked');
+        if (!checked) return;   // no logo: nothing to show
+        const body = document.body;
+        body.className = body.className.replace(/\bbadge-\w+\b/g, '').trim()
+            + (checked.value === 'AUTO' ? '' : ' badge-' + checked.value.toLowerCase());
+    }
+
     function changeLook(keepNote) {
         showLook(form.elements.theme.value, chosenAccent(), form.elements.font.value, chosenPaper(), keepNote === true,
             form.elements.size ? form.elements.size.value : null);
+        showBadge();
         fitTexts();   // another font, another width
     }
 
@@ -368,6 +406,9 @@
     });
     Array.prototype.forEach.call(form.querySelectorAll('input[name="accent"]'), function (radio) {
         radio.addEventListener('change', changeLook);
+    });
+    Array.prototype.forEach.call(form.querySelectorAll('input[name="badge"]'), function (radio) {
+        radio.addEventListener('change', showBadge);
     });
     // a colour picker: the preview follows the drag ("input"), the note about a weak heading waits for the colour picked ("change")
     if (picker && own) {

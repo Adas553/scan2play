@@ -179,10 +179,20 @@
     });
 })();
 
-// The white badge goes round the DJ's logo, never into it: the badge's padding counted inside the logo's box (border-box with the
-// box's max sizes) and the logo shrank when the DJ picked a paper of their own or the club's — nor do the words under it move.
+// The white badge only colours the room the DJ's logo always has: the logo keeps its size and place whatever the paper, and the
+// badge stays 1 mm or more off the code under it and, on a card, within the code's column (a wide logo too).
 (function () {
-    function steady(page, selector, below) {
+    const MM = 96 / 25.4;
+
+    function wideLogo() {
+        const canvas = document.createElement('canvas');
+        canvas.width = 800;
+        canvas.height = 200;
+        canvas.getContext('2d').fillRect(0, 0, 800, 200);
+        return canvas.toDataURL();
+    }
+
+    function steady(page, selector, below, column) {
         return async function (t) {
             const logo = document.querySelector(selector);
             const measure = function () {
@@ -210,6 +220,14 @@
             t.step('the badge on the DJ\'s paper only', [bare, badge()], ['rgba(0, 0, 0, 0)', 'rgb(255, 255, 255)']);
             t.step('on the DJ\'s paper the logo and the words under it where and as large as on the theme\'s (left, top, width, height, next)',
                 own, plain);
+            const gap = document.querySelector(below).getBoundingClientRect().top - logo.getBoundingClientRect().bottom;
+            t.check('the badge 1 mm or more above the next part (' + (gap / MM).toFixed(1) + ' mm)', gap >= MM);
+            if (column) {
+                await new Promise(function (loaded) { logo.onload = loaded; logo.src = wideLogo(); });
+                const reach = logo.getBoundingClientRect().right, text = document.querySelector(column).getBoundingClientRect().left;
+                t.check('a wide logo\'s badge within the code\'s column (' + ((text - reach) / MM).toFixed(1) + ' mm before the texts)',
+                    reach <= text);
+            }
             // the club's own paper: its frame differs, the logo's size not
             picker.value = '#ffffff';
             document.querySelector('#posterForm input[name="paper"][value=""]').click();
@@ -230,8 +248,193 @@
     S2P.scenario({
         name: 'poster-paper-logo-size-cards',
         page: 'qr-print-cards-logo',
-        title: 'the DJ\'s logo on a card on the white badge: as large and where it was, the code not moved',
-        run: steady('qr-print-cards-logo', '.card .dj-logo', '.card .qr')
+        title: 'the DJ\'s logo on a card on the white badge: as large and where it was, the code not moved nor touched, a wide one within its column',
+        run: steady('qr-print-cards-logo', '.card .dj-logo', '.card .qr', '.card .text')
+    });
+    S2P.scenario({
+        name: 'poster-paper-logo-size-tent',
+        page: 'qr-print-tent-logo',
+        title: 'the DJ\'s logo on a tent on the white badge: as large and where it was, the code not moved nor touched, a wide one within its column',
+        run: steady('qr-print-tent-logo', '.face-lower .dj-logo', '.face-lower .qr', '.face-lower .text')
+    });
+})();
+
+// "Białe tło pod logo" (V70): the badge on every paper, on none, or as the papers have it — at once in the preview, the logo keeping
+// its size and place; hidden, and still sent, with the logo left off (it goes along to the other layouts: poster-switch-badge).
+(function () {
+    S2P.scenario({
+        name: 'poster-logo-badge-choice',
+        page: 'qr-print-poster-logo',
+        title: '"Białe tło pod logo": always — the badge on the classic paper, never — none on the club\'s; the logo as large and where it was',
+        run: async function (t) {
+            const logo = document.querySelector('.poster .dj-logo');
+            const box = function () { const r = logo.getBoundingClientRect(); return [r.left, r.top, r.width, r.height].map(Math.round); };
+            const badge = function () { return getComputedStyle(logo).backgroundColor; };
+            const pick = function (value) {
+                const radio = document.querySelector('#posterForm input[name="badge"][value="' + value + '"]');
+                radio.checked = true;
+                radio.dispatchEvent(new Event('change', { bubbles: true }));
+            };
+            const theme = function (name) {
+                const select = document.getElementById('posterTheme');
+                select.value = name;
+                select.dispatchEvent(new Event('change', { bubbles: true }));
+            };
+            t.step('automatic on the classic paper: none', badge(), 'rgba(0, 0, 0, 0)');
+            const plain = box();
+            pick('ALWAYS');
+            t.step('always: the badge, the logo where it was', [badge(), box(), document.body.classList.contains('badge-always')],
+                ['rgb(255, 255, 255)', plain, true]);
+            theme('CLUB');
+            pick('NEVER');
+            t.step('never, on the club\'s paper: none', [badge(), document.body.className.indexOf('badge-') < 0 ? 'no class' : 'class'],
+                ['rgba(0, 0, 0, 0)', 'class']);
+            pick('AUTO');
+            t.step('automatic on the club\'s paper: the badge, no class', [badge(), /\bbadge-/.test(document.body.className)],
+                ['rgb(255, 255, 255)', false]);
+            t.step('the choice is unsaved', document.getElementById('posterAnswer').classList.contains('unsaved'), true);
+            const fieldset = document.querySelector('#posterForm input[name="badge"]').closest('fieldset');
+            const logoBox = document.querySelector('#posterForm [data-poster-toggle="logo"]');
+            logoBox.checked = false;
+            logoBox.dispatchEvent(new Event('change', { bubbles: true }));
+            t.step('the logo left off: the choice hidden, still sent', [fieldset.hidden, new FormData(document.getElementById('posterForm')).get('badge')],
+                [true, 'AUTO']);
+            logoBox.checked = true;
+            logoBox.dispatchEvent(new Event('change', { bubbles: true }));
+            t.step('the logo back: the choice too', fieldset.hidden, false);
+        }
+    });
+})();
+
+// The cut's margin (qr-print.js checkMargins): a part of a card nearer than 3 mm to its edge is said under "Pokaż". Every card the
+// editor makes keeps its parts 3 mm in — the DJ's logo with all three profiles too (the code 33 mm then) —, so the
+// note is seen here with the logo made taller than its box allows; back in its box, nothing is said. The poster has no cut.
+(function () {
+    /** The logo on every card as tall as given (or as the stylesheet has it), and the editor told: a part ticked off and on again. */
+    function logoHeight(height) {
+        document.querySelectorAll('.card .dj-logo').forEach(function (logo) { logo.style.maxHeight = height; });
+        const box = document.querySelector('#posterForm [data-poster-toggle="tip"]');
+        [false, true].forEach(function (on) { box.checked = on; box.dispatchEvent(new Event('change', { bubbles: true })); });
+    }
+
+    function tightNote(t) {
+        return async function () {
+            const note = document.getElementById('posterTightNote');
+            await t.sleep(300);
+            t.step('the logo and three profiles, the tip: every part 3 mm in, nothing said', note.hidden, true);
+            logoHeight('30mm');
+            t.step('a logo too tall for its box: said', [note.hidden, note.textContent.indexOf('3 mm') >= 0], [false, true]);
+            logoHeight('');
+            t.step('back in its box: nothing said', note.hidden, true);
+        };
+    }
+
+    S2P.scenario({
+        name: 'poster-cards-tight-note',
+        page: 'qr-print-cards-logo',
+        title: 'a card\'s part within 3 mm of its edge said in the editor; the logo with three profiles fits, nothing said',
+        run: function (t) { return tightNote(t)(); }
+    });
+    // a phone: the sheet made smaller (zoom) — the margin measured on paper all the same, the note as on a computer
+    S2P.scenario({
+        name: 'poster-cards-tight-note-phone',
+        page: 'qr-print-cards-logo',
+        viewport: '390,844',
+        title: 'on a phone (the preview zoomed): the same note, the same fit',
+        run: function (t) { return tightNote(t)(); }
+    });
+    // the code 33 mm only with the logo and all three profiles shown: the profiles left off, 36 mm again
+    S2P.scenario({
+        name: 'poster-cards-code-with-three-profiles',
+        page: 'qr-print-cards-logo',
+        title: 'a card with the logo and three profiles: the code 33 mm; the profiles left off: 36 mm',
+        run: async function (t) {
+            const MM = 96 / 25.4;
+            const size = function () { return Math.round(document.querySelector('.card .qr').getBoundingClientRect().width / MM); };
+            const first = size();
+            const box = document.querySelector('#posterForm [data-poster-toggle="links"]');
+            box.checked = false;
+            box.dispatchEvent(new Event('change', { bubbles: true }));
+            t.step('three profiles, then none', [first, size()], [33, 36]);
+        }
+    });
+    S2P.scenario({
+        name: 'poster-cards-tight-note-none',
+        page: 'qr-print-cards',
+        title: 'a card without the DJ\'s logo, with three profiles and the tip: nothing near its edge, nothing said',
+        run: async function (t) {
+            await t.sleep(300);
+            t.step('no note', document.getElementById('posterTightNote').hidden, true);
+        }
+    });
+    S2P.scenario({
+        name: 'poster-tight-note-not-on-the-poster',
+        page: 'qr-print-poster-logo',
+        title: 'the poster has no cut: the note never',
+        run: async function (t) {
+            await t.sleep(300);
+            t.step('no note', document.getElementById('posterTightNote').hidden, true);
+        }
+    });
+})();
+
+// The cut on the cards: a mark at each corner (crosses where the cards meet) and a light dashed edge, all of it the card's background —
+// a border was drawn over the marks; the marks in the paper's quiet colour, dark on white, light on the club's dark paper.
+(function () {
+    S2P.scenario({
+        name: 'poster-cards-cut-marks',
+        page: 'qr-print-cards',
+        title: 'the cards\' cut: corner marks and a light dashed edge in the background, no border; the marks light on the club\'s paper',
+        run: async function (t) {
+            const card = document.querySelector('.card');
+            const look = function () {
+                const s = getComputedStyle(card);
+                return [s.borderLeftWidth, s.borderBottomWidth, (s.backgroundImage.match(/linear-gradient/g) || []).length,
+                    s.getPropertyValue('--cut').trim() === getComputedStyle(document.body).getPropertyValue('--muted').trim()];
+            };
+            t.step('classic: no border, twelve lines (eight marks, four dashed edges), the marks in the quiet colour', look(),
+                ['0px', '0px', 12, true]);
+            const theme = document.getElementById('posterTheme');
+            theme.value = 'CLUB';
+            theme.dispatchEvent(new Event('change', { bubbles: true }));
+            t.step('the club: the same, the frame at the top', [look(), getComputedStyle(card).borderTopStyle], [['0px', '0px', 12, true], 'solid']);
+            const muted = getComputedStyle(document.body).getPropertyValue('--muted').trim();
+            t.check('the marks light on the dark paper (' + muted + ')', parseInt(muted.slice(1, 3), 16) > 128);
+        }
+    });
+})();
+
+// The table's number on a card: 3 mm in from the cut as the rest of the card, nothing said about it; moved nearer the cut, it is said
+(function () {
+    S2P.scenario({
+        name: 'poster-cards-table-number-margin',
+        page: 'qr-print-cards-tables',
+        title: 'a card\'s table number 3 mm or more from its top and right edges, over none of its parts; no note',
+        run: async function (t) {
+            const MM = 96 / 25.4;
+            const card = document.querySelector('.card'), no = card.querySelector('.table-no');
+            const c = card.getBoundingClientRect(), n = no.getBoundingClientRect();
+            const top = (n.top - c.top) / MM, right = (c.right - n.right) / MM;
+            t.check('from the edges (' + top.toFixed(1) + ' / ' + right.toFixed(1) + ' mm)', top >= 2.9 && right >= 2.9);
+            const over = Array.from(card.querySelectorAll('.side > *, .text > *')).filter(function (part) {
+                if (!part.getClientRects().length) return false;
+                const r = part.getBoundingClientRect();
+                return r.left < n.right && n.left < r.right && r.top < n.bottom && n.top < r.bottom;
+            }).map(function (part) { return part.className; });
+            t.step('over none of the card\'s parts', over, []);
+            const note = document.getElementById('posterTightNote');
+            t.step('no note', note.hidden, true);
+            // the number alone 1 mm from the cut on every card, and the editor told (a part ticked off and on again)
+            const nudge = function (top) {
+                document.querySelectorAll('.card .table-no').forEach(function (el) { el.style.top = top; });
+                const box = document.querySelector('#posterForm [data-poster-toggle="address"]');
+                [false, true].forEach(function (on) { box.checked = on; box.dispatchEvent(new Event('change', { bubbles: true })); });
+            };
+            nudge('1mm');
+            t.step('the number 1 mm from the cut: said', note.hidden, false);
+            nudge('');
+            t.step('back 3 mm in: nothing said', note.hidden, true);
+        }
     });
 })();
 

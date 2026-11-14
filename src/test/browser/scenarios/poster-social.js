@@ -191,4 +191,28 @@
             t.step('every theme\'s frame as on paper; the code in the print\'s font', bad, []);
         }
     });
+
+    // "Białe tło pod logo" (V70): the picture's badge as the print's — always on the classic paper, never on the club's
+    S2P.scenario({
+        name: 'poster-social-logo-badge',
+        page: 'qr-print-poster-logo',
+        title: 'the picture for social media: the white badge behind the logo as on the print — automatic, always, never',
+        run: async function (t) {
+            const pick = function (value) {
+                const radio = document.querySelector('#posterForm input[name="badge"][value="' + value + '"]');
+                radio.checked = true;
+                radio.dispatchEvent(new Event('change', { bubbles: true }));
+            };
+            const badge = async function () { return !!(await make(t, 'post')).layout.badge; };
+            const seen = [await badge()];
+            pick('ALWAYS');
+            seen.push(await badge());
+            pickTheme('CLUB');
+            pick('NEVER');
+            seen.push(await badge());
+            pick('AUTO');
+            seen.push(await badge());
+            t.step('classic automatic, classic always, club never, club automatic', seen, [false, true, false, true]);
+        }
+    });
 })();

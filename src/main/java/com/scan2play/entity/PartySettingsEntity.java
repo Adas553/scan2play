@@ -311,6 +311,12 @@ public class PartySettingsEntity {
     @Column(nullable = false, length = 6)
     private PosterSize posterSize = PosterSize.NORMAL;
 
+    /** The white badge behind the DJ's logo on the print (V70): on the dark and the DJ's own papers, always, or never. */
+    @Builder.Default
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 6)
+    private com.scan2play.model.PosterLogoBadge posterLogoBadge = com.scan2play.model.PosterLogoBadge.AUTO;
+
     /** The look of the guests' pages (V59, "Motyw dla gości"): the party page, the result, the kiosk, the TV — not the print's. */
     @Builder.Default
     @Enumerated(EnumType.STRING)
