@@ -926,22 +926,12 @@ body:not(.theme-classic) .poster > .logo {
 }
 
 /* on the dark club paper — and on any paper of the DJ's own (V53), whatever its words' colour, so the logo keeps one shape while the
-   DJ tries colours — the DJ's logo on a white badge: a dark logo with a transparent background would vanish. The badge goes round
-   the logo, never into it: in a border-box its padding counted within the logo's max sizes and the logo shrank; the negative
-   margins keep the words under it where they are on the theme's paper */
+   DJ tries colours — the DJ's logo on a white badge: a dark logo with a transparent background would vanish. The badge's room is
+   the logo's on every paper (.dj-logo below: its padding, transparent without the badge), so the badge only colours it: the logo
+   neither shrinks nor moves when the DJ picks another paper, and the badge never reaches the code */
 body.theme-club .dj-logo,
 body.paper-own .dj-logo {
-    box-sizing: content-box;
-    padding: 1.5mm 2.5mm;
-    margin-top: -1.5mm;
-    margin-bottom: -1.5mm;
-    border-radius: 2mm;
     background: #ffffff;
-}
-
-body.theme-club .poster .dj-logo,
-body.paper-own .poster .dj-logo {
-    margin-bottom: 2.5mm;
 }
 
 body:not(.theme-classic) .card {
@@ -1246,16 +1236,21 @@ body:not(.theme-classic) .card {
     }
 }
 
-/* The DJ's logo (V45, Pro): at the poster's top and above a card's code, within a box — any proportions fit; ours then smaller */
+/* The DJ's logo (V45, Pro): at the poster's top and above a card's code, within a box — any proportions fit; ours then smaller.
+   The box holds the badge's padding on every paper (above: the club's and the DJ's own paper colour it white) */
 .dj-logo {
     display: block;
     margin: 0 auto;
+    padding: 1.5mm 2.5mm;
+    border-radius: 2mm;
     object-fit: contain;
 }
 
+/* the logo itself up to 120 × 45 mm; the badge's padding reaches into the sheet's top margin, the heading 4 mm under the badge */
 .poster .dj-logo {
-    max-width: 120mm;
-    max-height: 45mm;
+    max-width: 125mm;
+    max-height: 48mm;
+    margin-top: -1.5mm;
     margin-bottom: 4mm;
 }
 
@@ -1288,9 +1283,11 @@ body:not(.theme-classic) .card {
     height: 4mm;
 }
 
+/* a card's column is full (the logo, the code, three profiles): the badge's padding smaller, within the logo's 40 × 14 mm */
 .card .dj-logo {
     max-width: 40mm;
     max-height: 14mm;
+    padding: 1mm 1.5mm;
 }
 
 /* a card with the DJ's logo: the code 4 mm smaller, so the logo, the code and three profiles still fit its 60 mm */
@@ -1424,9 +1421,10 @@ body:not(.theme-classic) .card {
     height: 8mm;
 }
 
+/* the logo itself up to 16 mm high, and the badge's padding: a face has the room */
 .face .dj-logo {
     max-width: 78mm;
-    max-height: 16mm;
+    max-height: 19mm;
 }
 
 .face .dj-links {

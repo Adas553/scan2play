@@ -179,10 +179,21 @@
     });
 })();
 
-// The white badge goes round the DJ's logo, never into it: the badge's padding counted inside the logo's box (border-box with the
-// box's max sizes) and the logo shrank when the DJ picked a paper of their own or the club's — nor do the words under it move.
+// The white badge only colours the room the DJ's logo always has: its padding counted inside the logo's box on the badge's papers
+// alone, and the logo shrank when the DJ picked a paper of their own or the club's; the badge put outside it then touched the code
+// on a card and a tent, and a wide logo's badge reached past a card's column into the heading.
 (function () {
-    function steady(page, selector, below) {
+    const MM = 96 / 25.4;
+
+    function wideLogo() {
+        const canvas = document.createElement('canvas');
+        canvas.width = 800;
+        canvas.height = 200;
+        canvas.getContext('2d').fillRect(0, 0, 800, 200);
+        return canvas.toDataURL();
+    }
+
+    function steady(page, selector, below, column) {
         return async function (t) {
             const logo = document.querySelector(selector);
             const measure = function () {
@@ -210,6 +221,14 @@
             t.step('the badge on the DJ\'s paper only', [bare, badge()], ['rgba(0, 0, 0, 0)', 'rgb(255, 255, 255)']);
             t.step('on the DJ\'s paper the logo and the words under it where and as large as on the theme\'s (left, top, width, height, next)',
                 own, plain);
+            const gap = document.querySelector(below).getBoundingClientRect().top - logo.getBoundingClientRect().bottom;
+            t.check('the badge 1 mm or more above the next part (' + (gap / MM).toFixed(1) + ' mm)', gap >= MM);
+            if (column) {
+                await new Promise(function (loaded) { logo.onload = loaded; logo.src = wideLogo(); });
+                const reach = logo.getBoundingClientRect().right, text = document.querySelector(column).getBoundingClientRect().left;
+                t.check('a wide logo\'s badge within the code\'s column (' + ((text - reach) / MM).toFixed(1) + ' mm before the texts)',
+                    reach <= text);
+            }
             // the club's own paper: its frame differs, the logo's size not
             picker.value = '#ffffff';
             document.querySelector('#posterForm input[name="paper"][value=""]').click();
@@ -230,8 +249,14 @@
     S2P.scenario({
         name: 'poster-paper-logo-size-cards',
         page: 'qr-print-cards-logo',
-        title: 'the DJ\'s logo on a card on the white badge: as large and where it was, the code not moved',
-        run: steady('qr-print-cards-logo', '.card .dj-logo', '.card .qr')
+        title: 'the DJ\'s logo on a card on the white badge: as large and where it was, the code not moved nor touched, a wide one within its column',
+        run: steady('qr-print-cards-logo', '.card .dj-logo', '.card .qr', '.card .text')
+    });
+    S2P.scenario({
+        name: 'poster-paper-logo-size-tent',
+        page: 'qr-print-tent-logo',
+        title: 'the DJ\'s logo on a tent on the white badge: as large and where it was, the code not moved nor touched, a wide one within its column',
+        run: steady('qr-print-tent-logo', '.face-lower .dj-logo', '.face-lower .qr', '.face-lower .text')
     });
 })();
 
