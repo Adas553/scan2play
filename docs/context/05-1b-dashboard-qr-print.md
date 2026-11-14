@@ -74,11 +74,12 @@ font fits A4, a card and a tent, the poster's code at least 100 mm (`poster-size
 `…-tent`, `poster-size-story`, `poster-print-pdf-large`). **"Białe tło pod logo"** (V70, under "Pokaż", with a logo only):
 "Automatycznie" (the default: on the club's and the DJ's own paper), "Zawsze" (a logo with a white background of its own then a
 rounded badge on any paper) or "Nigdy" (`body.badge-*`); the badge's room is the logo's on every paper (`.dj-logo` padding), so the
-choice and the paper only colour it — the logo never changes size or place, never touches the code (`poster-logo-badge-choice`,
+choice and the paper only colour it — the logo never changes size or place, never touches the code; on a card the logo itself is
+at most 37 × 12 mm, the badge's room within the column's 40 × 14 mm; the choice hidden with the logo left off (`poster-logo-badge-choice`,
 `poster-paper-logo-size`, `…-cards`, `…-tent`); the pictures draw it as the print has it (`poster-social-logo-badge`). A part of a card or a tent nearer than 3 mm to its edge
 (the cut, the fold) is said under "Pokaż" (`#posterTightNote`, `qr-print.js checkMargins`, the preview's zoom taken out; a card's
 table number 3 mm in from its corner as well), never changed. Every card the editor makes keeps its parts 3 mm in: with the
-DJ's logo and all three profiles the code is 33 mm (it reached 2 mm from the cut)
+DJ's logo and all three profiles the code is 33 mm (36 mm would take the profiles 2 mm from the cut)
 (`poster-cards-tight-note`, `…-phone`, `…-none`, `poster-tight-note-not-on-the-poster`, `poster-cards-code-with-three-profiles`). The cards' cut: a 5 mm mark at every
 corner (crosses where the cards meet, for a trimmer) in the paper's `--muted`, and a light dashed edge for scissors — all of it the
 card's background, no border (`poster-cards-cut-marks`). "Działa na" and our small mark on one

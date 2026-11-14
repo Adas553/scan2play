@@ -1211,8 +1211,8 @@ body:not(.theme-classic) .card {
 
 /* The cut: a dark mark 5 mm along each edge at every corner — the cards side by side make them crosses at the cuts, what a trimmer is
    set to — and the edges between them a light dashed line for scissors, so a cut a little off its line leaves no dark stripe on the
-   card. All of it the card's background, under its words (a border was drawn over the marks and dashed them too); a theme's frame
-   at the top covers its own. The marks in the paper's quiet colour: dark on a light paper, light on the club's dark one */
+   card. All of it the card's background, under its words (a border would be drawn over the marks); a theme's frame at the top
+   covers its own. The marks in the paper's quiet colour: dark on a light paper, light on the club's dark one */
 .card {
     --cut: var(--muted);
     --cut-light: #cfcfcf;
@@ -1283,12 +1283,13 @@ body:not(.theme-classic) .card {
     object-fit: contain;
 }
 
-/* the logo itself up to 120 × 45 mm; the badge's padding reaches into the sheet's top margin, the heading 4 mm under the badge */
+/* the logo itself up to 120 × 45 mm; the badge's padding reaches into the sheet's top margin and into the room under the logo, so the
+   heading stays 4 mm under the logo (2.5 mm under the badge) and the code keeps its size */
 .poster .dj-logo {
     max-width: 125mm;
     max-height: 48mm;
     margin-top: -1.5mm;
-    margin-bottom: 4mm;
+    margin-bottom: 2.5mm;
 }
 
 .poster.with-logo h1 {
@@ -1320,7 +1321,8 @@ body:not(.theme-classic) .card {
     height: 4mm;
 }
 
-/* a card's column is full (the logo, the code, three profiles): the badge's padding smaller, within the logo's 40 × 14 mm */
+/* a card's column is full (the logo, the code, three profiles) and 40 mm wide: the badge's padding, smaller, is within the 40 × 14 mm —
+   the logo itself up to 37 × 12 mm on every paper */
 .card .dj-logo {
     max-width: 40mm;
     max-height: 14mm;
@@ -1337,7 +1339,7 @@ body:not(.theme-classic) .card {
     grid-template-rows: auto 36mm auto;
 }
 
-/* the logo and all three profiles: the column was 63.6 mm in the card's 59.5 — the profiles 2 mm from the cut. The code 3 mm smaller
+/* the logo and all three profiles fill the column (with the 36 mm code the profiles reach 2 mm from the cut): the code 3 mm smaller
    keeps every part 3 mm in, on a theme's card under its frame too (the editor's margin warning), and the badge its 1.5 mm off it */
 .card.with-logo:has(> .side > .dj-links:not([hidden]) > span:nth-child(3)) {
     grid-template-rows: auto 33mm auto;
@@ -1349,7 +1351,7 @@ body:not(.theme-classic) .card {
 }
 
 /* ---- The table number (V50): "Stół / Table 5" — on a card in its top corner, over none of its parts, 3 mm in from the cut as the
-   rest of the card (a cut a little off its line took a number nearer it); on a tent's face above the heading. In the heading's
+   rest of the card (a cut a little off its line would take a number nearer it); on a tent's face above the heading. In the heading's
    colour. ---- */
 
 .table-no {

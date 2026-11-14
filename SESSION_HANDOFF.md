@@ -35,9 +35,10 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
 - **Cloud sessions:** the environment `scan2play` (personal) allows `www.scan2play.com.pl` — the curl of a release check; the
   Default environment allows no site.
 - **Railway:** neither service sleeps; a spending limit of 15 USD (an alert at 10 USD); Healthcheck Path `/privacy`.
-- **2026-11-14 — PRs #265 (`main`), #266 (`dev`) from `claude/happy-dijkstra-txy1s2`, V70 → a database copy first:** the print's logo
-  keeps its size and place on every paper; "Białe tło pod logo" (V70); the editor warns of a card's part within 3 mm of the cut; the
-  cards' corner cut marks, the table number 3 mm in; a card with the logo and three profiles: the code 33 mm (every part 3 mm in).
+- **2026-11-14 — the QR print (`claude/happy-dijkstra-txy1s2`, reviewed: `docs/history/review-2026-11-14-print.md`, the fixes on
+  `claude/pensive-rubin-rpps6k`), V70 → a database copy first:** #265 / #266 took only its first commit (`8162724`: on `main` the badge
+  touches the code on a card and a tent); the rest in new PRs: the logo's room on every paper, "Białe tło pod logo" (V70), the 3 mm
+  note, the cards' corner cut marks, the code 33 mm with the logo and three profiles.
 - **2026-11-13 — PRs to `main` and `dev` from `claude/blissful-cannon-h66za3` (V68, V69 → a database copy first):** the reviewed
   `claude/happy-carson-5odcet` (`docs/ideas.md` item 12 — "Życzenia przed imprezą": `/w/{token}`, `/dj/wishes`, the invitation's print,
   WISHES, Pro; the hint to vote 👍 above the guests' list, on the kiosk and the TV) with the review's fixes on top

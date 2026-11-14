@@ -148,6 +148,8 @@
                 return Math.min(r.left - box.left, r.top - box.top, box.right - r.right, box.bottom - r.bottom) < (SAFE - 0.5) * scale;
             });
         }
+        // set only when it changes: called at every keystroke and colour dragged, a new text would lay the editor out again each time
+        if (note.hidden !== tight) return;
         note.hidden = !tight;
         note.textContent = tight ? note.dataset.tight : '';
     }

@@ -465,10 +465,16 @@ class QrPrintPageTest {
     void theLogosBadge_isTheOneTheDjPicked() throws IOException {
         PartySettingsEntity withLogo = PartySettingsEntity.builder().partyCode(PARTY).logoVersion("0123456789abcdef".repeat(4))
                 .posterTables(3).posterLogoBadge(com.scan2play.model.PosterLogoBadge.ALWAYS).build();
+        // first: the page it writes is the next one's name too, which keeps the logo shown
+        assertThat(render("cards", Locale.ENGLISH, withLogo.toBuilder().posterShowLogo(false).build()).replaceAll("\\s+", " "))
+                .as("the logo left off: the choice hidden with it, still sent")
+                .contains("<fieldset class=\"editor-colors\" data-poster-part=\"logo\" aria-describedby=\"posterBadgeHint\" hidden=\"hidden\">", "name=\"badge\" value=\"ALWAYS\" checked=\"checked\"");
         String always = render("cards", Locale.forLanguageTag("pl"), withLogo).replaceAll("\\s+", " ");
         assertThat(always).contains("class=\"layout-cards theme-classic badge-always has-editor\"",
                 "name=\"badge\" value=\"ALWAYS\" checked=\"checked\"", ">Białe tło pod logo</legend>", ">Automatycznie</span>",
-                ">Zawsze</span>", ">Nigdy</span>").doesNotContain("type=\"hidden\" name=\"badge\"");
+                ">Zawsze</span>", ">Nigdy</span>",
+                "<fieldset class=\"editor-colors\" data-poster-part=\"logo\" aria-describedby=\"posterBadgeHint\">")
+                .doesNotContain("type=\"hidden\" name=\"badge\"");
 
         String automatic = render("poster", Locale.ENGLISH, withLogo.toBuilder().posterLogoBadge(com.scan2play.model.PosterLogoBadge.AUTO)
                 .build()).replaceAll("\\s+", " ");

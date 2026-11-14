@@ -185,8 +185,10 @@
         <small id="posterTightNote" class="editor-hint editor-warning" role="status" hidden
                th:attr="data-tight=#{qr.edit.tight}"></small>
         <!--/* the white badge behind the DJ's logo (V70): on the dark and the DJ's own papers, always — a logo with a white background of
-             its own then a rounded badge on any paper —, or never; only colours the logo's room (qr-print.css body.badge-*) */-->
-        <fieldset th:if="${djLogo != null}" class="editor-colors" aria-describedby="posterBadgeHint">
+             its own then a rounded badge on any paper —, or never; only colours the logo's room (qr-print.css body.badge-*). Hidden
+             with the logo left off (a part of the logo's: qr-print.js showPart), still sent */-->
+        <fieldset th:if="${djLogo != null}" class="editor-colors" data-poster-part="logo" th:hidden="${!poster.posterShowLogo}"
+                  aria-describedby="posterBadgeHint">
             <legend th:text="#{qr.edit.badge}">White behind the logo</legend>
             <label th:each="b : ${T(com.scan2play.model.PosterLogoBadge).values()}" class="swatch swatch-text"><input type="radio" name="badge"
                    th:value="${b.name()}" th:checked="${b == poster.posterLogoBadge}"><span class="swatch-chip"

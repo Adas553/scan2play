@@ -150,3 +150,20 @@ Adas553/scan2play#265 and #266 were merged at 09:47 UTC with the branch at `8162
 cards and tents. The branch fixes that, adds nothing broken, and every check passes. Before the PR: the owner's choice on P2 (to
 document or not). P3–C1 are small and optional, ideally done in the same PR: T1 and Q1 are a few lines each. V70 needs a database copy
 first.
+
+## The fixes (2026-11-14, `claude/pensive-rubin-rpps6k` = the branch + the fixes; the owner: "zgoda, P2 jak uważasz, popraw wszystko")
+
+- **P1:** new PRs from `claude/pensive-rubin-rpps6k` to `main` and `dev`. `SESSION_HANDOFF.md` says that #265 / #266 took `8162724` only.
+- **P2:** (a) accepted. `05-1b` and the comment at `.card .dj-logo` say that on a card the logo itself is at most 37 × 12 mm.
+- **P3:** `.poster .dj-logo` `margin-bottom: 2.5mm`. The heading and the code are where they are on `main`, on every paper (the matrix
+  again: on the poster only the logo's box, its padding, differs; its content does not).
+- **T1:** `poster-cards-table-number-margin` moves the number 1 mm from the cut and expects the note, then moves it back and expects
+  none. The mutation that dropped `.table-no` from `checkMargins` is now caught.
+- **T2:** `poster-switch-badge`: kept by the switch, and the next page has it picked and on the paper.
+- **Q1:** `checkMargins` leaves the note alone when its state does not change.
+- **U1:** the fieldset is `data-poster-part="logo"`, hidden with the logo's box and still sent. `poster-logo-badge-choice` and
+  `QrPrintPageTest` check this.
+- **U2:** `qr.edit.tight` now says "Coś jest bliżej niż 3 mm od krawędzi i może zostać ucięte lub zagięte. …" (and the same in English).
+- **C1:** the comments in the CSS, `05-1b` and the scenarios no longer describe the earlier state.
+- Checks: `unit` 1306 OK, `browser` 421 OK, `audit -t qr-print` 19 pages OK. The matrix of 288 against `main`: the branch has no
+  overlaps, nothing within 3 mm, the badge 1 mm or more off the code, 1 page each.

@@ -179,9 +179,8 @@
     });
 })();
 
-// The white badge only colours the room the DJ's logo always has: its padding counted inside the logo's box on the badge's papers
-// alone, and the logo shrank when the DJ picked a paper of their own or the club's; the badge put outside it then touched the code
-// on a card and a tent, and a wide logo's badge reached past a card's column into the heading.
+// The white badge only colours the room the DJ's logo always has: the logo keeps its size and place whatever the paper, and the
+// badge stays 1 mm or more off the code under it and, on a card, within the code's column (a wide logo too).
 (function () {
     const MM = 96 / 25.4;
 
@@ -261,7 +260,7 @@
 })();
 
 // "Białe tło pod logo" (V70): the badge on every paper, on none, or as the papers have it — at once in the preview, the logo keeping
-// its size and place; the choice goes along to the other layouts with the editor's unsaved changes.
+// its size and place; hidden, and still sent, with the logo left off (it goes along to the other layouts: poster-switch-badge).
 (function () {
     S2P.scenario({
         name: 'poster-logo-badge-choice',
@@ -294,12 +293,21 @@
             t.step('automatic on the club\'s paper: the badge, no class', [badge(), /\bbadge-/.test(document.body.className)],
                 ['rgb(255, 255, 255)', false]);
             t.step('the choice is unsaved', document.getElementById('posterAnswer').classList.contains('unsaved'), true);
+            const fieldset = document.querySelector('#posterForm input[name="badge"]').closest('fieldset');
+            const logoBox = document.querySelector('#posterForm [data-poster-toggle="logo"]');
+            logoBox.checked = false;
+            logoBox.dispatchEvent(new Event('change', { bubbles: true }));
+            t.step('the logo left off: the choice hidden, still sent', [fieldset.hidden, new FormData(document.getElementById('posterForm')).get('badge')],
+                [true, 'AUTO']);
+            logoBox.checked = true;
+            logoBox.dispatchEvent(new Event('change', { bubbles: true }));
+            t.step('the logo back: the choice too', fieldset.hidden, false);
         }
     });
 })();
 
 // The cut's margin (qr-print.js checkMargins): a part of a card nearer than 3 mm to its edge is said under "Pokaż". Every card the
-// editor makes keeps its parts 3 mm in — the DJ's logo with all three profiles too (the code 33 mm then; it reached 2 mm) —, so the
+// editor makes keeps its parts 3 mm in — the DJ's logo with all three profiles too (the code 33 mm then) —, so the
 // note is seen here with the logo made taller than its box allows; back in its box, nothing is said. The poster has no cut.
 (function () {
     /** The logo on every card as tall as given (or as the stylesheet has it), and the editor told: a part ticked off and on again. */
@@ -396,7 +404,7 @@
     });
 })();
 
-// The table's number on a card: 3 mm in from the cut as the rest of the card (it sat 1.5 mm from it), nothing said about it
+// The table's number on a card: 3 mm in from the cut as the rest of the card, nothing said about it; moved nearer the cut, it is said
 (function () {
     S2P.scenario({
         name: 'poster-cards-table-number-margin',
@@ -414,7 +422,18 @@
                 return r.left < n.right && n.left < r.right && r.top < n.bottom && n.top < r.bottom;
             }).map(function (part) { return part.className; });
             t.step('over none of the card\'s parts', over, []);
-            t.step('no note', document.getElementById('posterTightNote').hidden, true);
+            const note = document.getElementById('posterTightNote');
+            t.step('no note', note.hidden, true);
+            // the number alone 1 mm from the cut on every card, and the editor told (a part ticked off and on again)
+            const nudge = function (top) {
+                document.querySelectorAll('.card .table-no').forEach(function (el) { el.style.top = top; });
+                const box = document.querySelector('#posterForm [data-poster-toggle="address"]');
+                [false, true].forEach(function (on) { box.checked = on; box.dispatchEvent(new Event('change', { bubbles: true })); });
+            };
+            nudge('1mm');
+            t.step('the number 1 mm from the cut: said', note.hidden, false);
+            nudge('');
+            t.step('back 3 mm in: nothing said', note.hidden, true);
         }
     });
 })();
