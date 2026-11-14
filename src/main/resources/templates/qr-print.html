@@ -20,7 +20,8 @@
     cards and tents (data-print-item), numbered; without it eight cards and one tent, the number rendered hidden.
 */-->
 <body th:class="${'layout-' + qrLayout + ' ' + poster.posterTheme.cssClass() + (poster.posterFont.cssClass().isEmpty() ? '' : ' ' + poster.posterFont.cssClass())
-                  + (poster.posterSize.cssClass().isEmpty() ? '' : ' ' + poster.posterSize.cssClass())}"
+                  + (poster.posterSize.cssClass().isEmpty() ? '' : ' ' + poster.posterSize.cssClass())
+                  + (poster.posterLogoBadge.cssClass().isEmpty() ? '' : ' ' + poster.posterLogoBadge.cssClass())}"
       th:attr="data-accent=${poster.posterAccent},data-paper=${poster.posterPaper}" th:classappend="${posterEdit} ? 'has-editor'"
       th:with="pl=${printLang != 'en'}, en=${printLang != 'pl'}, both=${printLang == 'both'},
                logoShown=${djLogo != null and poster.posterShowLogo}, tables=${poster.posterTables}, wish=${wishPrint != null}">
@@ -179,6 +180,15 @@
             <label th:if="${tipUrl != null}"><input type="checkbox" name="showTip" value="true" data-poster-toggle="tip" th:checked="${poster.posterShowTip}"> <span th:text="#{qr.edit.show.tip}">Tip</span></label>
             <label><input type="checkbox" name="showAddress" value="true" data-poster-toggle="address" th:checked="${poster.posterShowAddress}"> <span th:text="#{qr.edit.show.address}">Address and party code</span></label>
         </div>
+        <!--/* the white badge behind the DJ's logo (V70): on the dark and the DJ's own papers, always — a logo with a white background of
+             its own then a rounded badge on any paper —, or never; only colours the logo's room (qr-print.css body.badge-*) */-->
+        <fieldset th:if="${djLogo != null}" class="editor-colors" aria-describedby="posterBadgeHint">
+            <legend th:text="#{qr.edit.badge}">White behind the logo</legend>
+            <label th:each="b : ${T(com.scan2play.model.PosterLogoBadge).values()}" class="swatch swatch-text"><input type="radio" name="badge"
+                   th:value="${b.name()}" th:checked="${b == poster.posterLogoBadge}"><span class="swatch-chip"
+                   th:text="#{'qr.edit.badge.' + ${b.name().toLowerCase()}}">Automatic</span></label>
+            <small id="posterBadgeHint" class="editor-hint" th:text="#{qr.edit.badge.hint}">Automatic: on the dark paper and on your own colour</small>
+        </fieldset>
         <!--/* the number of tables (V50): shown on the cards and the tents; on the poster, which has no numbers, hidden and still sent —
              "Zapisz" there keeps it */-->
         <div class="editor-field" th:hidden="${qrLayout == 'poster' or wish}">
@@ -203,6 +213,7 @@
     </section>
     <!--/* a part the party has none of (no logo, no tip) keeps what was saved: sent as it is */-->
     <input th:if="${djLogo == null}" type="hidden" name="showLogo" th:value="${poster.posterShowLogo}">
+    <input th:if="${djLogo == null}" type="hidden" name="badge" th:value="${poster.posterLogoBadge}">
     <input th:if="${instagramUrl == null and facebookUrl == null and tiktokUrl == null}" type="hidden" name="showLinks" th:value="${poster.posterShowLinks}">
     <input th:if="${tipUrl == null}" type="hidden" name="showTip" th:value="${poster.posterShowTip}">
     <div class="editor-actions">

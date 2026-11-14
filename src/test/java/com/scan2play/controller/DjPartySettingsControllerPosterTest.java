@@ -140,6 +140,21 @@ class DjPartySettingsControllerPosterTest {
         assertThat(send(post("/dj/qr-print/settings").param("paper", "")).getPosterPaper()).isNull();
     }
 
+    /** The white badge behind the logo (V70): by its name; anything else automatic. */
+    @Test
+    void theLogosBadge_isSavedByName() throws Exception {
+        assertThat(send(post("/dj/qr-print/settings").param("badge", "always")).getPosterLogoBadge())
+                .isEqualTo(com.scan2play.model.PosterLogoBadge.ALWAYS);
+        setUp();
+        assertThat(send(post("/dj/qr-print/settings").param("badge", "NEVER")).getPosterLogoBadge())
+                .isEqualTo(com.scan2play.model.PosterLogoBadge.NEVER);
+        setUp();
+        assertThat(send(post("/dj/qr-print/settings").param("badge", "PINK")).getPosterLogoBadge())
+                .isEqualTo(com.scan2play.model.PosterLogoBadge.AUTO);
+        setUp();
+        assertThat(send(post("/dj/qr-print/settings")).getPosterLogoBadge()).isEqualTo(com.scan2play.model.PosterLogoBadge.AUTO);
+    }
+
     /** The heading's size (V54): by its name; anything else as the theme has it. */
     @Test
     void theHeadingsSize_isSavedByName() throws Exception {

@@ -355,9 +355,19 @@
         return checked ? checked.value : '';
     }
 
+    // the white badge behind the DJ's logo (V70): AUTO has no class (qr-print.css: the club's paper and the DJ's own), ALWAYS, NEVER
+    function showBadge() {
+        const checked = form.querySelector('input[name="badge"]:checked');
+        if (!checked) return;   // no logo: nothing to show
+        const body = document.body;
+        body.className = body.className.replace(/\bbadge-\w+\b/g, '').trim()
+            + (checked.value === 'AUTO' ? '' : ' badge-' + checked.value.toLowerCase());
+    }
+
     function changeLook(keepNote) {
         showLook(form.elements.theme.value, chosenAccent(), form.elements.font.value, chosenPaper(), keepNote === true,
             form.elements.size ? form.elements.size.value : null);
+        showBadge();
         fitTexts();   // another font, another width
     }
 
@@ -368,6 +378,9 @@
     });
     Array.prototype.forEach.call(form.querySelectorAll('input[name="accent"]'), function (radio) {
         radio.addEventListener('change', changeLook);
+    });
+    Array.prototype.forEach.call(form.querySelectorAll('input[name="badge"]'), function (radio) {
+        radio.addEventListener('change', showBadge);
     });
     // a colour picker: the preview follows the drag ("input"), the note about a weak heading waits for the colour picked ("change")
     if (picker && own) {

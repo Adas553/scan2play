@@ -934,6 +934,16 @@ body.paper-own .dj-logo {
     background: #ffffff;
 }
 
+/* the DJ's choice (V70, "Białe tło pod logo"): the badge on every paper — a logo with a white background of its own reads as a
+   rounded badge, not a white rectangle — or on none; after the papers' rule, so it wins over it */
+body.badge-always .dj-logo {
+    background: #ffffff;
+}
+
+body.badge-never .dj-logo {
+    background: transparent;
+}
+
 body:not(.theme-classic) .card {
     border-top: 1.2mm solid var(--frame);
 }

@@ -260,6 +260,44 @@
     });
 })();
 
+// "Białe tło pod logo" (V70): the badge on every paper, on none, or as the papers have it — at once in the preview, the logo keeping
+// its size and place; the choice goes along to the other layouts with the editor's unsaved changes.
+(function () {
+    S2P.scenario({
+        name: 'poster-logo-badge-choice',
+        page: 'qr-print-poster-logo',
+        title: '"Białe tło pod logo": always — the badge on the classic paper, never — none on the club\'s; the logo as large and where it was',
+        run: async function (t) {
+            const logo = document.querySelector('.poster .dj-logo');
+            const box = function () { const r = logo.getBoundingClientRect(); return [r.left, r.top, r.width, r.height].map(Math.round); };
+            const badge = function () { return getComputedStyle(logo).backgroundColor; };
+            const pick = function (value) {
+                const radio = document.querySelector('#posterForm input[name="badge"][value="' + value + '"]');
+                radio.checked = true;
+                radio.dispatchEvent(new Event('change', { bubbles: true }));
+            };
+            const theme = function (name) {
+                const select = document.getElementById('posterTheme');
+                select.value = name;
+                select.dispatchEvent(new Event('change', { bubbles: true }));
+            };
+            t.step('automatic on the classic paper: none', badge(), 'rgba(0, 0, 0, 0)');
+            const plain = box();
+            pick('ALWAYS');
+            t.step('always: the badge, the logo where it was', [badge(), box(), document.body.classList.contains('badge-always')],
+                ['rgb(255, 255, 255)', plain, true]);
+            theme('CLUB');
+            pick('NEVER');
+            t.step('never, on the club\'s paper: none', [badge(), document.body.className.indexOf('badge-') < 0 ? 'no class' : 'class'],
+                ['rgba(0, 0, 0, 0)', 'class']);
+            pick('AUTO');
+            t.step('automatic on the club\'s paper: the badge, no class', [badge(), /\bbadge-/.test(document.body.className)],
+                ['rgb(255, 255, 255)', false]);
+            t.step('the choice is unsaved', document.getElementById('posterAnswer').classList.contains('unsaved'), true);
+        }
+    });
+})();
+
 // While the DJ drags in the browser's colour picker ("input", again and again) the heading follows at once, but the note about a weak
 // heading waits for the colour picked ("change"): shown and hidden while dragging, it made the editor shorter and longer under the
 // open picker, the panel scrolled and the browser closed the picker.
