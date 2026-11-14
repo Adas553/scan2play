@@ -77,8 +77,9 @@ rounded badge on any paper) or "Nigdy" (`body.badge-*`); the badge's room is the
 choice and the paper only colour it — the logo never changes size or place, never touches the code (`poster-logo-badge-choice`,
 `poster-paper-logo-size`, `…-cards`, `…-tent`); the pictures draw it as the print has it (`poster-social-logo-badge`). A part of a card or a tent nearer than 3 mm to its edge
 (the cut, the fold) is said under "Pokaż" (`#posterTightNote`, `qr-print.js checkMargins`, the preview's zoom taken out; a card's
-table number 3 mm in from its corner as well), never changed: the DJ's logo with three profiles reaches some 2 mm
-(`poster-cards-tight-note`, `…-phone`, `…-none`, `poster-tight-note-not-on-the-poster`). The cards' cut: a 5 mm mark at every
+table number 3 mm in from its corner as well), never changed. Every card the editor makes keeps its parts 3 mm in: with the
+DJ's logo and all three profiles the code is 33 mm (it reached 2 mm from the cut)
+(`poster-cards-tight-note`, `…-phone`, `…-none`, `poster-tight-note-not-on-the-poster`, `poster-cards-code-with-three-profiles`). The cards' cut: a 5 mm mark at every
 corner (crosses where the cards meet, for a trimmer) in the paper's `--muted`, and a light dashed edge for scissors — all of it the
 card's background, no border (`poster-cards-cut-marks`). "Działa na" and our small mark on one
 line, our big mark apart from the code's tile in every theme (`poster-themes-powered-aligned`). What is typed or ticked shows at

@@ -298,38 +298,56 @@
     });
 })();
 
-// The cut's margin (qr-print.js checkMargins): a part of a card nearer than 3 mm to its edge is said under "Pokaż" — the DJ's logo and
-// three profiles in the code's column reach within some 2 mm; the profiles left off, nothing is said. The poster has no cut.
+// The cut's margin (qr-print.js checkMargins): a part of a card nearer than 3 mm to its edge is said under "Pokaż". Every card the
+// editor makes keeps its parts 3 mm in — the DJ's logo with all three profiles too (the code 33 mm then; it reached 2 mm) —, so the
+// note is seen here with the logo made taller than its box allows; back in its box, nothing is said. The poster has no cut.
 (function () {
-    function untick(name) {
-        const box = document.querySelector('#posterForm [data-poster-toggle="' + name + '"]');
-        box.checked = false;
-        box.dispatchEvent(new Event('change', { bubbles: true }));
+    /** The logo on every card as tall as given (or as the stylesheet has it), and the editor told: a part ticked off and on again. */
+    function logoHeight(height) {
+        document.querySelectorAll('.card .dj-logo').forEach(function (logo) { logo.style.maxHeight = height; });
+        const box = document.querySelector('#posterForm [data-poster-toggle="tip"]');
+        [false, true].forEach(function (on) { box.checked = on; box.dispatchEvent(new Event('change', { bubbles: true })); });
+    }
+
+    function tightNote(t) {
+        return async function () {
+            const note = document.getElementById('posterTightNote');
+            await t.sleep(300);
+            t.step('the logo and three profiles, the tip: every part 3 mm in, nothing said', note.hidden, true);
+            logoHeight('30mm');
+            t.step('a logo too tall for its box: said', [note.hidden, note.textContent.indexOf('3 mm') >= 0], [false, true]);
+            logoHeight('');
+            t.step('back in its box: nothing said', note.hidden, true);
+        };
     }
 
     S2P.scenario({
         name: 'poster-cards-tight-note',
         page: 'qr-print-cards-logo',
-        title: 'a card\'s part within 3 mm of its edge (the logo and three profiles): said in the editor; the profiles left off, not',
-        run: async function (t) {
-            const note = document.getElementById('posterTightNote');
-            await t.waitFor(function () { return !note.hidden; }, 'the note', 3000);
-            t.check('the note says it (' + note.textContent + ')', note.textContent.indexOf('3 mm') >= 0);
-            untick('links');
-            t.step('the profiles left off: no note', note.hidden, true);
-        }
+        title: 'a card\'s part within 3 mm of its edge said in the editor; the logo with three profiles fits, nothing said',
+        run: function (t) { return tightNote(t)(); }
     });
     // a phone: the sheet made smaller (zoom) — the margin measured on paper all the same, the note as on a computer
     S2P.scenario({
         name: 'poster-cards-tight-note-phone',
         page: 'qr-print-cards-logo',
         viewport: '390,844',
-        title: 'on a phone (the preview zoomed): the same note for the logo and three profiles, none without the profiles',
+        title: 'on a phone (the preview zoomed): the same note, the same fit',
+        run: function (t) { return tightNote(t)(); }
+    });
+    // the code 33 mm only with the logo and all three profiles shown: the profiles left off, 36 mm again
+    S2P.scenario({
+        name: 'poster-cards-code-with-three-profiles',
+        page: 'qr-print-cards-logo',
+        title: 'a card with the logo and three profiles: the code 33 mm; the profiles left off: 36 mm',
         run: async function (t) {
-            const note = document.getElementById('posterTightNote');
-            await t.waitFor(function () { return !note.hidden; }, 'the note', 3000);
-            untick('links');
-            t.step('the profiles left off: no note', note.hidden, true);
+            const MM = 96 / 25.4;
+            const size = function () { return Math.round(document.querySelector('.card .qr').getBoundingClientRect().width / MM); };
+            const first = size();
+            const box = document.querySelector('#posterForm [data-poster-toggle="links"]');
+            box.checked = false;
+            box.dispatchEvent(new Event('change', { bubbles: true }));
+            t.step('three profiles, then none', [first, size()], [33, 36]);
         }
     });
     S2P.scenario({
