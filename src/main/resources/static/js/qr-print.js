@@ -125,6 +125,31 @@
         });
         fitPoster();
         fitPreview();
+        checkMargins();
+    }
+
+    // A card is cut out, a tent folded: a part nearer than this to the card's or the face's edge may be cut off (a cut a little off
+    // its line), or is already clipped by it. Said in the editor under "Pokaż", never changed — the DJ decides what to leave off. The
+    // table's number on a card sits in its corner by design (absolute) and is left out of it.
+    const SAFE = 3 * 96 / 25.4;
+
+    function checkMargins() {
+        const note = document.getElementById('posterTightNote');
+        if (!note) return;
+        const item = Array.prototype.find.call(document.querySelectorAll('.card, .face-lower'), visible);
+        let tight = false;
+        if (item) {
+            const box = item.getBoundingClientRect();
+            // the preview made smaller (zoom): the rectangles are the screen's, the safe margin the paper's
+            const scale = box.width / parseFloat(getComputedStyle(item).width) || 1;
+            tight = Array.prototype.some.call(item.querySelectorAll('.side > *, .text > *'), function (part) {
+                if (!visible(part) || getComputedStyle(part).position === 'absolute') return false;
+                const r = part.getBoundingClientRect();
+                return Math.min(r.left - box.left, r.top - box.top, box.right - r.right, box.bottom - r.bottom) < SAFE * scale;
+            });
+        }
+        note.hidden = !tight;
+        note.textContent = tight ? note.dataset.tight : '';
     }
 
     // The poster fills its page (qr-print.css .poster: as high as the printable page): the room its words and parts leave goes to the
@@ -275,6 +300,7 @@
             all('.poster, .card, .face').forEach(function (el) { el.classList.toggle('with-logo', box.checked); });
         }
         fitPoster();   // a part more or less: the code's room
+        checkMargins();
     }
 
     const MAX_TABLES = Number(form.elements.tables.max) || 50;

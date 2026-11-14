@@ -75,7 +75,10 @@ font fits A4, a card and a tent, the poster's code at least 100 mm (`poster-size
 "Automatycznie" (the default: on the club's and the DJ's own paper), "Zawsze" (a logo with a white background of its own then a
 rounded badge on any paper) or "Nigdy" (`body.badge-*`); the badge's room is the logo's on every paper (`.dj-logo` padding), so the
 choice and the paper only colour it — the logo never changes size or place, never touches the code (`poster-logo-badge-choice`,
-`poster-paper-logo-size`, `…-cards`, `…-tent`); the pictures draw it as the print has it (`poster-social-logo-badge`). "Działa na" and our small mark on one
+`poster-paper-logo-size`, `…-cards`, `…-tent`); the pictures draw it as the print has it (`poster-social-logo-badge`). A part of a card or a tent nearer than 3 mm to its edge
+(the cut, the fold) is said under "Pokaż" (`#posterTightNote`, `qr-print.js checkMargins`, the preview's zoom taken out; a card's
+table number, in its corner by design, left out), never changed: the DJ's logo with three profiles reaches some 2 mm
+(`poster-cards-tight-note`, `…-phone`, `…-none`, `poster-tight-note-not-on-the-poster`). "Działa na" and our small mark on one
 line, our big mark apart from the code's tile in every theme (`poster-themes-powered-aligned`). What is typed or ticked shows at
 once (`js/qr-print.js`: a part left off is rendered `hidden`, `data-poster-part`; the DJ's logo left off brings ours back);
 "Zapisz" keeps it with the party in the background (`POST /dj/qr-print/settings`, 204); a new language is saved and the page loads

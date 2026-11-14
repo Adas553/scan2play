@@ -180,6 +180,10 @@
             <label th:if="${tipUrl != null}"><input type="checkbox" name="showTip" value="true" data-poster-toggle="tip" th:checked="${poster.posterShowTip}"> <span th:text="#{qr.edit.show.tip}">Tip</span></label>
             <label><input type="checkbox" name="showAddress" value="true" data-poster-toggle="address" th:checked="${poster.posterShowAddress}"> <span th:text="#{qr.edit.show.address}">Address and party code</span></label>
         </div>
+        <!--/* a part of a card or a tent nearer than 3 mm to its edge — a cut a little off its line takes it (qr-print.js checkMargins):
+             said, never changed; the poster has no cut */-->
+        <small id="posterTightNote" class="editor-hint editor-warning" role="status" hidden
+               th:attr="data-tight=#{qr.edit.tight}"></small>
         <!--/* the white badge behind the DJ's logo (V70): on the dark and the DJ's own papers, always — a logo with a white background of
              its own then a rounded badge on any paper —, or never; only colours the logo's room (qr-print.css body.badge-*) */-->
         <fieldset th:if="${djLogo != null}" class="editor-colors" aria-describedby="posterBadgeHint">

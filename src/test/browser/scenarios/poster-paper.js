@@ -298,6 +298,60 @@
     });
 })();
 
+// The cut's margin (qr-print.js checkMargins): a part of a card nearer than 3 mm to its edge is said under "Pokaż" — the DJ's logo and
+// three profiles in the code's column reach within some 2 mm; the profiles left off, nothing is said. The poster has no cut.
+(function () {
+    function untick(name) {
+        const box = document.querySelector('#posterForm [data-poster-toggle="' + name + '"]');
+        box.checked = false;
+        box.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    S2P.scenario({
+        name: 'poster-cards-tight-note',
+        page: 'qr-print-cards-logo',
+        title: 'a card\'s part within 3 mm of its edge (the logo and three profiles): said in the editor; the profiles left off, not',
+        run: async function (t) {
+            const note = document.getElementById('posterTightNote');
+            await t.waitFor(function () { return !note.hidden; }, 'the note', 3000);
+            t.check('the note says it (' + note.textContent + ')', note.textContent.indexOf('3 mm') >= 0);
+            untick('links');
+            t.step('the profiles left off: no note', note.hidden, true);
+        }
+    });
+    // a phone: the sheet made smaller (zoom) — the margin measured on paper all the same, the note as on a computer
+    S2P.scenario({
+        name: 'poster-cards-tight-note-phone',
+        page: 'qr-print-cards-logo',
+        viewport: '390,844',
+        title: 'on a phone (the preview zoomed): the same note for the logo and three profiles, none without the profiles',
+        run: async function (t) {
+            const note = document.getElementById('posterTightNote');
+            await t.waitFor(function () { return !note.hidden; }, 'the note', 3000);
+            untick('links');
+            t.step('the profiles left off: no note', note.hidden, true);
+        }
+    });
+    S2P.scenario({
+        name: 'poster-cards-tight-note-none',
+        page: 'qr-print-cards',
+        title: 'a card without the DJ\'s logo, with three profiles and the tip: nothing near its edge, nothing said',
+        run: async function (t) {
+            await t.sleep(300);
+            t.step('no note', document.getElementById('posterTightNote').hidden, true);
+        }
+    });
+    S2P.scenario({
+        name: 'poster-tight-note-not-on-the-poster',
+        page: 'qr-print-poster-logo',
+        title: 'the poster has no cut: the note never',
+        run: async function (t) {
+            await t.sleep(300);
+            t.step('no note', document.getElementById('posterTightNote').hidden, true);
+        }
+    });
+})();
+
 // While the DJ drags in the browser's colour picker ("input", again and again) the heading follows at once, but the note about a weak
 // heading waits for the colour picked ("change"): shown and hidden while dragging, it made the editor shorter and longer under the
 // open picker, the panel scrolled and the browser closed the picker.
