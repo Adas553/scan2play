@@ -179,6 +179,62 @@
     });
 })();
 
+// The white badge goes round the DJ's logo, never into it: the badge's padding counted inside the logo's box (border-box with the
+// box's max sizes) and the logo shrank when the DJ picked a paper of their own or the club's — nor do the words under it move.
+(function () {
+    function steady(page, selector, below) {
+        return async function (t) {
+            const logo = document.querySelector(selector);
+            const measure = function () {
+                const r = logo.getBoundingClientRect(), s = getComputedStyle(logo);
+                const px = function (v) { return parseFloat(v); };
+                return [r.left + px(s.paddingLeft), r.top + px(s.paddingTop), r.width - px(s.paddingLeft) - px(s.paddingRight),
+                    r.height - px(s.paddingTop) - px(s.paddingBottom), document.querySelector(below).getBoundingClientRect().top]
+                    .map(function (v) { return Math.round(v * 10) / 10; });
+            };
+            const theme = function (name) {
+                const select = document.getElementById('posterTheme');
+                select.value = name;
+                select.dispatchEvent(new Event('change', { bubbles: true }));
+            };
+            const badge = function () { return getComputedStyle(logo).backgroundColor; };
+            // a theme with a paper of its own: the DJ's paper changes nothing else on it (on the classic one it moves the words off the
+            // edges, and the code is fitted anew)
+            theme('ELEGANT');
+            const plain = measure();
+            const bare = badge();
+            const picker = document.getElementById('posterPaperPicker');
+            picker.value = '#3b0a14';
+            picker.dispatchEvent(new Event('input', { bubbles: true }));
+            const own = measure();
+            t.step('the badge on the DJ\'s paper only', [bare, badge()], ['rgba(0, 0, 0, 0)', 'rgb(255, 255, 255)']);
+            t.step('on the DJ\'s paper the logo and the words under it where and as large as on the theme\'s (left, top, width, height, next)',
+                own, plain);
+            // the club's own paper: its frame differs, the logo's size not
+            picker.value = '#ffffff';
+            document.querySelector('#posterForm input[name="paper"][value=""]').click();
+            theme('CLASSIC');
+            const classic = measure();
+            theme('CLUB');
+            t.step('on the club\'s paper: on the badge, as large as on the classic one (width, height)',
+                [badge(), measure().slice(2, 4)], ['rgb(255, 255, 255)', classic.slice(2, 4)]);
+        };
+    }
+
+    S2P.scenario({
+        name: 'poster-paper-logo-size',
+        page: 'qr-print-poster-logo',
+        title: 'the DJ\'s logo on the white badge (own paper, club): as large and where it was, the heading not moved',
+        run: steady('qr-print-poster-logo', '.poster .dj-logo', '.poster h1')
+    });
+    S2P.scenario({
+        name: 'poster-paper-logo-size-cards',
+        page: 'qr-print-cards-logo',
+        title: 'the DJ\'s logo on a card on the white badge: as large and where it was, the code not moved',
+        run: steady('qr-print-cards-logo', '.card .dj-logo', '.card .qr')
+    });
+})();
+
 // While the DJ drags in the browser's colour picker ("input", again and again) the heading follows at once, but the note about a weak
 // heading waits for the colour picked ("change"): shown and hidden while dragging, it made the editor shorter and longer under the
 // open picker, the panel scrolled and the browser closed the picker.

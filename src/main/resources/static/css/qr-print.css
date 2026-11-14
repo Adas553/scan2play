@@ -926,12 +926,22 @@ body:not(.theme-classic) .poster > .logo {
 }
 
 /* on the dark club paper — and on any paper of the DJ's own (V53), whatever its words' colour, so the logo keeps one shape while the
-   DJ tries colours — the DJ's logo on a white badge: a dark logo with a transparent background would vanish */
+   DJ tries colours — the DJ's logo on a white badge: a dark logo with a transparent background would vanish. The badge goes round
+   the logo, never into it: in a border-box its padding counted within the logo's max sizes and the logo shrank; the negative
+   margins keep the words under it where they are on the theme's paper */
 body.theme-club .dj-logo,
 body.paper-own .dj-logo {
+    box-sizing: content-box;
     padding: 1.5mm 2.5mm;
+    margin-top: -1.5mm;
+    margin-bottom: -1.5mm;
     border-radius: 2mm;
     background: #ffffff;
+}
+
+body.theme-club .poster .dj-logo,
+body.paper-own .poster .dj-logo {
+    margin-bottom: 2.5mm;
 }
 
 body:not(.theme-classic) .card {
