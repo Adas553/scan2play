@@ -352,6 +352,55 @@
     });
 })();
 
+// The cut on the cards: a mark at each corner (crosses where the cards meet) and a light dashed edge, all of it the card's background —
+// a border was drawn over the marks; the marks in the paper's quiet colour, dark on white, light on the club's dark paper.
+(function () {
+    S2P.scenario({
+        name: 'poster-cards-cut-marks',
+        page: 'qr-print-cards',
+        title: 'the cards\' cut: corner marks and a light dashed edge in the background, no border; the marks light on the club\'s paper',
+        run: async function (t) {
+            const card = document.querySelector('.card');
+            const look = function () {
+                const s = getComputedStyle(card);
+                return [s.borderLeftWidth, s.borderBottomWidth, (s.backgroundImage.match(/linear-gradient/g) || []).length,
+                    s.getPropertyValue('--cut').trim() === getComputedStyle(document.body).getPropertyValue('--muted').trim()];
+            };
+            t.step('classic: no border, twelve lines (eight marks, four dashed edges), the marks in the quiet colour', look(),
+                ['0px', '0px', 12, true]);
+            const theme = document.getElementById('posterTheme');
+            theme.value = 'CLUB';
+            theme.dispatchEvent(new Event('change', { bubbles: true }));
+            t.step('the club: the same, the frame at the top', [look(), getComputedStyle(card).borderTopStyle], [['0px', '0px', 12, true], 'solid']);
+            const muted = getComputedStyle(document.body).getPropertyValue('--muted').trim();
+            t.check('the marks light on the dark paper (' + muted + ')', parseInt(muted.slice(1, 3), 16) > 128);
+        }
+    });
+})();
+
+// The table's number on a card: 3 mm in from the cut as the rest of the card (it sat 1.5 mm from it), nothing said about it
+(function () {
+    S2P.scenario({
+        name: 'poster-cards-table-number-margin',
+        page: 'qr-print-cards-tables',
+        title: 'a card\'s table number 3 mm or more from its top and right edges, over none of its parts; no note',
+        run: async function (t) {
+            const MM = 96 / 25.4;
+            const card = document.querySelector('.card'), no = card.querySelector('.table-no');
+            const c = card.getBoundingClientRect(), n = no.getBoundingClientRect();
+            const top = (n.top - c.top) / MM, right = (c.right - n.right) / MM;
+            t.check('from the edges (' + top.toFixed(1) + ' / ' + right.toFixed(1) + ' mm)', top >= 2.9 && right >= 2.9);
+            const over = Array.from(card.querySelectorAll('.side > *, .text > *')).filter(function (part) {
+                if (!part.getClientRects().length) return false;
+                const r = part.getBoundingClientRect();
+                return r.left < n.right && n.left < r.right && r.top < n.bottom && n.top < r.bottom;
+            }).map(function (part) { return part.className; });
+            t.step('over none of the card\'s parts', over, []);
+            t.step('no note', document.getElementById('posterTightNote').hidden, true);
+        }
+    });
+})();
+
 // While the DJ drags in the browser's colour picker ("input", again and again) the heading follows at once, but the note about a weak
 // heading waits for the colour picked ("change"): shown and hidden while dragging, it made the editor shorter and longer under the
 // open picker, the panel scrolled and the browser closed the picker.

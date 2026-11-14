@@ -1126,7 +1126,6 @@ body:not(.theme-classic) .card {
     align-content: center;
     gap: 1.5mm 3mm;
     padding: 4mm;
-    border: 1px dashed #999999;
     overflow: hidden;
     break-inside: avoid;
 }
@@ -1208,6 +1207,34 @@ body:not(.theme-classic) .card {
 
 .card .link {
     overflow-wrap: anywhere;
+}
+
+/* The cut: a dark mark 5 mm along each edge at every corner — the cards side by side make them crosses at the cuts, what a trimmer is
+   set to — and the edges between them a light dashed line for scissors, so a cut a little off its line leaves no dark stripe on the
+   card. All of it the card's background, under its words (a border was drawn over the marks and dashed them too); a theme's frame
+   at the top covers its own. The marks in the paper's quiet colour: dark on a light paper, light on the club's dark one */
+.card {
+    --cut: var(--muted);
+    --cut-light: #cfcfcf;
+    --cut-arm: 5mm;
+    --cut-width: 0.3mm;
+    --dash: repeating-linear-gradient(to right, var(--cut-light) 0 2mm, transparent 2mm 3.5mm);
+    --dash-down: repeating-linear-gradient(to bottom, var(--cut-light) 0 2mm, transparent 2mm 3.5mm);
+    border: 0;
+    background:
+        linear-gradient(var(--cut), var(--cut)) left top / var(--cut-arm) var(--cut-width) no-repeat border-box,
+        linear-gradient(var(--cut), var(--cut)) left top / var(--cut-width) var(--cut-arm) no-repeat border-box,
+        linear-gradient(var(--cut), var(--cut)) right top / var(--cut-arm) var(--cut-width) no-repeat border-box,
+        linear-gradient(var(--cut), var(--cut)) right top / var(--cut-width) var(--cut-arm) no-repeat border-box,
+        linear-gradient(var(--cut), var(--cut)) left bottom / var(--cut-arm) var(--cut-width) no-repeat border-box,
+        linear-gradient(var(--cut), var(--cut)) left bottom / var(--cut-width) var(--cut-arm) no-repeat border-box,
+        linear-gradient(var(--cut), var(--cut)) right bottom / var(--cut-arm) var(--cut-width) no-repeat border-box,
+        linear-gradient(var(--cut), var(--cut)) right bottom / var(--cut-width) var(--cut-arm) no-repeat border-box,
+        var(--dash) left top / 100% var(--cut-width) no-repeat border-box,
+        var(--dash) left bottom / 100% var(--cut-width) no-repeat border-box,
+        var(--dash-down) left top / var(--cut-width) 100% no-repeat border-box,
+        var(--dash-down) right top / var(--cut-width) 100% no-repeat border-box,
+        var(--paper);
 }
 
 @media print {
@@ -1310,8 +1337,9 @@ body:not(.theme-classic) .card {
     grid-template-rows: auto 36mm auto;
 }
 
-/* ---- The table number (V50): "Stół / Table 5" — on a card in its top corner, over none of its parts; on a tent's face above the
-   heading. In the heading's colour. ---- */
+/* ---- The table number (V50): "Stół / Table 5" — on a card in its top corner, over none of its parts, 3 mm in from the cut as the
+   rest of the card (a cut a little off its line took a number nearer it); on a tent's face above the heading. In the heading's
+   colour. ---- */
 
 .table-no {
     margin: 0;
@@ -1326,8 +1354,8 @@ body:not(.theme-classic) .card {
 
 .card .table-no {
     position: absolute;
-    top: 1.5mm;
-    right: 2.5mm;
+    top: 3mm;
+    right: 3mm;
     font-size: 8pt;
 }
 

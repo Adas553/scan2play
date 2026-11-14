@@ -129,8 +129,7 @@
     }
 
     // A card is cut out, a tent folded: a part nearer than this to the card's or the face's edge may be cut off (a cut a little off
-    // its line), or is already clipped by it. Said in the editor under "Pokaż", never changed — the DJ decides what to leave off. The
-    // table's number on a card sits in its corner by design (absolute) and is left out of it.
+    // its line), or is already clipped by it. Said in the editor under "Pokaż", never changed — the DJ decides what to leave off.
     const SAFE = 3 * 96 / 25.4;
 
     function checkMargins() {
@@ -142,10 +141,11 @@
             const box = item.getBoundingClientRect();
             // the preview made smaller (zoom): the rectangles are the screen's, the safe margin the paper's
             const scale = box.width / parseFloat(getComputedStyle(item).width) || 1;
-            tight = Array.prototype.some.call(item.querySelectorAll('.side > *, .text > *'), function (part) {
-                if (!visible(part) || getComputedStyle(part).position === 'absolute') return false;
+            tight = Array.prototype.some.call(item.querySelectorAll('.side > *, .text > *, :scope > .table-no'), function (part) {
+                if (!visible(part)) return false;
                 const r = part.getBoundingClientRect();
-                return Math.min(r.left - box.left, r.top - box.top, box.right - r.right, box.bottom - r.bottom) < SAFE * scale;
+                // half a pixel spared: a part set exactly 3 mm in measures a hair less
+                return Math.min(r.left - box.left, r.top - box.top, box.right - r.right, box.bottom - r.bottom) < (SAFE - 0.5) * scale;
             });
         }
         note.hidden = !tight;
