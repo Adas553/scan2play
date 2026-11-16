@@ -12,6 +12,9 @@ import org.springframework.stereotype.Service;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -23,8 +26,9 @@ import java.util.concurrent.atomic.AtomicInteger;
  * ({@link #giveBack}).
  * <p>
  * The evening is {@link EveningSummaryService#eveningOf}'s (from 6:00 to 6:00, Polish time), so a party past midnight is one evening.
- * In memory, as the other limits: a restart starts the count again — in the DJ's favour. Yesterday's count stays two evenings, for the
- * organiser's note the next day ({@link #yesterday}).
+ * In memory, and written to the database once a minute ({@link GuestLimitStore}, V71): a restart goes on from the count kept, less
+ * the last minute at most — in the DJ's favour. Yesterday's count stays two evenings, for the organiser's note the next day
+ * ({@link #yesterday}).
  */
 @Service
 @Slf4j
@@ -137,6 +141,35 @@ public class FreeAiLimit {
         }
         AtomicInteger asked = counts.getIfPresent(key(party, evening));
         return new Use(asked == null ? 0 : asked.get(), partyLimit);
+    }
+
+    /** The evenings' counts as they are kept across a restart ({@link GuestLimitStore}): "party|evening" → the requests counted. */
+    public Map<String, Integer> counted() {
+        Map<String, Integer> kept = new HashMap<>();
+        counts.asMap().forEach((key, asked) -> kept.put(key, asked.get()));
+        return kept;
+    }
+
+    /**
+     * Puts back the counts of before a restart: this evening's and yesterday's (the organiser's note). An evening that has counted a
+     * request since the start keeps its new count.
+     */
+    public void restore(Map<String, Integer> kept) {
+        LocalDate yesterday = today().minusDays(1);
+        kept.forEach((key, asked) -> {
+            if (asked > 0 && !eveningOf(key).isBefore(yesterday)) {
+                counts.asMap().putIfAbsent(key, new AtomicInteger(asked));
+            }
+        });
+    }
+
+    /** The evening a key names; a key that names none (it is no key of ours) counts as long past. */
+    private static LocalDate eveningOf(String key) {
+        try {
+            return LocalDate.parse(key.substring(key.lastIndexOf('|') + 1));
+        } catch (DateTimeParseException e) {
+            return LocalDate.MIN;
+        }
     }
 
     private LocalDate today() {

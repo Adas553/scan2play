@@ -11,6 +11,8 @@ import org.springframework.stereotype.Service;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -29,7 +31,9 @@ import java.util.Optional;
  * <p>
  * The guests' 👍 on the songs of the list ({@link GuestVoteService}) have a limit of their own, per client IP + party
  * ({@code guest.limit.votes-per-ip-party} per the same window): they cost no AI call, so a vote never uses up a request.
- * The counts are in memory, like the sessions (a single instance, Section 13 of {@code PROJECT_CONTEXT.md}).
+ * The counts are in memory (a single instance, Section 13 of {@code PROJECT_CONTEXT.md}). The parties' 24-hour windows are also
+ * written to the database once a minute and read at the start ({@link GuestLimitStore}, V71), so a deploy during a party does not
+ * hand it a new day; the address windows are not — a guest's address is never stored — and start again with the application.
  * <p>
  * The client address is {@link HttpServletRequest#getRemoteAddr()} — with {@code server.forward-headers-strategy=FRAMEWORK}
  * the first entry of {@code X-Forwarded-For}, which a client can fake — unless {@code guest.client-ip-header} names a header
@@ -204,6 +208,37 @@ public class GuestRequestLimiter {
     public void resetParty(String partyCode) {
         partyWindows.invalidate(partyCode);
         log.info("Party [{}]: the guests' daily request limit started again", partyCode);
+    }
+
+    // ---- Kept across a restart (GuestLimitStore) ----
+
+    /** A party's 24-hour window as it is kept across a restart: when it started and what it has counted. */
+    public record PartyDay(Instant start, int count) {
+    }
+
+    /** The parties' 24-hour windows that are still open, by party code — never an address's window: no address is stored. */
+    public Map<String, PartyDay> partyDays() {
+        Instant now = clock.instant();
+        Map<String, PartyDay> open = new HashMap<>();
+        partyWindows.asMap().forEach((partyCode, window) -> {
+            if (now.isBefore(window.start().plus(PARTY_WINDOW))) {
+                open.put(partyCode, new PartyDay(window.start(), window.count()));
+            }
+        });
+        return open;
+    }
+
+    /**
+     * Puts back the parties' windows of before a restart, the ones still open. A party that has counted a request since the start
+     * keeps its new window.
+     */
+    public void restorePartyDays(Map<String, PartyDay> kept) {
+        Instant now = clock.instant();
+        kept.forEach((partyCode, day) -> {
+            if (day.count() > 0 && now.isBefore(day.start().plus(PARTY_WINDOW))) {
+                partyWindows.asMap().putIfAbsent(partyCode, new Window(day.start(), day.count()));
+            }
+        });
     }
 
     // ---- What the DJ's dashboard shows (reads only) ----

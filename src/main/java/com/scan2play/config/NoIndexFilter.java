@@ -21,7 +21,8 @@ public class NoIndexFilter extends OncePerRequestFilter {
 
     static final String HEADER = "X-Robots-Tag";
     static final String NO_INDEX = "noindex, nofollow";
-    private static final List<String> PRIVATE = List.of("/p/", "/h/", "/k/", "/w/", "/s/", "/join", "/dj/", "/email/");
+    private static final List<String> PRIVATE = List.of("/p/", "/h/", "/k/", "/w/", "/s/", "/join", "/dj/", "/email/",
+            "/healthz");   // the uptime monitor's address is no page
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
