@@ -2,8 +2,10 @@ package com.scan2play.service;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import com.scan2play.model.Plan;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -14,6 +16,7 @@ import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Predicate;
 
 /**
  * Server-side limits on guest song requests that do not depend on the session cookie.
@@ -25,7 +28,9 @@ import java.util.Optional;
  *     <li><b>client IP + party</b> — {@code guest.limit.per-ip-party} requests per {@code guest.limit.per-ip-window-minutes}.
  *         Loose on purpose: the guests on a venue's Wi-Fi share one public address.</li>
  *     <li><b>party</b> — {@code guest.limit.per-party-daily} requests per 24 hours, whatever the address, so one party (or a
- *         script that fakes addresses) cannot spend more than its own share.</li>
+ *         script that fakes addresses) cannot spend more than its own share; a party whose organiser has Pro:
+ *         {@code guest.limit.per-party-daily-pro} ({@link #perPartyLimit}). The DJ's queue shows as many waiting requests
+ *         ({@code SongRequestRepository.findTop400…}): raise that bound with the larger of the two.</li>
  * </ul>
  * Each limit is a fixed window that starts with the first request after the previous one ended. A limit of 0 or less is off.
  * <p>
@@ -77,6 +82,9 @@ public class GuestRequestLimiter {
     private final int perClientVoteLimit;
     private final Duration clientWindow;
     private final int perPartyLimit;
+    private final int perPartyProLimit;
+    /** Whether the party of this code works with Pro (its organiser's plan); false for a code that is no party. */
+    private final Predicate<String> pro;
     private final String clientIpHeader;
     private final Clock clock;
 
@@ -96,8 +104,26 @@ public class GuestRequestLimiter {
                                @Value("${guest.limit.per-ip-window-minutes:10}") int clientWindowMinutes,
                                @Value("${guest.limit.per-party-daily:300}") int perPartyLimit,
                                @Value("${guest.client-ip-header:}") String clientIpHeader,
-                               @Value("${guest.limit.votes-per-ip-party:300}") int perClientVoteLimit) {
-        this(perClientLimit, clientWindowMinutes, perPartyLimit, clientIpHeader, perClientVoteLimit, Clock.systemUTC());
+                               @Value("${guest.limit.votes-per-ip-party:300}") int perClientVoteLimit,
+                               @Value("${guest.limit.per-party-daily-pro:400}") int perPartyProLimit,
+                               ObjectProvider<PartySettingsQueryService> parties, ObjectProvider<PlanService> plans) {
+        this(perClientLimit, clientWindowMinutes, perPartyLimit, clientIpHeader, perClientVoteLimit, Clock.systemUTC(),
+                perPartyProLimit, partyCode -> hasPro(partyCode, parties.getIfAvailable(), plans.getIfAvailable()));
+    }
+
+    /**
+     * Whether the party's organiser has Pro. Not for a code that is no party, nor where the parties or the plans are not there to
+     * ask (a test of one controller that brings the limiter alone): the smaller day then.
+     */
+    private static boolean hasPro(String partyCode, PartySettingsQueryService parties, PlanService plans) {
+        if (parties == null || plans == null) {
+            return false;
+        }
+        try {
+            return plans.planOf(parties.getSettings(partyCode)) == Plan.PRO;
+        } catch (IllegalArgumentException noSuchParty) {
+            return false;
+        }
     }
 
     /** With the votes' default limit (tests and the page renders). */
@@ -111,6 +137,15 @@ public class GuestRequestLimiter {
 
     GuestRequestLimiter(int perClientLimit, int clientWindowMinutes, int perPartyLimit, String clientIpHeader,
                         int perClientVoteLimit, Clock clock) {
+        this(perClientLimit, clientWindowMinutes, perPartyLimit, clientIpHeader, perClientVoteLimit, clock, perPartyLimit,
+                partyCode -> false);
+    }
+
+    /** With Pro's own limit of a party's day, and which parties have Pro. */
+    GuestRequestLimiter(int perClientLimit, int clientWindowMinutes, int perPartyLimit, String clientIpHeader,
+                        int perClientVoteLimit, Clock clock, int perPartyProLimit, Predicate<String> pro) {
+        this.perPartyProLimit = perPartyProLimit;
+        this.pro = pro;
         this.perClientLimit = perClientLimit;
         this.perClientVoteLimit = perClientVoteLimit;
         this.clientWindow = Duration.ofMinutes(Math.max(1, clientWindowMinutes));
@@ -150,13 +185,13 @@ public class GuestRequestLimiter {
         if (isPartyLimitReached(partyCode)) {
             // the party's day is spent: refused whatever the address, and no address window is made — a flood from ever new
             // addresses (IPv6 gives one each request) would otherwise fill the party's map up to its bound
-            return acquire(partyWindows, partyCode, perPartyLimit, PARTY_WINDOW, partyCode).map(wait -> new Refusal(Scope.PARTY, wait));
+            return acquire(partyWindows, partyCode, perPartyLimit(partyCode), PARTY_WINDOW, partyCode).map(wait -> new Refusal(Scope.PARTY, wait));
         }
         Optional<Long> clientWait = acquire(clientWindowsOf(partyCode), clientIp, perClientLimit, clientWindow, "one address @ " + partyCode);
         if (clientWait.isPresent()) {
             return Optional.of(new Refusal(Scope.CLIENT, clientWait.get()));
         }
-        return acquire(partyWindows, partyCode, perPartyLimit, PARTY_WINDOW, partyCode)
+        return acquire(partyWindows, partyCode, perPartyLimit(partyCode), PARTY_WINDOW, partyCode)
                 .map(wait -> new Refusal(Scope.PARTY, wait));
     }
 
@@ -171,7 +206,7 @@ public class GuestRequestLimiter {
         if (kioskWait.isPresent()) {
             return Optional.of(new Refusal(Scope.CLIENT, kioskWait.get()));
         }
-        return acquire(partyWindows, partyCode, perPartyLimit, PARTY_WINDOW, partyCode)
+        return acquire(partyWindows, partyCode, perPartyLimit(partyCode), PARTY_WINDOW, partyCode)
                 .map(wait -> new Refusal(Scope.PARTY, wait));
     }
 
@@ -252,9 +287,9 @@ public class GuestRequestLimiter {
         return clientWindow.toMinutes();
     }
 
-    /** Requests per party per 24 hours; 0 or less = off. */
-    public int perPartyLimit() {
-        return perPartyLimit;
+    /** Requests of this party per 24 hours — more when its organiser has Pro; 0 or less = off. */
+    public int perPartyLimit(String partyCode) {
+        return pro.test(partyCode) ? perPartyProLimit : perPartyLimit;
     }
 
     /** How many requests the party has used of its 24-hour window (0 when no window is open). */
@@ -263,7 +298,8 @@ public class GuestRequestLimiter {
         if (window == null || !clock.instant().isBefore(window.start().plus(PARTY_WINDOW))) {
             return 0;
         }
-        return perPartyLimit > 0 ? Math.min(window.count(), perPartyLimit) : window.count();
+        int limit = perPartyLimit(partyCode);
+        return limit > 0 ? Math.min(window.count(), limit) : window.count();
     }
 
     /**
@@ -304,7 +340,8 @@ public class GuestRequestLimiter {
 
     /** Whether the party's 24-hour limit is spent: its guests are refused until the window ends. */
     public boolean isPartyLimitReached(String partyCode) {
-        return perPartyLimit > 0 && partyRequestsUsed(partyCode) >= perPartyLimit;
+        int limit = perPartyLimit(partyCode);
+        return limit > 0 && partyRequestsUsed(partyCode) >= limit;
     }
 
     /**

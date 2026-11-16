@@ -110,7 +110,7 @@ class DjDashboardControllerQueueCacheTest {
     /** The queue in the database is now {@code songs}, with the fingerprint {@code fingerprint}. */
     private void queueIs(String fingerprint, SongRequestEntity... songs) {
         when(songRequestRepository.computeFingerprint(eq(PARTY), anyCollection())).thenReturn(fingerprint);
-        when(songRequestRepository.findTop300ByPartyCodeAndDecisionInOrderByRequestedAtAsc(eq(PARTY), anyCollection()))
+        when(songRequestRepository.findTop400ByPartyCodeAndDecisionInOrderByRequestedAtAsc(eq(PARTY), anyCollection()))
                 .thenReturn(List.of(songs));
     }
 

@@ -23,7 +23,8 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
   deploy of `main` Fri–Sun 18:00–6:00 (`deploy-window.yml`, `[deploy-now]`) and the party's day and the Free plan's AI checks kept
   across a restart (V71, `GuestLimitStore`). **Waits for the owner:** the R2 bucket, its token and the Railway service `db-backup`;
   the UptimeRobot account and its two monitors; after the first held commit, whether Railway deploys it on the workflow's re-run;
-  a sentence on the copies (R2, 30 days) in the privacy policy.
+  a sentence on the copies (R2, 30 days) in the privacy policy. Also there: Pro's day of a party is 400 requests (Free 300;
+  `guest.limit.per-party-daily-pro`, the queue's bound 400, the pricing table).
 - **2026-11-13 — the state.** `main` = `d033d77` (#262: item 11 B0 — the DJ's contact for bookings, V67 — and A0; #261 the guide's
   pictures), deployed 2026-11-13 06:11 UTC, SUCCESS: Flyway 66 → 67, started in 5.3 s, no WARN, 0 × 5xx (166 requests), RAM 0.6 GB
   (Railway, read only); curl without cookies: `/`, `/pro`, `/dj-weselny` 200 to `</html>`. The items released: `docs/history/session-handoff-2026-11-13.md`.

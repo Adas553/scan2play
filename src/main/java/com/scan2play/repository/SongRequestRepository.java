@@ -37,16 +37,16 @@ public interface SongRequestRepository extends JpaRepository<SongRequestEntity, 
 
 
     /**
-     * Finds the 300 oldest song requests for the DJ dashboard queue (FIFO order) — as many as a party may send in a day
-     * ({@code guest.limit.per-party-daily}), so every waiting request is in it: the DJ's queue, the guests' list and their 👍, and
-     * the match of a request for a song that waits already (a vote, not a second row). It was 100 until 2026-10-08: a song asked
-     * for again while 100 older ones waited became a second row. Bounded; {@code idx_party_decision_time} finds the rows.
+     * Finds the 400 oldest song requests for the DJ dashboard queue (FIFO order) — as many as a party may send in a day
+     * ({@code guest.limit.per-party-daily-pro}, the larger of the two limits), so every waiting request is in it: the DJ's queue, the guests' list and their 👍, and
+     * the match of a request for a song that waits already (a vote, not a second row). Past the bound a song asked
+     * for again would become a second row instead of a vote. Bounded; {@code idx_party_decision_time} finds the rows.
      *
      * @param partyCode The unique code of the party.
      * @param decisions The list of statuses to include (e.g., ["accepted"]).
-     * @return A list of the 300 oldest matching song requests, ordered by oldest first.
+     * @return A list of the 400 oldest matching song requests, ordered by oldest first.
      */
-    List<SongRequestEntity> findTop300ByPartyCodeAndDecisionInOrderByRequestedAtAsc(String partyCode, Collection<String> decisions);
+    List<SongRequestEntity> findTop400ByPartyCodeAndDecisionInOrderByRequestedAtAsc(String partyCode, Collection<String> decisions);
 
     /**
      * The party's requests the DJ skipped ("Pomiń", {@code skipped_at}, V20) after {@code since}, the latest skip first — a request

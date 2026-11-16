@@ -105,7 +105,7 @@ class ProPageRenderTest {
         assertThat(html).contains("lang=\"pl\"", "<title>Cennik Scan2Play</title>", ">Cennik</h1>", ">0 zł <small>zawsze</small><", ">WCZESNY DOSTĘP<", ">Napisz do nas<",
                 "href=\"mailto:contact@scan2play.com.pl?subject=Scan2Play%20Pro\"", ">Napisz, że chcesz Pro<",
                 "data-copy-text=\"contact@scan2play.com.pl\"", "data-copied=\"Skopiowano\"", ">Kopiuj adres<",
-                "data-plan=\"free\"", "data-plan=\"pro\"", ">Free<", "data-pro-compare", ">Ocena AI prośby<", ">150 na wieczór<", ">każda prośba<", ">300 na dobę<",
+                "data-plan=\"free\"", "data-plan=\"pro\"", ">Free<", "data-pro-compare", ">Ocena AI prośby<", ">150 na wieczór<", ">każda prośba<", ">300 na dobę<", ">400 na dobę<",
                 ">Lista gospodarzy<", ">Twoje profile i napiwki<", "w 100% dla Ciebie, bez prowizji", ">Podsumowanie wieczoru<", ">Komentarze AI z charakterem<",
                 ">Własne limity gości i ocena AI każdej prośby<", ">Obsługa do 10 osób<", ">Twoja biblioteka<", ">Kiosk dla gości<", "rano mail z podsumowaniem",
                 "„✓ DJ ma” w podpowiedziach gości",

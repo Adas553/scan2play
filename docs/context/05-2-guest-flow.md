@@ -62,7 +62,7 @@ decided by the server (`GuestController.styleOf`): the DJ's vibe when set, else 
    `GuestController.waitText` says it: whole minutes rounded up from a minute on ("3 min"), seconds below it ("45 s");
 2. client IP + party: `guest.limit.per-ip-party` (60) per `guest.limit.per-ip-window-minutes` (10) — loose, a venue's Wi-Fi is one
    address — `guest.error.too_many_requests`;
-3. party: `guest.limit.per-party-daily` (300) per 24 h — `guest.error.party_daily_limit`. Once spent, a request is refused before
+3. party: `guest.limit.per-party-daily` (300) per 24 h, or `guest.limit.per-party-daily-pro` (400) for a party whose organiser has Pro — every party while the plans are not enforced (`GuestRequestLimiter.perPartyLimit`; the DJ's queue is bounded by the same 400, `findTop400…`: raise both together) — `guest.error.party_daily_limit`. Once spent, a request is refused before
    2 is counted: no address window is kept for it (an IPv6 flood, a new address each request, would fill the party's map).
 
 A request that 2 or 3 refused gives the guest's own place back too (`giveBack`; review 2026-10-14 W2: the guest was then held by their
@@ -84,7 +84,7 @@ follow every poll's headers).
 
 **The Free plan's AI checks** (`FreeAiLimit`, the owner 2026-11-05: 150, soft): `guest.limit.free-ai-per-party` (env
 `GUEST_LIMIT_FREE_AI_PER_PARTY`, 150; 0 = off) requests a party an evening (`EveningSummaryService.eveningOf`, 6:00 to 6:00 Polish time)
-go to Gemini — only while the plans are enforced and for an organiser without Pro (Pro's bound: the 300 a day above). Counted in
+go to Gemini — only while the plans are enforced and for an organiser without Pro (Pro's bound: the 400 a day above). Counted in
 `SongEvaluationService` just before the call — moods and a song asked again too (they cost a call), a call that failed given back (`giveBack`: the AI judged nothing); not 👍, not the refusals before the AI
 (the limits, the hosts' list by the guest's words), not the demo; the kiosk as every guest. Past it: no call, the request reaches the DJ
 unchecked — `KIND_UNCHECKED`, the queue's "bez oceny AI", the path of "the AI is down" but no outage (`AiHealthMonitor` untouched) —, except a song of the recently played

@@ -22,7 +22,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * The Free plan's AI checks an evening ({@code guest.limit.free-ai-per-party}, 150): every guest's request that would go to Gemini is
  * counted here first, and past the limit it reaches the DJ unchecked — the path of "the AI is down" — so a party never stops, only
  * its cost does (one check ≈ $0.002–0.003). Only while the plans are enforced and for a party whose organiser has no Pro; Pro's bound
- * is the server's 300 a day for everyone ({@link GuestRequestLimiter}). Not counted: 👍, the refusals before the AI, the demo, a call that failed
+ * is the server's limit of a party's day ({@link GuestRequestLimiter}, 400 for Pro). Not counted: 👍, the refusals before the AI, the demo, a call that failed
  * ({@link #giveBack}).
  * <p>
  * The evening is {@link EveningSummaryService#eveningOf}'s (from 6:00 to 6:00, Polish time), so a party past midnight is one evening.

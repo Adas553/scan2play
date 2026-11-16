@@ -320,6 +320,28 @@ class GuestRequestLimiterTest {
         assertThat(limiter.clientIp(request)).isEqualTo("198.51.100.1");
     }
 
+    /** A party whose organiser has Pro has a larger day; the panel is told that party's own limit. */
+    @Test
+    void aPartyWithPro_hasItsOwnLargerDay() {
+        GuestRequestLimiter limiter = new GuestRequestLimiter(0, 10, 3, "", 300, clock, 5, "PRO01"::equals);
+
+        for (int i = 0; i < 5; i++) {
+            assertThat(limiter.tryAcquire(IP, "PRO01")).as("Pro's request %d", i + 1).isEmpty();
+        }
+        assertThat(limiter.tryAcquire(IP, "PRO01")).map(Refusal::scope).contains(Scope.PARTY);
+        assertThat(limiter.perPartyLimit("PRO01")).isEqualTo(5);
+        assertThat(limiter.partyRequestsUsed("PRO01")).isEqualTo(5);
+        assertThat(limiter.isPartyLimitReached("PRO01")).isTrue();
+
+        for (int i = 0; i < 3; i++) {
+            assertThat(limiter.tryAcquire(IP, PARTY)).isEmpty();
+        }
+        assertThat(limiter.tryAcquireKiosk(PARTY)).as("Free: the smaller day, the kiosk's requests in it too")
+                .map(Refusal::scope).contains(Scope.PARTY);
+        assertThat(limiter.perPartyLimit(PARTY)).isEqualTo(3);
+        assertThat(limiter.isPartyLimitReached(PARTY)).isTrue();
+    }
+
     /** The guests' 👍 have a limit of their own per address and party: a vote never uses up a request, nor the other way round. */
     @Test
     void votes_haveTheirOwnLimitPerAddress_apartFromTheRequests() {
