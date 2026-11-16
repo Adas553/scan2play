@@ -16,9 +16,8 @@ through Cloudflare like every request (the origin's own address answers 403, Sec
 
 1. An account at uptimerobot.com with the address the owner reads; install its phone app and allow its notifications — an e-mail at
    23:00 on a Saturday is read on Sunday.
-2. **New monitor**: type **Keyword**, URL `https://www.scan2play.com.pl/healthz`, keyword `ok`, alert when the keyword **does not
-   exist**, every 5 minutes, timeout 30 s. (A plain HTTP monitor would also do; the keyword also catches a 200 from a page that is
-   not ours.)
+2. **New monitor**: type **HTTP(s)**, URL `https://www.scan2play.com.pl/healthz`, every 5 minutes, timeout 30 s. It asks with
+   `HEAD` (the free plan): a database away is a 503, so the status alone tells it — no keyword needed.
 3. A second monitor, type **HTTP(s)**, URL `https://www.scan2play.com.pl/` — the landing page as a visitor gets it.
 4. Alert contacts: the e-mail and the phone app, for both monitors. Leave "alert after N failures" at 2: one missed check during a
    deploy is not an outage.
