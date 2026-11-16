@@ -16,6 +16,7 @@ import java.sql.Statement;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * The base of the tests that need a real PostgreSQL ({@code *IT}, run by {@code mvnw verify -Pit}; not by {@code mvnw test}).
@@ -56,6 +57,17 @@ public abstract class PostgresIntegrationTest {
         registry.add("spring.datasource.url", () -> "jdbc:postgresql://" + HOST + ":" + PORT + "/" + name);
         registry.add("spring.datasource.username", () -> USER);
         registry.add("spring.datasource.password", () -> PASSWORD);
+    }
+
+    private static final AtomicInteger PARTY_CODES = new AtomicInteger();
+
+    /**
+     * A party code no other test of the run has: {@code prefix} and a number counted up (base 36, four characters). The tests share
+     * one database, and a code drawn at random met another test's now and then (unique {@code party_code}: a red run for nothing).
+     */
+    protected static String newPartyCode(char prefix) {
+        String number = Integer.toString(PARTY_CODES.getAndIncrement(), 36).toUpperCase();
+        return prefix + "0".repeat(4 - number.length()) + number;
     }
 
     private static synchronized String createDatabaseOnce() {

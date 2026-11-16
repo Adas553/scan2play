@@ -22,7 +22,6 @@ import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.concurrent.ThreadLocalRandom;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -38,7 +37,7 @@ class DjLibraryIT extends PostgresIntegrationTest {
     @Autowired JdbcTemplate jdbc;
 
     private String party() {
-        String code = "L" + ThreadLocalRandom.current().nextInt(1000, 10000);
+        String code = newPartyCode('L');
         parties.saveAndFlush(PartySettingsEntity.builder().partyCode(code).ownerId("lib-" + code).active(true).build());
         return code;
     }
