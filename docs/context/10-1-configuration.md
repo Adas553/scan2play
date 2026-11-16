@@ -27,7 +27,9 @@ Brevo (Senders), or Brevo takes the e-mail and then drops it ("sender … is not
 on average, 2 GB at the top) — the live data is ~55 MB. Measured on a copy (20 parties × 50 guests polling every 3 s, 1 500
 requests in 2 min): 0 errors, the same speed as the default, ~800 MB at the top instead of 1–1.1 GB. `-Xmx256m` with SerialGC was
 lower (536 MB at one party of 150 guests) but slower under the 20 parties; out of memory the app restarts instead of hanging.
-Backups: Railway's scheduled ones are not on Hobby — `docs/database-backup.md` (a weekly `pg_dump` by hand).
+Backups: Railway's scheduled ones are not on Hobby — `docs/database-backup.md`: a copy every night to Cloudflare R2 by the Railway
+service `db-backup` (`tools/db-backup`, a cron; its variables — the database's references and the R2 token — are secrets), and a
+`pg_dump` by hand before a release with a migration.
 
 ### Key application properties
 

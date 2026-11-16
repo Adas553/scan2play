@@ -71,14 +71,14 @@ public class DjService {
     /**
      * Returns the accepted songs (waiting in queue) for the dashboard in FIFO order.
      * Oldest request is at the top — DJ sees what will be played next immediately.
-     * Limited to the 300 oldest pending entries (a day's requests of a party, see the repository).
+     * Limited to the 400 oldest pending entries (a day's requests of a party, see the repository).
      *
      * @param partyCode The unique code of the party.
-     * @return List of accepted song requests (max 300), oldest first.
+     * @return List of accepted song requests (max 400), oldest first.
      */
     @Cacheable(value = QUEUE_CACHE, key = "#partyCode")
     public List<SongRequestEntity> getDashboardQueue(String partyCode) {
-        return songRequestRepository.findTop300ByPartyCodeAndDecisionInOrderByRequestedAtAsc(
+        return songRequestRepository.findTop400ByPartyCodeAndDecisionInOrderByRequestedAtAsc(
                 partyCode, List.of(DECISION_ACCEPTED)
         );
     }
@@ -90,7 +90,7 @@ public class DjService {
      * fingerprint, so the list is never older than the ETag it is sent with.
      */
     public List<SongRequestEntity> getWaiting(String partyCode) {
-        return songRequestRepository.findTop300ByPartyCodeAndDecisionInOrderByRequestedAtAsc(partyCode, List.of(DECISION_ACCEPTED));
+        return songRequestRepository.findTop400ByPartyCodeAndDecisionInOrderByRequestedAtAsc(partyCode, List.of(DECISION_ACCEPTED));
     }
 
     /** How many of a song's dedications the queue shows: the newest; "+N" says how many more there are. */
@@ -116,7 +116,7 @@ public class DjService {
 
     /**
      * For each of the songs, by its id: "✓", "?" or "✗" by the party's library (V41, V42; {@link LibraryKey#markIn}), with the tempo
-     * and the key of the DJ's track (V57). One lookup for all of them (the queue is at most its 300); none, and no marks, when the
+     * and the key of the DJ's track (V57). One lookup for all of them (the queue is at most its 400); none, and no marks, when the
      * party has no library.
      */
     public Map<Long, DjLibraryService.Match> libraryMarksOf(String partyCode, List<SongRequestEntity> songs) {

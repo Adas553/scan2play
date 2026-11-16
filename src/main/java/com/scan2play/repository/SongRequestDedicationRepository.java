@@ -15,7 +15,7 @@ public interface SongRequestDedicationRepository extends JpaRepository<SongReque
 
     /**
      * The newest {@code perSong} dedications of each of these requests, each song's in the order they came, the songs by id. Bounded:
-     * at most {@code perSong} rows a song, the queue's ≤ 300 songs; {@code idx_dedication_request} finds them.
+     * at most {@code perSong} rows a song, the queue's ≤ 400 songs; {@code idx_dedication_request} finds them.
      */
     @Query(value = "SELECT id, song_request_id, text, checked, created_at FROM ("
             + " SELECT d.*, row_number() OVER (PARTITION BY d.song_request_id ORDER BY d.id DESC) AS place"
