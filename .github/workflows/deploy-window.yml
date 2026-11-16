@@ -1,0 +1,27 @@
+name: Deploy window
+
+# No deploy during a party. Railway deploys `main` only after every workflow of the commit has ended well ("Wait for CI"), so this
+# one fails on Friday, Saturday and Sunday from 18:00 until 6:00 the next morning, Polish time: a restart then would meet guests
+# in the middle of sending a song, and a migration gone wrong would stop an evening. An urgent fix: [deploy-now] in the commit's
+# message (for a merged pull request: in its title). A commit held back: re-run this workflow after 6:00 — if Railway does not
+# pick the commit up then, "Redeploy" it there.
+#
+# Every push to `main`, the documentation too: Railway deploys those as well, and a commit no workflow runs for is deployed at once.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy-window:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Outside the party hours
+        env:
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+        run: bash .github/scripts/deploy-window.sh

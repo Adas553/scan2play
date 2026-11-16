@@ -64,6 +64,7 @@ GuestQueueService          → DjService
 | GET | `/jak-to-dziala`, `/how-it-works` | the guide for DJs (public; the language by the locale) |
 | GET | `/dj-weselny`, `/kluby`, `/puby` | the pages "Dla kogo" (public; `ForWhomController`, 2026-10-21) |
 | GET | `/robots.txt`, `/sitemap.xml` | for search engines (`SeoController`, 2026-10-14) |
+| GET | `/healthz` | the uptime monitor's (`HealthController`, `docs/monitoring.md`): `ok`, or a 503 `database` when the database does not answer (asked at most once in 5 s); plain text, no session, `noindex` |
 | GET | `/pro` | the pricing page (V35): what stays free, what Pro adds, "Napisz, że chcesz Pro" (`mailto:`), the questions; while the plans are not enforced one card "Za darmo" (everything free, no word of Pro) |
 | POST | `/csp-report` | a browser's CSP report (no CSRF; 204) |
 | GET | `/manifest.webmanifest`, `/sw.js` | the web app manifest (`application/manifest+json`) and the notifications' service worker |

@@ -74,6 +74,7 @@ schema behind Flyway's back.
 | V68 | "Życzenia przed imprezą": `wish_event` (`id` bigserial, `party_code` FK ON DELETE / UPDATE CASCADE, `token` varchar(32) unique, `name` varchar(80), `event_date` date, `closed`, `wish_count`, `created_at`; indexes `(party_code, event_date)`, `(event_date)` — the latter unused: the purge's `OR created_at` reads the table whole, at most
 20 events a party; the next migration on `wish_event` drops it) and `guest_wish` (PK `(event_id, wish_key)`, `wish_key` varchar(401), `song_name` varchar(150), `wishes`, `first_at`, `last_at`; FK ON DELETE CASCADE); data: `WISHES` added to the permissions that were the whole set with `KIOSK` (the co-organisers), as V56 (Section 5.1, `05-1i-wishes.md`) |
 | V69 | "Życzenia przed imprezą": `wish_event.guest_theme` varchar(10), NOT NULL DEFAULT 'CLASSIC', CHECK the looks of V59 — the event's guests' page has its own look, not the party's "Motyw dla gości" (a new look goes into both CHECKs) (Section 5.1, `05-1i-wishes.md`) |
+| V71 | table `guest_limit_count` (`kind` varchar(10) — PARTY_DAY / FREE_AI —, `key` varchar(64), PK both; `started_at` timestamptz, `count` integer): the guests' limits kept across a restart (`GuestLimitStore`, Section 5.2 "Limits"); numbers only, never an address (`GuestLimitStoreIT`) |
 | V70 | `party_settings.poster_logo_badge` varchar(6) NOT NULL DEFAULT 'AUTO' (check AUTO / ALWAYS / NEVER): the white badge behind the DJ's logo on the QR print (`MigrationIT`) |
 | V62 | `song_requests.reject_reason` and `evening_song.reject_reason` varchar(16), null or DUPLICATE / OFF_VIBE (checks `song_requests_reject_reason_check`, `evening_song_reject_reason_check`): why the AI rejected a request, for the evening summary (`EveningSummaryIT`) |
 | V61 | tables `evening_song` (what the evening summary keeps of a deleted request: `song_request_id` PK, `party_code` FK → `party_settings` ON DELETE / UPDATE CASCADE, `song_name` nullable, `requested_at` NOT NULL, `played_at`, `status` with a check of the five, `votes`, `tips`, `dedications`, `added_by_dj`, `via_kiosk`; indexes `idx_evening_song_party_time`, `idx_evening_song_time`) and `evening_summary` (`id` bigserial PK, `party_code` FK as above, `evening` date, `title` varchar(60), `share_token` varchar(32) with `uk_evening_summary_share_token`, `share_expires_at`, `updated_at`; `uk_evening_summary_party_evening`) — the summary for 13 months, its title and the hosts' link (`EveningSummaryIT`) |
@@ -102,6 +103,16 @@ versioned script addresses (PR #10); 2026-10-07 PR #11 via #12 (`a06e4be`: clear
 applied in 0.05 s, "Push notifications on"). Since:
 `CSP_ENFORCE=true` (2026-10-15), Dependabot alerts and security updates on, Railway waits for the CI before it deploys `main`
 (`checkSuites: true`, 2026-10-16).
+
+**No deploy during a party** (`.github/workflows/deploy-window.yml`, `.github/scripts/deploy-window.sh`): a workflow of every push
+to `main` — the documentation too — that fails on Friday, Saturday and Sunday from 18:00 until 6:00 the next morning, Polish time,
+so Railway, waiting for the commit's workflows, does not deploy then. An urgent fix: `[deploy-now]` in the commit's message (a
+merged pull request: in its title). A commit held back: re-run the workflow after 6:00; if Railway does not pick it up, "Redeploy"
+there (not yet seen on Railway: check it the first time). A restart at any hour keeps the parties' day and the Free plan's AI
+checks (V71) — the address windows and a guest's own limit start again.
+
+**Watched from outside**: `GET /healthz` (`HealthController`: the application and its database) asked by UptimeRobot —
+`docs/monitoring.md`. Railway's own healthcheck stays `/privacy`.
 
 ---
 

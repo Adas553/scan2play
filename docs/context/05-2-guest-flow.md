@@ -73,7 +73,7 @@ feature) — `POST /dj/dashboard/guest-limit-reset`, `GuestRequestLimiter.resetP
 their windows (W4). A stricter limit per address was not added: a venue's Wi-Fi is one address for all its guests; a scripted flood is
 for the rate-limit rule in Cloudflare for `/p/*` (the owner's setting, in place since 2026-10-16).
 
-2 and 3 are `GuestRequestLimiter` (Caffeine, in memory; the address windows by party, so a dashboard's poll reads only its own
+2 and 3 are `GuestRequestLimiter` (Caffeine, in memory — 3, the party's day, is also kept across a restart, V71 `GuestLimitStore`: written once a minute, so a deploy during a party does not hand it a new day; 1 and 2 start again with the application, and no address is ever stored; the address windows by party, so a dashboard's poll reads only its own
 party's and a flood of made-up addresses at one party cannot push another's out — review 2026-10-14); 0 switches a limit off. The guests' 👍 have their own per-network limit
 there (`guest.limit.votes-per-ip-party`, 300 per the same window, `tryAcquireVote`): no AI call, so a vote never uses up a request. The address is `getRemoteAddr()` or the header named
 by `guest.client-ip-header` (`CF-Connecting-IP` — set on Railway). The DJ sees the use of 2 and 3 on "Ustawienia imprezy"

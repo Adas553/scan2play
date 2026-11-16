@@ -1,10 +1,46 @@
-# Backing up the production database (by hand)
+# Backing up the production database
 
-Railway's scheduled volume backups are not on the Hobby plan, so the owner takes a copy with `pg_dump` from their own computer —
-**once a week, and before every release with a migration** (Section 10 of `PROJECT_CONTEXT.md`). A copy is one small file (the data is well under the volume's 500 MB).
+Railway's scheduled volume backups are not on the Hobby plan. Two copies instead:
+
+- **every night, by itself** — the Railway service `db-backup` (`tools/db-backup`) runs `pg_dump` over Railway's private network
+  and puts the file in a Cloudflare R2 bucket: another provider than the database's, so a lost Railway project does not take the
+  copies with it. Set up once, below;
+- **by hand, before every release with a migration** — `pg_dump` from the owner's computer ("Take a copy (PowerShell)").
+
+## The nightly copy to Cloudflare R2 (set up once)
+
+1. **Cloudflare → R2 → Create bucket**: name `scan2play-backups`, location hint Europe, **not public**. In the bucket: **Settings →
+   Object lifecycle rules → Add rule**: delete objects 30 days after they were made (the copies hold personal data; thirty nightly
+   copies are enough to go back to).
+2. **R2 → Manage API tokens → Create Account API token**: permission **Object Read & Write**, **only the bucket
+   `scan2play-backups`**, no end date. Cloudflare shows the Access Key ID, the Secret Access Key and the endpoint
+   (`https://<account id>.r2.cloudflarestorage.com`) once — they go straight into Railway (step 4), never into the repo, a chat or
+   a screenshot.
+3. **Railway → the project → New → GitHub Repo → `Adas553/scan2play`**, name the service `db-backup`. Its **Settings**: Root
+   Directory `tools/db-backup` (Railway builds its `Dockerfile`), Watch Paths `tools/db-backup/**` (a change of the application
+   does not rebuild it), **Cron Schedule `17 3 * * *`** (UTC: 4:17 or 5:17 in Poland — after the parties, before the night's jobs
+   are of interest), no domain, no healthcheck.
+4. Its **Variables**: `PGHOST` = `${{Postgres.PGHOST}}`, and the same for `PGPORT`, `PGDATABASE`, `PGUSER`, `PGPASSWORD`
+   (references to the Postgres service — the private address, no TCP proxy); `R2_ENDPOINT`, `R2_BUCKET` = `scan2play-backups`,
+   `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` from step 2.
+5. Run it once by hand (the service's **Run now**): its log ends with `Backup done: scan2play-<day>.dump (<size> bytes)` and the
+   file is in the bucket. A failure is a line `BACKUP FAILED: …` and a crashed run — Railway's notifications (Account →
+   Notifications → deployment crashed) send an e-mail.
+
+Once a month: the bucket holds last night's file, and one of them restores ("Check that a copy restores": download it from the
+bucket in Cloudflare first). When PostgreSQL on Railway moves to a new major version, raise the image in
+`tools/db-backup/Dockerfile` with it — `pg_dump` must not be older than the server.
+
+The script was tried against a local PostgreSQL with a stand-in for the upload (2026-11-16); the upload to R2 itself and the
+image are first run in step 5.
+
+## A copy by hand (before a release with a migration)
+
+The owner takes a copy with `pg_dump` from their own computer (Section 10 of `PROJECT_CONTEXT.md`). A copy is one small file (the data is well under the volume's 500 MB).
 
 The copy holds the guests' words, the DJs' parties and Google account ids: personal data. Keep it **outside the repository**
-(`*.dump` is in `.gitignore` anyway) and off shared folders; delete copies older than 90 days.
+(`*.dump` is in `.gitignore` anyway) and off shared folders; delete copies older than 90 days. To restore from a nightly copy,
+download its file from the R2 bucket and use it as the file below.
 
 ## Take a copy (PowerShell)
 
