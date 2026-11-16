@@ -4,6 +4,9 @@ import com.scan2play.service.GuestRequestLimiter.Refusal;
 import com.scan2play.service.GuestRequestLimiter.Scope;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.mock.web.MockHttpServletRequest;
 
 import java.time.Duration;
@@ -21,6 +24,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * The server-side limits of guest requests (review item 4.1): per client address and party, and per party, counted before
  * the evaluation whatever the session cookie says.
  */
+@ExtendWith(OutputCaptureExtension.class)
 class GuestRequestLimiterTest {
 
     private static final String PARTY = "ABC12";
@@ -329,5 +333,28 @@ class GuestRequestLimiterTest {
 
         clock.advance(Duration.ofMinutes(10));
         assertThat(limiter.tryAcquireVote(IP, PARTY)).as("a new window").isEmpty();
+    }
+
+    /**
+     * A limit reached is written to the log once, naming the party — never the guest's address (the privacy pages: "never … in
+     * its own logs") nor the secret of a wishes' link.
+     */
+    @Test
+    void aLimitReached_isLogged_withoutTheAddress_orTheWishesSecret(CapturedOutput output) {
+        GuestRequestLimiter limiter = new GuestRequestLimiter(1, 10, 50, "", 1, clock);
+        String token = "s3cretWishesToken";
+
+        limiter.tryAcquire(IP, PARTY);
+        limiter.tryAcquire(IP, PARTY);
+        limiter.tryAcquireVote(IP, PARTY);
+        limiter.tryAcquireVote(IP, PARTY);
+        for (int i = 0; i <= GuestRequestLimiter.WISHES_PER_ADDRESS; i++) {
+            limiter.tryAcquireWish(IP, token);
+        }
+
+        assertThat(output.getOut()).contains("Guest request limit of 1 per PT10M reached for 'one address @ " + PARTY + "'")
+                .contains("reached for 'one address's votes @ " + PARTY + "'")
+                .contains("reached for 'one address @ a wishes' link'")
+                .doesNotContain(IP).doesNotContain(token);
     }
 }

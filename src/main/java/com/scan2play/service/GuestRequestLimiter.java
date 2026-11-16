@@ -146,13 +146,13 @@ public class GuestRequestLimiter {
         if (isPartyLimitReached(partyCode)) {
             // the party's day is spent: refused whatever the address, and no address window is made — a flood from ever new
             // addresses (IPv6 gives one each request) would otherwise fill the party's map up to its bound
-            return acquire(partyWindows, partyCode, perPartyLimit, PARTY_WINDOW).map(wait -> new Refusal(Scope.PARTY, wait));
+            return acquire(partyWindows, partyCode, perPartyLimit, PARTY_WINDOW, partyCode).map(wait -> new Refusal(Scope.PARTY, wait));
         }
-        Optional<Long> clientWait = acquire(clientWindowsOf(partyCode), clientIp, perClientLimit, clientWindow);
+        Optional<Long> clientWait = acquire(clientWindowsOf(partyCode), clientIp, perClientLimit, clientWindow, "one address @ " + partyCode);
         if (clientWait.isPresent()) {
             return Optional.of(new Refusal(Scope.CLIENT, clientWait.get()));
         }
-        return acquire(partyWindows, partyCode, perPartyLimit, PARTY_WINDOW)
+        return acquire(partyWindows, partyCode, perPartyLimit, PARTY_WINDOW, partyCode)
                 .map(wait -> new Refusal(Scope.PARTY, wait));
     }
 
@@ -163,17 +163,17 @@ public class GuestRequestLimiter {
      *         kiosk's)
      */
     public Optional<Refusal> tryAcquireKiosk(String partyCode) {
-        Optional<Long> kioskWait = acquire(kioskWindows, partyCode + "|kiosk", KIOSK_REQUESTS, KIOSK_WINDOW);
+        Optional<Long> kioskWait = acquire(kioskWindows, partyCode + "|kiosk", KIOSK_REQUESTS, KIOSK_WINDOW, "the kiosk @ " + partyCode);
         if (kioskWait.isPresent()) {
             return Optional.of(new Refusal(Scope.CLIENT, kioskWait.get()));
         }
-        return acquire(partyWindows, partyCode, perPartyLimit, PARTY_WINDOW)
+        return acquire(partyWindows, partyCode, perPartyLimit, PARTY_WINDOW, partyCode)
                 .map(wait -> new Refusal(Scope.PARTY, wait));
     }
 
     /** Counts one 👍 (or its taking back) at the party's kiosk (V56) against the kiosk's own limit of votes. */
     public Optional<Long> tryAcquireKioskVote(String partyCode) {
-        return acquire(voteWindows, partyCode + "|kiosk", KIOSK_VOTES, clientWindow);
+        return acquire(voteWindows, partyCode + "|kiosk", KIOSK_VOTES, clientWindow, "the kiosk's votes @ " + partyCode);
     }
 
     /**
@@ -183,7 +183,7 @@ public class GuestRequestLimiter {
      * @return empty if the wish may go on (it has been counted), otherwise the seconds to wait
      */
     public Optional<Long> tryAcquireWish(String clientIp, String eventToken) {
-        return acquire(wishWindows, clientIp + "|" + eventToken, WISHES_PER_ADDRESS, clientWindow);
+        return acquire(wishWindows, clientIp + "|" + eventToken, WISHES_PER_ADDRESS, clientWindow, "one address @ a wishes' link");
     }
 
     /**
@@ -192,7 +192,7 @@ public class GuestRequestLimiter {
      * @return empty if the vote may go on (it has been counted), otherwise the seconds to wait
      */
     public Optional<Long> tryAcquireVote(String clientIp, String partyCode) {
-        return acquire(voteWindows, clientIp + "|" + partyCode, perClientVoteLimit, clientWindow);
+        return acquire(voteWindows, clientIp + "|" + partyCode, perClientVoteLimit, clientWindow, "one address's votes @ " + partyCode);
     }
 
     /**
@@ -272,8 +272,13 @@ public class GuestRequestLimiter {
         return perPartyLimit > 0 && partyRequestsUsed(partyCode) >= perPartyLimit;
     }
 
-    /** Takes one request from the key's window in one atomic step; returns the seconds to wait if the window is full. */
-    private Optional<Long> acquire(Cache<String, Window> windows, String key, int limit, Duration length) {
+    /**
+     * Takes one request from the key's window in one atomic step; returns the seconds to wait if the window is full.
+     *
+     * @param logged what the log calls the window when its limit is reached: the party, never the key itself — a key holds the
+     *               guest's address or a wishes' link's secret, and the privacy pages say neither is written to the logs
+     */
+    private Optional<Long> acquire(Cache<String, Window> windows, String key, int limit, Duration length, String logged) {
         if (limit <= 0) {
             return Optional.empty();
         }
@@ -286,7 +291,7 @@ public class GuestRequestLimiter {
             if (window.count() >= limit) {
                 waitSeconds[0] = Math.max(1, Duration.between(now, window.start().plus(length)).toSeconds());
                 if (window.count() == limit) {
-                    log.warn("Guest request limit of {} per {} reached for '{}'", limit, length, loggable(k));
+                    log.warn("Guest request limit of {} per {} reached for '{}'", limit, length, logged);
                     return new Window(window.start(), limit + 1); // log once per window
                 }
                 return window;
@@ -294,11 +299,5 @@ public class GuestRequestLimiter {
             return new Window(window.start(), window.count() + 1);
         });
         return waitSeconds[0] < 0 ? Optional.empty() : Optional.of(waitSeconds[0]);
-    }
-
-    /** The party code of a key, without the client address (not logged). */
-    private static String loggable(String key) {
-        int separator = key.indexOf('|');
-        return separator < 0 ? key : "one address @ " + key.substring(separator + 1);
     }
 }
