@@ -231,8 +231,10 @@ public class SecurityConfig {
                         .requestMatchers("/dj-weselny", "/kluby", "/puby").permitAll()
                         // what a search engine reads first (SeoController); before, both led to the login page, "/"
                         .requestMatchers("/robots.txt", "/sitemap.xml").permitAll()
-                        // what the uptime monitor asks (HealthController): the application and its database
+                        // what the uptime monitor asks (HealthController): the application and its database; HEAD too, because
+                        // the free plans of the monitors check with HEAD, and a HEAD would otherwise meet "authenticated"
                         .requestMatchers(HttpMethod.GET, "/healthz").permitAll()
+                        .requestMatchers(HttpMethod.HEAD, "/healthz").permitAll()
                         // the demo (DemoController): the demo party's panel, only to look at, and its queue and history
                         .requestMatchers(HttpMethod.GET, "/demo", "/demo/**").permitAll()
                         // OAuth2 login endpoints must be public

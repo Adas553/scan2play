@@ -25,6 +25,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.head;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -52,6 +53,13 @@ class HealthControllerTest {
                 .andExpect(header().string("Cache-Control", "no-store"))
                 .andExpect(header().string("X-Robots-Tag", "noindex, nofollow"))
                 .andExpect(result -> assertThat(result.getRequest().getSession(false)).as("no session is made").isNull());
+    }
+
+    /** The free plans of the uptime monitors check with HEAD: it must be a 200 too, not the login's redirect or a 404. */
+    @Test
+    void aHeadRequest_isOkToo() throws Exception {
+        mockMvc.perform(head("/healthz"))
+                .andExpect(status().isOk());
     }
 
     /**
