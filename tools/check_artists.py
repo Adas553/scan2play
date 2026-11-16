@@ -118,6 +118,9 @@ def main():
         name = entry.split('=')[-1]
         try:
             songs = ask(name)
+            if not songs:   # iTunes sometimes answers a known name with nothing: once more before it is reported
+                time.sleep(10)
+                songs = ask(name)
         except Exception as e:   # one failed ask is reported, not the end of the run
             print(f'  ?? {name}: {e}')
             unchecked.append(name)

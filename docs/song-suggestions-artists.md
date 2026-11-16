@@ -41,7 +41,9 @@ New artists come, others stop being asked for. About every three months, or afte
      alias, `"what guests type=what iTunes calls them"`), or a name iTunes matches to others (the band Weekend: "Weekend" gives The
      Weeknd and Scooter) — then take it off the list;
    - `FEW <artist>: n of 25` — fewer than 3 of its songs: a name iTunes matches mostly to others ("Classic"). Completing to it shows
-     little of theirs: take it off, or ask by a name iTunes gives fewer others;
+     little of theirs, but no harm: the songs of iTunes's own answer with the word come after them. Take it off when a likelier
+     artist shares its beginning; a new candidate with `FEW` is not added. (2026-11-17: Classic, Perfect, Feel, Survivor, kept.)
+     An empty `NONE` (iTunes gave nothing) is asked once more; if it stays, check the name by hand before taking it off;
    - the beginnings shared by several artists and which one wins (`--offline` prints only this, at once): reorder when the winner is
      the less likely at a party.
 2. **Look for new names** — what is played at Polish parties now:
@@ -60,7 +62,7 @@ New artists come, others stop being asked for. About every three months, or afte
 3. **Edit `ARTISTS`** in `song-autocomplete.js`: add, take off, reorder (each group keeps its kind: Polish dance and disco polo,
    Polish pop/rock/rap, Polish wedding classics, international now / dance / classics; at the end the artists that lose a shared
    beginning to a likelier one). A candidate is checked before it is added: at least 3 of its songs under the name asked. Keep it to a few hundred names — the list is part of the script every guest loads.
-4. Run `python tools/check_artists.py` again (0 `NONE`, 0 `FEW`), the browser scenarios `song-suggestions-*`, and write the date of the
+4. Run `python tools/check_artists.py` again (0 `NONE`; a `FEW` only as decided above), the browser scenarios `song-suggestions-*`, and write the date of the
    review and the next one here.
 
 | Review | What changed |

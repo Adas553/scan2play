@@ -161,3 +161,9 @@ reason), then green.
 Checked in node on the real iTunes answers of the review: `zenek martyniuk ` → 8 songs with Zenon Martyniuk; `zenek` → his 5,
 then iTunes's own "zenek" songs; `zenek m` → his songs; `grease you` and `dirty dancing ti` as before the branch; `sweet car` without
 "Calm Down"; `zene` without Mariah Carey; `que` → Queen; `ac/d` → AC/DC.
+
+`python tools/check_artists.py` after the fixes (the whole list, iTunes PL, ~20 min): 379 of 381 found. `NONE` Duran Duran and Lionel
+Richie: iTunes answered both with nothing once; asked again by hand, 24 and 25 songs, so the tool now asks an empty answer once
+more. `FEW` (1 of 25): Classic, Perfect, Feel, Survivor — names iTunes matches mostly to others. Kept: after P3 completing to them
+shows their song and then iTunes's own songs with the word, which is better than iTunes's padding for the half word. The doc says
+so. Then `unit` 1311 OK, `browser` 431 OK, `audit -t guest` OK.
