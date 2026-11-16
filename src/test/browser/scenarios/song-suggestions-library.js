@@ -11,7 +11,8 @@
             const url = new URL(String(resource && resource.url ? resource.url : resource), location.href);
             if (url.hostname === 'itunes.apple.com') {
                 const term = url.searchParams.get('term');
-                const names = { wilki: ['ABBA - SOS', 'Wilki - Baśka', 'Wilki - Urke'], kult: ['Kult - Arahja', 'Kult - Polska'] }[term] || [];
+                const names = { wilki: ['ABBA - SOS', 'Wilki - Baśka', 'Wilki - Urke'], kult: ['Kult - Arahja', 'Kult - Polska'],
+                    Kult: ['Kult - Arahja', 'Kult - Polska'], kul: ['Kul - Wycie'] }[term] || [];
                 return Promise.resolve(new Response(JSON.stringify({ results: names.map(function (n) {
                     const at = n.indexOf(' - ');
                     return { artistName: n.slice(0, at), trackName: n.slice(at + 3) };
@@ -111,6 +112,24 @@
             type(input, 'wilki');
             await t.waitFor(function () { return items().length === 3; }, 'the suggestions for "wilki"', 3000);
             t.step('not asked, unmarked', [asked.length, items()], [0, ['ABBA – SOS', 'Wilki – Baśka', 'Wilki – Urke']]);
+        }
+    });
+
+    S2P.scenario({
+        name: 'song-suggestions-library-artist-begun',
+        title: 'a word completed to an artist ("kul" → Kult): the library asked for the list as shown, the DJ\'s song first and marked',
+        page: 'guest-library',
+        run: async function (t) {
+            const asked = stub(function (songs) {
+                return json(songs.map(function (song) { return song === 'Kult - Polska'; }));
+            });
+            const input = document.getElementById('songInput');
+            input.focus();
+            type(input, 'kul');
+            await t.waitFor(function () { return items().length === 3; }, 'the suggestions for "kul"', 3000);
+            t.step('Kult\'s songs (asked as "Kult"), then iTunes\'s own for "kul": the library asked for them as shown', asked,
+                [['Kult - Arahja', 'Kult - Polska', 'Kul - Wycie']]);
+            t.step('the DJ\'s song first, marked', items(), ['Kult – Polska [✓ DJ ma]', 'Kult – Arahja', 'Kul – Wycie']);
         }
     });
 })();

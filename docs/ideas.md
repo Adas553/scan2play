@@ -232,3 +232,9 @@ piece of work or when a task names an item. A finished item stays here until its
    było?" — the guests' list of what played tonight knows only the guests' requests, not the DJ's set (later perhaps the set's history
    uploaded after the party); "🎶 Leci Twoja piosenka!" (the guest page would ask the server every half minute); 🔥 for the song that
    plays. **Good, not started:** "Brakuje Ci" — the songs asked for at several parties of the last 30 days that the library has not.
+
+14. **The guests' song suggestions: a single word completed to an artist** (the owner, 2026-11-16: "shak" gave "Shik Shak Shok", not
+   Shakira) — built on `claude/awesome-sagan-hhc11y`: a hand-written list of ~280 artists in `song-autocomplete.js`, only an addition
+   to iTunes's answer, never from the DJ's library; with it each song's versions once and no padding without the typed words. The
+   list's review every few months (next 2027-02, `tools/check_artists.py`) and **the learning to come** — an endpoint of the
+   artists guests asked for across parties, after a few dozen real parties: `docs/song-suggestions-artists.md`.

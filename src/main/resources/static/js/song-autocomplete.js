@@ -38,12 +38,69 @@
     const DEBOUNCE_MS   = 300;
     const MAX_RESULTS   = 8;    // suggestions shown
     const WHOLE_LIMIT   = 15;   // asked for the whole query: room for the duplicates that go
+    const ARTIST_LIMIT  = 25;   // asked for the artist a single word begins
+    const ARTIST_FIRST  = 5;    // of them before iTunes's own answer for the word
+    const ARTIST_MIN_CHARS = 3; // "sh" begins too many
     const STEM_LIMIT    = 50;   // asked for the words before the one being typed (~10 KB gzipped, as fast as 8)
     const STORE         = 'PL';
     const MIN_CHARS     = 2;
     const CACHE_MAX_SIZE = 50;  // evict oldest entries beyond this limit
     const LIBRARY_WAIT_MS = 600;       // the longest the list waits for "which does the DJ have"
     const LIBRARY_CACHE_MAX = 500;     // songs remembered as had / not had
+
+    /**
+     * The artists a single word being typed is completed to (artistBegun): iTunes knows whole words only, so "shak" never reaches
+     * Shakira by itself. Only an addition — iTunes's own answer for the word is still shown — and never the DJ's library (a guest
+     * would learn it letter by letter). The first that fits wins: the likelier at a party comes earlier ("mart" → Martyniuk).
+     * "Zenek Martyniuk=Zenon Martyniuk": what guests type, then the name iTunes gives the artist (asked by that).
+     * Reviewed every few months: docs/song-suggestions-artists.md.
+     */
+    const ARTISTS = [
+        // Polish: dance, disco polo, weddings
+        'Zenek Martyniuk=Zenon Martyniuk', 'Akcent', 'Boys', 'Bayer Full', 'Skolim', 'Sławomir', 'Piękni i Młodzi', 'Classic', 'Top One',
+        'Łobuzy', 'Masters', 'Power Play', 'Cliver', 'Mig', 'Milano', 'Toples', 'Bracia Figo Fagot', 'Golec uOrkiestra',
+        'Enej', 'Ich Troje', 'Wanda i Banda', 'Papa Dance', 'Kombi', 'Kombii', 'Big Cyc', 'Formacja Nieżywych Schabuff',
+        // Polish: pop, rock, rap
+        'Dawid Podsiadło', 'sanah', 'Kortez', 'Daria Zawiałow', 'Krzysztof Zalewski', 'Vito Bambino', 'Ralph Kaminski', 'Kwiat Jabłoni',
+        'Taco Hemingway', 'Quebonafide', 'Mata', 'Bedoes', 'Young Leosia', 'Sobel', 'Smolasty', 'Kizo', 'Białas', 'Pezet', 'Kękę',
+        'Doda', 'Edyta Górniak', 'Maryla Rodowicz', 'Krzysztof Krawczyk', 'Bajm', 'Lady Pank', 'Perfect', 'Budka Suflera', 'Republika',
+        'Maanam', 'Kult', 'Kazik', 'Dżem', 'T.Love', 'Myslovitz', 'Hey', 'Nosowska', 'Wilki', 'Feel', 'Varius Manx', 'Kayah', 'Czerwone Gitary',
+        'Trubadurzy', 'Skaldowie', 'Anna Jantar', 'Andrzej Zaucha', 'Seweryn Krajewski', 'Lombard', 'Elektryczne Gitary', 'Margaret',
+        'Cleo', 'Dawid Kwiatkowski', 'Viki Gabor', 'Roksana Węgiel', 'Blanka', 'Brodka', 'Ania Dąbrowska', 'Sylwia Grzeszczak',
+        'Andrzej Piaseczny', 'Kasia Kowalska', 'Natalia Kukulska', 'Michał Szpak', 'Ewelina Lisowska', 'Grzegorz Hyży', 'Mrozu',
+        'Kamil Bednarek', 'Zakopower', 'Pectus', 'Edyta Bartosiewicz', 'Urszula', 'Rafał Brzozowski',
+        'Natalia Szroeder', 'Organek', 'Happysad', 'Mery Spolsky', 'Męskie Granie Orkiestra',
+        // international: now
+        'Shakira', 'Ed Sheeran', 'Dua Lipa', 'The Weeknd', 'Taylor Swift', 'Bruno Mars', 'Rihanna', 'Beyoncé', 'Lady Gaga', 'Ariana Grande',
+        'Billie Eilish', 'Harry Styles', 'Justin Bieber', 'Justin Timberlake', 'Katy Perry', 'Miley Cyrus', 'Sabrina Carpenter',
+        'Olivia Rodrigo', 'Benson Boone', 'Teddy Swims', 'Chappell Roan', 'Sia', 'Adele', 'Coldplay', 'Imagine Dragons', 'Maroon 5',
+        'OneRepublic', 'Lewis Capaldi', 'Sam Smith', 'Ellie Goulding', 'Rita Ora', 'Jessie J', 'Ava Max', 'Doja Cat', 'Lizzo', 'Post Malone',
+        'Drake', 'Eminem', 'Snoop Dogg', 'Black Eyed Peas', 'LMFAO', 'Usher', 'Ne-Yo', 'Chris Brown', 'Pitbull', 'Flo Rida', 'Sean Paul',
+        'Jennifer Lopez', 'Enrique Iglesias', 'Ricky Martin', 'Luis Fonsi', 'Daddy Yankee', 'J Balvin', 'Bad Bunny', 'Maluma', 'Karol G',
+        'Rosalía', 'Camila Cabello', 'Måneskin', 'Loreen', 'Hozier', 'Pharrell Williams', 'Mark Ronson',
+        // international: dance
+        'David Guetta', 'Calvin Harris', 'Avicii', 'Martin Garrix', 'Marshmello', 'Kygo', 'Tiësto', 'Alok', 'Robin Schulz',
+        'Swedish House Mafia', 'Major Lazer', 'DJ Snake', 'Clean Bandit', 'Jax Jones', 'Joel Corry', 'Lost Frequencies',
+        'Purple Disco Machine', 'Sophie Ellis-Bextor', 'Kylie Minogue', 'Gigi D\'Agostino', 'Scooter', 'Vengaboys', 'Aqua', 'Eiffel 65',
+        'Haddaway', 'Dr. Alban', 'Ace of Base', '2 Unlimited', 'Alice Deejay', 'Lou Bega', 'Las Ketchup', 'Los del Río', 'Tones and I',
+        'Shazza',   // after Shakira: "sha" is Shakira's more often
+        // international: classics
+        'Michael Jackson', 'Madonna', 'Whitney Houston', 'ABBA', 'Queen', 'Bon Jovi', 'AC/DC', 'Guns N\' Roses', 'The Beatles',
+        'The Rolling Stones', 'Elton John', 'Boney M.', 'Modern Talking', 'Bee Gees', 'Earth, Wind & Fire', 'Kool & The Gang',
+        'Gloria Gaynor', 'Village People', 'Daft Punk', 'Spice Girls', 'Backstreet Boys', 'Britney Spears', 'Christina Aguilera',
+        'Linkin Park', 'Red Hot Chili Peppers', 'Nirvana', 'Metallica', 'Europe', 'Scorpions', 'Roxette', 'Eurythmics', 'Depeche Mode',
+        'Pet Shop Boys', 'Duran Duran', 'Tears for Fears', 'a-ha', 'Toto', 'Journey', 'Survivor', 'Bonnie Tyler', 'Tina Turner', 'Cher',
+        'Celine Dion', 'Mariah Carey', 'Wham!', 'George Michael', 'Phil Collins', 'Lionel Richie', 'Stevie Wonder', 'Prince',
+        'Bruce Springsteen', 'Elvis Presley', 'Frank Sinatra', 'Dean Martin', 'Michael Bublé', 'Dire Straits', 'Pink Floyd',
+        'Led Zeppelin', 'Deep Purple', 'Status Quo', 'Creedence Clearwater Revival', 'The Killers', 'Arctic Monkeys', 'Kings of Leon',
+        'Franz Ferdinand', 'Oasis', 'Blur', 'U2', 'R.E.M.', 'Bob Marley', 'UB40', 'Zucchero', 'Eros Ramazzotti', 'Laura Pausini',
+        'Andrea Bocelli', 'Rammstein', 'Helene Fischer', 'Nelly Furtado', 'Timbaland', '50 Cent',
+        // after the artists that share their beginning and are asked for more often ("jus" → Justin Bieber, "jac" → Michael Jackson)
+        'Justyna Steczkowska', 'Jacek Stachursky'
+    ];
+
+    /** Words of the artists that begin nothing: "the" is no start of The Weeknd's name, "orkiestra" none of Golec uOrkiestra's. */
+    const ARTIST_SKIPPED = new Set(['the', 'and', 'band', 'orkiestra', 'orchestra', 'feat', 'dj', 'project']);
 
     // -------------------------------------------------------------------------
     // Module-level result cache  (query string → results array)
@@ -119,6 +176,41 @@
             return finished.every(function (w) { return its.some(function (it) { return it.indexOf(w) === 0; }); });
         });
         return having.length > 0 ? having : tracks;
+    }
+
+    /**
+     * The artist a single word being typed begins ("shak" → "Shakira", "podsia" → "Dawid Podsiadło"), from ARTISTS: the first whose
+     * word starts so and is longer — a whole word ("imagine") iTunes finds by itself. Null when none, or the word is short.
+     */
+    function artistBegun(typed) {
+        if (/\s$/.test(typed)) return null;
+        const parts = words(typed);
+        if (parts.length !== 1 || parts[0].length < ARTIST_MIN_CHARS) return null;
+        const fragment = parts[0];
+        const namesOf = function (entry) { return entry.split('='); };
+        const wordsOf = function (entry) { return words(namesOf(entry).join(' ')); };
+        // a word that already is an artist's ("kombi", "queen"): iTunes finds them, Kombii is not put above Kombi
+        if (ARTISTS.some(function (a) { return wordsOf(a).indexOf(fragment) >= 0; })) return null;
+        const entry = ARTISTS.find(function (a) {
+            return wordsOf(a).some(function (w) { return w.length > fragment.length && w.indexOf(fragment) === 0 && !ARTIST_SKIPPED.has(w); });
+        });
+        if (!entry) return null;
+        const names = namesOf(entry);
+        return { name: names[names.length - 1] };   // asked as iTunes names them
+    }
+
+    /**
+     * The songs of the artist the word begins (those with every word of the name in their artist: "Shakira", "Disney & Shakira"),
+     * iTunes's own answer after them — the artist's first ARTIST_FIRST songs, then iTunes's own, then the rest of the artist's:
+     * what iTunes found for the word itself is never pushed out of the list.
+     */
+    function withTheArtist(artistsSongs, itsOwn, name) {
+        const named = words(name);
+        const theirs = onceEach(artistsSongs.filter(function (track) {
+            const its = words(track.artistName);
+            return named.every(function (w) { return its.indexOf(w) >= 0; });
+        }));
+        return onceEach(theirs.slice(0, ARTIST_FIRST).concat(itsOwn, theirs.slice(ARTIST_FIRST))).slice(0, MAX_RESULTS);
     }
 
     /** The words already finished: before the word being typed, or all of them after a space; none of a single word being typed. */
@@ -229,8 +321,11 @@
             const query = typed.trim();
             const begun = wordBegun(typed);
             // both at once: the list waits for the slower of two parallel asks, not for one after the other
-            const answers = await Promise.all([ask(query, WHOLE_LIMIT, signal), begun ? ask(begun.stem, STEM_LIMIT, signal) : []]);
-            if (answers[0] === null || answers[1] === null) return null;
+            const artist = begun ? null : artistBegun(typed);
+            const answers = await Promise.all([ask(query, WHOLE_LIMIT, signal), begun ? ask(begun.stem, STEM_LIMIT, signal) : [],
+                artist ? ask(artist.name, ARTIST_LIMIT, signal) : []]);
+            if (answers[0] === null || answers[1] === null || answers[2] === null) return null;
+            if (artist) return withTheDjsFirst(withTheArtist(answers[2], answers[0], artist.name), signal);
             // the songs whose title has a word starting so, then those whose artist has ("da" → "Dai Dai", then "David Guetta")
             const starts = function (text) {
                 return words(text).some(function (w) { return w.indexOf(begun.fragment) === 0; });
