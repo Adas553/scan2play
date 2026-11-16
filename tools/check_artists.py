@@ -16,6 +16,7 @@ import re
 import sys
 import time
 import unicodedata
+import urllib.error
 import urllib.parse
 import urllib.request
 from collections import defaultdict
@@ -44,8 +45,14 @@ def artists():
 
 def ask(name):
     query = urllib.parse.urlencode({'term': name, 'media': 'music', 'entity': 'song', 'country': 'PL', 'limit': 25})
-    with urllib.request.urlopen('https://itunes.apple.com/search?' + query, timeout=15) as response:
-        return json.load(response)['results']
+    for attempt in range(3):
+        try:
+            with urllib.request.urlopen('https://itunes.apple.com/search?' + query, timeout=15) as response:
+                return json.load(response)['results']
+        except urllib.error.HTTPError as e:
+            if e.code != 429 or attempt == 2:
+                raise
+            time.sleep(60)   # iTunes's limit (~20 asks a minute) reached: a minute's pause, then again
 
 
 def main():
@@ -76,13 +83,14 @@ def main():
     if args.offline:
         return 0
     print('\niTunes, the Polish store:')
-    missing = []
+    missing, unchecked = [], []
     for i, entry in enumerate(entries):
         name = entry.split('=')[-1]
         try:
             songs = ask(name)
         except Exception as e:   # one failed ask is reported, not the end of the run
             print(f'  ?? {name}: {e}')
+            unchecked.append(name)
             songs = None
         if songs is not None:
             named = words(name)
@@ -92,8 +100,10 @@ def main():
                 print(f'  NONE {name}  (iTunes gave: {", ".join(sorted({s.get("artistName", "") for s in songs[:5]}))})')
         if i + 1 < len(entries):
             time.sleep(3)
-    print(f'\n{len(entries) - len(missing)} of {len(entries)} artists found; without songs: {", ".join(missing) or "none"}')
-    return 1 if missing else 0
+    found = len(entries) - len(missing) - len(unchecked)
+    print(f'\n{found} of {len(entries)} artists found; without songs: {", ".join(missing) or "none"}; '
+          f'not checked (iTunes failed): {", ".join(unchecked) or "none"}')
+    return 1 if missing or unchecked else 0
 
 
 if __name__ == '__main__':
