@@ -16,7 +16,10 @@ Railway's scheduled volume backups are not on the Hobby plan. Two copies instead
    `scan2play-backups`**, no end date. Cloudflare shows the Access Key ID, the Secret Access Key and the endpoint
    (`https://<account id>.r2.cloudflarestorage.com`) once — they go straight into Railway (step 4), never into the repo, a chat or
    a screenshot.
-3. **Railway → the project → New → GitHub Repo → `Adas553/scan2play`**, name the service `db-backup`. Its **Settings**: Root
+3. **Railway → the project `celebrated-enjoyment` (open it first; "+ Create" on its canvas) → GitHub Repo →
+   `Adas553/scan2play`**, name the service `db-backup`. **In that project, not a new one**: `${{Postgres.…}}` and the private
+   network reach only the services of the same project — in a project of its own the run ends with "the variable PGHOST is not
+   set" (it happened, 2026-11-16). Set the Root Directory before the first build, or Railway builds the application itself. Its **Settings**: Root
    Directory `tools/db-backup` (Railway builds its `Dockerfile`), Watch Paths `tools/db-backup/**` (a change of the application
    does not rebuild it), **Cron Schedule `17 3 * * *`** (UTC: 4:17 or 5:17 in Poland — after the parties, before the night's jobs
    are of interest), no domain, no healthcheck.
