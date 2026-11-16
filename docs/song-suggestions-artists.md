@@ -45,14 +45,16 @@ New artists come, others stop being asked for. About every three months, or afte
      the artists asked for often and missing from the list are the candidates (a guest's text is free: check the spelling against
      iTunes);
    - the charts: Apple Music's Top 100 Poland, the Polish radio charts (RMF FM, Eska, Radio ZET), the year's wedding hits.
-3. **Edit `ARTISTS`** in `song-autocomplete.js`: add, take off, reorder (each group keeps its kind: Polish dance, Polish pop/rock/rap,
-   international now / dance / classics). Keep it to a few hundred names — the list is part of the script every guest loads.
+3. **Edit `ARTISTS`** in `song-autocomplete.js`: add, take off, reorder (each group keeps its kind: Polish dance and disco polo,
+   Polish pop/rock/rap, Polish wedding classics, international now / dance / classics; at the end the artists that lose a shared
+   beginning to a likelier one). A candidate is checked before it is added: at least 3 of its songs under the name asked. Keep it to a few hundred names — the list is part of the script every guest loads.
 4. Run `python tools/check_artists.py` again (0 `NONE`), the browser scenarios `song-suggestions-*`, and write the date of the
    review and the next one here.
 
 | Review | What changed |
 |---|---|
 | 2026-11-16 | The list made: 280 artists, all found by `tools/check_artists.py` (the band Weekend left out: iTunes gives The Weeknd for it). |
+| 2026-11-16 | 101 Polish artists added (disco polo and dance, wedding classics, the new pop and rap): 381 in all, 204 Polish. Left out, iTunes has none or one song under the name: Daj To Głośniej, Imperium, Universe, Kabaret Ani Mru Mru, Daria Marcinkowska; aliases: Gąsowski → "Wojciech Gąssowski", Kasia → "Katarzyna Sobczyk", Roksana → "Roxie Węgiel". Moved to the end, as others are asked for more with the same beginning: Michał Szpak ("mich"), White 2115, Malik Montana, Kordian, Andre and others. |
 
 ## The learning to come (not built)
 

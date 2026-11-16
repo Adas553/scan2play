@@ -60,16 +60,31 @@
         'Zenek Martyniuk=Zenon Martyniuk', 'Akcent', 'Boys', 'Bayer Full', 'Skolim', 'Sławomir', 'Piękni i Młodzi', 'Classic', 'Top One',
         'Łobuzy', 'Masters', 'Power Play', 'Cliver', 'Mig', 'Milano', 'Toples', 'Bracia Figo Fagot', 'Golec uOrkiestra',
         'Enej', 'Ich Troje', 'Wanda i Banda', 'Papa Dance', 'Kombi', 'Kombii', 'Big Cyc', 'Formacja Nieżywych Schabuff',
+        'Exaited', 'Defis', 'After Party', 'Jorrgus', 'Diadem', 'Czadoman', 'Playboys', 'Bad Boys Blue',
+        'Top Girls', 'Tomasz Niecik', 'Fanatic', 'Effect', 'Skaner', 'Long & Junior', 'Radek Liszewski', 'Mejk',
+        'Ronnie Ferrari', 'Kalwi & Remi', 'Gang Albanii', 'Discoboys', 'Extazy', 'Sumptuastic', 'Cypis', 'Freaky Boys', 'Veegas',
+        'Damian Holecki', 'Marcin Miller', 'Piersi', 'Bastek', 'Endriu', 'Mister Dex', 'Etna', 'Tom Swoon',
+        'Gromee', 'Tribbs', 'Donatan',
         // Polish: pop, rock, rap
         'Dawid Podsiadło', 'sanah', 'Kortez', 'Daria Zawiałow', 'Krzysztof Zalewski', 'Vito Bambino', 'Ralph Kaminski', 'Kwiat Jabłoni',
         'Taco Hemingway', 'Quebonafide', 'Mata', 'Bedoes', 'Young Leosia', 'Sobel', 'Smolasty', 'Kizo', 'Białas', 'Pezet', 'Kękę',
         'Doda', 'Edyta Górniak', 'Maryla Rodowicz', 'Krzysztof Krawczyk', 'Bajm', 'Lady Pank', 'Perfect', 'Budka Suflera', 'Republika',
         'Maanam', 'Kult', 'Kazik', 'Dżem', 'T.Love', 'Myslovitz', 'Hey', 'Nosowska', 'Wilki', 'Feel', 'Varius Manx', 'Kayah', 'Czerwone Gitary',
         'Trubadurzy', 'Skaldowie', 'Anna Jantar', 'Andrzej Zaucha', 'Seweryn Krajewski', 'Lombard', 'Elektryczne Gitary', 'Margaret',
-        'Cleo', 'Dawid Kwiatkowski', 'Viki Gabor', 'Roksana Węgiel', 'Blanka', 'Brodka', 'Ania Dąbrowska', 'Sylwia Grzeszczak',
-        'Andrzej Piaseczny', 'Kasia Kowalska', 'Natalia Kukulska', 'Michał Szpak', 'Ewelina Lisowska', 'Grzegorz Hyży', 'Mrozu',
+        'Cleo', 'Dawid Kwiatkowski', 'Viki Gabor', 'Roksana Węgiel=Roxie Węgiel', 'Blanka', 'Brodka', 'Ania Dąbrowska', 'Sylwia Grzeszczak',
+        'Andrzej Piaseczny', 'Kasia Kowalska', 'Natalia Kukulska', 'Ewelina Lisowska', 'Grzegorz Hyży', 'Mrozu',
         'Kamil Bednarek', 'Zakopower', 'Pectus', 'Edyta Bartosiewicz', 'Urszula', 'Rafał Brzozowski',
         'Natalia Szroeder', 'Organek', 'Happysad', 'Mery Spolsky', 'Męskie Granie Orkiestra',
+        'Sara James', 'Oskar Cyms', 'Kaśka Sochacka', 'Ania Karwan', 'Igor Herbut', 'LemON', 'Sarsa', 'Paweł Domagała',
+        'Natalia Nykiel', 'Julia Wieniawa', 'Bryska', 'PRO8L3M', 'Otsochodzi', 'Szczyl', 'Tymek',
+        'Wiktoria Zwolińska', 'Kubi Producent', 'Jann', 'Zalia', 'Poparzeni Kawą Trzy',
+        // Polish: the classics of weddings and dances, rock, rap
+        'Zbigniew Wodecki', 'Irena Jarocka', 'Krzysztof Cugowski', 'Jerzy Połomski', 'Wojciech Gąsowski=Wojciech Gąssowski',
+        'Danuta Rinn', 'Felicjan Andrzejczak', 'Ryszard Rynkowski',
+        'Andrzej i Eliza', 'No To Co', 'Niebiesko-Czarni', 'Karin Stanek', 'Czesław Niemen', 'Marek Grechuta', 'Krzysztof Klenczon',
+        'De Mono', 'Sztywny Pal Azji', 'Bolter', 'Oddział Zamknięty', 'Vox', '2 plus 1', 'Brathanki',
+        'Raz Dwa Trzy', 'Golden Life', 'Alibabki', 'Kasia Cerekwicka', 'Ewa Farna', 'Afromental',
+        'Strachy Na Lachy', 'Akurat', 'Liroy', 'Peja', 'Grubson', 'Natalia Przybysz', 'Edyta Geppert',
         // international: now
         'Shakira', 'Ed Sheeran', 'Dua Lipa', 'The Weeknd', 'Taylor Swift', 'Bruno Mars', 'Rihanna', 'Beyoncé', 'Lady Gaga', 'Ariana Grande',
         'Billie Eilish', 'Harry Styles', 'Justin Bieber', 'Justin Timberlake', 'Katy Perry', 'Miley Cyrus', 'Sabrina Carpenter',
@@ -95,8 +110,9 @@
         'Led Zeppelin', 'Deep Purple', 'Status Quo', 'Creedence Clearwater Revival', 'The Killers', 'Arctic Monkeys', 'Kings of Leon',
         'Franz Ferdinand', 'Oasis', 'Blur', 'U2', 'R.E.M.', 'Bob Marley', 'UB40', 'Zucchero', 'Eros Ramazzotti', 'Laura Pausini',
         'Andrea Bocelli', 'Rammstein', 'Helene Fischer', 'Nelly Furtado', 'Timbaland', '50 Cent',
-        // after the artists that share their beginning and are asked for more often ("jus" → Justin Bieber, "jac" → Michael Jackson)
-        'Justyna Steczkowska', 'Jacek Stachursky'
+        // after the artists that share their beginning and are asked for more often ("jus" → Justin Bieber, "mich" → Michael Jackson)
+        'Justyna Steczkowska', 'Jacek Stachursky', 'Andre', 'Kordian', 'Michał Szpak', 'Michał Bajor', 'White 2115',
+        'Malik Montana', 'Andrzej Rosiewicz', 'Kasia Sobczyk=Katarzyna Sobczyk', 'Halina Frąckowiak', 'Krzysztof Kiljański', 'Camasutra'
     ];
 
     /** Words of the artists that begin nothing: "the" is no start of The Weeknd's name, "orkiestra" none of Golec uOrkiestra's. */
