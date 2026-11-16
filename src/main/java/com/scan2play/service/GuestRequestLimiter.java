@@ -2,8 +2,10 @@ package com.scan2play.service;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import com.scan2play.model.Plan;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -11,7 +13,10 @@ import org.springframework.stereotype.Service;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
+import java.util.function.Predicate;
 
 /**
  * Server-side limits on guest song requests that do not depend on the session cookie.
@@ -23,13 +28,17 @@ import java.util.Optional;
  *     <li><b>client IP + party</b> — {@code guest.limit.per-ip-party} requests per {@code guest.limit.per-ip-window-minutes}.
  *         Loose on purpose: the guests on a venue's Wi-Fi share one public address.</li>
  *     <li><b>party</b> — {@code guest.limit.per-party-daily} requests per 24 hours, whatever the address, so one party (or a
- *         script that fakes addresses) cannot spend more than its own share.</li>
+ *         script that fakes addresses) cannot spend more than its own share; a party whose organiser has Pro:
+ *         {@code guest.limit.per-party-daily-pro} ({@link #perPartyLimit}). The DJ's queue shows as many waiting requests
+ *         ({@code SongRequestRepository.findTop400…}): raise that bound with the larger of the two.</li>
  * </ul>
  * Each limit is a fixed window that starts with the first request after the previous one ended. A limit of 0 or less is off.
  * <p>
  * The guests' 👍 on the songs of the list ({@link GuestVoteService}) have a limit of their own, per client IP + party
  * ({@code guest.limit.votes-per-ip-party} per the same window): they cost no AI call, so a vote never uses up a request.
- * The counts are in memory, like the sessions (a single instance, Section 13 of {@code PROJECT_CONTEXT.md}).
+ * The counts are in memory (a single instance, Section 13 of {@code PROJECT_CONTEXT.md}). The parties' 24-hour windows are also
+ * written to the database once a minute and read at the start ({@link GuestLimitStore}, V71), so a deploy during a party does not
+ * hand it a new day; the address windows are not — a guest's address is never stored — and start again with the application.
  * <p>
  * The client address is {@link HttpServletRequest#getRemoteAddr()} — with {@code server.forward-headers-strategy=FRAMEWORK}
  * the first entry of {@code X-Forwarded-For}, which a client can fake — unless {@code guest.client-ip-header} names a header
@@ -73,6 +82,9 @@ public class GuestRequestLimiter {
     private final int perClientVoteLimit;
     private final Duration clientWindow;
     private final int perPartyLimit;
+    private final int perPartyProLimit;
+    /** Whether the party of this code works with Pro (its organiser's plan); false for a code that is no party. */
+    private final Predicate<String> pro;
     private final String clientIpHeader;
     private final Clock clock;
 
@@ -92,8 +104,26 @@ public class GuestRequestLimiter {
                                @Value("${guest.limit.per-ip-window-minutes:10}") int clientWindowMinutes,
                                @Value("${guest.limit.per-party-daily:300}") int perPartyLimit,
                                @Value("${guest.client-ip-header:}") String clientIpHeader,
-                               @Value("${guest.limit.votes-per-ip-party:300}") int perClientVoteLimit) {
-        this(perClientLimit, clientWindowMinutes, perPartyLimit, clientIpHeader, perClientVoteLimit, Clock.systemUTC());
+                               @Value("${guest.limit.votes-per-ip-party:300}") int perClientVoteLimit,
+                               @Value("${guest.limit.per-party-daily-pro:400}") int perPartyProLimit,
+                               ObjectProvider<PartySettingsQueryService> parties, ObjectProvider<PlanService> plans) {
+        this(perClientLimit, clientWindowMinutes, perPartyLimit, clientIpHeader, perClientVoteLimit, Clock.systemUTC(),
+                perPartyProLimit, partyCode -> hasPro(partyCode, parties.getIfAvailable(), plans.getIfAvailable()));
+    }
+
+    /**
+     * Whether the party's organiser has Pro. Not for a code that is no party, nor where the parties or the plans are not there to
+     * ask (a test of one controller that brings the limiter alone): the smaller day then.
+     */
+    private static boolean hasPro(String partyCode, PartySettingsQueryService parties, PlanService plans) {
+        if (parties == null || plans == null) {
+            return false;
+        }
+        try {
+            return plans.planOf(parties.getSettings(partyCode)) == Plan.PRO;
+        } catch (IllegalArgumentException noSuchParty) {
+            return false;
+        }
     }
 
     /** With the votes' default limit (tests and the page renders). */
@@ -107,6 +137,15 @@ public class GuestRequestLimiter {
 
     GuestRequestLimiter(int perClientLimit, int clientWindowMinutes, int perPartyLimit, String clientIpHeader,
                         int perClientVoteLimit, Clock clock) {
+        this(perClientLimit, clientWindowMinutes, perPartyLimit, clientIpHeader, perClientVoteLimit, clock, perPartyLimit,
+                partyCode -> false);
+    }
+
+    /** With Pro's own limit of a party's day, and which parties have Pro. */
+    GuestRequestLimiter(int perClientLimit, int clientWindowMinutes, int perPartyLimit, String clientIpHeader,
+                        int perClientVoteLimit, Clock clock, int perPartyProLimit, Predicate<String> pro) {
+        this.perPartyProLimit = perPartyProLimit;
+        this.pro = pro;
         this.perClientLimit = perClientLimit;
         this.perClientVoteLimit = perClientVoteLimit;
         this.clientWindow = Duration.ofMinutes(Math.max(1, clientWindowMinutes));
@@ -146,13 +185,13 @@ public class GuestRequestLimiter {
         if (isPartyLimitReached(partyCode)) {
             // the party's day is spent: refused whatever the address, and no address window is made — a flood from ever new
             // addresses (IPv6 gives one each request) would otherwise fill the party's map up to its bound
-            return acquire(partyWindows, partyCode, perPartyLimit, PARTY_WINDOW).map(wait -> new Refusal(Scope.PARTY, wait));
+            return acquire(partyWindows, partyCode, perPartyLimit(partyCode), PARTY_WINDOW, partyCode).map(wait -> new Refusal(Scope.PARTY, wait));
         }
-        Optional<Long> clientWait = acquire(clientWindowsOf(partyCode), clientIp, perClientLimit, clientWindow);
+        Optional<Long> clientWait = acquire(clientWindowsOf(partyCode), clientIp, perClientLimit, clientWindow, "one address @ " + partyCode);
         if (clientWait.isPresent()) {
             return Optional.of(new Refusal(Scope.CLIENT, clientWait.get()));
         }
-        return acquire(partyWindows, partyCode, perPartyLimit, PARTY_WINDOW)
+        return acquire(partyWindows, partyCode, perPartyLimit(partyCode), PARTY_WINDOW, partyCode)
                 .map(wait -> new Refusal(Scope.PARTY, wait));
     }
 
@@ -163,17 +202,17 @@ public class GuestRequestLimiter {
      *         kiosk's)
      */
     public Optional<Refusal> tryAcquireKiosk(String partyCode) {
-        Optional<Long> kioskWait = acquire(kioskWindows, partyCode + "|kiosk", KIOSK_REQUESTS, KIOSK_WINDOW);
+        Optional<Long> kioskWait = acquire(kioskWindows, partyCode + "|kiosk", KIOSK_REQUESTS, KIOSK_WINDOW, "the kiosk @ " + partyCode);
         if (kioskWait.isPresent()) {
             return Optional.of(new Refusal(Scope.CLIENT, kioskWait.get()));
         }
-        return acquire(partyWindows, partyCode, perPartyLimit, PARTY_WINDOW)
+        return acquire(partyWindows, partyCode, perPartyLimit(partyCode), PARTY_WINDOW, partyCode)
                 .map(wait -> new Refusal(Scope.PARTY, wait));
     }
 
     /** Counts one 👍 (or its taking back) at the party's kiosk (V56) against the kiosk's own limit of votes. */
     public Optional<Long> tryAcquireKioskVote(String partyCode) {
-        return acquire(voteWindows, partyCode + "|kiosk", KIOSK_VOTES, clientWindow);
+        return acquire(voteWindows, partyCode + "|kiosk", KIOSK_VOTES, clientWindow, "the kiosk's votes @ " + partyCode);
     }
 
     /**
@@ -183,7 +222,7 @@ public class GuestRequestLimiter {
      * @return empty if the wish may go on (it has been counted), otherwise the seconds to wait
      */
     public Optional<Long> tryAcquireWish(String clientIp, String eventToken) {
-        return acquire(wishWindows, clientIp + "|" + eventToken, WISHES_PER_ADDRESS, clientWindow);
+        return acquire(wishWindows, clientIp + "|" + eventToken, WISHES_PER_ADDRESS, clientWindow, "one address @ a wishes' link");
     }
 
     /**
@@ -192,7 +231,7 @@ public class GuestRequestLimiter {
      * @return empty if the vote may go on (it has been counted), otherwise the seconds to wait
      */
     public Optional<Long> tryAcquireVote(String clientIp, String partyCode) {
-        return acquire(voteWindows, clientIp + "|" + partyCode, perClientVoteLimit, clientWindow);
+        return acquire(voteWindows, clientIp + "|" + partyCode, perClientVoteLimit, clientWindow, "one address's votes @ " + partyCode);
     }
 
     /**
@@ -206,6 +245,37 @@ public class GuestRequestLimiter {
         log.info("Party [{}]: the guests' daily request limit started again", partyCode);
     }
 
+    // ---- Kept across a restart (GuestLimitStore) ----
+
+    /** A party's 24-hour window as it is kept across a restart: when it started and what it has counted. */
+    public record PartyDay(Instant start, int count) {
+    }
+
+    /** The parties' 24-hour windows that are still open, by party code — never an address's window: no address is stored. */
+    public Map<String, PartyDay> partyDays() {
+        Instant now = clock.instant();
+        Map<String, PartyDay> open = new HashMap<>();
+        partyWindows.asMap().forEach((partyCode, window) -> {
+            if (now.isBefore(window.start().plus(PARTY_WINDOW))) {
+                open.put(partyCode, new PartyDay(window.start(), window.count()));
+            }
+        });
+        return open;
+    }
+
+    /**
+     * Puts back the parties' windows of before a restart, the ones still open. A party that has counted a request since the start
+     * keeps its new window.
+     */
+    public void restorePartyDays(Map<String, PartyDay> kept) {
+        Instant now = clock.instant();
+        kept.forEach((partyCode, day) -> {
+            if (day.count() > 0 && now.isBefore(day.start().plus(PARTY_WINDOW))) {
+                partyWindows.asMap().putIfAbsent(partyCode, new Window(day.start(), day.count()));
+            }
+        });
+    }
+
     // ---- What the DJ's dashboard shows (reads only) ----
 
     /** Requests per client address and party per window; 0 or less = off. */
@@ -217,9 +287,9 @@ public class GuestRequestLimiter {
         return clientWindow.toMinutes();
     }
 
-    /** Requests per party per 24 hours; 0 or less = off. */
-    public int perPartyLimit() {
-        return perPartyLimit;
+    /** Requests of this party per 24 hours — more when its organiser has Pro; 0 or less = off. */
+    public int perPartyLimit(String partyCode) {
+        return pro.test(partyCode) ? perPartyProLimit : perPartyLimit;
     }
 
     /** How many requests the party has used of its 24-hour window (0 when no window is open). */
@@ -228,7 +298,8 @@ public class GuestRequestLimiter {
         if (window == null || !clock.instant().isBefore(window.start().plus(PARTY_WINDOW))) {
             return 0;
         }
-        return perPartyLimit > 0 ? Math.min(window.count(), perPartyLimit) : window.count();
+        int limit = perPartyLimit(partyCode);
+        return limit > 0 ? Math.min(window.count(), limit) : window.count();
     }
 
     /**
@@ -269,11 +340,17 @@ public class GuestRequestLimiter {
 
     /** Whether the party's 24-hour limit is spent: its guests are refused until the window ends. */
     public boolean isPartyLimitReached(String partyCode) {
-        return perPartyLimit > 0 && partyRequestsUsed(partyCode) >= perPartyLimit;
+        int limit = perPartyLimit(partyCode);
+        return limit > 0 && partyRequestsUsed(partyCode) >= limit;
     }
 
-    /** Takes one request from the key's window in one atomic step; returns the seconds to wait if the window is full. */
-    private Optional<Long> acquire(Cache<String, Window> windows, String key, int limit, Duration length) {
+    /**
+     * Takes one request from the key's window in one atomic step; returns the seconds to wait if the window is full.
+     *
+     * @param logged what the log calls the window when its limit is reached: the party, never the key itself — a key holds the
+     *               guest's address or a wishes' link's secret, and the privacy pages say neither is written to the logs
+     */
+    private Optional<Long> acquire(Cache<String, Window> windows, String key, int limit, Duration length, String logged) {
         if (limit <= 0) {
             return Optional.empty();
         }
@@ -286,7 +363,7 @@ public class GuestRequestLimiter {
             if (window.count() >= limit) {
                 waitSeconds[0] = Math.max(1, Duration.between(now, window.start().plus(length)).toSeconds());
                 if (window.count() == limit) {
-                    log.warn("Guest request limit of {} per {} reached for '{}'", limit, length, loggable(k));
+                    log.warn("Guest request limit of {} per {} reached for '{}'", limit, length, logged);
                     return new Window(window.start(), limit + 1); // log once per window
                 }
                 return window;
@@ -294,11 +371,5 @@ public class GuestRequestLimiter {
             return new Window(window.start(), window.count() + 1);
         });
         return waitSeconds[0] < 0 ? Optional.empty() : Optional.of(waitSeconds[0]);
-    }
-
-    /** The party code of a key, without the client address (not logged). */
-    private static String loggable(String key) {
-        int separator = key.indexOf('|');
-        return separator < 0 ? key : "one address @ " + key.substring(separator + 1);
     }
 }

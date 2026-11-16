@@ -98,7 +98,7 @@ class SongRequestRepositoryIT extends PostgresIntegrationTest {
         jdbc.update("UPDATE song_requests SET request_number = 1 WHERE id = ?", first.getId());
         assertThat(requests.addTip(first.getId(), party)).isEqualTo(1);
         assertThat(requests.computeFingerprint(party, List.of("accepted"))).isNotEqualTo(voted);
-        assertThat(requests.findTop300ByPartyCodeAndDecisionInOrderByRequestedAtAsc(party, List.of("accepted")))
+        assertThat(requests.findTop400ByPartyCodeAndDecisionInOrderByRequestedAtAsc(party, List.of("accepted")))
                 .extracting(SongRequestEntity::getSongName).containsExactly("one", "two");
     }
 
@@ -167,14 +167,14 @@ class SongRequestRepositoryIT extends PostgresIntegrationTest {
 
         assertThat(requests.rejectWaiting(party, clearedAt)).isEqualTo(2);
 
-        assertThat(requests.findTop300ByPartyCodeAndDecisionInOrderByRequestedAtAsc(party, List.of("accepted"))).isEmpty();
+        assertThat(requests.findTop400ByPartyCodeAndDecisionInOrderByRequestedAtAsc(party, List.of("accepted"))).isEmpty();
         // the AI's comment stays (V25: no note over it); only the cleared ones are marked
         assertThat(jdbc.queryForList("SELECT song_name || ':' || decision || ':' || coalesce(dj_comment, '') || ':' "
                 + "|| coalesce(to_char(cleared_at AT TIME ZONE 'UTC', 'HH24:MI'), '-') FROM song_requests "
                 + "WHERE party_code = ? ORDER BY song_name", String.class, party))
                 .containsExactly("played:played:played!:-", "rejected by the AI:rejected:rejected by the AI!:-",
                         "waiting one:rejected:waiting one!:20:00", "waiting two:rejected:waiting two!:20:00");
-        assertThat(requests.findTop300ByPartyCodeAndDecisionInOrderByRequestedAtAsc(other, List.of("accepted")))
+        assertThat(requests.findTop400ByPartyCodeAndDecisionInOrderByRequestedAtAsc(other, List.of("accepted")))
                 .as("another party's queue is untouched").hasSize(1);
         assertThat(requests.rejectWaiting(party, Instant.now())).as("nothing left to clear").isZero();
     }
@@ -246,7 +246,7 @@ class SongRequestRepositoryIT extends PostgresIntegrationTest {
                 + " WHERE party_code IN (?, ?) ORDER BY id", String.class, party, other))
                 .containsExactly("waited a week rejected true", "another party's, a week rejected true", "played a week ago played false",
                         "skipped a week ago rejected false", "tonight accepted false", "no time accepted false");
-        assertThat(requests.findTop300ByPartyCodeAndDecisionInOrderByRequestedAtAsc(party, List.of("accepted")))
+        assertThat(requests.findTop400ByPartyCodeAndDecisionInOrderByRequestedAtAsc(party, List.of("accepted")))
                 .extracting(SongRequestEntity::getSongName).containsExactlyInAnyOrder("tonight", "no time");
     }
 

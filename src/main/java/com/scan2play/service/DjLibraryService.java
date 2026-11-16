@@ -161,7 +161,7 @@ public class DjLibraryService {
 
     /**
      * Each of the songs asked for against the party's library ({@link LibraryKey#markIn}): one statement for the tracks of all their
-     * titles — a queue's at most 300, an evening's few hundred. "✗" for each when the party has no library: the caller asks
+     * titles — a queue's at most 400, an evening's few hundred. "✗" for each when the party has no library: the caller asks
      * {@link #info} first.
      */
     public Map<LibraryKey, LibraryMark> marks(String partyCode, Collection<LibraryKey> asked) {

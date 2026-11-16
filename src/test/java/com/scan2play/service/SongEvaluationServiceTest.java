@@ -434,7 +434,7 @@ class SongEvaluationServiceTest {
     private SongRequestEntity waitingWilki() {
         SongRequestEntity waiting = SongRequestEntity.builder().id(5L).partyCode(PARTY_CODE).songName("Wilki - Baśka")
                 .decision(DECISION_ACCEPTED).trackUrl("https://www.youtube.com/results?search_query=Wilki+-+Ba%C5%9Bka").votes(2).build();
-        when(songRequestRepository.findTop300ByPartyCodeAndDecisionInOrderByRequestedAtAsc(PARTY_CODE, List.of(DECISION_ACCEPTED)))
+        when(songRequestRepository.findTop400ByPartyCodeAndDecisionInOrderByRequestedAtAsc(PARTY_CODE, List.of(DECISION_ACCEPTED)))
                 .thenReturn(List.of(waiting));
         return waiting;
     }
@@ -526,7 +526,7 @@ class SongEvaluationServiceTest {
     @Test
     void aRejectedSong_thatDoesNotWait_isARowOfItsOwn() {
         aParty(0);
-        when(songRequestRepository.findTop300ByPartyCodeAndDecisionInOrderByRequestedAtAsc(PARTY_CODE, List.of(DECISION_ACCEPTED)))
+        when(songRequestRepository.findTop400ByPartyCodeAndDecisionInOrderByRequestedAtAsc(PARTY_CODE, List.of(DECISION_ACCEPTED)))
                 .thenReturn(List.of());
         ArgumentCaptor<SongRequestEntity> saved = savesWithId();
 

@@ -18,7 +18,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.concurrent.ThreadLocalRandom;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -35,7 +34,7 @@ class WishServiceIT extends PostgresIntegrationTest {
     @Autowired JdbcTemplate jdbc;
 
     private String party() {
-        String code = "W" + ThreadLocalRandom.current().nextInt(1000, 10000);
+        String code = newPartyCode('W');
         parties.saveAndFlush(PartySettingsEntity.builder().partyCode(code).ownerId("wish-" + code).active(true).build());
         return code;
     }
