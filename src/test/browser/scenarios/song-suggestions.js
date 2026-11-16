@@ -13,11 +13,15 @@
                 pending.push({
                     term: url.searchParams.get('term'),
                     url: url,
-                    answer: function (names) {
+                    answer: function (names, status) {
                         resolve(new Response(JSON.stringify({ results: names.map(function (n) {
-                            const at = n.indexOf(' - ');   // the artist, then the title (which may hold " - " too)
-                            return { artistName: n.slice(0, at), trackName: n.slice(at + 3) };
-                        }) }), { headers: { 'Content-Type': 'application/json' } }));
+                            // the artist, then the title (which may hold " - " too), then " @ " and the album, if any
+                            const album = n.indexOf(' @ ');
+                            const song = album >= 0 ? n.slice(0, album) : n;
+                            const at = song.indexOf(' - ');
+                            return { artistName: song.slice(0, at), trackName: song.slice(at + 3),
+                                collectionName: album >= 0 ? n.slice(album + 3) : undefined };
+                        }) }), { status: status || 200, headers: { 'Content-Type': 'application/json' } }));
                     }
                 });
             });
@@ -155,7 +159,7 @@
 
     S2P.scenario({
         name: 'song-suggestions-versions',
-        title: 'the versions of a song (Extended, Radio Edit, a remix) are suggested once, by the shortest title, where the first of them was; a " - " that names no version is the title\'s own',
+        title: 'the versions of a song (Extended, Radio Edit, a remix) are suggested once, where the first of them was, by the shortest title that names no version (not the K-Mix); a " - " that names no version is the title\'s own',
         page: 'guest',
         run: async function (t) {
             const pending = holdITunes();
@@ -171,7 +175,7 @@
             await t.waitFor(open, 'the suggestions', 3000);
             t.step('Weekend once, first, plain; "Sha - La - La - Lady" kept whole', shown(),
                 ['Weekend – Ona Tańczy Dla Mnie', 'Laser – Ona Tańczy Dla Mnie', 'Ona – Sha - La - La - Lady',
-                    'Ona – Waka Waka (This Time for Africa) [K-Mix]']);
+                    'Ona – Waka Waka [The 2010 World Cup (TM) Song] [Single]']);
         }
     });
 
@@ -237,6 +241,140 @@
             await t.sleep(450);
             t.step('a whole word of an artist, two letters: nothing more asked', pending.slice(4).map(function (p) { return p.term; }),
                 ['queen', 'sh']);
+        }
+    });
+
+    S2P.scenario({
+        name: 'song-suggestions-versions-not-joined',
+        title: 'songs that are not versions of each other stay apart: a part\'s number in brackets ("(Part 1)", "(Part 2)"), a " - " whose part only holds a version\'s word in its middle ("Video - Killed the Radio Star"); an en dash names a version too ("Teraz – Remix")',
+        page: 'guest',
+        run: async function (t) {
+            const pending = holdITunes();
+            const input = document.getElementById('songInput');
+            input.focus();
+            type(input, 'ona brick');
+            await t.waitFor(function () { return pending.length === 2; }, 'iTunes asked', 3000);
+            answered(pending, 'ona brick', ['Ona - Another Brick (Part 1)', 'Ona - Another Brick (Part 2)', 'Ona - Video - Killed the Radio Star',
+                'Ona - Video', 'Ona - Teraz – Remix', 'Ona - Teraz']);
+            answered(pending, 'ona', []);
+            await t.waitFor(open, 'the suggestions', 3000);
+            t.step('both parts, both videos, "Teraz" once', shown(), ['Ona – Another Brick (Part 1)', 'Ona – Another Brick (Part 2)',
+                'Ona – Video - Killed the Radio Star', 'Ona – Video', 'Ona – Teraz']);
+        }
+    });
+
+    S2P.scenario({
+        name: 'song-suggestions-album',
+        title: 'a finished word met by the album counts: "grease you" keeps "You\'re the One That I Want" of the film\'s album',
+        page: 'guest',
+        run: async function (t) {
+            const pending = holdITunes();
+            const input = document.getElementById('songInput');
+            input.focus();
+            type(input, 'grease you');
+            await t.waitFor(function () { return pending.length === 2; }, 'iTunes asked', 3000);
+            answered(pending, 'grease you', ['Frankie Valli - Grease', 'Calum Scott - You Are the Reason']);
+            answered(pending, 'grease', ['John Travolta & Olivia Newton-John - You\'re the One That I Want @ Grease (Soundtrack)',
+                'Frankie Valli - Grease']);
+            await t.waitFor(open, 'the suggestions', 3000);
+            t.step('the film\'s song first, then "Grease"; not the padding', shown(),
+                ['John Travolta & Olivia Newton-John – You\'re the One That I Want', 'Frankie Valli – Grease']);
+        }
+    });
+
+    S2P.scenario({
+        name: 'song-suggestions-alias',
+        title: 'what guests type for an artist iTunes names otherwise ("zenek" for "Zenon Martyniuk"): a finished word met by the name iTunes gives, the word completed even when whole, the words before the one begun asked by that name',
+        page: 'guest',
+        run: async function (t) {
+            const pending = holdITunes();
+            const input = document.getElementById('songInput');
+            input.focus();
+            type(input, 'zenek martyniuk ');
+            await t.waitFor(function () { return pending.length === 1; }, 'iTunes asked', 3000);
+            answered(pending, 'zenek martyniuk', ['Classic, Marcin Miller & zenek martyniuk - Kiedy spadnie śnieg',
+                'Łobuzy, Akcent & Zenon Martyniuk - Mandacik', 'Rema - Calm Down']);
+            await t.waitFor(open, 'the suggestions for "zenek martyniuk "', 3000);
+            t.step('"zenek" met by "Zenon" too; no padding', shown(), ['Classic, Marcin Miller & zenek martyniuk – Kiedy spadnie śnieg',
+                'Łobuzy, Akcent & Zenon Martyniuk – Mandacik']);
+
+            type(input, 'zenek');
+            await t.waitFor(function () { return pending.length === 3; }, '"zenek" and its artist asked', 3000);
+            t.step('"zenek" completed to Zenon Martyniuk', pending.slice(1).map(function (p) { return p.term; }).sort(),
+                ['Zenon Martyniuk', 'zenek']);
+
+            type(input, 'zenek m');
+            await t.waitFor(function () { return pending.length === 5; }, '"zenek m" asked', 3000);
+            t.step('the word before asked as iTunes names him', pending.slice(3).map(function (p) { return p.term; }).sort(),
+                ['zenek m', 'zenon']);
+        }
+    });
+
+    S2P.scenario({
+        name: 'song-suggestions-artist-begun-padding',
+        title: 'a word completed to an artist: of iTunes\'s own answer for the half word only the songs with a word starting so — the padding of unrelated hits does not push the artist\'s songs out',
+        page: 'guest',
+        run: async function (t) {
+            const pending = holdITunes();
+            const input = document.getElementById('songInput');
+            input.focus();
+            type(input, 'zene');
+            await t.waitFor(function () { return pending.length === 2; }, 'both asked', 3000);
+            answered(pending, 'zene', ['Mariah Carey - All I Want for Christmas Is You', 'Zenek Kupatasa - Zew']);
+            answered(pending, 'Zenon Martyniuk', ['Zenon Martyniuk - Jola', 'Zenon Martyniuk - Ostatni raz', 'Zenon Martyniuk - Przekorny los',
+                'Zenon Martyniuk - Małomiasteczkowa', 'Zenon Martyniuk - Ty jesteś dla mnie', 'Zenon Martyniuk - Za zdrowie Pań',
+                'Zenon Martyniuk - Wierzę w miłość']);
+            await t.waitFor(open, 'the suggestions for "zene"', 3000);
+            t.step('his five, the song with "zene…", the rest of his; no Mariah Carey', shown(), ['Zenon Martyniuk – Jola',
+                'Zenon Martyniuk – Ostatni raz', 'Zenon Martyniuk – Przekorny los', 'Zenon Martyniuk – Małomiasteczkowa',
+                'Zenon Martyniuk – Ty jesteś dla mnie', 'Zenek Kupatasa – Zew', 'Zenon Martyniuk – Za zdrowie Pań',
+                'Zenon Martyniuk – Wierzę w miłość']);
+        }
+    });
+
+    S2P.scenario({
+        name: 'song-suggestions-artist-joined',
+        title: 'a name with a slash or an apostrophe is completed from its letters ("ac/d" → AC/DC, "d\'ag" → Gigi D\'Agostino); "que" → Queen, before Quebonafide',
+        page: 'guest',
+        run: async function (t) {
+            const pending = holdITunes();
+            const input = document.getElementById('songInput');
+            input.focus();
+            type(input, 'ac/d');
+            await t.waitFor(function () { return pending.length === 2; }, '"ac/d" asked', 3000);
+            type(input, 'd\'ag');
+            await t.waitFor(function () { return pending.length === 4; }, '"d\'ag" asked', 3000);
+            type(input, 'que');
+            await t.waitFor(function () { return pending.length === 6; }, '"que" asked', 3000);
+            t.step('each with its artist', pending.map(function (p) { return p.term; }),
+                ['ac/d', 'AC/DC', 'd\'ag', 'Gigi D\'Agostino', 'que', 'Queen']);
+        }
+    });
+
+    S2P.scenario({
+        name: 'song-suggestions-itunes-refused',
+        title: 'when iTunes refuses (its limit reached: 429) nothing is asked for a while — the guests behind one address do not keep the limit full — then it is asked again',
+        page: 'guest',
+        run: async function (t) {
+            const pending = holdITunes();
+            const input = document.getElementById('songInput');
+            input.focus();
+            type(input, 'despacito');
+            await t.waitFor(function () { return pending.length === 1; }, '"despacito" asked', 3000);
+            pending[0].answer([], 429);
+            await t.sleep(200);
+            type(input, 'despacit');
+            await t.sleep(600);
+            t.step('refused: the next pause asks nothing', pending.length, 1);
+            const now = Date.now;
+            Date.now = function () { return now() + 120000; };
+            try {
+                type(input, 'despacito');
+                await t.waitFor(function () { return pending.length === 2; }, 'asked again after the pause', 3000);
+            } finally {
+                Date.now = now;
+            }
+            t.step('asked again after the pause', pending[1].term, 'despacito');
         }
     });
 })();

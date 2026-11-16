@@ -17,7 +17,9 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
 
 ## Start here
 
-- **2026-11-16 — the guests' song suggestions on `claude/awesome-sagan-hhc11y`, not merged, no migration:** each song's versions
+- **2026-11-17 — the song suggestions' review fixed on `claude/kind-knuth-7ryiki`** (not merged, no migration;
+  `docs/history/review-2026-11-17-song-suggestions.md`: "zenek martyniuk", "grease you", no padding after an artist).
+- **2026-11-16 — the guests' song suggestions, on `main` with #272, no migration:** each song's versions
   once, no songs without the typed words ("sweet car"), a single word completed to an artist of a hand-written list ("shak" →
   Shakira; `docs/ideas.md` item 14). The list's review every few months (next 2027-02) and the learning to come:
   `docs/song-suggestions-artists.md`. To try: the guest page on a phone, "shak", "podsia", "zene".

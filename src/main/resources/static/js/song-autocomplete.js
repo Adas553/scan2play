@@ -16,8 +16,9 @@
  * With it, the words before it are asked too (more of them, kept in memory while the word grows) and the songs with a word that
  * starts so come first; both asks go at once, so the list comes as fast as before. The Polish store (it has the Polish songs the
  * American one lacks, and the international ones too). A song iTunes gives several times (albums, singles, its versions: "(Radio
- * Edit)", "- Extended Mix") is shown once, by its shortest title. Of the songs found, those with every finished word come — iTunes
- * pads its answer with songs of none of them ("sweet car" → "Calm Down").
+ * Edit)", "- Extended Mix") is shown once, by its shortest title that names no version. Of the songs found, those with every finished
+ * word (in the artist, the title or the album) come — iTunes pads its answer with songs of none of them ("sweet car" → "Calm Down").
+ * After iTunes refused (its limit), nothing is asked for ITUNES_PAUSE_MS.
  *
  * Only the answer for what the field says now is shown: one that comes after the guest typed on (or cleared the field) is
  * dropped. The field is an ARIA combobox: aria-expanded, aria-controls, aria-activedescendant on the chosen suggestion.
@@ -47,12 +48,15 @@
     const CACHE_MAX_SIZE = 50;  // evict oldest entries beyond this limit
     const LIBRARY_WAIT_MS = 600;       // the longest the list waits for "which does the DJ have"
     const LIBRARY_CACHE_MAX = 500;     // songs remembered as had / not had
+    const ITUNES_PAUSE_MS = 60000;     // nothing asked after iTunes refused: its limit (~20 asks a minute) is the address's, often
+                                       // a venue's Wi-Fi shared by every guest, and asking again keeps it full
 
     /**
      * The artists a single word being typed is completed to (artistBegun): iTunes knows whole words only, so "shak" never reaches
      * Shakira by itself. Only an addition — iTunes's own answer for the word is still shown — and never the DJ's library (a guest
      * would learn it letter by letter). The first that fits wins: the likelier at a party comes earlier ("mart" → Martyniuk).
-     * "Zenek Martyniuk=Zenon Martyniuk": what guests type, then the name iTunes gives the artist (asked by that).
+     * "Zenek Martyniuk=Zenon Martyniuk": what guests type, then the name iTunes gives the artist (asked by that); a typed word
+     * iTunes does not know as theirs ("zenek") is completed even when whole, and stands for theirs ("zenon") everywhere (ALIAS_WORDS).
      * Reviewed every few months: docs/song-suggestions-artists.md.
      */
     const ARTISTS = [
@@ -67,7 +71,7 @@
         'Gromee', 'Tribbs', 'Donatan',
         // Polish: pop, rock, rap
         'Dawid Podsiadło', 'sanah', 'Kortez', 'Daria Zawiałow', 'Krzysztof Zalewski', 'Vito Bambino', 'Ralph Kaminski', 'Kwiat Jabłoni',
-        'Taco Hemingway', 'Quebonafide', 'Mata', 'Bedoes', 'Young Leosia', 'Sobel', 'Smolasty', 'Kizo', 'Białas', 'Pezet', 'Kękę',
+        'Taco Hemingway', 'Mata', 'Bedoes', 'Young Leosia', 'Sobel', 'Smolasty', 'Kizo', 'Białas', 'Pezet', 'Kękę',
         'Doda', 'Edyta Górniak', 'Maryla Rodowicz', 'Krzysztof Krawczyk', 'Bajm', 'Lady Pank', 'Perfect', 'Budka Suflera', 'Republika',
         'Maanam', 'Kult', 'Kazik', 'Dżem', 'T.Love', 'Myslovitz', 'Hey', 'Nosowska', 'Wilki', 'Feel', 'Varius Manx', 'Kayah', 'Czerwone Gitary',
         'Trubadurzy', 'Skaldowie', 'Anna Jantar', 'Andrzej Zaucha', 'Seweryn Krajewski', 'Lombard', 'Elektryczne Gitary', 'Margaret',
@@ -95,9 +99,9 @@
         'Rosalía', 'Camila Cabello', 'Måneskin', 'Loreen', 'Hozier', 'Pharrell Williams', 'Mark Ronson',
         // international: dance
         'David Guetta', 'Calvin Harris', 'Avicii', 'Martin Garrix', 'Marshmello', 'Kygo', 'Tiësto', 'Alok', 'Robin Schulz',
-        'Swedish House Mafia', 'Major Lazer', 'DJ Snake', 'Clean Bandit', 'Jax Jones', 'Joel Corry', 'Lost Frequencies',
+        'Major Lazer', 'DJ Snake', 'Clean Bandit', 'Jax Jones', 'Joel Corry', 'Lost Frequencies',
         'Purple Disco Machine', 'Sophie Ellis-Bextor', 'Kylie Minogue', 'Gigi D\'Agostino', 'Scooter', 'Vengaboys', 'Aqua', 'Eiffel 65',
-        'Haddaway', 'Dr. Alban', 'Ace of Base', '2 Unlimited', 'Alice Deejay', 'Lou Bega', 'Las Ketchup', 'Los del Río', 'Tones and I',
+        'Haddaway', 'Dr. Alban', 'Ace of Base', '2 Unlimited', 'Lou Bega', 'Las Ketchup', 'Los del Río', 'Tones and I',
         'Shazza',   // after Shakira: "sha" is Shakira's more often
         // international: classics
         'Michael Jackson', 'Madonna', 'Whitney Houston', 'ABBA', 'Queen', 'Bon Jovi', 'AC/DC', 'Guns N\' Roses', 'The Beatles',
@@ -110,13 +114,53 @@
         'Led Zeppelin', 'Deep Purple', 'Status Quo', 'Creedence Clearwater Revival', 'The Killers', 'Arctic Monkeys', 'Kings of Leon',
         'Franz Ferdinand', 'Oasis', 'Blur', 'U2', 'R.E.M.', 'Bob Marley', 'UB40', 'Zucchero', 'Eros Ramazzotti', 'Laura Pausini',
         'Andrea Bocelli', 'Rammstein', 'Helene Fischer', 'Nelly Furtado', 'Timbaland', '50 Cent',
-        // after the artists that share their beginning and are asked for more often ("jus" → Justin Bieber, "mich" → Michael Jackson)
+        // after the artists that share their beginning and are asked for more often ("jus" → Justin Bieber, "mich" → Michael Jackson,
+        // "que" → Queen, "hou" → Whitney Houston, "dee" → Deep Purple)
+        'Quebonafide', 'Swedish House Mafia', 'Alice Deejay',
         'Justyna Steczkowska', 'Jacek Stachursky', 'Andre', 'Kordian', 'Michał Szpak', 'Michał Bajor', 'White 2115',
         'Malik Montana', 'Andrzej Rosiewicz', 'Kasia Sobczyk=Katarzyna Sobczyk', 'Halina Frąckowiak', 'Krzysztof Kiljański', 'Camasutra'
     ];
 
     /** Words of the artists that begin nothing: "the" is no start of The Weeknd's name, "orkiestra" none of Golec uOrkiestra's. */
     const ARTIST_SKIPPED = new Set(['the', 'and', 'band', 'orkiestra', 'orchestra', 'feat', 'dj', 'project']);
+
+    /**
+     * ARTISTS, read once: the name asked of iTunes, the words of all its names (a typed word equal to one is whole: iTunes finds it
+     * by itself), and a short word joined with its neighbour ("acdc", "dagostino", "tlove") — a guest types "ac/d" or "d'ag" as one word.
+     */
+    const ARTIST_ENTRIES = ARTISTS.map(function (entry) {
+        const names = entry.split('=');
+        const all = words(names.join(' '));
+        const joined = [];
+        for (let i = 1; i < all.length; i++) {
+            if (all[i - 1].length <= 2 || all[i].length <= 2) joined.push(all[i - 1] + all[i]);
+        }
+        return { name: names[names.length - 1], typed: names.length > 1 ? words(names[0]) : [], words: all, joined: joined };
+    });
+
+    /**
+     * What guests type for an artist iTunes names otherwise, word for word ("zenek" → "zenon"): iTunes does not know the typed word
+     * as theirs. Never a word of another artist's name as iTunes gives it ("kasia": Kasia Kowalska is Kasia there).
+     */
+    const ALIAS_WORDS = new Map();
+    ARTIST_ENTRIES.forEach(function (entry) {
+        const named = words(entry.name);
+        entry.typed.forEach(function (w, i) {
+            const elsewhere = ARTIST_ENTRIES.some(function (other) { return words(other.name).indexOf(w) >= 0; });
+            if (named.indexOf(w) < 0 && named[i] && !elsewhere) ALIAS_WORDS.set(w, named[i]);
+        });
+    });
+
+    /** The words that name a version, in a bracket or at either end of a " - " part: "(Radio Edit)", " - 2015 Remaster". */
+    const VERSION_WORDS = new Set(['remix', 'rmx', 'mix', 'edit', 'version', 'wersja', 'live', 'remaster', 'remastered', 'acoustic',
+        'instrumental', 'acapella', 'cappella', 'radio', 'extended', 'cover', 'karaoke']);
+    /** A guest named: cut from the title like a version, but the same recording ("(feat. X)" is no remix). */
+    const FEAT_WORDS = new Set(['feat', 'ft']);
+    /** A part's number in brackets: another song ("Another Brick in the Wall (Part 1)" and "(Part 2)"), kept in the title. */
+    const PART = /^\s*(part|pt\.?|cz\.?|część)\s*\d+\s*$/i;
+
+    /** When iTunes may be asked again after it refused (ITUNES_PAUSE_MS). */
+    let itunesQuietUntil = 0;
 
     // -------------------------------------------------------------------------
     // Module-level result cache  (query string → results array)
@@ -147,86 +191,123 @@
     }
 
     /**
-     * The title without what names a version: "(Radio Edit)", "[feat. X]", " - Extended Mix" ("Ona Tańczy Dla Mnie (Davis Rmx)" →
-     * "Ona Tańczy Dla Mnie"). A " - " part is cut only when it names a version: "Sha - La - La - Lady" is a title of its own.
+     * The title without what names a version, and whether it named one: "(Radio Edit)", "[Live]", " - Extended Mix", " – 2015
+     * Remaster" ("Ona Tańczy Dla Mnie (Davis Rmx)" → "Ona Tańczy Dla Mnie"). "(feat. X)" goes too, as no version. A " - " part goes only
+     * when it begins or ends with a version's word: "Sha - La - La - Lady" and "Video - Killed the Radio Star" are titles of their own.
+     * A part's number stays: "(Part 1)" and "(Part 2)" are two songs.
      */
-    function bareTitle(title) {
+    function titleParts(title) {
         let bare = String(title || '');
+        let version = false;
+        const namesAVersion = function (text) { return words(text).some(function (w) { return VERSION_WORDS.has(w); }); };
         // the innermost brackets first: "[The Official 2010 FIFA World Cup (TM) Song]" goes whole
         for (let before = ''; before !== bare;) {
             before = bare;
-            bare = bare.replace(/\([^()]*\)|\[[^\[\]]*\]/g, ' ');
+            bare = bare.replace(/\(([^()]*)\)|\[([^\[\]]*)\]/g, function (all, round, square) {
+                const inner = round !== undefined ? round : square;
+                if (PART.test(inner)) return ' ' + inner + ' ';   // without its brackets: not taken again
+                if (namesAVersion(inner)) version = true;
+                return ' ';
+            });
         }
-        return bare
-            .replace(/\s+-\s+.*\b(remix|rmx|mix|edit|version|wersja|live|remaster(ed)?|acoustic|instrumental|acapella|a cappella|radio|extended|feat|ft|cover|karaoke)\b.*$/i, '')
-            .trim();
+        const parts = bare.split(/\s+[-–]\s+/);
+        while (parts.length > 1) {
+            const last = words(parts[parts.length - 1]);
+            const ends = [last[0], last[last.length - 1]];
+            const isVersion = ends.some(function (w) { return VERSION_WORDS.has(w); });
+            if (!isVersion && !ends.some(function (w) { return FEAT_WORDS.has(w); })) break;
+            if (isVersion) version = true;
+            parts.pop();
+        }
+        return { bare: parts.join(' - ').trim(), version: version };
     }
 
     /**
      * Each song once: the same artist and title, whatever the album, the version, the accents or the spaces — a guest asks for a
-     * song, the DJ plays their own file of it. The song keeps the place of its first version and is shown by its shortest title.
+     * song, the DJ plays their own file of it. The song keeps the place of its first version and is shown by a title that names no
+     * version, the shortest of them: the guest's pick is what the DJ reads, and "[K-Mix]" would ask for a remix.
      */
     function onceEach(tracks) {
         const byKey = new Map();
         tracks.forEach(function (track) {
-            const key = words(track.artistName).join(' ') + '|' + words(bareTitle(track.trackName) || track.trackName).join(' ');
+            const title = titleParts(track.trackName);
+            const key = words(track.artistName).join(' ') + '|' + words(title.bare || track.trackName).join(' ');
+            const found = { track: track, version: title.version, length: String(track.trackName || '').length };
             const kept = byKey.get(key);
-            if (!kept) {
-                byKey.set(key, track);
-            } else if (String(track.trackName || '').length < String(kept.trackName || '').length) {
-                byKey.set(key, track);   // a Map keeps the place of the key's first entry
+            if (!kept || (kept.version && !found.version) || (kept.version === found.version && found.length < kept.length)) {
+                byKey.set(key, found);   // a Map keeps the place of the key's first entry
             }
         });
-        return Array.from(byKey.values());
+        return Array.from(byKey.values()).map(function (found) { return found.track; });
+    }
+
+    /** The words of a song: its artist, title and album — iTunes matches the album too ("grease" → the film's songs). */
+    function wordsOfSong(track) {
+        return words(track.artistName).concat(words(track.trackName), words(track.collectionName));
+    }
+
+    /** The words typed, each as iTunes names the artist it stands for ("zenek m" → "zenon m"): asked of iTunes as such. */
+    function asITunesNames(text) {
+        return text.trim().split(/\s+/).map(function (w) { return ALIAS_WORDS.get(words(w).join('')) || w; }).join(' ');
     }
 
     /**
-     * Only the songs with every finished word ("sweet car": "sweet") in their artist or title, when there are such: iTunes fills
-     * its answer with songs of none of them ("Calm Down" for "sweet car"). When no song has them all — a typo iTunes corrected,
-     * "shakria w" — its answer stays as it is.
+     * Only the songs with every finished word ("sweet car": "sweet") in their artist, title or album — or the word iTunes names the
+     * artist by ("zenek": "Zenon Martyniuk") —, when there are such: iTunes fills its answer with songs of none of them ("Calm Down"
+     * for "sweet car"). When no song has them all — a typo iTunes corrected, "shakria w" — its answer stays as it is.
      */
     function withTheWords(tracks, finished) {
         if (finished.length === 0) return tracks;
         const having = tracks.filter(function (track) {
-            const its = words(track.artistName).concat(words(track.trackName));
-            return finished.every(function (w) { return its.some(function (it) { return it.indexOf(w) === 0; }); });
+            const its = wordsOfSong(track);
+            return finished.every(function (w) {
+                const named = ALIAS_WORDS.get(w);
+                return its.some(function (it) { return it.indexOf(w) === 0 || it === named; });
+            });
         });
         return having.length > 0 ? having : tracks;
     }
 
     /**
-     * The artist a single word being typed begins ("shak" → "Shakira", "podsia" → "Dawid Podsiadło"), from ARTISTS: the first whose
-     * word starts so and is longer — a whole word ("imagine") iTunes finds by itself. Null when none, or the word is short.
+     * The artist a single word being typed begins ("shak" → "Shakira", "podsia" → "Dawid Podsiadło", "ac/d" → "AC/DC"), from
+     * ARTISTS: the first whose word starts so and is longer — a whole word ("imagine") iTunes finds by itself, except a typed word of
+     * an alias ("zenek"), which iTunes knows as someone else's. Null when none, or the word is short.
      */
     function artistBegun(typed) {
-        if (/\s$/.test(typed)) return null;
-        const parts = words(typed);
-        if (parts.length !== 1 || parts[0].length < ARTIST_MIN_CHARS) return null;
-        const fragment = parts[0];
-        const namesOf = function (entry) { return entry.split('='); };
-        const wordsOf = function (entry) { return words(namesOf(entry).join(' ')); };
-        // a word that already is an artist's ("kombi", "queen"): iTunes finds them, Kombii is not put above Kombi
-        if (ARTISTS.some(function (a) { return wordsOf(a).indexOf(fragment) >= 0; })) return null;
-        const entry = ARTISTS.find(function (a) {
-            return wordsOf(a).some(function (w) { return w.length > fragment.length && w.indexOf(fragment) === 0 && !ARTIST_SKIPPED.has(w); });
-        });
-        if (!entry) return null;
-        const names = namesOf(entry);
-        return { name: names[names.length - 1] };   // asked as iTunes names them
+        if (/\s/.test(typed.trim()) || /\s$/.test(typed)) return null;
+        const fragment = words(typed).join('');
+        if (fragment.length < ARTIST_MIN_CHARS) return null;
+        let entry;
+        if (ALIAS_WORDS.has(fragment)) {
+            entry = ARTIST_ENTRIES.find(function (a) { return a.typed.indexOf(fragment) >= 0; });
+        } else if (!ARTIST_ENTRIES.some(function (a) { return a.words.indexOf(fragment) >= 0; })) {
+            // not a word that already is an artist's ("kombi", "queen"): iTunes finds them, Kombii is not put above Kombi
+            entry = ARTIST_ENTRIES.find(function (a) {
+                return a.words.some(function (w) {
+                    return w.length > fragment.length && w.indexOf(fragment) === 0 && !ARTIST_SKIPPED.has(w);
+                })
+                    || a.joined.some(function (w) { return w.indexOf(fragment) === 0; });
+            });
+        }
+        return entry ? { name: entry.name, fragment: fragment } : null;   // asked as iTunes names them
     }
 
     /**
      * The songs of the artist the word begins (those with every word of the name in their artist: "Shakira", "Disney & Shakira"),
-     * iTunes's own answer after them — the artist's first ARTIST_FIRST songs, then iTunes's own, then the rest of the artist's:
-     * what iTunes found for the word itself is never pushed out of the list.
+     * iTunes's own answer after them — the artist's first ARTIST_FIRST songs, then iTunes's own with a word starting so, then the
+     * rest of the artist's: what iTunes found for the word itself is never pushed out of the list. Its other songs are the hits it
+     * pads an answer for a half word with ("zene" → "All I Want for Christmas Is You"), and they would push the artist's out.
      */
-    function withTheArtist(artistsSongs, itsOwn, name) {
-        const named = words(name);
+    function withTheArtist(artistsSongs, itsOwn, artist) {
+        const named = words(artist.name);
         const theirs = onceEach(artistsSongs.filter(function (track) {
             const its = words(track.artistName);
             return named.every(function (w) { return its.indexOf(w) >= 0; });
         }));
-        return onceEach(theirs.slice(0, ARTIST_FIRST).concat(itsOwn, theirs.slice(ARTIST_FIRST))).slice(0, MAX_RESULTS);
+        const startingSo = itsOwn.filter(function (track) {
+            return wordsOfSong(track).some(function (w) { return w.indexOf(artist.fragment) === 0; });
+        });
+        return onceEach(theirs.slice(0, ARTIST_FIRST).concat(startingSo, theirs.slice(ARTIST_FIRST))).slice(0, MAX_RESULTS);
     }
 
     /** The words already finished: before the word being typed, or all of them after a space; none of a single word being typed. */
@@ -308,6 +389,7 @@
             if (resultCache.has(key)) {
                 return resultCache.get(key);
             }
+            if (Date.now() < itunesQuietUntil) return [];   // iTunes refused a moment ago
             const url = new URL(ITUNES_API);
             url.searchParams.set('term',    term);
             url.searchParams.set('media',   'music');
@@ -316,7 +398,10 @@
             url.searchParams.set('limit',   String(limit));
             try {
                 const response = await fetch(url, { signal: signal });
-                if (!response.ok) return [];
+                if (!response.ok) {
+                    if (response.status === 403 || response.status === 429) itunesQuietUntil = Date.now() + ITUNES_PAUSE_MS;
+                    return [];
+                }
                 const data = await response.json();
                 const results = data.results || [];
                 cacheSet(key, results);
@@ -338,10 +423,10 @@
             const begun = wordBegun(typed);
             // both at once: the list waits for the slower of two parallel asks, not for one after the other
             const artist = begun ? null : artistBegun(typed);
-            const answers = await Promise.all([ask(query, WHOLE_LIMIT, signal), begun ? ask(begun.stem, STEM_LIMIT, signal) : [],
-                artist ? ask(artist.name, ARTIST_LIMIT, signal) : []]);
+            const answers = await Promise.all([ask(query, WHOLE_LIMIT, signal),
+                begun ? ask(asITunesNames(begun.stem), STEM_LIMIT, signal) : [], artist ? ask(artist.name, ARTIST_LIMIT, signal) : []]);
             if (answers[0] === null || answers[1] === null || answers[2] === null) return null;
-            if (artist) return withTheDjsFirst(withTheArtist(answers[2], answers[0], artist.name), signal);
+            if (artist) return withTheDjsFirst(withTheArtist(answers[2], answers[0], artist), signal);
             // the songs whose title has a word starting so, then those whose artist has ("da" → "Dai Dai", then "David Guetta")
             const starts = function (text) {
                 return words(text).some(function (w) { return w.indexOf(begun.fragment) === 0; });

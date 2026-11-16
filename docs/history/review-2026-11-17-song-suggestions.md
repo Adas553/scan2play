@@ -140,3 +140,24 @@ Production runs this code, so the fixes below go in a new PR.
   DJ's "Dodaj" use the same code path.
 - Comments say why, not history (AGENTS.md). One history-like phrase is in `docs/ideas.md` item 14 ("the owner, 2026-11-16"), which
   is allowed there.
+
+## The fixes (2026-11-17, `claude/kind-knuth-7ryiki`)
+
+The owner chose all of them. Each new or changed scenario was run red on the branch's code first (7 of 7 red, each for its own
+reason), then green.
+
+| Point | Fix | Scenario |
+|---|---|---|
+| P1 | `ALIAS_WORDS` built from `ARTISTS` (zenek → zenon, roksana → roxie, gasowski → gassowski; not "kasia"): met by theirs in `withTheWords`, a whole typed word completed by `artistBegun`, the stem asked as theirs (`asITunesNames`) | `song-suggestions-alias` |
+| P2 | `wordsOfSong`: the artist, title and album, in `withTheWords` | `song-suggestions-album` |
+| P3 | `withTheArtist` keeps only those of iTunes's own with a word starting so | `song-suggestions-artist-begun-padding` |
+| P4 | `titleParts`: a part's number stays in the key, a " - " part goes only when its first or last word names a version, the en dash counts | `song-suggestions-versions-not-joined` |
+| P5 | `onceEach` shows a title that names no version (feat. is none) before the shortest | `song-suggestions-versions` (its expectation: the original, not "[K-Mix]") |
+| P6 | after 403/429 nothing asked for `ITUNES_PAUSE_MS` (60 s); the remembered answers still served | `song-suggestions-itunes-refused` |
+| P7 | Quebonafide, Swedish House Mafia, Alice Deejay moved to the end (`que` → Queen, `hou` → Whitney Houston, `dee` → Deep Purple); a short word joined with its neighbour (`ac/d` → AC/DC, `d'ag` → Gigi D'Agostino); `check_artists.py` reports `FEW` (< 3 songs); title words completing to an artist are lessened by P3 ("danc" now shows "Dance Monkey" after Papa Dance's five) | `song-suggestions-artist-joined` |
+| P8 | `docs/song-suggestions-artists.md`: the alias exception, ~20 min, `decision = 'accepted'` in the SQL, `FEW`; `check_artists.py` reads `ARTIST_SKIPPED` from the JS and mirrors the alias words and the joins | — |
+| P9 | `ARTIST_ENTRIES` read once; `artistBegun` no longer normalizes the list at every pause | — |
+
+Checked in node on the real iTunes answers of the review: `zenek martyniuk ` → 8 songs with Zenon Martyniuk; `zenek` → his 5,
+then iTunes's own "zenek" songs; `zenek m` → his songs; `grease you` and `dirty dancing ti` as before the branch; `sweet car` without
+"Calm Down"; `zene` without Mariah Carey; `que` → Queen; `ac/d` → AC/DC.
