@@ -11,8 +11,8 @@ Production runs this code, so the fixes below go in a new PR.
 | Step | Result |
 |---|---|
 | `unit` | 1311 tests, 0 failed, OK |
-| `browser` | see the end of this file |
-| `audit -t guest` | see the end of this file |
+| `browser` | 425 scenarios (the 4 new `song-suggestions-*` included), OK. No scenario covers P1–P6 |
+| `audit -t guest` | 10 pages × 320 / 390 / 1280: no sideways scrolling, no console errors, no small targets. OK |
 | `python tools/check_artists.py --offline` | 381 artists, none repeated, 130 shared beginnings (some in P7) |
 | the logic in node, on real iTunes answers (the Polish store, `curl` through the proxy) | the branch's `bareTitle`, `onceEach`, `withTheWords`, `artistBegun`, `withTheArtist`, `finishedWords`, `wordBegun` taken from the file as they are, `fetchSuggestions` copied without the DJ's library. The cases below were run this way; the answers of 2026-11-16 22:50 UTC |
 
@@ -140,5 +140,3 @@ Production runs this code, so the fixes below go in a new PR.
   DJ's "Dodaj" use the same code path.
 - Comments say why, not history (AGENTS.md). One history-like phrase is in `docs/ideas.md` item 14 ("the owner, 2026-11-16"), which
   is allowed there.
-
-## The checks' results
