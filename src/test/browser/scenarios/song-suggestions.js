@@ -152,4 +152,53 @@
             t.step('each song once', shown(), ['Shakira & Burna Boy – Dai Dai', 'Music Flow Vibes – Dai Dai - Shakira (Afro Latin House Mix)']);
         }
     });
+
+    S2P.scenario({
+        name: 'song-suggestions-versions',
+        title: 'the versions of a song (Extended, Radio Edit, a remix) are suggested once, by the shortest title, where the first of them was; a " - " that names no version is the title\'s own',
+        page: 'guest',
+        run: async function (t) {
+            const pending = holdITunes();
+            const input = document.getElementById('songInput');
+            input.focus();
+            type(input, 'ona tanczy');
+            await t.waitFor(function () { return pending.length === 2; }, 'iTunes asked', 3000);
+            answered(pending, 'ona tanczy', ['Weekend - Ona Tańczy Dla Mnie (Extended)', 'Laser - Ona Tańczy Dla Mnie',
+                'Weekend - Ona Tańczy dla Mnie (Radio Edit)', 'Weekend - Ona Tańczy Dla Mnie', 'Weekend - Ona Tańczy Dla Mnie - Davis Remix',
+                'Ona - Sha - La - La - Lady', 'Ona - Sha - La - La - Lady [Live]',
+                'Ona - Waka Waka (This Time for Africa) [K-Mix]', 'Ona - Waka Waka [The 2010 World Cup (TM) Song] [Single]']);
+            answered(pending, 'ona', []);
+            await t.waitFor(open, 'the suggestions', 3000);
+            t.step('Weekend once, first, plain; "Sha - La - La - Lady" kept whole', shown(),
+                ['Weekend – Ona Tańczy Dla Mnie', 'Laser – Ona Tańczy Dla Mnie', 'Ona – Sha - La - La - Lady',
+                    'Ona – Waka Waka (This Time for Africa) [K-Mix]']);
+        }
+    });
+
+    S2P.scenario({
+        name: 'song-suggestions-finished-words',
+        title: 'only the songs with every finished word are suggested ("sweet car": no "Calm Down" iTunes pads its answer with) — unless none has them: a typo iTunes corrected keeps its answer',
+        page: 'guest',
+        run: async function (t) {
+            const pending = holdITunes();
+            const input = document.getElementById('songInput');
+            input.focus();
+            type(input, 'sweet car');
+            await t.waitFor(function () { return pending.length === 2; }, 'iTunes asked for "sweet car"', 3000);
+            answered(pending, 'sweet car', ['Neil Diamond - Sweet Caroline', 'Rema & Selena Gomez - Calm Down', 'Adele - Easy On Me',
+                'Lynyrd Skynyrd - Sweet Home Alabama']);
+            answered(pending, 'sweet', ['Neil Diamond - Sweet Caroline', 'Ava Max - Sweet but Psycho']);
+            await t.waitFor(open, 'the suggestions for "sweet car"', 3000);
+            t.step('the songs with "sweet", "car…" first', shown(),
+                ['Neil Diamond – Sweet Caroline', 'Lynyrd Skynyrd – Sweet Home Alabama']);
+
+            type(input, 'shakria w');
+            await t.waitFor(function () { return pending.length === 4; }, 'iTunes asked for "shakria w"', 3000);
+            answered(pending, 'shakria w', ['Shakira - Whenever, Wherever', 'Shakira - She Wolf']);
+            answered(pending, 'shakria', []);
+            await t.waitFor(function () { return shown()[0] === 'Shakira – Whenever, Wherever'; }, 'the suggestions for "shakria w"', 3000);
+            t.step('no song has "shakria": iTunes\'s corrected answer kept', shown(),
+                ['Shakira – Whenever, Wherever', 'Shakira – She Wolf']);
+        }
+    });
 })();

@@ -15,7 +15,9 @@
  * iTunes matches whole words only ("shakira da" finds no "Dai Dai", "zenek prz" nothing): a word being typed is completed here.
  * With it, the words before it are asked too (more of them, kept in memory while the word grows) and the songs with a word that
  * starts so come first; both asks go at once, so the list comes as fast as before. The Polish store (it has the Polish songs the
- * American one lacks, and the international ones too). A song iTunes gives several times (albums, singles) is shown once.
+ * American one lacks, and the international ones too). A song iTunes gives several times (albums, singles, its versions: "(Radio
+ * Edit)", "- Extended Mix") is shown once, by its shortest title. Of the songs found, those with every finished word come — iTunes
+ * pads its answer with songs of none of them ("sweet car" → "Calm Down").
  *
  * Only the answer for what the field says now is shown: one that comes after the guest typed on (or cleared the field) is
  * dropped. The field is an ARIA combobox: aria-expanded, aria-controls, aria-activedescendant on the chosen suggestion.
@@ -71,15 +73,58 @@
         return parts.length > 1 && fragment && stem.length >= MIN_CHARS ? { stem: stem, fragment: fragment } : null;
     }
 
-    /** Each song once: the same artist and title, whatever the album, the accents or the spaces. */
+    /**
+     * The title without what names a version: "(Radio Edit)", "[feat. X]", " - Extended Mix" ("Ona Tańczy Dla Mnie (Davis Rmx)" →
+     * "Ona Tańczy Dla Mnie"). A " - " part is cut only when it names a version: "Sha - La - La - Lady" is a title of its own.
+     */
+    function bareTitle(title) {
+        let bare = String(title || '');
+        // the innermost brackets first: "[The Official 2010 FIFA World Cup (TM) Song]" goes whole
+        for (let before = ''; before !== bare;) {
+            before = bare;
+            bare = bare.replace(/\([^()]*\)|\[[^\[\]]*\]/g, ' ');
+        }
+        return bare
+            .replace(/\s+-\s+.*\b(remix|rmx|mix|edit|version|wersja|live|remaster(ed)?|acoustic|instrumental|acapella|a cappella|radio|extended|feat|ft|cover|karaoke)\b.*$/i, '')
+            .trim();
+    }
+
+    /**
+     * Each song once: the same artist and title, whatever the album, the version, the accents or the spaces — a guest asks for a
+     * song, the DJ plays their own file of it. The song keeps the place of its first version and is shown by its shortest title.
+     */
     function onceEach(tracks) {
-        const seen = new Set();
-        return tracks.filter(function (track) {
-            const key = words(track.artistName).join(' ') + '|' + words(track.trackName).join(' ');
-            if (seen.has(key)) return false;
-            seen.add(key);
-            return true;
+        const byKey = new Map();
+        tracks.forEach(function (track) {
+            const key = words(track.artistName).join(' ') + '|' + words(bareTitle(track.trackName) || track.trackName).join(' ');
+            const kept = byKey.get(key);
+            if (!kept) {
+                byKey.set(key, track);
+            } else if (String(track.trackName || '').length < String(kept.trackName || '').length) {
+                byKey.set(key, track);   // a Map keeps the place of the key's first entry
+            }
         });
+        return Array.from(byKey.values());
+    }
+
+    /**
+     * Only the songs with every finished word ("sweet car": "sweet") in their artist or title, when there are such: iTunes fills
+     * its answer with songs of none of them ("Calm Down" for "sweet car"). When no song has them all — a typo iTunes corrected,
+     * "shakria w" — its answer stays as it is.
+     */
+    function withTheWords(tracks, finished) {
+        if (finished.length === 0) return tracks;
+        const having = tracks.filter(function (track) {
+            const its = words(track.artistName).concat(words(track.trackName));
+            return finished.every(function (w) { return its.some(function (it) { return it.indexOf(w) === 0; }); });
+        });
+        return having.length > 0 ? having : tracks;
+    }
+
+    /** The words already finished: before the word being typed, or all of them after a space; none of a single word being typed. */
+    function finishedWords(typed, begun) {
+        if (begun) return words(begun.stem);
+        return /\s$/.test(typed) ? words(typed) : [];
     }
 
     function cacheSet(key, value) {
@@ -192,7 +237,8 @@
             };
             const byTitle = begun ? answers[1].filter(function (track) { return starts(track.trackName); }) : [];
             const byArtist = begun ? answers[1].filter(function (track) { return !starts(track.trackName) && starts(track.artistName); }) : [];
-            return withTheDjsFirst(onceEach(byTitle.concat(byArtist, answers[0])).slice(0, MAX_RESULTS), signal);
+            const found = withTheWords(byTitle.concat(byArtist, answers[0]), finishedWords(typed, begun));
+            return withTheDjsFirst(onceEach(found).slice(0, MAX_RESULTS), signal);
         }
 
         /**
