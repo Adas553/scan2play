@@ -17,6 +17,10 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
 
 ## Start here
 
+- **2026-11-16 — the guests' song suggestions on `claude/awesome-sagan-hhc11y`, not merged, no migration:** each song's versions
+  once, no songs without the typed words ("sweet car"), a single word completed to an artist of a hand-written list ("shak" →
+  Shakira; `docs/ideas.md` item 14). The list's review every few months (next 2027-02) and the learning to come:
+  `docs/song-suggestions-artists.md`. To try: the guest page on a phone, "shak", "podsia", "zene".
 - **2026-11-16 — the review's fixes on `claude/intelligent-fermi-oq8xqt` (V71 → a database copy first), not merged:** (1) a reached
   limit's log line no longer names the guest's address or a wishes' link (`GuestRequestLimiter`); (2) the nightly copy to
   Cloudflare R2 (`tools/db-backup`, `docs/database-backup.md`); (3) `GET /healthz` for UptimeRobot (`docs/monitoring.md`); (4) no
