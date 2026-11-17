@@ -112,15 +112,16 @@
 
     <!--/* What one gets: six, for the grid of three, in the order a DJ counts them in money — the guests who see the DJ's profiles
          (future clients) and the work before the party first, the AI fourth (the guest's words and "⚠ Sprawdź" are in "Ty decydujesz").
-         No "PRO" on one card (the owner, 2026-10-18); "Ile to kosztuje?" names Pro only while the plans are enforced */-->
+         No "PRO" on one card: this page sells the product, /pro the plans; "Ile to kosztuje?" names Pro only while the plans are
+         enforced */-->
     <section class="s2p-landing-section" id="landingFeatures">
         <div class="container">
             <h2 th:text="#{landing.features.title}">What you get</h2>
             <div class="s2p-landing-grid s2p-landing-grid-3">
                 <div class="s2p-landing-card"><span class="s2p-landing-icon" aria-hidden="true">📣</span>
-                    <h3 th:text="#{landing.feature.profiles.title}">Promotion for you</h3><p th:text="#{landing.feature.profiles.text}">…</p></div>
+                    <h3 th:text="#{landing.feature.profiles.title}">Your next bookings</h3><p th:text="#{landing.feature.profiles.text}">…</p></div>
                 <div class="s2p-landing-card"><span class="s2p-landing-icon" aria-hidden="true">⭐</span>
-                    <h3 th:text="#{landing.feature.hosts.title}">The hosts' list and wishes</h3>
+                    <h3 th:text="#{landing.feature.hosts.title}">The hosts' list and the guests' songs</h3>
                     <p th:text="#{landing.feature.hosts.text}">…</p></div>
                 <div class="s2p-landing-card"><span class="s2p-landing-icon" aria-hidden="true">👍</span>
                     <h3 th:text="#{landing.feature.votes.title}">The room's votes</h3><p th:text="#{landing.feature.votes.text}">…</p></div>
@@ -138,11 +139,11 @@
          say, no feature of its own), the TV screen */-->
     <section class="s2p-landing-section" id="landingFirstParty">
         <div class="container">
-            <h2 th:text="#{landing.first.title}">Your first party</h2>
+            <h2 th:text="#{landing.first.title}">Your first party with Scan2Play</h2>
             <div class="s2p-landing-grid s2p-landing-grid-3">
                 <div class="s2p-landing-card"><span class="s2p-landing-icon" aria-hidden="true">🖨️</span>
                     <h3 th:text="#{landing.first.print.title}">Cards for the tables and a poster</h3><p th:text="#{landing.first.print.text}">…</p></div>
-                <div class="s2p-landing-card"><span class="s2p-landing-icon" aria-hidden="true">🎤</span>
+                <div class="s2p-landing-card"><span class="s2p-landing-icon" aria-hidden="true">🗣️</span>
                     <h3 th:text="#{landing.first.mic.title}">One line on the mic</h3><p th:text="#{landing.first.mic.text}">…</p></div>
                 <div class="s2p-landing-card"><span class="s2p-landing-icon" aria-hidden="true">📺</span>
                     <h3 th:text="#{landing.first.tv.title}">The code on the TV</h3><p th:text="#{landing.first.tv.text}">…</p></div>
@@ -178,8 +179,9 @@
             <div class="s2p-landing-faq">
                 <details><summary th:text="#{landing.faq.install.q}">Do guests have to install anything?</summary>
                     <p th:text="#{landing.faq.install.a}">…</p></details>
-                <!--/* the numbers measured: the guest page of the demo party on production, a phone, no cache — 87 KB in six files, the
-                     song field after 0.8 s on 1.6 Mb/s / 150 ms, 2.7 s on 400 kb/s / 400 ms; measure again when the page grows */-->
+                <!--/* the numbers measured: the guest page of the demo party (no DJ's logo) on production, a phone, no cache — 87 KB in six
+                     files, the song field painted after 0.8 s on 1.6 Mb/s / 150 ms, 2.7 s on 400 kb/s / 400 ms; measure again when the page
+                     grows */-->
                 <details><summary th:text="#{landing.faq.signal.q}">What if the hall has a weak signal?</summary>
                     <p th:text="#{landing.faq.signal.a}">…</p></details>
                 <details><summary th:text="#{landing.faq.player.q}">Does Scan2Play play the music?</summary>
@@ -191,7 +193,7 @@
                         <a th:href="${lang == 'en' ? '/pro?lang=en' : '/pro'}" href="/pro" class="d-block mt-2" th:text="#{landing.faq.price.link}">See the pricing →</a></p></details>
                 <details><summary th:text="#{landing.faq.tips.q}">Do you take a cut of the tips?</summary>
                     <p th:text="#{landing.faq.tips.a}">…</p></details>
-                <details><summary th:text="#{landing.faq.ai.q}">What if the AI gets it wrong or is down?</summary>
+                <details><summary th:text="#{landing.faq.ai.q}">What if the AI turns down a good song?</summary>
                     <p th:text="#{landing.faq.ai.a}">…</p></details>
                 <details><summary th:text="#{landing.faq.phone.q}">Does it work on the DJ's phone?</summary>
                     <p th:text="#{landing.faq.phone.a}">…</p></details>

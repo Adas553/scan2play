@@ -69,7 +69,9 @@ class ForWhomPagesWebTest {
             // the landing page's "Ty decydujesz" (a DJ's first fear) between the steps and the features
             assertThat(html.indexOf("id=\"landingControl\"")).as(path + ": \"Ty decydujesz\" after the steps, before the features")
                     .isGreaterThan(html.indexOf("id=\"forWhomSteps\"")).isLessThan(html.indexOf("id=\"forWhomFeatures\""));
-            assertThat(section(html, "landingControl")).contains(">Ty decydujesz</h2>", ">Nic nie gra bez Ciebie</h3>");
+            // one text for all kinds: the pubs' page is for a pub's owner — no console, no DJ
+            assertThat(section(html, "landingControl")).contains(">Ty decydujesz</h2>", ">Nic nie gra bez Ciebie</h3>")
+                    .doesNotContain("konsol", "DJ");
             // three questions, the pubs' two (the owner, 2026-10-21: "Czy trzeba mieć DJ-a?" out)
             assertThat(section(html, "forWhomFaq").split("<details", -1)).as(path + ": its questions")
                     .hasSize(path.equals("/puby") ? 3 : 4);

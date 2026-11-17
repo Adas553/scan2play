@@ -14,17 +14,16 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
 
 ## Start here
 
-- **2026-11-17 — the state.** `main` = `e4ff4d1` (#272, the guests' song suggestions; before it #263 … #271, V68 … V71), no open PR.
-  Deployed 2026-11-16 22:56 UTC, SUCCESS (Railway, read only): Flyway at 71, nothing to apply, started in 4.9 s, no WARN, 0 × 5xx of
-  681 requests in 24 h, RAM 0.48 GB;
-  curl without cookies: `/`, `/pro`, `/dj-weselny` 200 to `</html>`, `/healthz` 200.
-- **2026-11-17 — `claude/kind-knuth-7ryiki`, PRs #274 (`main`) and #275 (`dev`), not merged, no migration:** the review of #272
-  (`docs/history/review-2026-11-17-song-suggestions.md`) and all its fixes, P1–P9: "zenek martyniuk" keeps Zenon Martyniuk's songs,
-  the album counts ("grease you"), no padding after an artist, a minute without iTunes after it refused. To try: the guest page on a
-  phone, "zenek", "grease you", "ac/d". Waits for the owner: the merges; Classic, Perfect, Feel, Survivor kept or not.
+- **2026-11-17 — the state.** `main` = `c2d6254` (#276, the artist words of the song suggestions; before it #274, the fixes of the
+  review of #272; `dev` has them as #275, #277), no migration since V71. The last deploy checked: `e4ff4d1` (#272), 2026-11-16 22:56
+  UTC, SUCCESS (Railway, read only): Flyway at 71, started in 4.9 s, no WARN, 0 × 5xx of 681 requests in 24 h, RAM 0.48 GB; curl
+  without cookies: `/`, `/pro`, `/dj-weselny` 200 to `</html>`, `/healthz` 200. The deploys of #274 and #276 not checked yet.
 - **2026-11-17 — `claude/wonderful-edison-4qz6fs`, PRs #278 (`main`) and #279 (`dev`), not merged, no migration:** the landing page and "Dla kogo" rewritten for a DJ's
   fears: the title "Mniej ludzi przy konsoli…", "Ty decydujesz", the features by the DJ's gain, "Pierwsza impreza", the weak signal
-  in the FAQ (the guest page measured: 87 KB, 2.7 s on 3G); `/dj-weselny`'s features: the wishes first. Waits: a review, the owner's read, the merges.
+  in the FAQ (the guest page measured: 87 KB, 2.7 s on 3G); `/dj-weselny`'s features: the wishes first.
+- **2026-11-17 — `claude/optimistic-hamilton-zc7qq6` = that branch + its review (`docs/history/review-2026-11-17-landing-message.md`)
+  and the fixes P1–P13 (texts, the 🎤 of the mic card, comments; P9 left: three cards stay three).** Waits for the owner: the read, then
+  this branch into #278 / #279 (or merged instead of them).
 - **Waits for the owner (from #269):** after the first commit the deploy window holds back (Fri–Sun 18:00–6:00): does Railway
   deploy it on the workflow's re-run? UptimeRobot is set up (the owner, 2026-11-17; `docs/monitoring.md`).
 - **Waits for the owner (the wishes, #263):** the three older Polish texts with "DJ" and a masculine verb (`guest.vote.gone`,

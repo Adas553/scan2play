@@ -10,13 +10,14 @@ party, in the page's language — the English ones with songs known everywhere a
 from the pages `GuestPageRenderTest` / `DashboardPageRenderTest` render, `theLandingPagesPicture_…`; run it again after a change of
 the look; the panel shows the guests' dedications, the phone the folded "💌 Dodaj dedykację") —; the title the DJ's gain ("Mniej
 ludzi przy konsoli. Więcej kontroli nad salą."), the AI only further down; then "Ty decydujesz" (`landing :: control`, a DJ's first
-fear — an AI turning guests down in their name: every request seen before it is played, with the guest's words and "⚠ Sprawdź";
-the guest's answer at once; nothing lost when the AI is down; also on the pages "Dla kogo"), three steps, what one gets (six cards,
-in the order a DJ counts them in money: the guests who see the DJ's profiles, the hosts' list and the wishes, the votes, the vibe —
-with no repeats —, the dedications, the phone and the staff; no "PRO" on a card), "Pierwsza impreza" (the print, one line to say on
+fear — an AI turning guests down in their name: every request let through seen before it is played, with the guest's words and
+"⚠ Sprawdź", the turned-down ones in the history; the guest's answer at once; nothing lost when the AI is down; also on the pages
+"Dla kogo", so no word of a console or a DJ — the pubs' page is for a pub's owner), three steps, what one gets (six cards,
+in the order a DJ counts them in money: the guests who see the DJ's profiles, the hosts' list and the guests' songs (the wishes), the votes, the vibe —
+with no repeats —, the dedications, the phone and the staff; no "PRO" on a card), "Pierwsza impreza ze Scan2Play" (the print, one line to say on
 the mic — a text, no feature —, the TV screen); "Ile to kosztuje?" names Pro and links `/pro` only while the plans are enforced — `HomeController`'s
 `plansEnforced`; before, "Nic. Scan2Play jest za darmo…"; "Zobacz cennik →" to `/pro` either way, and "Cennik" beside the language at the top), for whom (wedding DJs, clubs, pubs, karaoke — the first three
-cards lead to their pages "Dla kogo", below; karaoke has none yet), eight questions (`details`, no script; one of them: the tips go 100% to the DJ, Scan2Play takes no commission — the owner, 2026-10-30; one the weak signal in a hall, with the guest page's weight and load times as measured on production — measure again when that page grows) and the start again; no word of Pro while the plans are not enforced.
+cards lead to their pages "Dla kogo", below; karaoke has none yet), eight questions (`details`, no script; one of them: the tips go 100% to the DJ, Scan2Play takes no commission — the owner, 2026-10-30; one the weak signal in a hall, with the guest page's weight and load times as measured on production, without a DJ's logo — measure again when that page grows; one a good song the AI turned down: the history, "+ Dodaj piosenkę", the hosts' must-play list) and the start again; no word of Pro while the plans are not enforced.
 **The pages "Dla kogo"** (`ForWhomController`, `for-whom.html`, 2026-10-21; Next 7): `/dj-weselny`, `/kluby`, `/puby` — for search
 engines (in the sitemap, Polish at the address, English with `?lang=en`, canonical and `hreflang` like the other public pages) and for
 a link sent to a DJ or a pub's owner. Where one is, at once (the owner: from the landing page's card the page looked the same): breadcrumbs (the

@@ -150,3 +150,11 @@ Pro. On the landing page the profiles, the wishes, the hosts' list and the logo 
 - CSP: the audit saw no violation on the 12 pages; the new sections are markup and message keys only.
 - The tests: `GuestPageRenderTest` checks the order (control before the steps, the first party between the features and for whom) and
   nine `<details>`; `ForWhomPagesWebTest` the control between the steps and the features; `ForWhomPagesPlansWebTest` the wishes as Pro.
+
+## The fixes (the owner: "popraw wszystko"), on `claude/optimistic-hamilton-zc7qq6`
+
+That branch merged `claude/wonderful-edison-4qz6fs` and fixed P1–P8 and P10–P13 with the texts proposed above, with two changes:
+P2's answer says the hosts' must-play songs get through "nawet wtedy, gdy nie pasuje do klimatu" — not "zawsze": a song played lately
+is still refused (`SongEvaluationService.withTheHostsWish`); the TV's songs are „najczęściej wybierane", as the TV screen itself names
+them (`tv.html:33`). P9 left as it is: the section has three points, and three cards in a grid of four would leave a hole; the
+template's comment says so. `ForWhomPagesWebTest` now checks that "Ty decydujesz" names no console and no DJ (P4).
