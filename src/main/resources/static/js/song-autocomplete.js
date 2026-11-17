@@ -42,6 +42,7 @@
     const ARTIST_LIMIT  = 25;   // asked for the artist a single word begins
     const ARTIST_FIRST  = 5;    // of them before iTunes's own answer for the word
     const ARTIST_MIN_CHARS = 3; // "sh" begins too many
+    const ARTIST_NEXT_MIN_CHARS = 2; // after words before it: "bad b" may as well be "Bad Blood" as Bad Boys Blue
     const STEM_LIMIT    = 50;   // asked for the words before the one being typed (~10 KB gzipped, as fast as 8)
     const STORE         = 'PL';
     const MIN_CHARS     = 2;
@@ -304,19 +305,23 @@
      * The artist several words typed begin, the last still being typed ("bad bu" → Bad Bunny, "lady p" → Lady Pank, "zenek m" →
      * Zenon Martyniuk, "rolling st" → The Rolling Stones): the finished words are the name's first (or its first after "the" and
      * the like), the last begins the next. The words before alone are no help when the first is common: iTunes's 50 songs for
-     * "bad" hold none of Bad Bunny's. The first on the list wins ("bad b" → Bad Boys Blue). A whole name typed is not completed:
-     * iTunes finds it.
+     * "bad" hold none of Bad Bunny's. The first on the list wins ("bad bo" → Bad Boys Blue). Not completed: a whole name typed
+     * (iTunes finds it), one letter ("bad b": a title as likely), and words before of "the" and the like only ("the we": "The
+     * Winner…" as likely as The Weeknd) — the words before are asked for them. A short word joins its neighbour ("gigi d'ag").
      */
     function artistOfWords(typed) {
         const parts = typed.trim().split(/\s+/);
         const finished = words(parts.slice(0, -1).join(' '));
         const fragment = words(parts[parts.length - 1]).join('');
-        if (finished.length === 0 || !fragment) return null;
+        if (fragment.length < ARTIST_NEXT_MIN_CHARS) return null;
+        if (finished.every(function (w) { return ARTIST_SKIPPED.has(w); })) return null;   // none, or only "the" and the like
         const begins = function (name) {
             for (let at = 0; at + finished.length < name.length; at++) {
-                const next = name[at + finished.length];
-                const isWhole = at + finished.length === name.length - 1 && next === fragment;
-                if (finished.every(function (w, i) { return name[at + i] === w; }) && next.indexOf(fragment) === 0 && !isWhole) return true;
+                const rest = name.slice(at + finished.length);
+                const isWhole = rest.length === 1 && rest[0] === fragment;
+                const joined = rest.length > 1 && (rest[0].length <= 2 || rest[1].length <= 2) ? rest[0] + rest[1] : '';
+                const startsNext = rest[0].indexOf(fragment) === 0 || joined.indexOf(fragment) === 0;
+                if (finished.every(function (w, i) { return name[at + i] === w; }) && startsNext && !isWhole) return true;
                 if (!ARTIST_SKIPPED.has(name[at])) return false;   // only "the" and the like may come before
             }
             return false;
@@ -455,19 +460,22 @@
             const query = typed.trim();
             // the artist the words begin, else the words before the one begun: never both, two asks at most at a time
             const artist = artistBegun(typed);
-            const begun = artist ? null : wordBegun(typed);
+            const begun = wordBegun(typed);
+            const finished = finishedWords(typed, begun);
             // both at once: the list waits for the slower of two parallel asks, not for one after the other
             const answers = await Promise.all([ask(query, WHOLE_LIMIT, signal),
-                begun ? ask(asITunesNames(begun.stem), STEM_LIMIT, signal) : [], artist ? ask(artist.name, ARTIST_LIMIT, signal) : []]);
+                begun && !artist ? ask(asITunesNames(begun.stem), STEM_LIMIT, signal) : [],
+                artist ? ask(artist.name, ARTIST_LIMIT, signal) : []]);
             if (answers[0] === null || answers[1] === null || answers[2] === null) return null;
-            if (artist) return withTheDjsFirst(withTheArtist(answers[2], answers[0], artist), signal);
+            // iTunes's own answer with the finished words ("lady pa": not "Panic! At The Disco")
+            if (artist) return withTheDjsFirst(withTheArtist(answers[2], withTheWords(answers[0], finished), artist), signal);
             // the songs whose title has a word starting so, then those whose artist has ("da" → "Dai Dai", then "David Guetta")
             const starts = function (text) {
                 return words(text).some(function (w) { return w.indexOf(begun.fragment) === 0; });
             };
             const byTitle = begun ? answers[1].filter(function (track) { return starts(track.trackName); }) : [];
             const byArtist = begun ? answers[1].filter(function (track) { return !starts(track.trackName) && starts(track.artistName); }) : [];
-            const found = withTheWords(byTitle.concat(byArtist, answers[0]), finishedWords(typed, begun));
+            const found = withTheWords(byTitle.concat(byArtist, answers[0]), finished);
             return withTheDjsFirst(onceEach(found).slice(0, MAX_RESULTS), signal);
         }
 
