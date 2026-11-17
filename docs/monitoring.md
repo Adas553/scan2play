@@ -12,7 +12,7 @@ application itself is away. The landing page would stay a 200 with the database 
 The address is public, makes no session and asks the database at most once in five seconds, however often it is asked. It goes
 through Cloudflare like every request (the origin's own address answers 403, Section 8 of `PROJECT_CONTEXT.md`).
 
-## UptimeRobot (set up once, free)
+## UptimeRobot (set up once, free — done 2026-11-17)
 
 1. An account at uptimerobot.com with the address the owner reads; install its phone app and allow its notifications — an e-mail at
    23:00 on a Saturday is read on Sunday.
