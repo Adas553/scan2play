@@ -1,4 +1,4 @@
-# Session Handoff — 2026-11-07
+# Session Handoff — 2026-11-17
 
 The current state only: the branch, what waits for the owner, what comes next. **Kept short: the whole file ≤ 15 KB, "Start here"
 ≤ 4 KB, an item ≤ 4 lines.** After each release move to `docs/history/session-handoff-<date>.md`, word for word: the released
@@ -6,103 +6,40 @@ items and their checks (migrations applied, the deploy's lines), the previous "s
 words behind a decision — keep here only `main` and its deploy, open PRs and branches, what waits for the owner, the next step.
 The owner's numbered ideas ("item N") are in `docs/ideas.md`; traps seen before in `CLAUDE.md` ("Mind").
 
-**The history** (decisions, the owner's words, what
-was tried) is in `docs/history/`: `session-handoff-2026-09.md`, `session-handoff-2026-10-01.md`, `session-handoff-2026-10-04.md`,
-`session-handoff-2026-10-16.md`, `session-handoff-2026-10-18.md`, `session-handoff-2026-10-21.md`, `session-handoff-2026-10-24.md`
-(2026-10-22 … 24: the review of 2026-10-21 and its releases, the DJ's library, the ideas list — items 1–7 — word for word),
-`session-handoff-2026-10-26.md` (2026-10-26 … 28: the DJ's logo, the QR poster's editor and look, the panel's review — word for word),
-`session-handoff-2026-10-30.md` (the "Start here" of 2026-10-28 … 30: the state, the releases and the use of those days — word for word), `session-handoff-2026-11-06.md` (the "Start here" of 2026-11-04 … 05: the state, the releases #219 … #236, the review of 2026-11-05), `session-handoff-2026-11-07.md` (the state of 2026-11-06, H2–H4, the pricing's state and the review of PR #239 — released with #246 … #249), `session-handoff-2026-11-13.md` (the state of 2026-11-07, the releases #261, #262).
+**The history** (decisions, the owner's words, what was tried) is in `docs/history/session-handoff-<date>.md`, one file for each
+tidying, by date (from `-2026-09` on). The latest, `session-handoff-2026-11-17.md`: the releases #251 … #272 (the daily report, the
+wishes, the QR print, the review's fixes and V71, the song suggestions) and the owner's picks on the pricing (2026-11-05, -06).
 Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. Reviews: `docs/history/review-*.md` (the latest
-`review-2026-11-13-wishes.md`: "Życzenia przed imprezą", before its PR).
+`review-2026-11-17-song-suggestions.md`).
 
 ## Start here
 
-- **2026-11-17 — the song suggestions' review fixed on `claude/kind-knuth-7ryiki`** (not merged, no migration;
-  `docs/history/review-2026-11-17-song-suggestions.md`: "zenek martyniuk", "grease you", no padding after an artist).
-- **2026-11-16 — the guests' song suggestions, on `main` with #272, no migration:** each song's versions
-  once, no songs without the typed words ("sweet car"), a single word completed to an artist of a hand-written list ("shak" →
-  Shakira; `docs/ideas.md` item 14). The list's review every few months (next 2027-02) and the learning to come:
-  `docs/song-suggestions-artists.md`. To try: the guest page on a phone, "shak", "podsia", "zene".
-- **2026-11-16 — the review's fixes on `claude/intelligent-fermi-oq8xqt` (V71 → a database copy first), not merged:** (1) a reached
-  limit's log line no longer names the guest's address or a wishes' link (`GuestRequestLimiter`); (2) the nightly copy to
-  Cloudflare R2 (`tools/db-backup`, `docs/database-backup.md`); (3) `GET /healthz` for UptimeRobot (`docs/monitoring.md`); (4) no
-  deploy of `main` Fri–Sun 18:00–6:00 (`deploy-window.yml`, `[deploy-now]`) and the party's day and the Free plan's AI checks kept
-  across a restart (V71, `GuestLimitStore`). **Waits for the owner:** the R2 bucket, its token and the Railway service `db-backup`;
-  the UptimeRobot account and its two monitors; after the first held commit, whether Railway deploys it on the workflow's re-run;
-  a sentence on the copies (R2, 30 days) in the privacy policy. Also there: Pro's day of a party is 400 requests (Free 300;
-  `guest.limit.per-party-daily-pro`, the queue's bound 400, the pricing table).
-- **2026-11-13 — the state.** `main` = `d033d77` (#262: item 11 B0 — the DJ's contact for bookings, V67 — and A0; #261 the guide's
-  pictures), deployed 2026-11-13 06:11 UTC, SUCCESS: Flyway 66 → 67, started in 5.3 s, no WARN, 0 × 5xx (166 requests), RAM 0.6 GB
-  (Railway, read only); curl without cookies: `/`, `/pro`, `/dj-weselny` 200 to `</html>`. The items released: `docs/history/session-handoff-2026-11-13.md`.
-- **The owner's daily report** (`AdminReportService`, V65) on `claude/dazzling-heisenberg-oilwvm`: an e-mail to
-  `scan2playcontact@gmail.com` (`ADMIN_EMAIL`) when the owner sets on `/dj/stats/report` (V66; 9:10 daily by default), "Wyślij teraz". The e-mail has no
-  organiser's address or name (the privacy policy); to put them in: a sentence in the policy's Brevo point first. V65, V66 → a database copy.
-- **Only Cloudflare reaches the app — on since 2026-11-06 22:47 UTC.** The owner set the Cloudflare Transform Rule `X-Scan2Play-Origin`
-  and Railway's `ORIGIN_SECRET` (the first value showed in a screenshot and was replaced at once); checked: the site 200 through
-  Cloudflare, Railway's own address (`oqz5xl6q.up.railway.app`, `153.52.255.99`) 403. To change the secret: the Cloudflare rule and the
-  variable together — between the two the site is 403 for a minute (`PROJECT_CONTEXT.md` Sections 8, 10).
-- **The database's copy:** the owner took one on 2026-11-06 (`scan2play-2026-11-06.dump`, 250 KB, on their computer); the Postgres TCP
-  proxy was removed after it (checked: only the private endpoint). Weekly, and before a release with a migration
-  (`docs/database-backup.md`: the proxy only for the copy).
+- **2026-11-17 — the state.** `main` = `e4ff4d1` (#272, the guests' song suggestions; before it #263 … #271, V68 … V71), no open PR.
+  Deployed 2026-11-16 22:56 UTC, SUCCESS (Railway, read only): Flyway at 71, nothing to apply, started in 4.9 s, no WARN, 0 × 5xx of
+  681 requests in 24 h, RAM 0.48 GB;
+  curl without cookies: `/`, `/pro`, `/dj-weselny` 200 to `</html>`, `/healthz` 200.
+- **2026-11-17 — `claude/kind-knuth-7ryiki`, not merged, no migration:** the review of #272
+  (`docs/history/review-2026-11-17-song-suggestions.md`) and all its fixes, P1–P9: "zenek martyniuk" keeps Zenon Martyniuk's songs,
+  the album counts ("grease you"), no padding after an artist, a minute without iTunes after it refused. To try: the guest page on a
+  phone, "zenek", "grease you", "ac/d". Waits for the owner: the PRs to `main` and `dev`; Classic, Perfect, Feel, Survivor kept or not.
+- **Waits for the owner (from #269):** the UptimeRobot account and its two monitors (`docs/monitoring.md`);
+  after the first commit the deploy window holds back (Fri–Sun 18:00–6:00): does Railway deploy it on the workflow's re-run?
+- **Waits for the owner (the wishes, #263):** the three older Polish texts with "DJ" and a masculine verb (`guest.vote.gone`,
+  `party.ended.subtitle`, `party.tip.title`, listed in `ImpersonalPolishTextsTest`); item 13's picks (`docs/ideas.md`). To try on an
+  **iPhone**: "⭐" and "Nowy link" in "Obsługa" come back where they were.
+- **The plans:** everyone keeps Pro (`PLANS_ENFORCE=false`) until there are customers and a registered business; `/pro` public with
+  one free card; the day's steps: `docs/plans-switch-on.md`; the owner's picks: `docs/history/session-handoff-2026-11-17.md`.
+- **Only Cloudflare reaches the app** (since 2026-11-06): the Cloudflare Transform Rule `X-Scan2Play-Origin` and Railway's
+  `ORIGIN_SECRET`; Railway's own address is 403. To change the secret: the rule and the variable together — between the two the
+  site is 403 for a minute (`PROJECT_CONTEXT.md` Sections 8, 10).
+- **The database's copies:** nightly to Cloudflare R2 (the Railway service `db-backup`, since 2026-11-16; 2026-11-17 03:19 UTC
+  `scan2play-2026-11-17.dump`, 255 KB, done — the bucket itself and a restore not checked yet). By hand before a release with a
+  migration (`docs/database-backup.md`: the Postgres TCP proxy only for the copy, removed after it).
 - **The repository is public** (`LICENSE`: viewing only) — GitHub Actions have no minute limit. Nothing secret in the repo, the docs
   or a commit — ever.
 - **Cloud sessions:** the environment `scan2play` (personal) allows `www.scan2play.com.pl` — the curl of a release check; the
-  Default environment allows no site.
-- **Railway:** neither service sleeps; a spending limit of 15 USD (an alert at 10 USD); Healthcheck Path `/privacy`.
-- **2026-11-14 — the QR print (`claude/happy-dijkstra-txy1s2`, reviewed: `docs/history/review-2026-11-14-print.md`, the fixes on
-  `claude/pensive-rubin-rpps6k`), V70 → a database copy first:** #265 / #266 took only its first commit (`8162724`: on `main` the badge
-  touches the code on a card and a tent); the rest in new PRs: the logo's room on every paper, "Białe tło pod logo" (V70), the 3 mm
-  note, the cards' corner cut marks, the code 33 mm with the logo and three profiles.
-- **2026-11-13 — PRs to `main` and `dev` from `claude/blissful-cannon-h66za3` (V68, V69 → a database copy first):** the reviewed
-  `claude/happy-carson-5odcet` (`docs/ideas.md` item 12 — "Życzenia przed imprezą": `/w/{token}`, `/dj/wishes`, the invitation's print,
-  WISHES, Pro; the hint to vote 👍 above the guests' list, on the kiosk and the TV) with the review's fixes on top
-  (`docs/history/review-2026-11-13-wishes.md`: W1 reopening kept to five open, 20 events a party; W2–W3 tests; D1, D3, D4, D6, S1–S3;
-  D2, D5 left, said why); then the owner's notes: no page of the wishes or the settings jumps (no anchors, `scroll-restore.js`, the
-  answer in a bar at the bottom, the settings' folds remembered), the guests' hint shorter, and an event's own look (V69). Waits for the owner: the three older Polish texts with "DJ" and a masculine verb (`guest.vote.gone`,
-  `party.ended.subtitle`, `party.tip.title`, listed in `ImpersonalPolishTextsTest`). Item 13 waits for the owner's picks. To try: an
-  invitation printed, its link on a phone, "⭐" from the wishes before a party.
-- **2026-11-13 — the second review's fixes on `claude/quirky-faraday-mhc53m`** (that branch = `claude/blissful-cannon-h66za3` + the fixes;
-  `docs/history/review-2026-11-13-wishes-2.md`): the look on a line of its own, the invitation's look the event's, `pagehide`, "Dodaj 10"
-  sends what it names, the toast goes by itself, "Zobacz życzenia" to the event. To try on an **iPhone**: "⭐" and "Nowy link" in
-  "Obsługa" come back where they were.
-
-## Pricing and the Free plan's limit (the owner's picks, 2026-11-05)
-
-The analysis (competitors, Pro / Free checked with the code, the mock-ups, the AI's cost): the artifact "Cennik i limity Free"
-(https://claude.ai/artifact/HmAVim6owQkhpoe6hTg1vZ, private). The AI costs ~$0.002–0.003 a request from 2027 (half until 2026-12-31);
-the logs Railway keeps (since 2026-10-27) hold no guest's request — nobody but the owner has tested it, so there is no real party size.
-The owner's picks:
-1. **Free: 150 AI evaluations a party an evening, soft** — past it a request still reaches the DJ, unchecked (the path of "AI down",
-   `withoutTheAi`); the hard 300 a day stays for everyone; Pro: every request checked. Counted: what goes to Gemini (moods and repeats too; a failed
-   call given back); not: 👍,
-   refusals before the AI, the demo; the kiosk counts. The guest sees nothing of a limit; the DJ a quiet line at 80 %, a bar past it,
-   "bez oceny AI" on those requests — no Pro offer during the party; the next day the organiser's panel ("Wczoraj 212 próśb, AI oceniło
-   150. W Pro AI ocenia każdą prośbę.", "Zobacz, co daje Pro"; only until the next evening's first request). Property `guest.limit.free-ai-per-party` (150, 0 = off), only while enforced.
-2. **The pricing page: variant A** — Free "0 zł zawsze", Pro "WCZESNY DOSTĘP" with "Napisz do nas" (no price, no payment, no date), a
-   comparison table, FAQ ("Ile będzie kosztować Pro?" — not known yet; we write before anything is paid).
-3. **A 404 while `PLANS_ENFORCE=false`** (as `/pro` now); links: the footer ("Cennik"), the landing page's FAQ "Ile to kosztuje?", the
-   account menu ("Twój plan: Free · Cennik", the organiser only); never in the queue.
-4. **`contact@scan2play.com.pl` everywhere public** (`/pro`, the footer's `contact.email`, terms, guide, the privacy policy's contact);
-   Gmail only as Reply-To (and named so in the privacy policy).
-5. **30 days everywhere**: a gift of Pro for the accounts that exist on the switch (`PLANS_GIFT_UNTIL` = the switch + 30 — see the
-   state below) and `PLANS_TRIAL_DAYS=30` for new ones.
-6. The address: `/pro`, with `/cennik` (PL) and `/pricing` (EN) as the same page, one canonical; in the sitemap only once enforced.
-
-**State:** (1)–(4) built and released (#239 and its review, on `main` since #246); (5) not switched — everyone keeps Pro
-(`PLANS_ENFORCE=false`) until there are customers and a registered business; the day's steps: `docs/plans-switch-on.md`.
-
-## The pricing page before the switch, and the trial's abuse (the owner's picks, 2026-11-06)
-
-1. **Variant B**: `/pro` (and `/cennik`, `/pricing`) is public while `PLANS_ENFORCE=false` too — one card "Za darmo", "0 zł", every
-   feature, "Zacznij za darmo", the questions "Czy tak zostanie?" (the terms' section 5, `/terms#plans`), "Czy potrzebuję karty?",
-   "A goście?"; no word of Pro (PROJECT_CONTEXT 6.7). "Cennik" beside the language at the top of `/` and the pages "Dla kogo", in the
-   footer of the site's pages (`pricingLink`), the landing page's "Zobacz cennik →"; `/pro` in the sitemap always. The canonical address
-   stays `/pro` (the panel links it). Tests: `ProPageRenderTest.withThePlansOff_everythingIsFree`, `SmokeTest`, `ForWhomPagesWebTest`,
-   `GuestPageRenderTest`; browser scenarios `pricing-at-the-top-*` (320 px), `pro-page-plans-off-*`.
-2. **The trial**: kept as it is (30 days from the account, or from the gift's end). Its abuse costs little (≤ 150 AI checks an evening,
-   a morning e-mail) and gains nothing while Pro is free on request; the terms' one sentence against it is a step of
-   `docs/plans-switch-on.md` (added on the day of the switch, not before); a card for the trial when payments come.
-3. **The privacy policy**: the trial's hash is kept "while Scan2Play offers a trial", on the legitimate interest (was: with no end).
+  Default environment allows no site. **Railway:** neither service sleeps; a spending limit of 15 USD (an alert at 10 USD);
+  Healthcheck Path `/privacy`.
 
 ## Next
 
