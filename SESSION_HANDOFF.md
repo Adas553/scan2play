@@ -18,10 +18,10 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
   Deployed 2026-11-16 22:56 UTC, SUCCESS (Railway, read only): Flyway at 71, nothing to apply, started in 4.9 s, no WARN, 0 × 5xx of
   681 requests in 24 h, RAM 0.48 GB;
   curl without cookies: `/`, `/pro`, `/dj-weselny` 200 to `</html>`, `/healthz` 200.
-- **2026-11-17 — `claude/kind-knuth-7ryiki`, not merged, no migration:** the review of #272
+- **2026-11-17 — `claude/kind-knuth-7ryiki`, PRs #274 (`main`) and #275 (`dev`), not merged, no migration:** the review of #272
   (`docs/history/review-2026-11-17-song-suggestions.md`) and all its fixes, P1–P9: "zenek martyniuk" keeps Zenon Martyniuk's songs,
   the album counts ("grease you"), no padding after an artist, a minute without iTunes after it refused. To try: the guest page on a
-  phone, "zenek", "grease you", "ac/d". Waits for the owner: the PRs to `main` and `dev`; Classic, Perfect, Feel, Survivor kept or not.
+  phone, "zenek", "grease you", "ac/d". Waits for the owner: the merges; Classic, Perfect, Feel, Survivor kept or not.
 - **Waits for the owner (from #269):** after the first commit the deploy window holds back (Fri–Sun 18:00–6:00): does Railway
   deploy it on the workflow's re-run? UptimeRobot is set up (the owner, 2026-11-17; `docs/monitoring.md`).
 - **Waits for the owner (the wishes, #263):** the three older Polish texts with "DJ" and a masculine verb (`guest.vote.gone`,
