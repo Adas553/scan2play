@@ -902,7 +902,7 @@ class GuestPageRenderTest {
             assertThat(section(html, "landingWho")).contains("href=\"/dj-weselny" + q + "\"", "href=\"/kluby" + q + "\"",
                     "href=\"/puby" + q + "\"").doesNotContain("karaoke\"");
             assertThat(section(html, "landingWho").split("class=\"stretched-link\"", -1)).as("three cards are links").hasSize(4);
-            assertThat(section(html, "landingFaq").split("<details", -1)).as("seven questions — the tips' one too").hasSize(8);
+            assertThat(section(html, "landingFaq").split("<details", -1)).as("eight questions — the tips' and the weak signal's too").hasSize(9);
             assertThat(html.split("href=\"/start\"", -1)).as("the start at the top and at the end").hasSize(3);
             assertThat(html).contains("id=\"staffLogin\"", "id=\"landingGuide\"", "id=\"landingFinal\"", "href=\"/privacy\"");
             // no "PRO" on one card (the owner, 2026-10-18); Pro only while the plans are enforced — the pricing page always, beside the
