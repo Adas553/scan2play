@@ -2,6 +2,7 @@
 
     python tools/check_artists.py              every artist asked of iTunes (~3 s each: iTunes allows ~20 asks a minute)
     python tools/check_artists.py --offline    only the list: repeated names, the beginnings that go to an artist
+    python tools/check_artists.py "SZA" "Lao Che"    only these names asked of iTunes: candidates before they are added
 
 For the review every few months (docs/song-suggestions-artists.md). It prints:
   - the artists iTunes gives no song for under the name asked (a wrong spelling, an artist iTunes names otherwise — then an alias
@@ -83,7 +84,10 @@ def ask(name):
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('--offline', action='store_true', help='only the list, no iTunes')
+    parser.add_argument('names', nargs='*', help='only these names asked of iTunes, not the list: candidates before they are added')
     args = parser.parse_args()
+    if args.names:
+        return check_itunes(args.names)
     entries = artists()
     print(f'{len(entries)} artists in {JS.name}')
 
@@ -110,8 +114,38 @@ def main():
     for p in sorted(shared):
         print(f'  {p:6} → {shared[p][0]}   (also: {", ".join(shared[p][1:])})')
 
+    # as artistOfWords: the name's first words (after "the" and the like) and 2 or more letters of the next ("bad bu" → Bad Bunny)
+    by_words = defaultdict(list)
+    for entry in entries:
+        for name in [words(n) for n in entry.split('=')]:
+            at = 0
+            while at < len(name):
+                for k in range(1, len(name) - at):
+                    finished, rest = name[at:at + k], name[at + k:]
+                    if all(w in skip for w in finished):
+                        continue
+                    nexts = [rest[0]] + ([rest[0] + rest[1]] if len(rest) > 1 and min(len(rest[0]), len(rest[1])) <= 2 else [])
+                    for nxt in nexts:
+                        for n in range(2, len(nxt) + 1):
+                            if len(rest) == 1 and n == len(nxt):
+                                continue   # a whole name typed: iTunes finds it
+                            key = ' '.join(finished) + ' ' + nxt[:n]
+                            if entry not in by_words[key]:
+                                by_words[key].append(entry)
+                if name[at] not in skip:
+                    break
+                at += 1
+    shared_words = {p: names for p, names in by_words.items() if len(names) > 1}
+    print(f'\n{len(shared_words)} beginnings of several words shared by several artists (the first wins):')
+    for p in sorted(shared_words):
+        print(f'  {p:16} → {shared_words[p][0]}   (also: {", ".join(shared_words[p][1:])})')
+
     if args.offline:
         return 0
+    return check_itunes(entries)
+
+
+def check_itunes(entries):
     print('\niTunes, the Polish store:')
     missing, few, unchecked = [], [], []
     for i, entry in enumerate(entries):

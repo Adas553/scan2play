@@ -303,10 +303,92 @@
             t.step('"zenek" completed to Zenon Martyniuk', pending.slice(1).map(function (p) { return p.term; }).sort(),
                 ['Zenon Martyniuk', 'zenek']);
 
+            type(input, 'zenek ostatni r');
+            await t.waitFor(function () { return pending.length === 5; }, '"zenek ostatni r" asked', 3000);
+            t.step('the words before asked as iTunes names him', pending.slice(3).map(function (p) { return p.term; }).sort(),
+                ['zenek ostatni r', 'zenon ostatni']);
+
             type(input, 'zenek m');
-            await t.waitFor(function () { return pending.length === 5; }, '"zenek m" asked', 3000);
-            t.step('the word before asked as iTunes names him', pending.slice(3).map(function (p) { return p.term; }).sort(),
+            await t.waitFor(function () { return pending.length === 7; }, '"zenek m" asked', 3000);
+            t.step('one letter: the word before asked as iTunes names him', pending.slice(5).map(function (p) { return p.term; }).sort(),
                 ['zenek m', 'zenon']);
+
+            type(input, 'zenek ma');
+            await t.waitFor(function () { return pending.length === 9; }, '"zenek ma" asked', 3000);
+            t.step('"zenek ma" completed to Zenon Martyniuk', pending.slice(7).map(function (p) { return p.term; }).sort(),
+                ['Zenon Martyniuk', 'zenek ma']);
+        }
+    });
+
+    S2P.scenario({
+        name: 'song-suggestions-artist-words',
+        title: 'the words typed begin an artist\'s name ("bad bu" → Bad Bunny: iTunes has none of his songs among its answer for "bad"): completed once the last word has 2 letters ("bad b", "lady p" ask the words before: a title as likely as a name); after "the" too ("rolling st"); a whole name typed or words of no artist ask the words before the one begun, as before',
+        page: 'guest',
+        run: async function (t) {
+            const pending = holdITunes();
+            const input = document.getElementById('songInput');
+            input.focus();
+            type(input, 'bad bu');
+            await t.waitFor(function () { return pending.length === 2; }, '"bad bu" asked', 3000);
+            t.step('"bad bu" and Bad Bunny', pending.map(function (p) { return p.term; }).sort(), ['Bad Bunny', 'bad bu']);
+            answered(pending, 'bad bu', ['Michael Jackson - Bad', 'Bad Bunny & Jhay Cortez - Dakiti']);
+            answered(pending, 'Bad Bunny', ['Bad Bunny - Tití Me Preguntó', 'Bad Bunny - Me Porto Bonito', 'Michael Jackson - Bad']);
+            await t.waitFor(open, 'the suggestions for "bad bu"', 3000);
+            t.step('his songs first, then iTunes\'s own with a word starting "bu"', shown(),
+                ['Bad Bunny – Tití Me Preguntó', 'Bad Bunny – Me Porto Bonito', 'Bad Bunny & Jhay Cortez – Dakiti']);
+
+            type(input, 'bad b');
+            await t.waitFor(function () { return pending.length === 4; }, '"bad b" asked', 3000);
+            type(input, 'lady p');
+            await t.waitFor(function () { return pending.length === 6; }, '"lady p" asked', 3000);
+            type(input, 'lady pa');
+            await t.waitFor(function () { return pending.length === 8; }, '"lady pa" asked', 3000);
+            type(input, 'rolling st');
+            await t.waitFor(function () { return pending.length === 10; }, '"rolling st" asked', 3000);
+            type(input, 'bad bunny');
+            await t.waitFor(function () { return pending.length === 12; }, '"bad bunny" asked', 3000);
+            type(input, 'shakira wa');
+            await t.waitFor(function () { return pending.length === 14; }, '"shakira wa" asked', 3000);
+            t.step('one letter, a whole name and a title asked with the words before; two letters with the artist',
+                pending.slice(2).map(function (p) { return p.term; }),
+                ['bad b', 'bad', 'lady p', 'lady', 'lady pa', 'Lady Pank', 'rolling st', 'The Rolling Stones', 'bad bunny', 'bad',
+                    'shakira wa', 'shakira']);
+        }
+    });
+
+    S2P.scenario({
+        name: 'song-suggestions-artist-words-not-titles',
+        title: '"the" or "dj" alone before the word begun completes no artist ("the we" may be "The Weekend" or "The Winner Takes It All": the words before asked, as for any title); a short word joined with its neighbour is completed after the words before too ("gigi d\'ag")',
+        page: 'guest',
+        run: async function (t) {
+            const pending = holdITunes();
+            const input = document.getElementById('songInput');
+            input.focus();
+            type(input, 'the we');
+            await t.waitFor(function () { return pending.length === 2; }, '"the we" asked', 3000);
+            type(input, 'dj sn');
+            await t.waitFor(function () { return pending.length === 4; }, '"dj sn" asked', 3000);
+            type(input, 'gigi d\'ag');
+            await t.waitFor(function () { return pending.length === 6; }, '"gigi d\'ag" asked', 3000);
+            t.step('"the" and "dj" asked as words; Gigi D\'Agostino completed', pending.map(function (p) { return p.term; }),
+                ['the we', 'the', 'dj sn', 'dj', 'gigi d\'ag', 'Gigi D\'Agostino']);
+        }
+    });
+
+    S2P.scenario({
+        name: 'song-suggestions-artist-words-padding',
+        title: 'words completed to an artist: of iTunes\'s own answer only the songs with the finished words too — its padding with a word starting so ("Panic! At The Disco" for "lady pa") is not shown',
+        page: 'guest',
+        run: async function (t) {
+            const pending = holdITunes();
+            const input = document.getElementById('songInput');
+            input.focus();
+            type(input, 'lady pa');
+            await t.waitFor(function () { return pending.length === 2; }, '"lady pa" asked', 3000);
+            answered(pending, 'lady pa', ['Panic! At The Disco - High Hopes', 'Lady Pank - Zawsze tam gdzie ty']);
+            answered(pending, 'Lady Pank', ['Lady Pank - Mniej niż zero']);
+            await t.waitFor(open, 'the suggestions for "lady pa"', 3000);
+            t.step('Lady Pank\'s songs; not the padding', shown(), ['Lady Pank – Mniej niż zero', 'Lady Pank – Zawsze tam gdzie ty']);
         }
     });
 
