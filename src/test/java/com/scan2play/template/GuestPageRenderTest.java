@@ -916,12 +916,17 @@ class GuestPageRenderTest {
             context.setVariable("plansEnforced", true);
             assertThat(section(engine.process("landing", context), "landingFaq")).as("the plans enforced")
                     .contains(pricing, locale == PL ? "Pro dodaje" : "Pro adds");
+            // what the DJ keeps in hand at once under the hero (a DJ's first fear), the first party after what one gets
+            assertThat(html.indexOf("id=\"landingControl\"")).as("\"Ty decydujesz\" before the steps")
+                    .isPositive().isLessThan(html.indexOf("id=\"landingSteps\""));
+            assertThat(html.indexOf("id=\"landingFirstParty\"")).as("the first party after the features, before for whom")
+                    .isGreaterThan(html.indexOf("id=\"landingFeatures\"")).isLessThan(html.indexOf("id=\"landingWho\""));
             if (locale == Locale.ENGLISH) {
-                assertThat(html).contains(">Guests request songs. AI keeps the vibe. You play.<", ">Wedding DJs<");
+                assertThat(html).contains(">Fewer people at the booth. More control over the room.<", ">You decide<", ">Wedding DJs<");
                 continue;
             }
-            assertThat(html).contains(">Goście proszą o piosenki. AI pilnuje klimatu. Ty grasz.<", ">Czy goście muszą coś instalować?<",
-                    ">DJ weselny<");
+            assertThat(html).contains(">Mniej ludzi przy konsoli. Więcej kontroli nad salą.<", ">Ty decydujesz<",
+                    ">Czy goście muszą coś instalować?<", ">DJ weselny<");
         }
     }
 
