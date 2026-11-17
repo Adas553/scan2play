@@ -221,7 +221,7 @@ piece of work or when a task names an item. A finished item stays here until its
    (the list clean enough for the hosts to see whole); the guests' 👍 on the others' wishes (only after the AI). **Rejected:** the
    wishes as requests in the evening's queue — weeks-old wishes would bury the room's requests, and "⭐" already carries what the DJ picks.
 
-13. **The ideas of 2026-11-13 — waiting for the owner's picks.** **"Propozycje z listy DJ-a"** (the owner's "Wylosuj z playlisty
+13. **The ideas of 2026-11-13 — parked** (the owner, 2026-11-17: "na razie odpuszczamy"; nothing of it is being built). **"Propozycje z listy DJ-a"** (the owner's "Wylosuj z playlisty
    DJ-a"; the artifact https://claude.ai/artifact/YY17E3WR3GzzQA2zsJ1x3C): a random song of the whole library is weak (intros and
    edits, songs off the vibe) and lists the library to a script (~99 % of 20 000 tracks in a day from ten addresses), against the
    privacy policy; the analysis recommends B — "Nie wiesz, co wybrać?", three songs of a short list the DJ uploads as the guests'

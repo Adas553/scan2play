@@ -5,7 +5,8 @@
 
 For the review every few months (docs/song-suggestions-artists.md). It prints:
   - the artists iTunes gives no song for under the name asked (a wrong spelling, an artist iTunes names otherwise — then an alias
-    "what guests type=what iTunes calls them" —, or one gone from the Polish store);
+    "what guests type=what iTunes calls them" —, or one gone from the Polish store), and those it gives fewer than FEW_BELOW songs
+    of among its 25 (a name iTunes matches mostly to others, "Classic": completing to it shows little of theirs);
   - the beginnings of 3–5 letters shared by several artists, and which one wins (the first on the list): reorder when the winner is
     the less likely at a party.
 Standard library only; reads nothing but the JS file and iTunes's public search.
@@ -23,7 +24,7 @@ from collections import defaultdict
 from pathlib import Path
 
 JS = Path(__file__).resolve().parent.parent / 'src/main/resources/static/js/song-autocomplete.js'
-SKIPPED = {'the', 'and', 'band', 'orkiestra', 'orchestra', 'feat', 'dj', 'project'}   # as ARTIST_SKIPPED in the JS
+FEW_BELOW = 3   # songs of the artist among iTunes's 25: fewer is reported (docs/song-suggestions-artists.md: a candidate needs 3)
 
 
 def plain(text):
@@ -41,6 +42,30 @@ def artists():
     block = block[:block.index('];')]
     block = re.sub(r'//[^\n]*', '', block)
     return [m.group(1).replace("\\'", "'") for m in re.finditer(r"'((?:[^'\\]|\\.)*)'", block)]
+
+
+def skipped():
+    """ARTIST_SKIPPED of the JS: the artists' words that begin nothing."""
+    source = JS.read_text(encoding='utf-8')
+    line = source[source.index('const ARTIST_SKIPPED = new Set(['):]
+    line = line[:line.index('])')]
+    return set(re.findall(r"'([^']*)'", line))
+
+
+def alias_words(entries):
+    """ALIAS_WORDS of the JS: a typed word of an alias that iTunes does not know as theirs ("zenek" → "zenon")."""
+    named = [words(e.split('=')[-1]) for e in entries]
+    others = {w for n in named for w in n}
+    found = {}
+    for entry in entries:
+        names = entry.split('=')
+        if len(names) < 2:
+            continue
+        typed, asked = words(names[0]), words(names[-1])
+        for i, w in enumerate(typed):
+            if w not in asked and i < len(asked) and w not in others:
+                found[w] = asked[i]
+    return found
 
 
 def ask(name):
@@ -66,15 +91,20 @@ def main():
     if repeated:
         print('REPEATED:', ', '.join(repeated))
 
+    skip = skipped()
+    aliases = alias_words(entries)
+    if aliases:
+        print('Typed words of the aliases, completed even when whole:', ', '.join(f'{w} → {n}' for w, n in aliases.items()))
     winners = defaultdict(list)
     for entry in entries:
-        for w in words(' '.join(entry.split('='))):
-            if w in SKIPPED:
-                continue
+        all_words = words(' '.join(entry.split('=')))
+        # as artistBegun: the words, and a short word joined with its neighbour ("acdc", "dagostino")
+        joined = [a + b for a, b in zip(all_words, all_words[1:]) if len(a) <= 2 or len(b) <= 2]
+        for w in [w for w in all_words if w not in skip] + joined:
             for n in range(3, min(len(w), 6)):
                 if entry not in winners[w[:n]]:
                     winners[w[:n]].append(entry)
-    whole = {w for e in entries for w in words(' '.join(e.split('=')))}
+    whole = {w for e in entries for w in words(' '.join(e.split('=')))} - set(aliases)
     shared = {p: names for p, names in winners.items() if len(names) > 1 and p not in whole}
     print(f'\n{len(shared)} beginnings shared by several artists (the first wins):')
     for p in sorted(shared):
@@ -83,11 +113,14 @@ def main():
     if args.offline:
         return 0
     print('\niTunes, the Polish store:')
-    missing, unchecked = [], []
+    missing, few, unchecked = [], [], []
     for i, entry in enumerate(entries):
         name = entry.split('=')[-1]
         try:
             songs = ask(name)
+            if not songs:   # iTunes sometimes answers a known name with nothing: once more before it is reported
+                time.sleep(10)
+                songs = ask(name)
         except Exception as e:   # one failed ask is reported, not the end of the run
             print(f'  ?? {name}: {e}')
             unchecked.append(name)
@@ -98,12 +131,16 @@ def main():
             if not theirs:
                 missing.append(name)
                 print(f'  NONE {name}  (iTunes gave: {", ".join(sorted({s.get("artistName", "") for s in songs[:5]}))})')
+            elif len(theirs) < FEW_BELOW:
+                few.append(name)
+                print(f'  FEW  {name}: {len(theirs)} of {len(songs)}  (iTunes gave: '
+                      f'{", ".join(sorted({s.get("artistName", "") for s in songs[:5]}))})')
         if i + 1 < len(entries):
             time.sleep(3)
     found = len(entries) - len(missing) - len(unchecked)
     print(f'\n{found} of {len(entries)} artists found; without songs: {", ".join(missing) or "none"}; '
-          f'not checked (iTunes failed): {", ".join(unchecked) or "none"}')
-    return 1 if missing or unchecked else 0
+          f'with fewer than {FEW_BELOW}: {", ".join(few) or "none"}; not checked (iTunes failed): {", ".join(unchecked) or "none"}')
+    return 1 if missing or few or unchecked else 0
 
 
 if __name__ == '__main__':
