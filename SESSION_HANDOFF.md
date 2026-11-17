@@ -22,10 +22,10 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
   (`docs/history/review-2026-11-17-song-suggestions.md`) and all its fixes, P1–P9: "zenek martyniuk" keeps Zenon Martyniuk's songs,
   the album counts ("grease you"), no padding after an artist, a minute without iTunes after it refused. To try: the guest page on a
   phone, "zenek", "grease you", "ac/d". Waits for the owner: the PRs to `main` and `dev`; Classic, Perfect, Feel, Survivor kept or not.
-- **Waits for the owner (from #269):** the UptimeRobot account and its two monitors (`docs/monitoring.md`);
-  after the first commit the deploy window holds back (Fri–Sun 18:00–6:00): does Railway deploy it on the workflow's re-run?
+- **Waits for the owner (from #269):** after the first commit the deploy window holds back (Fri–Sun 18:00–6:00): does Railway
+  deploy it on the workflow's re-run? UptimeRobot is set up (the owner, 2026-11-17; `docs/monitoring.md`).
 - **Waits for the owner (the wishes, #263):** the three older Polish texts with "DJ" and a masculine verb (`guest.vote.gone`,
-  `party.ended.subtitle`, `party.tip.title`, listed in `ImpersonalPolishTextsTest`); item 13's picks (`docs/ideas.md`). To try on an
+  `party.ended.subtitle`, `party.tip.title`, listed in `ImpersonalPolishTextsTest`); item 13 parked (the owner). To try on an
   **iPhone**: "⭐" and "Nowy link" in "Obsługa" come back where they were.
 - **The plans:** everyone keeps Pro (`PLANS_ENFORCE=false`) until there are customers and a registered business; `/pro` public with
   one free card; the day's steps: `docs/plans-switch-on.md`; the owner's picks: `docs/history/session-handoff-2026-11-17.md`.
