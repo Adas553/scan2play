@@ -2,6 +2,7 @@
 
     python tools/check_artists.py              every artist asked of iTunes (~3 s each: iTunes allows ~20 asks a minute)
     python tools/check_artists.py --offline    only the list: repeated names, the beginnings that go to an artist
+    python tools/check_artists.py "SZA" "Lao Che"    only these names asked of iTunes: candidates before they are added
 
 For the review every few months (docs/song-suggestions-artists.md). It prints:
   - the artists iTunes gives no song for under the name asked (a wrong spelling, an artist iTunes names otherwise — then an alias
@@ -83,7 +84,10 @@ def ask(name):
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('--offline', action='store_true', help='only the list, no iTunes')
+    parser.add_argument('names', nargs='*', help='only these names asked of iTunes, not the list: candidates before they are added')
     args = parser.parse_args()
+    if args.names:
+        return check_itunes(args.names)
     entries = artists()
     print(f'{len(entries)} artists in {JS.name}')
 
@@ -112,6 +116,10 @@ def main():
 
     if args.offline:
         return 0
+    return check_itunes(entries)
+
+
+def check_itunes(entries):
     print('\niTunes, the Polish store:')
     missing, few, unchecked = [], [], []
     for i, entry in enumerate(entries):
