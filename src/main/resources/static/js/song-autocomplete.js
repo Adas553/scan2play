@@ -42,6 +42,7 @@
     const ARTIST_LIMIT  = 25;   // asked for the artist a single word begins
     const ARTIST_FIRST  = 5;    // of them before iTunes's own answer for the word
     const ARTIST_MIN_CHARS = 3; // "sh" begins too many
+    const ARTIST_NEXT_MIN_CHARS = 2; // after words before it: "bad b" may as well be "Bad Blood" as Bad Boys Blue
     const STEM_LIMIT    = 50;   // asked for the words before the one being typed (~10 KB gzipped, as fast as 8)
     const STORE         = 'PL';
     const MIN_CHARS     = 2;
@@ -52,8 +53,8 @@
                                        // a venue's Wi-Fi shared by every guest, and asking again keeps it full
 
     /**
-     * The artists a single word being typed is completed to (artistBegun): iTunes knows whole words only, so "shak" never reaches
-     * Shakira by itself. Only an addition — iTunes's own answer for the word is still shown — and never the DJ's library (a guest
+     * The artists a word being typed is completed to (artistBegun; after words that begin the name too, artistOfWords): iTunes
+     * knows whole words only, so "shak" never reaches Shakira by itself, nor "bad bu" Bad Bunny. Only an addition — iTunes's own answer for the word is still shown — and never the DJ's library (a guest
      * would learn it letter by letter). The first that fits wins: the likelier at a party comes earlier ("mart" → Martyniuk).
      * "Zenek Martyniuk=Zenon Martyniuk": what guests type, then the name iTunes gives the artist (asked by that); a typed word
      * iTunes does not know as theirs ("zenek") is completed even when whole, and stands for theirs ("zenon") everywhere (ALIAS_WORDS).
@@ -82,6 +83,8 @@
         'Sara James', 'Oskar Cyms', 'Kaśka Sochacka', 'Ania Karwan', 'Igor Herbut', 'LemON', 'Sarsa', 'Paweł Domagała',
         'Natalia Nykiel', 'Julia Wieniawa', 'Bryska', 'PRO8L3M', 'Otsochodzi', 'Szczyl', 'Tymek',
         'Wiktoria Zwolińska', 'Kubi Producent', 'Jann', 'Zalia', 'Poparzeni Kawą Trzy',
+        'Blue Café', 'Sistars', 'Virgin', 'Jamal', 'Coma', 'Lao Che', 'Paktofonika', 'Paluch', 'Żabson', 'Young Igi', 'Bambi',
+        'Kaliber 44', 'Sokół', 'Mesajah',
         // Polish: the classics of weddings and dances, rock, rap
         'Zbigniew Wodecki', 'Irena Jarocka', 'Krzysztof Cugowski', 'Jerzy Połomski', 'Wojciech Gąsowski=Wojciech Gąssowski',
         'Danuta Rinn', 'Felicjan Andrzejczak', 'Ryszard Rynkowski',
@@ -97,6 +100,8 @@
         'Drake', 'Eminem', 'Snoop Dogg', 'Black Eyed Peas', 'LMFAO', 'Usher', 'Ne-Yo', 'Chris Brown', 'Pitbull', 'Flo Rida', 'Sean Paul',
         'Jennifer Lopez', 'Enrique Iglesias', 'Ricky Martin', 'Luis Fonsi', 'Daddy Yankee', 'J Balvin', 'Bad Bunny', 'Maluma', 'Karol G',
         'Rosalía', 'Camila Cabello', 'Måneskin', 'Loreen', 'Hozier', 'Pharrell Williams', 'Mark Ronson',
+        'Kendrick Lamar', 'Tate McRae', 'Zara Larsson', 'Gracie Abrams', 'Charli xcx', 'Shawn Mendes', 'Rauw Alejandro',
+        'Ozuna', 'Feid', 'Anitta', 'Becky G', 'Kesha', 'Avril Lavigne',
         // international: dance
         'David Guetta', 'Calvin Harris', 'Avicii', 'Martin Garrix', 'Marshmello', 'Kygo', 'Tiësto', 'Alok', 'Robin Schulz',
         'Major Lazer', 'DJ Snake', 'Clean Bandit', 'Jax Jones', 'Joel Corry', 'Lost Frequencies',
@@ -114,10 +119,12 @@
         'Led Zeppelin', 'Deep Purple', 'Status Quo', 'Creedence Clearwater Revival', 'The Killers', 'Arctic Monkeys', 'Kings of Leon',
         'Franz Ferdinand', 'Oasis', 'Blur', 'U2', 'R.E.M.', 'Bob Marley', 'UB40', 'Zucchero', 'Eros Ramazzotti', 'Laura Pausini',
         'Andrea Bocelli', 'Rammstein', 'Helene Fischer', 'Nelly Furtado', 'Timbaland', '50 Cent',
+        'Shania Twain', 'Cyndi Lauper', 'Natasha Bedingfield', 'Fleetwood Mac', 'Eagles', 'Bryan Adams', 'Lenny Kravitz', 'Sting',
+        'The Police', 'Blondie', 'Rick Astley', 'Gwen Stefani',
         // after the artists that share their beginning and are asked for more often ("jus" → Justin Bieber, "mich" → Michael Jackson,
-        // "que" → Queen, "hou" → Whitney Houston, "dee" → Deep Purple)
-        'Quebonafide', 'Swedish House Mafia', 'Alice Deejay',
-        'Justyna Steczkowska', 'Jacek Stachursky', 'Andre', 'Kordian', 'Michał Szpak', 'Michał Bajor', 'White 2115',
+        // "que" → Queen, "hou" → Whitney Houston, "dee" → Deep Purple, "sco" → Scooter)
+        'Quebonafide', 'Swedish House Mafia', 'Alice Deejay', 'Travis Scott',
+        'Justyna Steczkowska', 'Jacek Stachursky', 'Andre', 'Kordian', 'Michał Szpak', 'Szpaku', 'Michał Bajor', 'White 2115',
         'Malik Montana', 'Andrzej Rosiewicz', 'Kasia Sobczyk=Katarzyna Sobczyk', 'Halina Frąckowiak', 'Krzysztof Kiljański', 'Camasutra'
     ];
 
@@ -135,7 +142,8 @@
         for (let i = 1; i < all.length; i++) {
             if (all[i - 1].length <= 2 || all[i].length <= 2) joined.push(all[i - 1] + all[i]);
         }
-        return { name: names[names.length - 1], typed: names.length > 1 ? words(names[0]) : [], words: all, joined: joined };
+        return { name: names[names.length - 1], typed: names.length > 1 ? words(names[0]) : [], words: all, joined: joined,
+            names: names.map(words) };
     });
 
     /**
@@ -274,7 +282,8 @@
      * an alias ("zenek"), which iTunes knows as someone else's. Null when none, or the word is short.
      */
     function artistBegun(typed) {
-        if (/\s/.test(typed.trim()) || /\s$/.test(typed)) return null;
+        if (/\s$/.test(typed)) return null;
+        if (/\s/.test(typed.trim())) return artistOfWords(typed);
         const fragment = words(typed).join('');
         if (fragment.length < ARTIST_MIN_CHARS) return null;
         let entry;
@@ -290,6 +299,35 @@
             });
         }
         return entry ? { name: entry.name, fragment: fragment } : null;   // asked as iTunes names them
+    }
+
+    /**
+     * The artist several words typed begin, the last still being typed ("bad bu" → Bad Bunny, "lady p" → Lady Pank, "zenek m" →
+     * Zenon Martyniuk, "rolling st" → The Rolling Stones): the finished words are the name's first (or its first after "the" and
+     * the like), the last begins the next. The words before alone are no help when the first is common: iTunes's 50 songs for
+     * "bad" hold none of Bad Bunny's. The first on the list wins ("bad bo" → Bad Boys Blue). Not completed: a whole name typed
+     * (iTunes finds it), one letter ("bad b": a title as likely), and words before of "the" and the like only ("the we": "The
+     * Winner…" as likely as The Weeknd) — the words before are asked for them. A short word joins its neighbour ("gigi d'ag").
+     */
+    function artistOfWords(typed) {
+        const parts = typed.trim().split(/\s+/);
+        const finished = words(parts.slice(0, -1).join(' '));
+        const fragment = words(parts[parts.length - 1]).join('');
+        if (fragment.length < ARTIST_NEXT_MIN_CHARS) return null;
+        if (finished.every(function (w) { return ARTIST_SKIPPED.has(w); })) return null;   // none, or only "the" and the like
+        const begins = function (name) {
+            for (let at = 0; at + finished.length < name.length; at++) {
+                const rest = name.slice(at + finished.length);
+                const isWhole = rest.length === 1 && rest[0] === fragment;
+                const joined = rest.length > 1 && (rest[0].length <= 2 || rest[1].length <= 2) ? rest[0] + rest[1] : '';
+                const startsNext = rest[0].indexOf(fragment) === 0 || joined.indexOf(fragment) === 0;
+                if (finished.every(function (w, i) { return name[at + i] === w; }) && startsNext && !isWhole) return true;
+                if (!ARTIST_SKIPPED.has(name[at])) return false;   // only "the" and the like may come before
+            }
+            return false;
+        };
+        const entry = ARTIST_ENTRIES.find(function (a) { return a.names.some(begins); });
+        return entry ? { name: entry.name, fragment: fragment } : null;
     }
 
     /**
@@ -420,20 +458,24 @@
             currentController = new AbortController();
             const signal = currentController.signal;
             const query = typed.trim();
+            // the artist the words begin, else the words before the one begun: never both, two asks at most at a time
+            const artist = artistBegun(typed);
             const begun = wordBegun(typed);
+            const finished = finishedWords(typed, begun);
             // both at once: the list waits for the slower of two parallel asks, not for one after the other
-            const artist = begun ? null : artistBegun(typed);
             const answers = await Promise.all([ask(query, WHOLE_LIMIT, signal),
-                begun ? ask(asITunesNames(begun.stem), STEM_LIMIT, signal) : [], artist ? ask(artist.name, ARTIST_LIMIT, signal) : []]);
+                begun && !artist ? ask(asITunesNames(begun.stem), STEM_LIMIT, signal) : [],
+                artist ? ask(artist.name, ARTIST_LIMIT, signal) : []]);
             if (answers[0] === null || answers[1] === null || answers[2] === null) return null;
-            if (artist) return withTheDjsFirst(withTheArtist(answers[2], answers[0], artist), signal);
+            // iTunes's own answer with the finished words ("lady pa": not "Panic! At The Disco")
+            if (artist) return withTheDjsFirst(withTheArtist(answers[2], withTheWords(answers[0], finished), artist), signal);
             // the songs whose title has a word starting so, then those whose artist has ("da" → "Dai Dai", then "David Guetta")
             const starts = function (text) {
                 return words(text).some(function (w) { return w.indexOf(begun.fragment) === 0; });
             };
             const byTitle = begun ? answers[1].filter(function (track) { return starts(track.trackName); }) : [];
             const byArtist = begun ? answers[1].filter(function (track) { return !starts(track.trackName) && starts(track.artistName); }) : [];
-            const found = withTheWords(byTitle.concat(byArtist, answers[0]), finishedWords(typed, begun));
+            const found = withTheWords(byTitle.concat(byArtist, answers[0]), finished);
             return withTheDjsFirst(onceEach(found).slice(0, MAX_RESULTS), signal);
         }
 

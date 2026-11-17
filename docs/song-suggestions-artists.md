@@ -10,6 +10,14 @@ finds "Shik Shak Shok", never Shakira; `podsia` finds nothing. A word after anot
 - A single word of at least 3 letters, still being typed (no space after it), that begins a word of an artist on the list and is
   shorter than it: `shak` → Shakira, `podsia` → Dawid Podsiadło, `beyo` → Beyoncé, `gun` → Guns N' Roses. A word with a slash or
   an apostrophe counts by its letters, and a short word of a name with its neighbour: `ac/d` → AC/DC, `d'ag` → Gigi D'Agostino.
+- Several words, the last still being typed, that begin an artist's name (`artistOfWords`): the finished words are the name's first
+  (or its first after "the" and the like), the last, of 2 letters at least, begins the next — `bad bu` → Bad Bunny, `lady pa` →
+  Lady Pank, `rolling st` → The Rolling Stones, `zenek ma` → Zenon Martyniuk, `gigi d'ag` → Gigi D'Agostino (a short word joins its
+  neighbour). The words before alone are no help when the first is common: iTunes's 50 songs for "bad" hold none of Bad Bunny's. The
+  first on the list wins here too (`bad bo` → Bad Boys Blue). Of iTunes's own answer only the songs with the finished words come
+  (`lady pa`: not "Panic! At The Disco"). These ask the words before the one being typed, as before: a whole name typed (`bad
+  bunny`), words of no artist (`shakira wa`), one letter (`bad b`: "Bad Blood" as likely as Bad Boys Blue) and only "the" or "dj"
+  before (`the we`: "The Winner Takes It All" as likely as The Weeknd).
 - **Only an addition.** iTunes is asked for the word as before and for the artist at the same time (the list waits for the slower of
   the two). The artist's first 5 songs come first, then the songs of iTunes's own answer with a word (artist, title, album) starting
   so, then the rest of the artist's — what iTunes found for the word is never pushed out of the list. The rest of its answer is the
@@ -44,8 +52,8 @@ New artists come, others stop being asked for. About every three months, or afte
      little of theirs, but no harm: the songs of iTunes's own answer with the word come after them. Take it off when a likelier
      artist shares its beginning; a new candidate with `FEW` is not added. (2026-11-17: Classic, Perfect, Feel, Survivor, kept.)
      An empty `NONE` (iTunes gave nothing) is asked once more; if it stays, check the name by hand before taking it off;
-   - the beginnings shared by several artists and which one wins (`--offline` prints only this, at once): reorder when the winner is
-     the less likely at a party.
+   - the beginnings shared by several artists and which one wins, of a single word (`sco`) and of several (`bad bu`; `--offline`
+     prints only these, at once): reorder when the winner is the less likely at a party.
 2. **Look for new names** — what is played at Polish parties now:
    - the guests' requests on Scan2Play (read only; the production database's copy, `docs/database-backup.md`, or the read-only
      inspection of a local copy — never write to the developer's `scan2play`):
@@ -61,7 +69,9 @@ New artists come, others stop being asked for. About every three months, or afte
    - the charts: Apple Music's Top 100 Poland, the Polish radio charts (RMF FM, Eska, Radio ZET), the year's wedding hits.
 3. **Edit `ARTISTS`** in `song-autocomplete.js`: add, take off, reorder (each group keeps its kind: Polish dance and disco polo,
    Polish pop/rock/rap, Polish wedding classics, international now / dance / classics; at the end the artists that lose a shared
-   beginning to a likelier one). A candidate is checked before it is added: at least 3 of its songs under the name asked. Keep it to a few hundred names — the list is part of the script every guest loads.
+   beginning to a likelier one). A candidate is checked before it is added: at least 3 of its songs under the name asked
+   (`python tools/check_artists.py "Name" "Other Name"` asks only those). A name that is one short word iTunes finds by itself
+   ("SZA", "Oki") or one whose letters cannot be typed as a word ("O.S.T.R.") completes nothing — not added. Keep it to a few hundred names — the list is part of the script every guest loads.
 4. Run `python tools/check_artists.py` again (0 `NONE`; a `FEW` only as decided above), the browser scenarios `song-suggestions-*`, and write the date of the
    review and the next one here.
 
@@ -69,6 +79,7 @@ New artists come, others stop being asked for. About every three months, or afte
 |---|---|
 | 2026-11-16 | The list made: 280 artists, all found by `tools/check_artists.py` (the band Weekend left out: iTunes gives The Weeknd for it). |
 | 2026-11-16 | 101 Polish artists added (disco polo and dance, wedding classics, the new pop and rap): 381 in all, 204 Polish. Left out, iTunes has none or one song under the name: Daj To Głośniej, Imperium, Universe, Kabaret Ani Mru Mru, Daria Marcinkowska; aliases: Gąsowski → "Wojciech Gąssowski", Kasia → "Katarzyna Sobczyk", Roksana → "Roxie Węgiel". Moved to the end, as others are asked for more with the same beginning: Michał Szpak ("mich"), White 2115, Malik Montana, Kordian, Andre and others. |
+| 2026-11-17 | Words that begin a name completed too (`bad bu` → Bad Bunny: it was on the list, but "bad" is a whole word). 41 artists added, each with 3 or more songs in iTunes: 422 in all (international now: Kendrick Lamar, Tate McRae, Zara Larsson, Gracie Abrams, Charli xcx, Shawn Mendes, Rauw Alejandro, Ozuna, Feid, Anitta, Becky G, Kesha, Avril Lavigne, Travis Scott; classics: Shania Twain, Cyndi Lauper, Natasha Bedingfield, Fleetwood Mac, Eagles, Bryan Adams, Lenny Kravitz, Sting, The Police, Blondie, Rick Astley, Gwen Stefani; Polish: Blue Café, Sistars, Virgin, Jamal, Coma, Lao Che, Paktofonika, Paluch, Żabson, Young Igi, Bambi, Kaliber 44, Sokół, Mesajah, Szpaku). At the end: Travis Scott ("sco" → Scooter), Szpaku ("szp" → Michał Szpak). Left out: Łzy (2 songs under the name), SZA, Oki, Tede (whole short words: nothing to complete; "ted" → Teddy Swims), O.S.T.R. ("ostr" begins none of its letters). |
 
 ## The learning to come (not built)
 
