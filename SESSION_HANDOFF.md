@@ -22,6 +22,9 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
   (`docs/history/review-2026-11-17-song-suggestions.md`) and all its fixes, P1–P9: "zenek martyniuk" keeps Zenon Martyniuk's songs,
   the album counts ("grease you"), no padding after an artist, a minute without iTunes after it refused. To try: the guest page on a
   phone, "zenek", "grease you", "ac/d". Waits for the owner: the merges; Classic, Perfect, Feel, Survivor kept or not.
+- **2026-11-17 — `claude/wonderful-edison-4qz6fs`, PRs #278 (`main`) and #279 (`dev`), not merged, no migration:** the landing page and "Dla kogo" rewritten for a DJ's
+  fears: the title "Mniej ludzi przy konsoli…", "Ty decydujesz", the features by the DJ's gain, "Pierwsza impreza", the weak signal
+  in the FAQ (the guest page measured: 87 KB, 2.7 s on 3G); `/dj-weselny`'s features: the wishes first. Waits: a review, the owner's read, the merges.
 - **Waits for the owner (from #269):** after the first commit the deploy window holds back (Fri–Sun 18:00–6:00): does Railway
   deploy it on the workflow's re-run? UptimeRobot is set up (the owner, 2026-11-17; `docs/monitoring.md`).
 - **Waits for the owner (the wishes, #263):** the three older Polish texts with "DJ" and a masculine verb (`guest.vote.gone`,

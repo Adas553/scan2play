@@ -10,10 +10,11 @@
     <link href="/webjars/bootstrap/css/bootstrap.min.css" rel="stylesheet">
     <link href="/css/app.css" th:href="@{/css/app.css}" rel="stylesheet">
 </head>
-<!--/* The landing page (2026-10-17, an idea from Rekwest — its features, never its look or texts): at once how it looks, the DJ's
+<!--/* The landing page (an idea from Rekwest — its features, never its look or texts): at once how it looks, the DJ's
      panel on a laptop and the guest's page on a phone — real pictures of the app, of a made-up party, in the page's language
-     (src/test/browser/screenshots.py writes them from GuestPageRenderTest / DashboardPageRenderTest) —, then three steps, what one
-     gets, for whom, the questions (details: no script, CSP) and the start again. "Cennik" at the top and in the answer to the price,
+     (src/test/browser/screenshots.py writes them from GuestPageRenderTest / DashboardPageRenderTest) —, then what the DJ keeps in
+     hand ("Ty decydujesz", a DJ's first fear), three steps, what one gets, the first party, for whom, the questions (details: no
+     script, CSP) and the start again. "Cennik" at the top and in the answer to the price,
      whether the plans are enforced or not — /pro says what is true. */-->
 <body class="page-landing" th:with="lang=${#messages.msg('html.lang') == 'en' ? 'en' : 'pl'}">
 
@@ -69,6 +70,22 @@
 </header>
 
 <main>
+    <!--/* "Ty decydujesz" first: a DJ's first fear is an AI turning guests down in their name — what the DJ keeps in hand, what the
+         guest gets, and that nothing is lost when the AI is down. The pages "Dla kogo" show it too (for-whom.html) */-->
+    <section th:fragment="control" class="s2p-landing-section" id="landingControl">
+        <div class="container">
+            <h2 th:text="#{landing.control.title}">You decide</h2>
+            <div class="s2p-landing-grid s2p-landing-grid-3">
+                <div class="s2p-landing-card"><span class="s2p-landing-icon" aria-hidden="true">🎛️</span>
+                    <h3 th:text="#{landing.control.decide.title}">Nothing plays without you</h3><p th:text="#{landing.control.decide.text}">…</p></div>
+                <div class="s2p-landing-card"><span class="s2p-landing-icon" aria-hidden="true">💬</span>
+                    <h3 th:text="#{landing.control.answer.title}">The guest gets an answer at once</h3><p th:text="#{landing.control.answer.text}">…</p></div>
+                <div class="s2p-landing-card"><span class="s2p-landing-icon" aria-hidden="true">🛟</span>
+                    <h3 th:text="#{landing.control.safe.title}">Nothing gets lost</h3><p th:text="#{landing.control.safe.text}">…</p></div>
+            </div>
+        </div>
+    </section>
+
     <!--/* Three steps, from the login to the queue */-->
     <section class="s2p-landing-section" id="landingSteps">
         <div class="container">
@@ -93,26 +110,42 @@
         </div>
     </section>
 
-    <!--/* What one gets: the features a DJ asks about first; six, for the grid of three (the guests' dedications, V38, took the place
-         of "no repeats, no spam" — the repeats are in the vibe's card). No "PRO" on one card (the owner, 2026-10-18); "Ile to kosztuje?"
-         names Pro only while the plans are enforced */-->
+    <!--/* What one gets: six, for the grid of three, in the order a DJ counts them in money — the guests who see the DJ's profiles
+         (future clients) and the work before the party first, the AI fourth (the guest's words and "⚠ Sprawdź" are in "Ty decydujesz").
+         No "PRO" on one card (the owner, 2026-10-18); "Ile to kosztuje?" names Pro only while the plans are enforced */-->
     <section class="s2p-landing-section" id="landingFeatures">
         <div class="container">
             <h2 th:text="#{landing.features.title}">What you get</h2>
             <div class="s2p-landing-grid s2p-landing-grid-3">
-                <div class="s2p-landing-card"><span class="s2p-landing-icon" aria-hidden="true">🎯</span>
-                    <h3 th:text="#{landing.feature.vibe.title}">The AI keeps the vibe</h3><p th:text="#{landing.feature.vibe.text}">…</p></div>
-                <div class="s2p-landing-card"><span class="s2p-landing-icon" aria-hidden="true">⚠️</span>
-                    <h3 th:text="#{landing.feature.words.title}">You see what the guest asked for</h3><p th:text="#{landing.feature.words.text}">…</p></div>
+                <div class="s2p-landing-card"><span class="s2p-landing-icon" aria-hidden="true">📣</span>
+                    <h3 th:text="#{landing.feature.profiles.title}">Promotion for you</h3><p th:text="#{landing.feature.profiles.text}">…</p></div>
+                <div class="s2p-landing-card"><span class="s2p-landing-icon" aria-hidden="true">⭐</span>
+                    <h3 th:text="#{landing.feature.hosts.title}">The hosts' list and wishes</h3>
+                    <p th:text="#{landing.feature.hosts.text}">…</p></div>
                 <div class="s2p-landing-card"><span class="s2p-landing-icon" aria-hidden="true">👍</span>
                     <h3 th:text="#{landing.feature.votes.title}">The room's votes</h3><p th:text="#{landing.feature.votes.text}">…</p></div>
+                <div class="s2p-landing-card"><span class="s2p-landing-icon" aria-hidden="true">🎯</span>
+                    <h3 th:text="#{landing.feature.vibe.title}">The AI keeps the vibe</h3><p th:text="#{landing.feature.vibe.text}">…</p></div>
                 <div class="s2p-landing-card"><span class="s2p-landing-icon" aria-hidden="true">💌</span>
                     <h3 th:text="#{landing.feature.dedications.title}">Dedications</h3><p th:text="#{landing.feature.dedications.text}">…</p></div>
-                <div class="s2p-landing-card"><span class="s2p-landing-icon" aria-hidden="true">⭐</span>
-                    <h3 th:text="#{landing.feature.hosts.title}">The hosts' list</h3>
-                    <p th:text="#{landing.feature.hosts.text}">…</p></div>
                 <div class="s2p-landing-card"><span class="s2p-landing-icon" aria-hidden="true">🔔</span>
                     <h3 th:text="#{landing.feature.phone.title}">Your phone and your team</h3><p th:text="#{landing.feature.phone.text}">…</p></div>
+            </div>
+        </div>
+    </section>
+
+    <!--/* The first party: guests scan when the codes are at hand and the DJ invites them — the print, one line on the mic (a text to
+         say, no feature of its own), the TV screen */-->
+    <section class="s2p-landing-section" id="landingFirstParty">
+        <div class="container">
+            <h2 th:text="#{landing.first.title}">Your first party</h2>
+            <div class="s2p-landing-grid s2p-landing-grid-3">
+                <div class="s2p-landing-card"><span class="s2p-landing-icon" aria-hidden="true">🖨️</span>
+                    <h3 th:text="#{landing.first.print.title}">Cards for the tables and a poster</h3><p th:text="#{landing.first.print.text}">…</p></div>
+                <div class="s2p-landing-card"><span class="s2p-landing-icon" aria-hidden="true">🎤</span>
+                    <h3 th:text="#{landing.first.mic.title}">One line on the mic</h3><p th:text="#{landing.first.mic.text}">…</p></div>
+                <div class="s2p-landing-card"><span class="s2p-landing-icon" aria-hidden="true">📺</span>
+                    <h3 th:text="#{landing.first.tv.title}">The code on the TV</h3><p th:text="#{landing.first.tv.text}">…</p></div>
             </div>
         </div>
     </section>
@@ -145,6 +178,10 @@
             <div class="s2p-landing-faq">
                 <details><summary th:text="#{landing.faq.install.q}">Do guests have to install anything?</summary>
                     <p th:text="#{landing.faq.install.a}">…</p></details>
+                <!--/* the numbers measured: the guest page of the demo party on production, a phone, no cache — 87 KB in six files, the
+                     song field after 0.8 s on 1.6 Mb/s / 150 ms, 2.7 s on 400 kb/s / 400 ms; measure again when the page grows */-->
+                <details><summary th:text="#{landing.faq.signal.q}">What if the hall has a weak signal?</summary>
+                    <p th:text="#{landing.faq.signal.a}">…</p></details>
                 <details><summary th:text="#{landing.faq.player.q}">Does Scan2Play play the music?</summary>
                     <p th:text="#{landing.faq.player.a}">…</p></details>
                 <details><summary th:text="#{landing.faq.price.q}">How much does it cost?</summary>
