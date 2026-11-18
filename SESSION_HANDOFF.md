@@ -28,6 +28,10 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
   Google's (`/login`, `PasswordLoginController`, table `dj_account`; the owner's picks: the address confirmed by the e-mail's link,
   no linking with a Google account of the same address, "Nie pamiętasz hasła?" now). Rules: `docs/context/07-09-…` Section 8. V72 only
   adds a table and an index (no rows moved): the nightly copy is enough (the owner). After the release: try a registration on production (Brevo must send). The trial: once per Google account or address (the terms).
+- **2026-11-18 — `claude/beautiful-darwin-19krex` = that branch + its review (`docs/history/review-2026-11-18-password-login.md`)
+  and the fixes P1–P14, migration V73 (one column wider, no rows moved):** no account told by the login or the forms' time, limits
+  a stranger cannot turn against the owner, the forms' work on its own thread, links used once by one `UPDATE`, sessions kept /
+  ended right. Waits for the owner: the read, then this branch into #280 / #281 (or merged instead of them).
 - **Waits for the owner (from #269):** after the first commit the deploy window holds back (Fri–Sun 18:00–6:00): does Railway
   deploy it on the workflow's re-run? UptimeRobot is set up (the owner, 2026-11-17; `docs/monitoring.md`).
 - **Waits for the owner (the wishes, #263):** the three older Polish texts with "DJ" and a masculine verb (`guest.vote.gone`,

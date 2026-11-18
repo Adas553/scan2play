@@ -164,3 +164,25 @@ dane — oceniane jest wykonanie.
 małym kosztem), P4 (bcrypt bez limitu) i P5 (wylogowanie przy zmianie hasła — to udokumentowana droga zmiany hasła). P6–P14 mogą
 pójść w tym samym PR albo w następnym. Reszta wykonania — przepływ logowania, tokeny, CSRF, sesje, migracja, testy i strony — jest
 porządna.
+
+## Poprawki (2026-11-18, gałąź `claude/beautiful-darwin-19krex` = gałąź PR + ten przegląd)
+
+| Uwaga | Commit | Co zrobione |
+|---|---|---|
+| P1 | `206294f` | Dobre hasło konta niepotwierdzonego = odpowiedź i licznik złego hasła (`LoginOutcome.NOT_CONFIRMED` usunięte, klucz `account.login.not_confirmed` też); `account.login.wrong` mówi o potwierdzeniu adresu; link idzie ponownie w tle. Test: rejestracja + logowanie obcego adresu z kontem i bez — ta sama odpowiedź i ta sama blokada |
+| P2 | `206294f` | `LoginLimiter`: złe hasła 10 na (adres, klient), 50 na adres ze wszystkich klientów, 50 na klienta; nowe hasło czyści licznik adresu; maile 1/min i 3/h na (adres, klient), 10/h na adres — ale pierwszy mail klienta w godzinie zawsze idzie (obcy nie zablokuje resetu właściciela). `LoginLimiterTest` |
+| P3 | `206294f` | Konto czekające na potwierdzenie (link ważny) zachowuje hasło i nazwę; ponowna rejestracja wysyła link „ustaw hasło” (nowy mail `account-pending`), który potwierdza adres; po wygaśnięciu linku nowe hasło przejmuje konto. Bez maila (limit) nic się nie zmienia |
+| P4 | `206294f` | „Załóż konto” i „Nie pamiętam hasła” odpowiadają od razu; bcrypt, zapytania i mail na osobnym wątku (1 wątek, kolejka 50, nadmiar odrzucany); 10 rejestracji/h z klienta |
+| P5 | `4cbc5df` | `AccountSessions.endAllBut(konto, bieżąca sesja)` — po resecie kończą się inne sesje, bieżąca zostaje. IT na prawdziwym repozytorium JDBC + test kontrolera |
+| P6 | `206294f` | `useResetToken` / `useVerifyToken`: jeden `UPDATE … WHERE id AND token_hash`; IT z dwiema równoczesnymi transakcjami na PostgreSQL — przechodzi jedna |
+| P7 | `206294f` | Rejestracja w tle: naruszenie unikalności zalogowane, formularz zawsze „Sprawdź skrzynkę” |
+| P8 | `206294f` | Jak P4 — praca zależna od konta poza wątkiem żądania; logowanie: jedno porównanie bcrypt zawsze (także dla hasła > 72 bajtów) |
+| P9 | `4cbc5df` | Usunięcie konta kończy po commicie wszystkie sesje konta (Google i hasło) |
+| P10 | ten commit | Sekcja 8 opisuje lukę (konto Google samej obsługi, logowanie Google nie sprawdzane z kontami z hasłem) |
+| P11 | `206294f` | Klient IPv6 = jego /64 (`LoginLimiter.clientKey`) |
+| P12 | `4cbc5df` | `SecurityConfig.CSRF_TOKENS` — to samo repozytorium w konfiguracji i w `logIn`; kontekst przez `SecurityContextHolderStrategy` |
+| P13 | `278770b` | V73: `password_hash` varchar(255), encja `length = 255` |
+| P14 | `206294f`, ten commit | Hasło w NFC (zapis i porównanie, test); komentarze bez historii (`app.css`, `folds.js`, `PasswordLoginSessionWebTest`), `staff.html` bez „konta Google”; polityka prywatności: licznik kont z IP; dokumentacja (Sekcje 4, 6, 8, 10, 12, 13) |
+
+Sprawdzenia po poprawkach (`tools/check.py`, ta gałąź): `unit` 1355 testów OK, `it` 176 OK (w tym równoczesne użycie linku i sesje
+JDBC), `browser` 436 scenariuszy OK, `audit -t login,register,password,account,settings,staff` 20 stron × 3 szerokości OK.

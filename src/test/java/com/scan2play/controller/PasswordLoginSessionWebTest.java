@@ -39,7 +39,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * The login page and the password's pages (V72) on a first visit — no session yet — through Spring Session's filter (sessions in
  * memory, as the JDBC ones in production; the session is the {@code SESSION} cookie): each page whole, with its form's CSRF token and
- * its footer (the trap of the landing page, 2026-10-18: the token is kept in the session, which can be made only before the response
+ * its footer (CLAUDE.md's trap (1): the token is kept in the session, which can be made only before the response
  * is committed). And the login itself: a new session — a new cookie — that is logged in, the old one not.
  */
 @WebMvcTest(PasswordLoginController.class)
