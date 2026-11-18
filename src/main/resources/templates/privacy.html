@@ -24,6 +24,7 @@
         <p><strong>For DJs (registered users):</strong></p>
         <ul>
             <li>Google account profile information (name, email, profile picture) via OAuth 2.0</li>
+            <li>Or — when the account is made with an e-mail address and a password instead of Google — that address, the name or DJ name if given, and the password, kept only as a hash (bcrypt) that cannot be reversed; to that address we send through Brevo (section 6) only the e-mails the account needs: the link that confirms the address and the link to set a new password</li>
             <li>Party settings and configuration preferences</li>
             <li>The account’s plan (Free or Pro), where it comes from (e.g. a trial) and until when it lasts</li>
             <li>If the DJ gives them: the addresses of the DJ’s Instagram, Facebook and TikTok profiles — shown publicly to the guests on the party page and on the QR print</li>
@@ -88,6 +89,7 @@
             <li>Sessions (the DJ’s login, a guest’s session identifier): stored in the database and deleted after 30 minutes without activity</li>
             <li>The page’s language you picked: when you pick it by an address with <code>?lang=pl</code> or <code>?lang=en</code>, the cookie <code>lang</code>, holding only the language’s code, keeps it in your browser for a year, so the next pages are in that language; nothing goes to the database</li>
             <li>A guest’s IP address: in the server’s memory only, forgotten 10 minutes after the last request, 👍 or wish from that network</li>
+            <li>The login with a password: the number of wrong passwords of an e-mail address and of an IP address, and the number of e-mails sent about the account — only in the server’s memory, forgotten after 15 minutes (wrong passwords) or an hour (e-mails); the link that confirms the address works for 48 hours, the new password’s link for an hour</li>
             <li>DJ account data: stored until the DJ deletes their account</li>
             <li>The party owner’s e-mail address and the day the account was made: until the DJ deletes their account (the messages we exchanged stay in our mailbox, as any correspondence); the log of the e-mails sent through Brevo (the recipient’s address, the subject, the delivery status) — 1 month from the sending, also after the account is deleted; Brevo does not keep the content of the e-mails sent</li>
             <li>A device’s notification subscription: until the DJ switches the notifications off on it, the browser drops it, or the DJ deletes their account</li>

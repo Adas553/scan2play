@@ -15,7 +15,7 @@
 <!--/* The staff's invitation: by the link (V30, /join/{token}) or by e-mail (V34, /dj/invitation — joinInvitationId). It names the
      party and who invites, and what the person will be able to do (the role the link or the invitation gives, V33 / V34). Logged in:
      "Dołącz" (POST, CSRF) or "Nie, dziękuję" — joining is never a side effect of opening a page; an invitation by e-mail is declined
-     by a POST too (it goes from the organiser's list). Not logged in: Google's login first, then this question again. A link that
+     by a POST too (it goes from the organiser's list). Not logged in: the login first (Google or a password), then this question again. A link that
      no longer works, or a full staff: what happened and what to do (joinProblem). */-->
 <body class="page-guest">
 <div class="container d-flex flex-column align-items-center">
@@ -56,7 +56,7 @@
                     <button type="submit" id="joinDecline" class="btn btn-link text-secondary mt-2" th:text="#{join.decline}">No, thanks</button>
                 </form>
             </th:block>
-            <a th:unless="${joinLoggedIn}" href="/start" id="joinButton" class="btn btn-action btn-lg w-100" th:text="#{join.button}">Log in with Google and join</a>
+            <a th:unless="${joinLoggedIn}" href="/start" id="joinButton" class="btn btn-action btn-lg w-100" th:text="#{join.button}">Log in and join</a>
         </th:block>
     </div>
 </div>

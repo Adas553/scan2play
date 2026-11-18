@@ -24,6 +24,7 @@
         <p><strong>Dla DJ-ów (zarejestrowani użytkownicy):</strong></p>
         <ul>
             <li>Informacje z profilu Google (imię, email, zdjęcie profilowe) przez OAuth 2.0</li>
+            <li>Albo — gdy konto jest zakładane adresem e-mail i hasłem zamiast przez Google — ten adres, imię lub nazwa DJ-a, jeśli zostaną podane, i hasło, przechowywane wyłącznie jako skrót (bcrypt), którego nie da się odwrócić; na ten adres wysyłamy przez Brevo (pkt 6) tylko maile potrzebne do konta: link potwierdzający adres i link do ustawienia nowego hasła</li>
             <li>Ustawienia imprezy i preferencje konfiguracji</li>
             <li>Plan konta (Free albo Pro), skąd pochodzi (np. okres próbny) i do kiedy obowiązuje</li>
             <li>Gdy DJ je poda: adresy jego profili na Instagramie, Facebooku i TikToku — publicznie widoczne dla gości na stronie imprezy i na wydruku kodu QR</li>
@@ -88,6 +89,7 @@
             <li>Sesje (logowanie DJ-a, identyfikator sesji gościa): przechowywane w bazie danych i usuwane po 30 minutach bez aktywności</li>
             <li>Wybrany język strony: gdy wybierzesz go adresem z <code>?lang=pl</code> albo <code>?lang=en</code>, ciasteczko <code>lang</code> z samym kodem języka zapamiętuje go w Twojej przeglądarce na rok, żeby kolejne strony były w tym języku; nic nie trafia do bazy danych</li>
             <li>Adres IP gościa: tylko w pamięci serwera, zapominany 10 minut po ostatniej prośbie, 👍 lub życzeniu z tej sieci</li>
+            <li>Logowanie hasłem: liczba błędnych haseł danego adresu e-mail i adresu IP oraz liczba wysłanych maili o koncie — tylko w pamięci serwera, zapominane po 15 minutach (błędne hasła) albo godzinie (maile); link potwierdzający adres działa 48 godzin, link do nowego hasła godzinę</li>
             <li>Dane konta DJ-a: przechowywane do momentu usunięcia konta przez DJ-a</li>
             <li>Adres e-mail właściciela imprezy i dzień założenia konta: do usunięcia konta (wiadomości, które sobie wymieniliśmy, zostają w naszej skrzynce pocztowej jak każda korespondencja); dziennik maili wysłanych przez Brevo (adres odbiorcy, temat, stan doręczenia) — 1 miesiąc od wysyłki, także po usunięciu konta; treści wysłanych maili Brevo nie przechowuje</li>
             <li>Subskrypcja powiadomień urządzenia: do wyłączenia powiadomień na nim przez DJ-a, porzucenia jej przez przeglądarkę albo usunięcia konta</li>

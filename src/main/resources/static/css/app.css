@@ -272,6 +272,8 @@ body::before {
     a.s2p-schedule-text { position: relative; }
     a.s2p-schedule-text::after { content: ""; position: absolute; inset: -11px 0; }
     .page-status .card a:not(.btn) { display: inline-block; padding-block: 0.75rem; }
+    /* the login's and the password's pages (V72): "Nie pamiętasz hasła?", "Załóż je", "Wróć do logowania" */
+    .page-account .card p.text-center > a { display: inline-block; padding-block: 0.75rem; }
     /* the pages "Dla kogo": the breadcrumbs' links and "← Wróć na stronę główną" */
     .s2p-breadcrumb a,
     #forWhomBack { display: inline-flex; align-items: center; min-height: 44px; }
@@ -421,6 +423,9 @@ th[data-sort].sort-desc::after {
     width: 100%;
     max-width: 500px;
 }
+/* the login's and the password's pages (V72): their links in the action's cyan, as .btn-link — Bootstrap's blue is under AA here */
+.page-account .card a:not(.btn):not(.s2p-home-logo) { color: var(--s2p-action); }
+.page-account .card a:not(.btn):not(.s2p-home-logo):hover { color: var(--s2p-action-hover); }
 .page-guest .list-group-item {
     background: var(--s2p-bg-elevated);
     color: white;

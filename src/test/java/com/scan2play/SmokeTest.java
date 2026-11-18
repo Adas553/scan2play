@@ -221,7 +221,7 @@ class SmokeTest {
                             "data-pro-compare", "WCZESNY", "mailto:")
                     .contains("data-plan=\"all\"", "<p class=\"s2p-plan-price\" data-plan-price>0 zł</p>", "href=\"/start\"",
                             "href=\"/terms#plans\"", "id=\"footerPricing\"",
-                            lang.equals("pl") ? "na każdą imprezę. Wystarczy konto Google." : "For every DJ and every party.");
+                            lang.equals("pl") ? "na każdą imprezę. Wystarczy konto Google albo adres e-mail." : "For every DJ and every party.");
         }
         // the other addresses lead to it whether the plans are enforced or not
         mockMvc.perform(get("/cennik")).andExpect(status().isMovedPermanently())
@@ -297,13 +297,13 @@ class SmokeTest {
     }
 
     @Test
-    @DisplayName("GET /start (public) goes on to Google's login; so do the old links of the tiles")
-    void start_goesToGooglesLogin() throws Exception {
+    @DisplayName("GET /start (public) goes on to the login page (Google or a password); so do the old links of the tiles")
+    void start_goesToTheLoginPage() throws Exception {
         mockMvc.perform(get("/start"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/oauth2/authorization/google"));
-        mockMvc.perform(get("/start/requests")).andExpect(redirectedUrl("/oauth2/authorization/google"));
-        mockMvc.perform(get("/start/youtube")).andExpect(redirectedUrl("/oauth2/authorization/google"));
+                .andExpect(redirectedUrl("/login"));
+        mockMvc.perform(get("/start/requests")).andExpect(redirectedUrl("/login"));
+        mockMvc.perform(get("/start/youtube")).andExpect(redirectedUrl("/login"));
     }
 
     @Test
@@ -395,11 +395,11 @@ class SmokeTest {
      * login, the page with its party remembered for after it; before, the landing page for DJs and the panel of another party.
      */
     @Test
-    @DisplayName("A DJ's page opened without a session → Google's login, the page with its ?party= remembered")
-    void aDjsPageOpenedWithoutASession_goesToGooglesLogin_andIsRemembered() throws Exception {
+    @DisplayName("A DJ's page opened without a session → the login page, the page with its ?party= remembered")
+    void aDjsPageOpenedWithoutASession_goesToTheLoginPage_andIsRemembered() throws Exception {
         MvcResult result = mockMvc.perform(get("/dj/dashboard?party=ABC12").header("Sec-Fetch-Mode", "navigate"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/oauth2/authorization/google"))
+                .andExpect(redirectedUrl("/login"))
                 .andReturn();
         Object saved = result.getRequest().getSession().getAttribute("SPRING_SECURITY_SAVED_REQUEST");
         assertThat(saved).isInstanceOf(org.springframework.security.web.savedrequest.SavedRequest.class);
