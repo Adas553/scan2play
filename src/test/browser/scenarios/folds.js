@@ -52,6 +52,61 @@
         }
     });
 
+    /** The words of an element split over two lines (a word whose range has two boxes). */
+    function splitWords(element) {
+        const node = element.firstChild;
+        const found = [];
+        const re = /\S+/g;
+        let match;
+        while ((match = re.exec(node.textContent)) !== null) {
+            const range = document.createRange();
+            range.setStart(node, match.index);
+            range.setEnd(node, match.index + match[0].length);
+            const lines = new Set(Array.from(range.getClientRects()).map(function (box) { return Math.round(box.top); }));
+            if (lines.size > 1) {
+                found.push(match[0]);
+            }
+        }
+        return found;
+    }
+
+    /**
+     * A folded card's state on a phone: "Nieustawione" beside "Profile, kontakt i napiwki" whole — the heading wraps, never a word of
+     * the state (the owner's phone, 2026-11-18: "Nieustawion / e"). Every state set to the longest one-word state, one to three words.
+     */
+    async function stateWordsWhole(t) {
+        const states = Array.from(document.querySelectorAll('details.s2p-fold > summary .s2p-fold-state'));
+        states.forEach(function (state) {
+            state.textContent = 'Nieustawione';
+        });
+        document.querySelector('#guestThemeCard .s2p-fold-state').textContent = 'Instagram · kontakt · napiwki';
+        t.step('no word of a state split over two lines', states.filter(function (state) { return splitWords(state).length > 0; })
+            .map(function (state) { return state.closest('details').id + ': ' + splitWords(state).join(' '); }), []);
+        t.step('each state inside its line, right of its heading', states.filter(function (state) {
+            const line = state.parentElement.getBoundingClientRect();
+            const box = state.getBoundingClientRect();
+            const name = state.parentElement.querySelector('.s2p-fold-name').getBoundingClientRect();
+            return box.right > line.right || box.left < name.right;
+        }).map(function (state) { return state.closest('details').id; }), []);
+        t.check('nothing wider than the screen', document.documentElement.scrollWidth <= document.documentElement.clientWidth);
+    }
+
+    S2P.scenario({
+        name: 'settings-fold-state-whole-words-360',
+        title: 'a folded card\'s state on a 360 px phone: its words whole, the heading wraps instead',
+        page: 'settings',
+        viewport: '360,800',
+        run: stateWordsWhole
+    });
+
+    S2P.scenario({
+        name: 'settings-fold-state-whole-words-390',
+        title: 'a folded card\'s state on a 390 px phone: its words whole, the heading wraps instead',
+        page: 'settings',
+        viewport: '390,844',
+        run: stateWordsWhole
+    });
+
     S2P.scenario({
         name: 'settings-unfolds-the-named-card',
         title: 'the page "Ustawienia imprezy": the card the address names (#libraryCard — a row of the panel) unfolds, the others stay folded',

@@ -1449,7 +1449,9 @@ th[data-sort].sort-desc::after {
 .s2p-fold-summary:focus-visible,
 .s2p-fold-link:focus-visible { outline: 2px solid var(--s2p-cyan); outline-offset: -2px; border-radius: var(--s2p-radius-card); }
 .s2p-fold-name { margin: 0 auto 0 0 !important; min-width: 0; line-height: 1.3; }
-.s2p-fold-state { color: var(--s2p-text-muted); font-size: 0.875rem; text-align: right; min-width: 0; }
+/* the state never narrower than its longest word, broken only between words: on a phone the heading wraps instead (min-width: 0
+   let "Nieustawione" beside "Profile, kontakt i napiwki" break as "Nieustawion / e" — the owner's phone, 2026-11-18) */
+.s2p-fold-state { color: var(--s2p-text-muted); font-size: 0.875rem; text-align: right; min-width: min-content; overflow-wrap: normal; word-break: normal; }
 .s2p-fold[open] > .s2p-fold-summary > .s2p-fold-state { display: none; }
 .s2p-fold-body { padding: 0 1rem 1rem; }
 .s2p-fold-link { flex-direction: row; color: inherit; text-decoration: none; }
