@@ -72,7 +72,7 @@ its part (and this table, if a part's subject changes); a new subject goes to th
 | 4, 4.1 | [`docs/context/04-1a-entities-party-requests.md`](docs/context/04-1a-entities-party-requests.md) | 12 KB | every moment a `timestamptz`; `party_settings` (the party: its code, vibe, limits, hours, kiosk token, theme…); `song_requests` (a request, its states and columns) |
 | 4.1 (cont.) | [`docs/context/04-1b-entities-votes-lists.md`](docs/context/04-1b-entities-votes-lists.md) | 11 KB | votes and merged requests (`saveOrVote`, V15); numbers and tips; a song the DJ adds; the hosts' lists; a guest's 👍 |
 | 4.1 (cont.) | [`docs/context/04-1c-entities-dj-library.md`](docs/context/04-1c-entities-dj-library.md) | 11 KB | dedications; `evening_summary`; feedback; push subscriptions; the staff and invitations; the DJ's library (`dj_library`, `dj_library_track`) |
-| 4.1 (cont.), 4.2, 4.3 | [`docs/context/04-1d-entities-logo-plans.md`](docs/context/04-1d-entities-logo-plans.md) | 11 KB | the DJ's logo; `dj_plan`; the plans Free and Pro; enums; records |
+| 4.1 (cont.), 4.2, 4.3 | [`docs/context/04-1d-entities-logo-plans.md`](docs/context/04-1d-entities-logo-plans.md) | 11 KB | the DJ's logo; `dj_plan`; the plans Free and Pro; `dj_account` (the login with a password, V72); enums; records |
 | 5, 5.1 | [`docs/context/05-1a-public-pages.md`](docs/context/05-1a-public-pages.md) | 3 KB | the landing page `/`; the pages "Dla kogo" |
 | 5.1 (cont.) | [`docs/context/05-1b-dashboard-qr-print.md`](docs/context/05-1b-dashboard-qr-print.md) | 18 KB | login → the dashboard: the queue's buttons and keys; the QR print (poster, cards, tents, tables, "Wzór na okazję", "Do internetu"); the account's menu; background forms and polling |
 | 5.1 (cont.) | [`docs/context/05-1c-notifications-emails.md`](docs/context/05-1c-notifications-emails.md) | 6 KB | Web Push on the DJ's devices; a new organiser's welcome; the automatic e-mails (Brevo); when the AI cannot be asked |
@@ -86,7 +86,7 @@ its part (and this table, if a part's subject changes); a new subject goes to th
 | 6, 6.1, 6.2 | [`docs/context/06-1-controllers-services.md`](docs/context/06-1-controllers-services.md) | 15 KB | file inventory: controllers, services |
 | 6.3 – 6.6 | [`docs/context/06-3-config-templates-static.md`](docs/context/06-3-config-templates-static.md) | 13 KB | file inventory: configuration classes, templates, static assets, resources |
 | 6.7 | [`docs/context/06-7-look.md`](docs/context/06-7-look.md) | 12 KB | the look: `app.css`, colours, components, the design review |
-| 7, 8, 9 | [`docs/context/07-09-integrations-security-caching.md`](docs/context/07-09-integrations-security-caching.md) | 15 KB | Gemini, Web Push, Brevo, (Spotify, YouTube removed); the security model; caching |
+| 7, 8, 9 | [`docs/context/07-09-integrations-security-caching.md`](docs/context/07-09-integrations-security-caching.md) | 15 KB | Gemini, Web Push, Brevo, (Spotify, YouTube removed); the security model (the login: Google's, or an e-mail address and a password — V72); caching |
 | 10 | [`docs/context/10-1-configuration.md`](docs/context/10-1-configuration.md) | 5 KB | environment variables; key application properties |
 | 10 (cont.) | [`docs/context/10-2-migrations.md`](docs/context/10-2-migrations.md) | 17 KB | Flyway: the rules, every migration V1 … , the production first-deploy checklist |
 | 11, 12 | [`docs/context/11-12-dependencies-endpoints.md`](docs/context/11-12-dependencies-endpoints.md) | 19 KB | main dependencies; every HTTP endpoint (public, DJ) |

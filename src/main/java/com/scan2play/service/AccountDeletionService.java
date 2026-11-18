@@ -1,6 +1,8 @@
 package com.scan2play.service;
 
 import com.scan2play.entity.PartySettingsEntity;
+import com.scan2play.entity.DjAccountEntity;
+import com.scan2play.repository.DjAccountRepository;
 import com.scan2play.repository.DjPlanRepository;
 import com.scan2play.repository.FeedbackRepository;
 import com.scan2play.repository.PartySettingsRepository;
@@ -41,11 +43,13 @@ public class AccountDeletionService {
     private final PartyStaffRepository partyStaffRepository;
     private final StaffInvitationRepository staffInvitationRepository;
     private final DjPlanRepository djPlanRepository;
+    private final DjAccountRepository djAccountRepository;
     private final CacheManager cacheManager;
 
     /**
      * Deletes all data associated with the given DJ (owner).
-     * This includes: song requests, feedback, party settings, the devices that took notifications and the DJ's plan (V35).
+     * This includes: song requests, feedback, party settings, the devices that took notifications, the DJ's plan (V35) and a password
+     * account's login (V72).
      * <p>
      * The party's locks come first, in the order the rest of the app takes them (review 2026-10-14 W9, {@code AccountDeletionIT}):
      * the guests' requests' lock ("S2PR", {@link SongRequestCommandService}), then the party's row. Holding the first, the deletion
@@ -53,7 +57,7 @@ public class AccountDeletionService {
      * and saves nothing. Taking the row before any of its staff's invitations, it waits for a "Dołącz" ({@code StaffInvitationService},
      * the row, then the invitation) instead of deadlocking with it.
      *
-     * @param ownerId The OAuth2 owner ID (the Google subject).
+     * @param ownerId The owner's id: the Google subject, or {@code local:<id>} of a password account (V72).
      */
     @Transactional
     public void deleteAllUserData(String ownerId) {
@@ -99,6 +103,15 @@ public class AccountDeletionService {
                 plans.evict(ownerId);
             }
         });
+
+        // 8. The login with a password (V72): its address and password's hash — the address may make a new account afterwards
+        if (ownerId.startsWith(DjAccountEntity.USER_ID_PREFIX)) {
+            try {
+                djAccountRepository.deleteById(Long.parseLong(ownerId.substring(DjAccountEntity.USER_ID_PREFIX.length())));
+            } catch (NumberFormatException notAnAccount) {
+                log.warn("Account deletion: {} is no password account's id", ownerId);
+            }
+        }
 
         log.info("Account deletion completed for ownerId={}", ownerId);
     }

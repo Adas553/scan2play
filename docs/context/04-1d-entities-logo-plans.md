@@ -59,7 +59,7 @@ decides, as `DjSessionHelper.require` for the staff): Pro for ever for the Googl
   saved); the hosts' link is a 404 as an old one; the people already on the staff keep their access — only no one new joins while the
   places are taken. The card says "Twoje listy są zachowane: 🚫 3 · ⭐ 5. Wrócą, gdy włączysz Pro".
 - **A trial**: `scan2play.plans.trial-days` (env `PLANS_TRIAL_DAYS`, 0) days of Pro written for a new DJ when their party is made —
-  only while enforced, once per Google account — also after "Usuń konto" (`trial_used`, V36; `PlanService.startTrial`). The
+  only while enforced, once per Google account — also after "Usuń konto" (`trial_used`, V36; `PlanService.startTrial`) —, and once per e-mail address of a password account (V72: its key is the address's, `"email:" + EmailAddresses.key`, not its id's, which is new when the account is made again; `PlanService.trialKeyOf`, `DjPlanIT`). The
   cached plan goes after the trial's commit, and the cache keeps the row's end (`PlanService.Read`): a plan ends at its `validUntil`
   (that moment is Free already), not up to 10 min later.
 - **The gift** (the owner, 2026-11-05: 30 days): `scan2play.plans.gift-until` (env `PLANS_GIFT_UNTIL`, a day; empty: none) — until the
@@ -76,6 +76,12 @@ decides, as `DjSessionHelper.require` for the staff): Pro for ever for the Googl
   `ProPageRenderTest.everyPlanFeature_isOnThePage`). Later, before the first payment: a payment provider (Stripe Billing /
   Przelewy24 / Tpay) writing `dj_plan` (PAID, `validUntil`), the terms (a paid service, renewal, the consumer's withdrawal), the
   privacy policy (the payment provider, the billing data), invoices and VAT (KSeF, OSS) — the review's list.
+
+**`dj_account` (V72, `DjAccountEntity`)** — an account that logs in with an e-mail address and a password, beside Google's: the
+address (lower case, unique), the password's bcrypt hash, an optional name (the staff see it, as a Google account's name), when the
+address was confirmed (null: cannot log in), the SHA-256 of the confirmation's and the new password's links with their ends. The
+rest of the app knows it only by `local:<id>` (`userId()`) — in `party_settings.owner_id`, `party_staff.user_id` and the like, where
+a Google account is its subject; deleted with the account (`AccountDeletionService`). The rules: Section 8.
 
 ### 4.2 Enums
 

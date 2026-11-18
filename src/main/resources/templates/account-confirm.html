@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en" th:lang="#{html.lang}">
+<head>
+    <meta charset="UTF-8">
+    <title th:text="#{account.confirm.title}">Confirm your account - Scan2Play</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="dark">
+    <!-- a secret link: no search engine, and no Referer that would carry it to another site -->
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="referrer" content="no-referrer">
+    <link href="/webjars/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/css/app.css" th:href="@{/css/app.css}" rel="stylesheet">
+</head>
+<!--/* The confirmation link of the e-mail (V72): the account's password asked, then the person is logged in. The link alone changes
+     nothing — a mail filter opens links to check them —, and only who typed the password at the registration can confirm it. */-->
+<body class="page-guest page-account">
+<div class="container d-flex flex-column align-items-center">
+    <div class="card p-4 shadow-lg w-100 text-white mb-4 s2p-mw-500">
+        <h1 class="display-6 fw-bold text-center"><th:block th:replace="~{fragments/components :: logo}"></th:block></h1>
+        <h2 class="h4 fw-bold mt-2 text-center" id="confirmHeading" th:text="#{account.confirm.heading}">Confirm your account</h2>
+        <p class="text-center text-secondary-bright" th:text="#{account.confirm.text(${email})}">Type the password of ola@example.com.</p>
+
+        <div th:if="${formError != null}" id="formError" class="alert alert-danger" role="alert" th:text="#{__${formError}__}">
+            Wrong password.
+        </div>
+
+        <form th:action="@{/register/confirm}" method="post" id="confirmForm" class="m-0">
+            <input type="hidden" name="token" th:value="${token}">
+            <input type="email" name="email" class="d-none" th:value="${email}" autocomplete="username" tabindex="-1" aria-hidden="true">
+            <label for="confirmPassword" class="form-label" th:text="#{account.field.password}">Password</label>
+            <input type="password" id="confirmPassword" name="password" class="form-control mb-3" required maxlength="64"
+                   autocomplete="current-password">
+            <button type="submit" class="btn btn-action btn-lg w-100" th:text="#{account.confirm.submit}">Confirm and log in</button>
+        </form>
+        <p class="text-center mt-3 mb-0"><a href="/password/forgot" th:text="#{account.login.forgot}">Forgot your password?</a></p>
+    </div>
+</div>
+<div th:replace="~{fragments/components :: footer}"></div>
+</body>
+</html>

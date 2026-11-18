@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en" th:lang="#{html.lang}">
+<head>
+    <meta charset="UTF-8">
+    <title th:text="#{account.login.title}">Log in - Scan2Play</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="dark">
+    <meta name="robots" content="noindex">
+    <link href="/webjars/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/css/app.css" th:href="@{/css/app.css}" rel="stylesheet">
+</head>
+<!--/* The login page (PasswordLoginController): where "Zacznij" and a DJ's page opened without a session lead. Google's button
+     first — most DJs have an account there —, then an e-mail address and a password (V72). A wrong address and a wrong password
+     read the same (loginError): the page never says whether an address has an account. */-->
+<body class="page-guest page-account">
+<div class="container d-flex flex-column align-items-center">
+    <div class="card p-4 shadow-lg w-100 text-white mb-4 s2p-mw-500">
+        <h1 class="display-6 fw-bold text-center"><a th:replace="~{fragments/components :: home-logo}" href="/">Scan2Play</a></h1>
+        <h2 class="h4 fw-bold mt-2 text-center" id="loginHeading" th:text="#{account.login.heading}">Log in</h2>
+
+        <div th:if="${loginError != null}" id="loginError" class="alert alert-danger mt-2" role="alert" th:text="#{__${loginError}__}">
+            Wrong e-mail address or password.
+        </div>
+
+        <a href="/oauth2/authorization/google" id="googleLogin" class="btn btn-action btn-lg w-100 mt-2" th:text="#{account.login.google}">Log in with Google</a>
+
+        <p class="text-center text-secondary-bright my-3" th:text="#{account.login.or}">or with an e-mail address</p>
+
+        <form th:action="@{/login/password}" method="post" id="passwordLoginForm" class="m-0">
+            <label for="loginEmail" class="form-label" th:text="#{account.field.email}">E-mail address</label>
+            <input type="email" id="loginEmail" name="email" class="form-control mb-3" required maxlength="254" autocomplete="email"
+                   th:value="${email}">
+            <label for="loginPassword" class="form-label" th:text="#{account.field.password}">Password</label>
+            <input type="password" id="loginPassword" name="password" class="form-control mb-3" required maxlength="64"
+                   autocomplete="current-password">
+            <button type="submit" class="btn btn-outline-light btn-lg w-100" th:text="#{account.login.submit}">Log in</button>
+        </form>
+
+        <p class="text-center mt-3 mb-1"><a href="/password/forgot" id="forgotLink" th:text="#{account.login.forgot}">Forgot your password?</a></p>
+        <p class="text-center mb-0">
+            <span class="text-secondary-bright" th:text="#{account.login.no_account}">No account yet?</span>
+            <a href="/register" id="registerLink" th:text="#{account.login.register}">Create one</a>
+        </p>
+    </div>
+</div>
+<div th:replace="~{fragments/components :: footer}"></div>
+</body>
+</html>

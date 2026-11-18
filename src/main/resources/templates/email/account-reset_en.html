@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<!--/* A new password's link (V72, PasswordAccountService), English. Mail programs read little CSS — inline styles only, one column, no images. */-->
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head><meta charset="UTF-8"><title>Scan2Play</title></head>
+<body style="margin:0;padding:24px;background:#ffffff;color:#1a1a1a;font-family:-apple-system,'Segoe UI',Roboto,Arial,sans-serif;font-size:16px;line-height:1.5;">
+<div style="max-width:560px;">
+<p>Hi!</p>
+<p>Someone asked for a new password for your Scan2Play account. You can set it here:</p>
+<p><a th:href="${link}" href="https://www.scan2play.com.pl/" style="display:inline-block;padding:12px 20px;background:#0a7f99;color:#ffffff;text-decoration:none;border-radius:8px;font-weight:600;">Set a new password</a></p>
+<p style="color:#666666;font-size:13px;">Or copy this address into your browser: <span th:text="${link}">https://www.scan2play.com.pl/</span></p>
+<p>The link works for an hour, once. If it was not you, ignore this e-mail: your password stays as it is.</p>
+<p>Scan2Play</p>
+</div>
+</body>
+</html>
