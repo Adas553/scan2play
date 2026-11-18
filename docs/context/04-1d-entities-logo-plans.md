@@ -59,7 +59,7 @@ decides, as `DjSessionHelper.require` for the staff): Pro for ever for the Googl
   saved); the hosts' link is a 404 as an old one; the people already on the staff keep their access — only no one new joins while the
   places are taken. The card says "Twoje listy są zachowane: 🚫 3 · ⭐ 5. Wrócą, gdy włączysz Pro".
 - **A trial**: `scan2play.plans.trial-days` (env `PLANS_TRIAL_DAYS`, 0) days of Pro written for a new DJ when their party is made —
-  only while enforced, once per Google account — also after "Usuń konto" (`trial_used`, V36; `PlanService.startTrial`). The
+  only while enforced, once per Google account — also after "Usuń konto" (`trial_used`, V36; `PlanService.startTrial`) —, and once per e-mail address of a password account (V72: its key is the address's, `"email:" + EmailAddresses.key`, not its id's, which is new when the account is made again; `PlanService.trialKeyOf`, `DjPlanIT`). The
   cached plan goes after the trial's commit, and the cache keeps the row's end (`PlanService.Read`): a plan ends at its `validUntil`
   (that moment is Free already), not up to 10 min later.
 - **The gift** (the owner, 2026-11-05: 30 days): `scan2play.plans.gift-until` (env `PLANS_GIFT_UNTIL`, a day; empty: none) — until the
