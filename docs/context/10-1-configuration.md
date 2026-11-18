@@ -49,7 +49,7 @@ column or an index needs none).
 | `guest.client-ip-header` | empty (env `GUEST_CLIENT_IP_HEADER`) |
 | `security.csp.enforce` | `false` = report only (env `CSP_ENFORCE`) |
 | `scan2play.plans.enforce` / `.pro-owners` / `.trial-days` / `.gift-until` | `false` / empty / 0 / empty (env `PLANS_ENFORCE`, `SCAN2PLAY_PLANS_PRO_OWNERS`, `PLANS_TRIAL_DAYS`, `PLANS_GIFT_UNTIL`; V35) |
-| `spring.session.jdbc.initialize-schema` | `never` (the tables are Flyway's, `V11`); a session lives 30 min without a request |
+| `spring.session.jdbc.initialize-schema` | `never` (the tables are Flyway's, `V11`); a session lives 30 min without a request (`server.servlet.session.timeout`'s default), 14 days with "Nie wylogowuj mnie na tym urządzeniu" (`StayLoggedIn.LONG`, in the code) |
 
 **The profile `local`** (`application-local.properties`): the developer's defaults `PGUSER=postgres`, `PGPASSWORD=1111`. IntelliJ's run
 configuration has *Active profiles: local* (or `SPRING_PROFILES_ACTIVE=local`); without it and without the variables the application

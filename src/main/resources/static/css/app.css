@@ -426,6 +426,10 @@ th[data-sort].sort-desc::after {
 /* the login's and the password's pages (V72): their links in the action's cyan, as .btn-link — Bootstrap's blue is under AA here */
 .page-account .card a:not(.btn):not(.s2p-home-logo) { color: var(--s2p-action); }
 .page-account .card a:not(.btn):not(.s2p-home-logo):hover { color: var(--s2p-action-hover); }
+/* "Nie wylogowuj mnie na tym urządzeniu" (login.html): the box and its words one line of 44 px, all of it the box's target */
+.s2p-stay-logged-in { display: flex; align-items: center; gap: 0.6rem; min-height: 44px; padding-left: 0; margin-bottom: 0; }
+.s2p-stay-logged-in .form-check-input { float: none; flex: none; margin: 0; width: 1.3em; height: 1.3em; }
+.s2p-stay-logged-in .form-check-label { flex: 1 1 auto; align-self: stretch; display: flex; align-items: center; cursor: pointer; }
 .page-guest .list-group-item {
     background: var(--s2p-bg-elevated);
     color: white;

@@ -1,6 +1,7 @@
 package com.scan2play.controller;
 
 import com.scan2play.config.SecurityConfig;
+import com.scan2play.config.StayLoggedIn;
 import com.scan2play.entity.DjAccountEntity;
 import com.scan2play.service.GuestRequestLimiter;
 import com.scan2play.service.PasswordAccountService;
@@ -17,13 +18,20 @@ import org.springframework.context.annotation.Import;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.session.MapSession;
+import org.springframework.session.Session;
+import org.springframework.session.security.web.authentication.SpringSessionRememberMeServices;
+import org.springframework.session.web.http.CookieHttpSessionIdResolver;
+import org.springframework.session.web.http.DefaultCookieSerializer;
 import org.springframework.session.MapSessionRepository;
 import org.springframework.session.web.http.SessionRepositoryFilter;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
+import java.time.Duration;
 import java.time.Instant;
+import java.util.Base64;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -48,10 +56,23 @@ class PasswordLoginSessionWebTest {
 
     @TestConfiguration
     static class Sessions {
+        /** The sessions, to read a session's life after the login. */
+        static final Map<String, Session> STORE = new ConcurrentHashMap<>();
+
         @Bean
         @Order(Ordered.HIGHEST_PRECEDENCE + 50)
         SessionRepositoryFilter<MapSession> springSessionRepositoryFilter() {
-            return new SessionRepositoryFilter<>(new MapSessionRepository(new ConcurrentHashMap<>()));
+            MapSessionRepository repository = new MapSessionRepository(STORE);
+            repository.setDefaultMaxInactiveInterval(Duration.ofMinutes(30));
+            SessionRepositoryFilter<MapSession> filter = new SessionRepositoryFilter<>(repository);
+            // the cookie as Spring Boot's serializer writes it in production: persistent after a remember-me login (StayLoggedInIT
+            // checks Boot's own)
+            DefaultCookieSerializer cookies = new DefaultCookieSerializer();
+            cookies.setRememberMeRequestAttribute(SpringSessionRememberMeServices.REMEMBER_ME_LOGIN_ATTR);
+            CookieHttpSessionIdResolver resolver = new CookieHttpSessionIdResolver();
+            resolver.setCookieSerializer(cookies);
+            filter.setHttpSessionIdResolver(resolver);
+            return filter;
         }
     }
 
@@ -76,8 +97,8 @@ class PasswordLoginSessionWebTest {
 
         String page = WishWebTest.html(result);
         WishWebTest.csrf(page);
-        assertThat(page).contains("href=\"/oauth2/authorization/google\"", "Zaloguj się przez Google", "id=\"passwordLoginForm\"",
-                "action=\"/login/password\"", "href=\"/register\"", "href=\"/password/forgot\"", "<footer", "</html>");
+        assertThat(page).contains("formaction=\"/login/google\"", "Zaloguj się przez Google", "id=\"loginForm\"",
+                "action=\"/login/password\"", "name=\"remember-me\"", "Nie wylogowuj mnie na tym urządzeniu", "href=\"/register\"", "href=\"/password/forgot\"", "<footer", "</html>");
         WishWebTest.write("login.html", page);
     }
 
@@ -111,5 +132,75 @@ class PasswordLoginSessionWebTest {
         assertThat(after.getValue()).as("a new session id").isNotEqualTo(before.getValue());
         mockMvc.perform(get("/login").cookie(after)).andExpect(redirectedUrl("/dj/dashboard"));   // logged in
         mockMvc.perform(get("/login").cookie(before)).andExpect(status().isOk());                  // the old id is nobody's
+    }
+
+    // ------------------------------------------------ "Nie wylogowuj mnie na tym urządzeniu" (StayLoggedIn)
+
+    /** The session a cookie names. */
+    private static Session session(Cookie cookie) {
+        return Sessions.STORE.get(new String(Base64.getDecoder().decode(cookie.getValue())));
+    }
+
+    private static String sessionCookie(MvcResult result) {
+        return result.getResponse().getHeaders("Set-Cookie").stream().filter(header -> header.startsWith("SESSION=")).findFirst()
+                .orElseThrow();
+    }
+
+    private MvcResult passwordLogin(boolean stay) throws Exception {
+        when(accounts.logIn(anyString(), anyString(), any(), any())).thenReturn(new LoginResult(LoginOutcome.OK, account()));
+        MvcResult page = mockMvc.perform(get("/login").secure(true)).andReturn();
+        var login = post("/login/password").secure(true).cookie(page.getResponse().getCookie("SESSION"))
+                .param("_csrf", WishWebTest.csrf(WishWebTest.html(page))).param("email", "ola@example.com").param("password", "dobre-haslo-1");
+        if (stay) {
+            login.param("remember-me", "true");
+        }
+        return mockMvc.perform(login).andExpect(redirectedUrl("/dj/dashboard")).andReturn();
+    }
+
+    @Test
+    void theLogin_withTheBox_lives14Days_withAPersistentCookie() throws Exception {
+        MvcResult login = passwordLogin(true);
+
+        assertThat(session(login.getResponse().getCookie("SESSION")).getMaxInactiveInterval()).isEqualTo(Duration.ofDays(14));
+        assertThat(sessionCookie(login)).contains("Max-Age=" + Integer.MAX_VALUE, "Secure", "HttpOnly", "SameSite=Lax");
+    }
+
+    /** The box clear (the default): the session and its cookie as before the box — 30 minutes, a cookie of the browser's session. */
+    @Test
+    void theLogin_withoutTheBox_isAsBefore() throws Exception {
+        MvcResult login = passwordLogin(false);
+
+        assertThat(session(login.getResponse().getCookie("SESSION")).getMaxInactiveInterval()).isEqualTo(Duration.ofMinutes(30));
+        assertThat(sessionCookie(login)).doesNotContain("Max-Age", "Expires").contains("Secure", "HttpOnly", "SameSite=Lax");
+    }
+
+    /** The login page's box is clear until ticked. */
+    @Test
+    void theBox_isClearOnTheLoginPage() throws Exception {
+        String page = WishWebTest.html(mockMvc.perform(get("/login")).andExpect(status().isOk()).andReturn());
+        String box = page.substring(page.indexOf("<input type=\"checkbox\""), page.indexOf(">", page.indexOf("<input type=\"checkbox\"")));
+
+        assertThat(box).contains("name=\"remember-me\"", "value=\"true\"").doesNotContain("checked");
+    }
+
+    /** The Google button: the box's state kept in the session, then Google's login — with the form's CSRF token only. */
+    @Test
+    void googlesButton_keepsTheBox_thenGoogle() throws Exception {
+        MvcResult page = mockMvc.perform(get("/login")).andReturn();
+        Cookie cookie = page.getResponse().getCookie("SESSION");
+        String csrf = WishWebTest.csrf(WishWebTest.html(page));
+
+        mockMvc.perform(post("/login/google").cookie(cookie).param("remember-me", "true")).andExpect(status().isForbidden());
+        assertThat(session(cookie).<Object>getAttribute(StayLoggedIn.class.getName() + ".CHOSEN_FOR_GOOGLE")).as("refused, nothing kept")
+                .isNull();
+
+        mockMvc.perform(post("/login/google").cookie(cookie).param("_csrf", csrf).param("remember-me", "true"))
+                .andExpect(redirectedUrl("/oauth2/authorization/google"));
+        assertThat(session(cookie).<Object>getAttribute(StayLoggedIn.class.getName() + ".CHOSEN_FOR_GOOGLE")).isEqualTo(Boolean.TRUE);
+        assertThat(session(cookie).getMaxInactiveInterval()).as("no login yet: the session as it was").isEqualTo(Duration.ofMinutes(30));
+
+        mockMvc.perform(post("/login/google").cookie(cookie).param("_csrf", csrf))
+                .andExpect(redirectedUrl("/oauth2/authorization/google"));
+        assertThat(session(cookie).<Object>getAttribute(StayLoggedIn.class.getName() + ".CHOSEN_FOR_GOOGLE")).isNull();
     }
 }

@@ -1,6 +1,7 @@
 package com.scan2play.controller;
 
 import com.scan2play.config.SecurityConfig;
+import com.scan2play.config.StayLoggedIn;
 import com.scan2play.entity.DjAccountEntity;
 import com.scan2play.service.AccountSessions;
 import com.scan2play.service.GuestRequestLimiter;
@@ -46,7 +47,9 @@ import java.util.Optional;
  * A password account logs in as a Google account does — an {@link OAuth2AuthenticationToken} whose user says {@code sub},
  * {@code name}, {@code email} and {@code email_verified} ({@link #authentication}) — so the rest of the app, which reads those, knows
  * no difference; its id is {@code local:<id>} ({@link DjAccountEntity#userId()}). After the login the same as Google's: a new session
- * id, the DJ's page asked for before it or the panel, the site's counter ({@link SecurityConfig#loginSuccess}).
+ * id, the DJ's page asked for before it or the panel, the site's counter ({@link SecurityConfig#loginSuccess}). "Nie wylogowuj mnie na
+ * tym urządzeniu" ({@link StayLoggedIn}): the login form's box — the account's confirmation and a new password log in for the usual
+ * time, their pages have no box (the link of an e-mail is often opened on a device that is not one's own).
  */
 @Controller
 @Slf4j
@@ -61,15 +64,17 @@ public class PasswordLoginController {
     private final AccountSessions sessions;
     private final SecurityContextRepository contexts = new HttpSessionSecurityContextRepository();
     private final SecurityContextHolderStrategy contextHolder = SecurityContextHolder.getContextHolderStrategy();
+    private final StayLoggedIn stayLoggedIn;
     private final AuthenticationSuccessHandler success;
 
     public PasswordLoginController(PasswordAccountService accounts, GuestRequestLimiter clientAddress, ObjectProvider<SiteCounter> siteCounter,
-                                   AccountSessions sessions) {
+                                   AccountSessions sessions, StayLoggedIn stayLoggedIn) {
         this.accounts = accounts;
         this.clientAddress = clientAddress;
         this.sessions = sessions;
+        this.stayLoggedIn = stayLoggedIn;
         this.success = SecurityConfig.loginSuccess(SecurityConfig.djPagesRemembered(),
-                () -> siteCounter.ifAvailable(counter -> counter.count(SiteCounter.Event.LOGIN)));
+                () -> siteCounter.ifAvailable(counter -> counter.count(SiteCounter.Event.LOGIN)), stayLoggedIn);
     }
 
     private static boolean loggedIn(Authentication authentication) {
@@ -87,11 +92,25 @@ public class PasswordLoginController {
         return "login";
     }
 
+    /**
+     * "Zaloguj się przez Google": a button of the login page's one form, so that the box "Nie wylogowuj mnie na tym urządzeniu" above
+     * it counts for Google's login too — the box's state kept in the session ({@link StayLoggedIn#keepForGoogle}), then Google's login.
+     * A POST with the form's CSRF token: another site cannot make a browser's next login a long one. The form's address and
+     * password fields come along when they are filled in, unread.
+     */
+    @PostMapping("/login/google")
+    public String toGoogle(HttpServletRequest request) {
+        stayLoggedIn.keepForGoogle(request);
+        return "redirect:" + SecurityConfig.GOOGLE_LOGIN;
+    }
+
     @PostMapping("/login/password")
     public String logIn(@RequestParam(defaultValue = "") String email, @RequestParam(defaultValue = "") String password, Model model,
                         Locale locale, HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException {
         Optional<String> address = PasswordAccountService.cleanEmail(email);
         model.addAttribute("email", email.strip());
+        // a wrong password: the page again with the box as it was (StayLoggedIn reads the request's own parameter at the login)
+        model.addAttribute("stayLoggedIn", request.getParameter(StayLoggedIn.PARAMETER) != null);
         if (address.isEmpty()) {
             model.addAttribute("loginError", "account.login.wrong");
             return "login";
