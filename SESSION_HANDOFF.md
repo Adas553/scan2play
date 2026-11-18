@@ -32,10 +32,10 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
   and the fixes P1–P14, migration V73 (one column wider, no rows moved):** no account told by the login or the forms' time, limits
   a stranger cannot turn against the owner, the forms' work on its own thread, links used once by one `UPDATE`, sessions kept /
   ended right. Waits for the owner: the read, then this branch into #280 / #281 (or merged instead of them).
-- **2026-11-18 — `claude/blissful-ritchie-36scit` = `beautiful-darwin-19krex` + "Nie wylogowuj mnie na tym urządzeniu", no migration, no PR:**
+- **2026-11-18 — `claude/blissful-ritchie-36scit` = `beautiful-darwin-19krex` + "Nie wylogowuj mnie na tym urządzeniu", PRs #282 (`main`) and #283 (`dev`), V73 (#280 merged):**
   a box on `/login` (clear by default) for Google and the password: 14 days without a request (`StayLoggedIn`, the session's own
-  `MAX_INACTIVE_INTERVAL`), a persistent cookie; Google's button posts to `POST /login/google`. Waits for the owner: the read, then into
-  #280 / #281. After the release: curl `/login` without cookies — `SESSION` with `Secure; HttpOnly; SameSite=Lax` (as `/demo` today).
+  `MAX_INACTIVE_INTERVAL`), a persistent cookie; Google's button posts to `POST /login/google`. Waits for the owner: a review in a new
+  session, then the merge. After the release: curl `/login` without cookies — `SESSION` with `Secure; HttpOnly; SameSite=Lax` (as `/demo` today).
 - **Waits for the owner (from #269):** after the first commit the deploy window holds back (Fri–Sun 18:00–6:00): does Railway
   deploy it on the workflow's re-run? UptimeRobot is set up (the owner, 2026-11-17; `docs/monitoring.md`).
 - **Waits for the owner (the wishes, #263):** the three older Polish texts with "DJ" and a masculine verb (`guest.vote.gone`,
