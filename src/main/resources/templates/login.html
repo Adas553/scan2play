@@ -36,7 +36,7 @@
                 <label class="form-check-label" for="stayLoggedIn" th:text="#{account.login.stay}">Keep me logged in on this device</label>
             </div>
             <p id="stayLoggedInHelp" class="small text-secondary-bright mb-2" th:text="#{account.login.stay_help}">
-                Only on your own phone or computer — the login stays for 14 days after the last use. Not on a shared device at a club.
+                Tick it only on your own phone or computer — the login stays for 14 days after the last use.
             </p>
 
             <button type="submit" id="googleLogin" class="btn btn-action btn-lg w-100" th:formaction="@{/login/google}" formnovalidate
