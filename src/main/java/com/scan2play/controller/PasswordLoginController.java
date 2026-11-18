@@ -100,11 +100,7 @@ public class PasswordLoginController {
             logIn(result.account(), request, response);
             return null;
         }
-        model.addAttribute("loginError", switch (result.outcome()) {
-            case LOCKED -> "account.login.locked";
-            case NOT_CONFIRMED -> "account.login.not_confirmed";
-            default -> "account.login.wrong";
-        });
+        model.addAttribute("loginError", result.outcome() == LoginOutcome.LOCKED ? "account.login.locked" : "account.login.wrong");
         return "login";
     }
 
@@ -131,7 +127,7 @@ public class PasswordLoginController {
             model.addAttribute("formError", address.isEmpty() ? "account.email.invalid" : passwordKey(problem));
             return "register";
         }
-        accounts.register(address.get(), password, name, clientAddress.clientIp(request), locale);
+        accounts.requestRegistration(address.get(), password, name, clientAddress.clientIp(request), locale);
         return sent(redirect, "account.sent.register", address.get());
     }
 
@@ -209,7 +205,7 @@ public class PasswordLoginController {
             model.addAttribute("formError", "account.email.invalid");
             return "password-forgot";
         }
-        accounts.forgotPassword(address.get(), clientAddress.clientIp(request), locale);
+        accounts.requestPasswordReset(address.get(), clientAddress.clientIp(request), locale);
         return sent(redirect, "account.sent.forgot", address.get());
     }
 

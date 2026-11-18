@@ -8,8 +8,13 @@ import com.scan2play.service.PasswordAccountService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.Instant;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -24,6 +29,7 @@ class DjAccountRepositoryIT extends PostgresIntegrationTest {
     @Autowired DjAccountRepository accounts;
     @Autowired PartySettingsCommandService commands;
     @Autowired AccountDeletionService deletion;
+    @Autowired PlatformTransactionManager transactionManager;
 
     private DjAccountEntity account(String email) {
         return DjAccountEntity.builder().email(email).passwordHash("{bcrypt}$2a$10$x").createdAt(Instant.now()).build();
@@ -71,4 +77,42 @@ class DjAccountRepositoryIT extends PostgresIntegrationTest {
         assertThat(accounts.findById(account.getId())).isEmpty();
     }
 
+    /**
+     * A link used by two requests at once: the first one's UPDATE holds the row until its commit, the second one waits, then finds
+     * the link gone — one new password, never two.
+     */
+    @Test
+    void aLinkUsedTwiceAtOnce_goesOnce() throws Exception {
+        String hash = PasswordAccountService.hash("reset-" + System.nanoTime());
+        DjAccountEntity account = account(unique("ola"));
+        account.setResetTokenHash(hash);
+        account.setResetExpiresAt(Instant.now().plusSeconds(3600));
+        long id = accounts.saveAndFlush(account).getId();
+        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
+        CountDownLatch firstUsedIt = new CountDownLatch(1);
+        CountDownLatch secondAsked = new CountDownLatch(1);
+
+        CompletableFuture<Integer> first = CompletableFuture.supplyAsync(() -> transaction.execute(status -> {
+            int used = accounts.useResetToken(id, hash);
+            firstUsedIt.countDown();
+            try {
+                secondAsked.await(5, TimeUnit.SECONDS);
+                Thread.sleep(300);   // the second one is waiting for the row now
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+            return used;
+        }));
+        firstUsedIt.await(5, TimeUnit.SECONDS);
+        CompletableFuture<Integer> second = CompletableFuture.supplyAsync(() -> transaction.execute(status -> {
+            secondAsked.countDown();
+            return accounts.useResetToken(id, hash);
+        }));
+
+        assertThat(first.get(10, TimeUnit.SECONDS)).isEqualTo(1);
+        assertThat(second.get(10, TimeUnit.SECONDS)).isZero();
+        assertThat(accounts.findById(id)).get().extracting(DjAccountEntity::getResetTokenHash).isNull();
+        Integer otherKind = transaction.execute(status -> accounts.useVerifyToken(id, hash));
+        assertThat(otherKind).as("a link of the other kind").isZero();
+    }
 }
