@@ -3,6 +3,7 @@ package com.scan2play.service;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.Ticker;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.net.InetAddress;
@@ -10,6 +11,7 @@ import java.net.UnknownHostException;
 import java.time.Duration;
 import java.util.HexFormat;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.regex.Pattern;
 
 /**
  * The limits of the login with a password (V72), in memory — one instance by design (Section 13); a restart forgets them, which
@@ -27,11 +29,17 @@ import java.util.concurrent.atomic.AtomicInteger;
  * <li>e-mails to one address asked from one client: one a minute and {@value #EMAILS_PER_ADDRESS_AND_CLIENT_HOUR} an hour;
  *     from all clients {@value #EMAILS_PER_ADDRESS_HOUR} an hour — except a client's first one of the hour: a stranger asking
  *     again and again cannot keep the owner's own "Nie pamiętasz hasła?" from arriving;</li>
+ * <li>e-mails to one address from all clients, that exception included: {@value #EMAILS_PER_ADDRESS_DAY} a day — clients are
+ *     cheap (an IPv6 /56 is 256 of them), so without a ceiling many could flood one mailbox;</li>
  * <li>e-mails asked from one client: {@value #EMAILS_PER_CLIENT_HOUR} an hour — nor many mailboxes;</li>
+ * <li>e-mails about accounts from everyone: {@value #ACCOUNT_EMAILS_DAY} a day — the account's e-mails go through the same Brevo
+ *     account as every other e-mail of the app (the daily report, the automatic ones), whose day has a limit: a flood of account
+ *     e-mails stops at this, not at Brevo's;</li>
  * <li>new accounts from one client: {@value #REGISTRATIONS_PER_CLIENT_HOUR} an hour — each costs a bcrypt hash.</li>
  * </ul>
  */
 @Component
+@Slf4j
 public class LoginLimiter {
 
     static final int FAILURES_PER_EMAIL_AND_CLIENT = 10;
@@ -41,8 +49,14 @@ public class LoginLimiter {
     static final int EMAILS_PER_ADDRESS_AND_CLIENT_HOUR = 3;
     static final int EMAILS_PER_ADDRESS_HOUR = 10;
     static final int EMAILS_PER_CLIENT_HOUR = 20;
+    static final int EMAILS_PER_ADDRESS_DAY = 30;
+    static final int ACCOUNT_EMAILS_DAY = 150;
     static final int REGISTRATIONS_PER_CLIENT_HOUR = 10;
     private static final int MAX_KEYS = 50_000;
+    /** The characters of an IPv6 literal (with an embedded IPv4 part or a zone): nothing else reaches {@link InetAddress}. */
+    private static final Pattern IPV6_LITERAL = Pattern.compile("[0-9A-Fa-f:.]+(%[0-9A-Za-z_.-]+)?");
+    /** {@link #emailsDay}'s key of all account e-mails together (an address always has an '@'). */
+    private static final String ALL = "all";
 
     private final Cache<String, AtomicInteger> failuresByEmailAndClient;
     private final Cache<String, AtomicInteger> failuresByEmail;
@@ -51,6 +65,7 @@ public class LoginLimiter {
     private final Cache<String, AtomicInteger> emailsPairHour;
     private final Cache<String, AtomicInteger> emailsHour;
     private final Cache<String, AtomicInteger> emailsByClient;
+    private final Cache<String, AtomicInteger> emailsDay;
     private final Cache<String, AtomicInteger> registrationsByClient;
 
     public LoginLimiter() {
@@ -67,6 +82,7 @@ public class LoginLimiter {
         emailsPairHour = window(hour, ticker);
         emailsHour = window(hour, ticker);
         emailsByClient = window(hour, ticker);
+        emailsDay = window(Duration.ofDays(1), ticker);
         registrationsByClient = window(hour, ticker);
     }
 
@@ -92,8 +108,11 @@ public class LoginLimiter {
         if (client == null || client.indexOf(':') < 0) {
             return String.valueOf(client);
         }
+        if (!IPV6_LITERAL.matcher(client.strip()).matches()) {
+            return client;   // InetAddress would ask the DNS for a name that does not start like a literal ("zz:1")
+        }
         try {
-            // a literal with ':' is parsed, never looked up
+            // only a literal's characters: parsed, never looked up
             byte[] bytes = InetAddress.getByName(client.strip()).getAddress();
             return bytes.length == 16 ? HexFormat.of().formatHex(bytes, 0, 8) + "::/64" : client;
         } catch (UnknownHostException | IllegalArgumentException notAnAddress) {
@@ -139,13 +158,20 @@ public class LoginLimiter {
         boolean firstOfThePair = count(emailsPairHour, pair) == 0;
         if (count(emailsMinute, pair) >= 1 || count(emailsPairHour, pair) >= EMAILS_PER_ADDRESS_AND_CLIENT_HOUR
                 || (!firstOfThePair && count(emailsHour, email) >= EMAILS_PER_ADDRESS_HOUR)
-                || count(emailsByClient, key) >= EMAILS_PER_CLIENT_HOUR) {
+                || count(emailsByClient, key) >= EMAILS_PER_CLIENT_HOUR
+                || count(emailsDay, email) >= EMAILS_PER_ADDRESS_DAY) {
+            return false;
+        }
+        if (count(emailsDay, ALL) >= ACCOUNT_EMAILS_DAY) {
+            log.warn("Password accounts: {} e-mails today — no more until the day's window ends", ACCOUNT_EMAILS_DAY);
             return false;
         }
         add(emailsMinute, pair);
         add(emailsPairHour, pair);
         add(emailsHour, email);
         add(emailsByClient, key);
+        add(emailsDay, email);
+        add(emailsDay, ALL);
         return true;
     }
 

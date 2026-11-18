@@ -36,6 +36,10 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
   a box on `/login` (clear by default) for Google and the password: 14 days without a request (`StayLoggedIn`, the session's own
   `MAX_INACTIVE_INTERVAL`), a persistent cookie; Google's button posts to `POST /login/google`. Waits for the owner: a review in a new
   session, then the merge. After the release: curl `/login` without cookies — `SESSION` with `Secure; HttpOnly; SameSite=Lax` (as `/demo` today).
+- **2026-11-18 — `claude/funny-pascal-58pbzw` = that branch + its review (`docs/history/review-2026-11-18-stay-logged-in.md`) and the
+  fixes P1–P11 (no migration; P7, P10 left):** "Wyloguj na innych urządzeniach" (`POST /dj/logout-others`), a ceiling of account
+  e-mails, the cookie's attributes in `application.properties` (`SessionCookieIT`), the Google choice valid 10 min. Waits for the
+  owner: the read, then into #282 / #283; to try on an iPhone: Enter ("Idź") on `/login` = the password's login.
 - **Waits for the owner (from #269):** after the first commit the deploy window holds back (Fri–Sun 18:00–6:00): does Railway
   deploy it on the workflow's re-run? UptimeRobot is set up (the owner, 2026-11-17; `docs/monitoring.md`).
 - **Waits for the owner (the wishes, #263):** the three older Polish texts with "DJ" and a masculine verb (`guest.vote.gone`,

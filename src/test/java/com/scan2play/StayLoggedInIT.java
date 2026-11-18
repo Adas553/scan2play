@@ -175,6 +175,55 @@ class StayLoggedInIT extends PostgresIntegrationTest {
                 .andExpect(status().isForbidden());
     }
 
+    /** "Wyloguj na innych urządzeniach": the account's other sessions — long ones too — end, this one stays; CSRF as any form. */
+    @Test
+    void logOutOtherDevices_endsTheOtherSessions_andKeepsThisOne() throws Exception {
+        Cookie here = logIn(true).getCookie("SESSION");
+        logIn(true);   // another device
+        assertThat(sessionCount()).isEqualTo(2);
+        String csrf = formToken(here);
+
+        mockMvc.perform(post("/dj/logout-others").secure(true).cookie(here)).andExpect(status().isForbidden());
+        mockMvc.perform(post("/dj/logout-others").secure(true).cookie(here).param("_csrf", csrf))
+                .andExpect(redirectedUrl("/dj/dashboard"));
+
+        String id = new String(Base64.getDecoder().decode(here.getValue()), StandardCharsets.UTF_8);
+        assertThat(jdbc.queryForList("SELECT session_id FROM spring_session WHERE principal_name = ?", String.class, account.userId()))
+                .containsExactly(id);
+    }
+
+    private int sessionCount() {
+        return jdbc.queryForObject("SELECT count(*) FROM spring_session WHERE principal_name = ?", Integer.class, account.userId());
+    }
+
+    /** A form's CSRF token of a logged-in session: the panel's forms (its menu's "Wyloguj"). */
+    private String formToken(Cookie session) throws Exception {
+        MvcResult panel = mockMvc.perform(get("/dj/dashboard").secure(true).cookie(session)).andExpect(status().isOk()).andReturn();
+        Matcher csrf = CSRF.matcher(panel.getResponse().getContentAsString());
+        assertThat(csrf.find()).as("the panel's form token").isTrue();
+        return csrf.group(1);
+    }
+
+    /** "Nie wylogowuj mnie" added by hand to the new password's form: that page has no box — the usual session. */
+    @Test
+    void theBoxAddedToANewPasswordsForm_isNoChoice() throws Exception {
+        String token = "stay-reset-" + UUID.randomUUID();
+        account.setResetTokenHash(com.scan2play.service.PasswordAccountService.hash(token));
+        account.setResetExpiresAt(Instant.now().plusSeconds(600));
+        account = accounts.saveAndFlush(account);
+        MvcResult page = mockMvc.perform(get("/password/reset").param("token", token).secure(true)).andExpect(status().isOk()).andReturn();
+        Matcher csrf = CSRF.matcher(page.getResponse().getContentAsString());
+        assertThat(csrf.find()).isTrue();
+
+        MockHttpServletResponse response = mockMvc.perform(post("/password/reset").secure(true).cookie(page.getResponse().getCookie("SESSION"))
+                        .param("_csrf", csrf.group(1)).param("token", token).param("password", "nowe-haslo-12")
+                        .param(StayLoggedIn.PARAMETER, "true"))
+                .andExpect(redirectedUrl("/dj/dashboard")).andReturn().getResponse();
+
+        assertThat(((Number) sessionRow().get("max_inactive_interval")).intValue()).isEqualTo(30 * 60);
+        assertThat(sessionCookie(response)).doesNotContain("Max-Age", "Expires");
+    }
+
     @Test
     void theLongSession_keepsItsLifeAtTheNextRequest() throws Exception {
         MockHttpServletResponse response = logIn(true);

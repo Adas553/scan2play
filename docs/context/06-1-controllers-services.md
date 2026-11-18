@@ -36,6 +36,7 @@
 | `LegalController` | `/privacy`, `/terms`, the guide `/jak-to-dziala` = `/how-it-works` (a file per language; the guide's way back is the panel when logged in, else the landing page), the pricing page `/pro` (V35: Free and Pro, a file per language; `/cennik`, `/pricing` redirect to it; while the plans are not enforced one card "Za darmo" — 6.7) |
 | `ViewAttributes` | names of the model attributes |
 
+| `OtherDevicesController` | `POST /dj/logout-others` — "Wyloguj na innych urządzeniach" of the account menu: the account's other sessions end (`AccountSessions`), this one stays |
 | `PasswordLoginController` | the login page `/login` (Google's button and the password's form) and the password accounts' pages (V72): `/register`, `/register/confirm`, `/password/forgot`, `/password/reset`, `/login/sent`; logs a password account in as Google's login does (an `OAuth2AuthenticationToken` named `local:<id>`, Section 8). Each page loads its CSRF token before rendering (`PasswordLoginSessionWebTest`, with Spring Session's filter) |
 
 ### 6.2 Services
@@ -44,7 +45,7 @@
 |-------|---------|
 | `PasswordAccountService` | the password accounts (V72, Section 8): register, confirm (the link and the password), log in, a new password; the e-mails about an account; never says whether an address has an account — the forms "Załóż konto" and "Nie pamiętam hasła" do their work on a thread of their own |
 | `LoginLimiter` | the password login's limits in memory: wrong passwords by address and client, by address, by client; e-mails by address and client, by address, by client; new accounts by client (an IPv6 client by its /64) |
-| `AccountSessions` | an account's sessions by Spring Session's principal index: ended after a new password (but the request's own) and after the account's deletion |
+| `AccountSessions` | an account's sessions by Spring Session's principal index: ended after a new password (but the request's own), at "Wyloguj na innych urządzeniach" (but the request's own) and after the account's deletion |
 | `SongEvaluationService` | the guest's request: Gemini (`askAi`) → the "Podejrzyj" link → save or vote |
 | `PromptBuilder` | the prompt of a request (`src/main/resources/prompts`, per language): the request, the genre, the DJ's note, the songs played lately, the comment style, the dedication — pure text, out of `SongEvaluationService` since the review of 2026-10-21 (R1); `GeminiComparison` builds the same prompts, or a proposed rewrite of them |
 | `DjService` | the guest queue (`dashboardQueue` cache; `getWaiting` uncached, for the poll), its fingerprint (ETag), mark played (a conditional `UPDATE`), skip (`dismissSong`, a conditional `UPDATE` too), clear the queue |

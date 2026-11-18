@@ -196,7 +196,8 @@ class PasswordLoginSessionWebTest {
 
         mockMvc.perform(post("/login/google").cookie(cookie).param("_csrf", csrf).param("remember-me", "true"))
                 .andExpect(redirectedUrl("/oauth2/authorization/google"));
-        assertThat(session(cookie).<Object>getAttribute(StayLoggedIn.class.getName() + ".CHOSEN_FOR_GOOGLE")).isEqualTo(Boolean.TRUE);
+        assertThat(session(cookie).<Object>getAttribute(StayLoggedIn.class.getName() + ".CHOSEN_FOR_GOOGLE")).as("when it was chosen")
+                .isInstanceOf(java.time.Instant.class);
         assertThat(session(cookie).getMaxInactiveInterval()).as("no login yet: the session as it was").isEqualTo(Duration.ofMinutes(30));
 
         mockMvc.perform(post("/login/google").cookie(cookie).param("_csrf", csrf))

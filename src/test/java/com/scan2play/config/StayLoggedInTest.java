@@ -13,8 +13,10 @@ import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
 import org.springframework.security.web.authentication.session.ChangeSessionIdAuthenticationStrategy;
 import org.springframework.session.security.web.authentication.SpringSessionRememberMeServices;
 
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -30,7 +32,24 @@ class StayLoggedInTest {
     private static final int USUAL = 30 * 60;
     private static final int LONG = 14 * 24 * 60 * 60;
 
-    private final StayLoggedIn stayLoggedIn = new StayLoggedIn(Duration.ofSeconds(USUAL));
+    /** A clock the tests move: the Google choice's life. */
+    private Instant now = Instant.parse("2026-11-18T20:00:00Z");
+    private final StayLoggedIn stayLoggedIn = new StayLoggedIn(Duration.ofSeconds(USUAL), new Clock() {
+        @Override
+        public ZoneOffset getZone() {
+            return ZoneOffset.UTC;
+        }
+
+        @Override
+        public Clock withZone(java.time.ZoneId zone) {
+            return this;
+        }
+
+        @Override
+        public Instant instant() {
+            return now;
+        }
+    });
 
     private static Authentication google() {
         DefaultOAuth2User user = new DefaultOAuth2User(AuthorityUtils.createAuthorityList("OAUTH2_USER"), Map.of("sub", "1074"), "sub");
@@ -148,6 +167,47 @@ class StayLoggedInTest {
         assertThat(login.getSession().getMaxInactiveInterval()).isEqualTo(USUAL);
         assertThat(persistentCookie(login)).isFalse();
         assertThat(login.getSession().getAttribute(StayLoggedIn.CHOSEN_FOR_GOOGLE)).isNull();
+    }
+
+    /** Google's login abandoned (the tab closed), Google's login opened by its address 11 minutes later: no choice any more. */
+    @Test
+    void google_aChoiceOlderThanTenMinutes_isNoChoice() throws Exception {
+        MockHttpSession session = new MockHttpSession();
+        pressGoogle(session, "true");
+        now = now.plus(StayLoggedIn.GOOGLE_CHOICE_LIFE).plusSeconds(60);
+
+        MockHttpServletRequest back = logIn(request("GET", "/login/oauth2/code/google", session), google());
+
+        assertThat(back.getSession().getMaxInactiveInterval()).isEqualTo(USUAL);
+        assertThat(persistentCookie(back)).isFalse();
+    }
+
+    /** Google's login failed (refused, cancelled): its choice goes with it — the next Google login is a usual one. */
+    @Test
+    void google_aFailedLogin_forgetsTheChoice() throws Exception {
+        MockHttpSession session = new MockHttpSession();
+        pressGoogle(session, "true");
+
+        SecurityConfig.loginFailure().onAuthenticationFailure(request("GET", "/login/oauth2/code/google", session),
+                new MockHttpServletResponse(), new org.springframework.security.oauth2.core.OAuth2AuthenticationException("access_denied"));
+        MockHttpServletRequest back = logIn(request("GET", "/login/oauth2/code/google", session), google());
+
+        assertThat(back.getSession().getMaxInactiveInterval()).isEqualTo(USUAL);
+        assertThat(persistentCookie(back)).isFalse();
+    }
+
+    /** The account's confirmation and a new password have no box: a "remember-me" added to their request by hand is no choice. */
+    @Test
+    void password_theLinksPages_areUsualWhateverTheRequestSays() throws Exception {
+        for (String page : new String[] {"/register/confirm", "/password/reset"}) {
+            MockHttpServletRequest login = request("POST", page, new MockHttpSession());
+            login.addParameter(StayLoggedIn.PARAMETER, "true");
+
+            logIn(login, password());
+
+            assertThat(login.getSession().getMaxInactiveInterval()).as(page).isEqualTo(USUAL);
+            assertThat(persistentCookie(login)).as(page).isFalse();
+        }
     }
 
     /** A long session whose owner logs in again without the box (another account, say): the usual life again. */

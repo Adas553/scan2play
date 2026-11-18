@@ -60,6 +60,7 @@ class LoginLimiterTest {
                 .isNotEqualTo(LoginLimiter.clientKey("2001:db8:1:3::1"));
         assertThat(LoginLimiter.clientKey("203.0.113.7")).isEqualTo("203.0.113.7");
         assertThat(LoginLimiter.clientKey("not:an:address:zz")).isEqualTo("not:an:address:zz");
+        assertThat(LoginLimiter.clientKey("zz:1")).as("not a literal's characters: never a name to look up").isEqualTo("zz:1");
         assertThat(LoginLimiter.clientKey(null)).isEqualTo("null");
 
         for (int i = 0; i < LoginLimiter.FAILURES_PER_EMAIL_AND_CLIENT; i++) {
@@ -90,6 +91,33 @@ class LoginLimiterTest {
 
         later(Duration.ofHours(1));
         assertThat(limiter.mayEmail(OLA, "203.0.113.7")).isTrue();
+    }
+
+    /** Many clients (an IPv6 /56 is 256 of them), each with its first e-mail of the hour: one mailbox gets a day's ceiling at most. */
+    @Test
+    void manyClients_cannotFloodOneMailbox() {
+        int sent = 0;
+        for (int i = 0; i < 256; i++) {
+            if (limiter.mayEmail(OLA, "2001:db8:0:" + Integer.toHexString(i) + "::1")) {
+                sent++;
+            }
+        }
+        assertThat(sent).isEqualTo(LoginLimiter.EMAILS_PER_ADDRESS_DAY);
+
+        later(Duration.ofDays(1));
+        assertThat(limiter.mayEmail(OLA, "203.0.113.7")).as("the next day").isTrue();
+    }
+
+    /** Account e-mails together stop at their day's ceiling, before Brevo's — the app's other e-mails keep going. */
+    @Test
+    void allTheAccountEMails_stopAtTheDaysCeiling() {
+        int sent = 0;
+        for (int i = 0; i < LoginLimiter.ACCOUNT_EMAILS_DAY + 20; i++) {
+            if (limiter.mayEmail("dj" + i + "@example.com", "2001:db8:" + Integer.toHexString(i) + "::1")) {
+                sent++;
+            }
+        }
+        assertThat(sent).isEqualTo(LoginLimiter.ACCOUNT_EMAILS_DAY);
     }
 
     @Test

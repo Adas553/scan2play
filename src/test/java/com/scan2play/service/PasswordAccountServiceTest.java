@@ -327,6 +327,21 @@ class PasswordAccountServiceTest {
         assertThat(service.logIn("ola@example.com", decomposed, CLIENT, PL).outcome()).isEqualTo(LoginOutcome.OK);
     }
 
+    /** A hash kept before passwords were normalized, of a password typed decomposed: it still logs in, and is made again in NFC. */
+    @Test
+    void anOldHashOfADecomposedPassword_stillLogsIn_andIsMadeAgainInNfc() {
+        String decomposed = java.text.Normalizer.normalize("zażółć-gęślą", java.text.Normalizer.Form.NFD);
+        var encoder = org.springframework.security.crypto.factory.PasswordEncoderFactories.createDelegatingPasswordEncoder();
+        DjAccountEntity old = repository.save(DjAccountEntity.builder().email("ola@example.com").passwordHash(encoder.encode(decomposed))
+                .createdAt(now).emailVerifiedAt(now).build());
+
+        assertThat(service.logIn("ola@example.com", decomposed, CLIENT, PL).outcome()).isEqualTo(LoginOutcome.OK);
+
+        String rehashed = rows.get(old.getId()).getPasswordHash();
+        assertThat(encoder.matches("zażółć-gęślą", rehashed)).as("kept in NFC now").isTrue();
+        assertThat(service.logIn("ola@example.com", "zażółć-gęślą", CLIENT, PL).outcome()).isEqualTo(LoginOutcome.OK);
+    }
+
     @Test
     void theConfirmationLink_endsAfter48Hours() {
         service.requestRegistration("ola@example.com", "dobre-haslo-1", null, CLIENT, PL);

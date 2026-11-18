@@ -33,6 +33,7 @@ import org.springframework.security.web.servlet.util.matcher.PathPatternRequestM
 import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.web.servlet.LocaleResolver;
 
+import java.time.Clock;
 import java.time.Duration;
 
 /**
@@ -162,7 +163,7 @@ public class SecurityConfig {
      */
     @Bean
     StayLoggedIn stayLoggedIn(@Value("${spring.session.timeout:${server.servlet.session.timeout:30m}}") Duration usual) {
-        return new StayLoggedIn(usual);
+        return new StayLoggedIn(usual, Clock.systemUTC());
     }
 
     /**
@@ -174,6 +175,7 @@ public class SecurityConfig {
     static AuthenticationFailureHandler loginFailure() {
         HttpSessionSecurityContextRepository contexts = new HttpSessionSecurityContextRepository();
         return (request, response, failure) -> {
+            StayLoggedIn.forgetGoogleChoice(request);   // "Nie wylogowuj mnie" was for this login, not a later one
             // the context of this request was cleared before the handler runs; the session still holds the person's login
             Authentication already = contexts.loadDeferredContext(request).get().getAuthentication();
             if (already instanceof OAuth2AuthenticationToken && already.isAuthenticated()) {

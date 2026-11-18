@@ -182,3 +182,23 @@ Gałąź nie była zmieniana; wszystko poniżej sprawdzone w osobnym worktree.
 błędów nie ma, poprawki P1–P14 naprawdę zamykają poprzedni przegląd, a nowa funkcja jest bezpieczna w tym, o co pytano (fixation,
 CSRF, cudze sesje). Przed albo zaraz po scaleniu: **P2** (sufit maili — chroni limit Brevo całej aplikacji) i **P1** (wylogowanie
 innych urządzeń — długie sesje bez tego są problemem dla kont Google). P3 i P4 — tanie, warto w tym samym PR. P5–P11 — kiedy wygodnie.
+
+## Poprawki (2026-11-18, gałąź `claude/funny-pascal-58pbzw` = gałąź PR + ten przegląd)
+
+| Uwaga | Co zrobione |
+|---|---|
+| P1 | „Wyloguj na innych urządzeniach” w menu konta (właściciel i obsługa), z pytaniem: `POST /dj/logout-others`, `OtherDevicesController` → `AccountSessions.endAllBut(konto, ta sesja)`. Testy: kontroler, render panelu, IT na sesjach JDBC (dwie długie sesje → zostaje ta; bez tokenu CSRF 403). Granica bezwzględna **nie** zrobiona (opcjonalna; opisana w Sekcji 8: sesja używana codziennie żyje dalej) |
+| P2 | `LoginLimiter`: 30 maili na adres na dobę bez wyjątków i 150 maili o kontach na dobę dla wszystkich (wspólny limit Brevo; WARN w logu). Testy: 256 klientów → 30 maili; 170 adresów → 150 |
+| P3 | `server.servlet.session.cookie.secure=true`, `http-only=true`, `same-site=lax` w `application.properties` (`secure=false` w `application-local.properties`: telefon w tej samej sieci przez http). `SessionCookieIT` — prawdziwy Tomcat, zwykłe http: `Secure; HttpOnly; SameSite=Lax`; mutacja (bez `secure=true`) → czerwony |
+| P4 | Polityka prywatności PL/EN: ciasteczko — sam identyfikator, przeglądarki trzymają je najwyżej ~400 dni; sesja kończy się też przy „Wyloguj na innych urządzeniach”, nowym haśle i z kontem; liczniki maili — doba. Komentarz `StayLoggedIn` o 400 dniach |
+| P5 | Wybór Google zapisany z czasem (`Instant`), ważny 10 minut (`GOOGLE_CHOICE_LIFE`); nieudane logowanie Google go zapomina (`SecurityConfig.loginFailure`). Testy: wybór sprzed 11 min, nieudane logowanie |
+| P6 | Pole czytane tylko na `PasswordLoginController.LOGIN_FORM` (`/login/password`); potwierdzenie konta i nowe hasło — zwykła sesja, cokolwiek mówi żądanie. Testy: jednostkowy (oba adresy) i IT (`POST /password/reset` z `remember-me=true` → 30 min, ciasteczko bez `Max-Age`) |
+| P7 | **Nie zrobione** — prawdziwy Enter wymaga obsługi CDP w `run.py`; do sprawdzenia ręcznie na iPhonie (klawisz „Idź”) |
+| P8 | `clientKey`: do `InetAddress` tylko znaki literału IPv6; „zz:1” zostaje napisem (test) |
+| P9 | Hasło niezgodne w NFC porównane drugi raz „jak wpisane” (tylko gdy wpisane nie jest w NFC — zależy od wpisanego, nie od konta), po sukcesie hasz zrobiony od nowa w NFC. Test |
+| P10 | **Nie zrobione** — świadomy kompromis (WARN w logu), bez zmiany projektu |
+| P11 | `StayLoggedIn.chosen(request)` — to samo w kontrolerze i przy logowaniu |
+
+Dokumentacja: Sekcje 6 (`OtherDevicesController`, `AccountSessions`), 8 (pole, 10 min, `/login/password`, ciasteczko, „Wyloguj na innych urządzeniach”, limity maili, NFC), 10-1 (atrybuty ciasteczka), 12 (`POST /dj/logout-others`).
+
+Sprawdzenia po poprawkach (`tools/check.py`, ta gałąź): `unit` 1373 OK, `it` 185 OK (z `SessionCookieIT` i dwoma nowymi w `StayLoggedInIT`), `browser` 437 scenariuszy OK (`account-menu`: menu ma teraz 7 pozycji), `audit -t login,dashboard,privacy,settings` 27 stron × 3 szerokości bez przewijania w bok i błędów konsoli (wypisane małe cele „Szczegóły” i godziny imprezy na panelu — sprzed tej zmiany, nie dotyczą jej).

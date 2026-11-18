@@ -49,7 +49,7 @@ import java.util.Optional;
  * no difference; its id is {@code local:<id>} ({@link DjAccountEntity#userId()}). After the login the same as Google's: a new session
  * id, the DJ's page asked for before it or the panel, the site's counter ({@link SecurityConfig#loginSuccess}). "Nie wylogowuj mnie na
  * tym urządzeniu" ({@link StayLoggedIn}): the login form's box — the account's confirmation and a new password log in for the usual
- * time, their pages have no box (the link of an e-mail is often opened on a device that is not one's own).
+ * time whatever their request says (the link of an e-mail is often opened on a device that is not one's own).
  */
 @Controller
 @Slf4j
@@ -57,6 +57,8 @@ public class PasswordLoginController {
 
     /** The registration id of a password account's login (Google's is "google"). */
     public static final String REGISTRATION_ID = "password";
+    /** The login form's address — the one page with the box "Nie wylogowuj mnie na tym urządzeniu" for a password ({@link StayLoggedIn}). */
+    public static final String LOGIN_FORM = "/login/password";
     static final String PANEL = "redirect:/dj/dashboard";
 
     private final PasswordAccountService accounts;
@@ -104,13 +106,13 @@ public class PasswordLoginController {
         return "redirect:" + SecurityConfig.GOOGLE_LOGIN;
     }
 
-    @PostMapping("/login/password")
+    @PostMapping(LOGIN_FORM)
     public String logIn(@RequestParam(defaultValue = "") String email, @RequestParam(defaultValue = "") String password, Model model,
                         Locale locale, HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException {
         Optional<String> address = PasswordAccountService.cleanEmail(email);
         model.addAttribute("email", email.strip());
         // a wrong password: the page again with the box as it was (StayLoggedIn reads the request's own parameter at the login)
-        model.addAttribute("stayLoggedIn", request.getParameter(StayLoggedIn.PARAMETER) != null);
+        model.addAttribute("stayLoggedIn", StayLoggedIn.chosen(request));
         if (address.isEmpty()) {
             model.addAttribute("loginError", "account.login.wrong");
             return "login";

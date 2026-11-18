@@ -104,6 +104,12 @@
                         <button type="submit" class="dropdown-item" th:text="#{dashboard.button.logout}">Logout</button>
                     </form>
                 </li>
+                <!--/* every other device of the account (OtherDevicesController): a login may last 14 days ("Nie wylogowuj mnie") */-->
+                <li>
+                    <form th:action="@{/dj/logout-others}" method="POST" class="m-0" th:data-confirm="#{dashboard.confirm.logout_others}">
+                        <button type="submit" id="logoutOthersBtn" class="dropdown-item" th:text="#{dashboard.button.logout_others}">Log out other devices</button>
+                    </form>
+                </li>
                 <li><hr class="dropdown-divider"></li>
                 <li>
                     <!--/* On another party's staff (V30) the panel is not theirs: "Opuść obsługę" in place of "Usuń konto", which deleted the

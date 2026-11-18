@@ -257,7 +257,8 @@ public class PasswordAccountService {
         if (limiter.locked(account.getEmail(), client)) {
             return new LoginResult(LoginOutcome.LOCKED, null);
         }
-        if (!matches(password, account.getPasswordHash())) {
+        Match match = check(password, account.getPasswordHash());
+        if (match == Match.NONE) {
             limiter.failed(account.getEmail(), client);
             return new LoginResult(LoginOutcome.WRONG, null);
         }
@@ -268,7 +269,7 @@ public class PasswordAccountService {
         account.setEmailVerifiedAt(clock.instant());
         account.setVerifyTokenHash(null);
         account.setVerifyExpiresAt(null);
-        upgrade(account, password);
+        upgrade(account, password, match);
         log.info("Password account {} confirmed", account.userId());
         return new LoginResult(LoginOutcome.OK, accounts.save(account));
     }
@@ -282,8 +283,8 @@ public class PasswordAccountService {
             return new LoginResult(LoginOutcome.LOCKED, null);
         }
         Optional<DjAccountEntity> found = accounts.findByEmail(email);
-        boolean right = matches(password, found.map(DjAccountEntity::getPasswordHash).orElse(dummyHash));
-        if (found.isEmpty() || !right) {
+        Match match = check(password, found.map(DjAccountEntity::getPasswordHash).orElse(dummyHash));
+        if (found.isEmpty() || match == Match.NONE) {
             limiter.failed(email, client);
             return new LoginResult(LoginOutcome.WRONG, null);
         }
@@ -297,7 +298,7 @@ public class PasswordAccountService {
             return new LoginResult(LoginOutcome.WRONG, null);
         }
         limiter.succeeded(email, client);
-        upgrade(account, password);
+        upgrade(account, password, match);
         return new LoginResult(LoginOutcome.OK, account);
     }
 
@@ -307,22 +308,39 @@ public class PasswordAccountService {
                 .ifPresent(account -> mail(account, Mail.CONFIRM, locale));
     }
 
-    /** A hash of an older kind (or strength) is made again from the right password. */
-    private void upgrade(DjAccountEntity account, String password) {
-        if (encoder.upgradeEncoding(account.getPasswordHash())) {
+    /**
+     * A hash of an older kind (or strength), or of the password as typed rather than in NFC ({@link Match#AS_TYPED}), is made
+     * again from the right password.
+     */
+    private void upgrade(DjAccountEntity account, String password, Match match) {
+        if (match == Match.AS_TYPED || encoder.upgradeEncoding(account.getPasswordHash())) {
             account.setPasswordHash(encoder.encode(normalized(password)));
             accounts.save(account);
         }
     }
 
-    /** bcrypt refuses more than 72 bytes: such a password is no account's (none could be set, {@link #passwordProblem}). */
-    private boolean matches(String password, String hash) {
+    /**
+     * How a typed password matched a hash. {@code AS_TYPED}: not in its NFC form but as typed — a hash kept before passwords were
+     * normalized, of a password typed decomposed; its owner must not be locked out by the normalization.
+     */
+    private enum Match { NONE, NFC, AS_TYPED }
+
+    /**
+     * bcrypt refuses more than 72 bytes: such a password is no account's (none could be set, {@link #passwordProblem}). The second
+     * comparison happens only for a password that is not in NFC — what was typed decides it, never whether the address has an
+     * account.
+     */
+    private Match check(String password, String hash) {
         String typed = normalized(password);
         if (typed == null || typed.getBytes(StandardCharsets.UTF_8).length > BCRYPT_BYTES) {
             encoder.matches("not-a-password-of-anyone", dummyHash);   // as long as any other answer
-            return false;
+            return Match.NONE;
         }
-        return encoder.matches(typed, hash);
+        if (encoder.matches(typed, hash)) {
+            return Match.NFC;
+        }
+        boolean decomposed = !typed.equals(password) && password.getBytes(StandardCharsets.UTF_8).length <= BCRYPT_BYTES;
+        return decomposed && encoder.matches(password, hash) ? Match.AS_TYPED : Match.NONE;
     }
 
     // ---------------------------------------------------------------- the new password
