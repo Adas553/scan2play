@@ -20,7 +20,7 @@ below. The app no longer reads `YOUTUBE_API_KEY`, `SPOTIFY_*` or `YOUTUBE_SEARCH
 **The plans** (V35, Section 4.1 "Plans"): `PLANS_ENFORCE` (default `false`: everything for everyone — not set on Railway),
 `SCAN2PLAY_PLANS_PRO_OWNERS` (Google subjects, comma-separated: Pro for ever — the owner's own `party_settings.owner_id`, testers),
 `PLANS_TRIAL_DAYS` (default 0). **`BREVO_API_KEY`** (V64, Section 7.4): the automatic e-mails' key — a secret, never in the repo; unset,
-no e-mail is sent. `SCAN2PLAY_MAIL_FROM` (optional, default `contact@scan2play.com.pl`): the sender — it must be a verified sender in
+no e-mail is sent. `scan2play.mail.dev-links` (only in `application-local.properties`, `http://localhost:8080`): on a developer's machine without the key, the password accounts' links (the confirmation, a new password, V72) are written to the log on that address instead — never set it on production (a link in the log opens the account). `SCAN2PLAY_MAIL_FROM` (optional, default `contact@scan2play.com.pl`): the sender — it must be a verified sender in
 Brevo (Senders), or Brevo takes the e-mail and then drops it ("sender … is not valid", seen only in Brevo's log). **`ADMIN_GOOGLE_ID`** (`scan2play.admin-id`): the owner's Google subject — the account that sees `/dj/stats` (V40) and whose devices get the AI alarm (Section 7.1); not a secret; unset, the page is a 404. **`ADMIN_EMAIL`** (`scan2play.admin-email`, default `scan2playcontact@gmail.com`): where the owner's daily report goes (Section 5.1c; when: on `/dj/stats/report`, V66); empty = no report. Switching the plans on is one variable — decide first what the DJs of that day get (a data migration).
 **`JAVA_TOOL_OPTIONS=-Xmx512m -XX:+ExitOnOutOfMemoryError`** on Railway's `scan2play` (set; the deploy log's first line says
 "Picked up JAVA_TOOL_OPTIONS", at the level ERROR because the JVM writes it to stderr — not a failure): Railway bills the RAM in use, and the JVM saw the container's 8 GB and let its heap grow to 2 GB (the metrics: 780 MB
@@ -29,7 +29,8 @@ requests in 2 min): 0 errors, the same speed as the default, ~800 MB at the top 
 lower (536 MB at one party of 150 guests) but slower under the 20 parties; out of memory the app restarts instead of hanging.
 Backups: Railway's scheduled ones are not on Hobby — `docs/database-backup.md`: a copy every night to Cloudflare R2 by the Railway
 service `db-backup` (`tools/db-backup`, a cron; its variables — the database's references and the R2 token — are secrets), and a
-`pg_dump` by hand before a release with a migration.
+`pg_dump` by hand before a release whose migration changes or moves existing rows (one that only adds a table, a
+column or an index needs none).
 
 ### Key application properties
 

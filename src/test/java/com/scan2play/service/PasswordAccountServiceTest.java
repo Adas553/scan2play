@@ -253,6 +253,30 @@ class PasswordAccountServiceTest {
         assertThat(sent).hasSize(before + 1);
     }
 
+    /** A developer's machine without Brevo's key (the profile local): the link goes to the log, on the machine's address. */
+    @Test
+    void onADevelopersMachineWithoutTheKey_theLinkGoesToTheLog_notToBrevo() {
+        when(mailer.isOn()).thenReturn(false);
+        PasswordAccountService local = new PasswordAccountService(repository, new LoginLimiter(), mailer, Clock.systemUTC(),
+                "http://localhost:8080/");
+
+        local.register("ola@example.com", "dobre-haslo-1", null, CLIENT, PL);
+
+        assertThat(rows).hasSize(1);
+        assertThat(sent).isEmpty();
+        org.mockito.Mockito.verify(mailer, org.mockito.Mockito.never()).later(any());
+    }
+
+    /** Production: never in the log — with or without the key, the e-mail is what carries the link. */
+    @Test
+    void withoutTheDevelopersAddress_theLinkIsNeverLogged_theEMailGoes() {
+        when(mailer.isOn()).thenReturn(false);
+
+        service.register("ola@example.com", "dobre-haslo-1", null, CLIENT, PL);
+
+        assertThat(sent).hasSize(1);
+    }
+
     @Test
     void thePasswordsRules() {
         assertThat(PasswordAccountService.passwordProblem(null)).isEqualTo(PasswordProblem.SHORT);

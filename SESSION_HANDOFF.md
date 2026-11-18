@@ -39,8 +39,8 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
   `ORIGIN_SECRET`; Railway's own address is 403. To change the secret: the rule and the variable together — between the two the
   site is 403 for a minute (`PROJECT_CONTEXT.md` Sections 8, 10).
 - **The database's copies:** nightly to Cloudflare R2 (the Railway service `db-backup`, since 2026-11-16; 2026-11-17 03:19 UTC
-  `scan2play-2026-11-17.dump`, 255 KB, done — the bucket itself and a restore not checked yet). By hand before a release with a
-  migration (`docs/database-backup.md`: the Postgres TCP proxy only for the copy, removed after it).
+  `scan2play-2026-11-17.dump`, 255 KB, done — the bucket itself and a restore not checked yet). By hand only before a migration that
+  changes existing rows (`docs/database-backup.md`: the Postgres TCP proxy only for the copy, removed after it).
 - **The repository is public** (`LICENSE`: viewing only) — GitHub Actions have no minute limit. Nothing secret in the repo, the docs
   or a commit — ever.
 - **Cloud sessions:** the environment `scan2play` (personal) allows `www.scan2play.com.pl` — the curl of a release check; the

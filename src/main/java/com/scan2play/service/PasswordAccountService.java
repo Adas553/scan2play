@@ -8,6 +8,7 @@ import com.scan2play.util.EmailAddresses;
 import com.scan2play.util.Texts;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -77,17 +78,29 @@ public class PasswordAccountService {
     private final LoginLimiter limiter;
     private final Mailer mailer;
     private final Clock clock;
+    /**
+     * A developer's machine without Brevo's key ({@code scan2play.mail.dev-links}, the profile {@code local}: its own address,
+     * {@code http://localhost:8080}): the e-mail's link goes to the log instead, on this address — the site's address is
+     * production's, where the account is not. Empty (production): never — a link in the log would open the account to whoever reads it.
+     */
+    private final String devLinks;
     private final PasswordEncoder encoder = PasswordEncoderFactories.createDelegatingPasswordEncoder();
     private final SecureRandom random = new SecureRandom();
     /** Compared against when the address has no account: a wrong address takes as long as a wrong password. */
     private final String dummyHash = encoder.encode("not-a-password-of-anyone");
 
     @Autowired
-    public PasswordAccountService(DjAccountRepository accounts, LoginLimiter limiter, Mailer mailer) {
-        this(accounts, limiter, mailer, Clock.systemUTC());
+    public PasswordAccountService(DjAccountRepository accounts, LoginLimiter limiter, Mailer mailer,
+                                  @Value("${scan2play.mail.dev-links:}") String devLinks) {
+        this(accounts, limiter, mailer, Clock.systemUTC(), devLinks);
     }
 
     PasswordAccountService(DjAccountRepository accounts, LoginLimiter limiter, Mailer mailer, Clock clock) {
+        this(accounts, limiter, mailer, clock, "");
+    }
+
+    PasswordAccountService(DjAccountRepository accounts, LoginLimiter limiter, Mailer mailer, Clock clock, String devLinks) {
+        this.devLinks = devLinks == null ? "" : Texts.withoutTrailingSlash(devLinks.strip());
         this.accounts = accounts;
         this.limiter = limiter;
         this.mailer = mailer;
@@ -276,11 +289,16 @@ public class PasswordAccountService {
     }
 
     private void send(String to, Mail kind, String token, Locale locale) {
-        String link = switch (kind) {
-            case CONFIRM -> mailer.siteUrl() + "/register/confirm?token=" + token;
-            case RESET, EXISTS -> mailer.siteUrl() + "/password/reset?token=" + token;
-            case GOOGLE -> mailer.siteUrl() + "/login";
+        String path = switch (kind) {
+            case CONFIRM -> "/register/confirm?token=" + token;
+            case RESET, EXISTS -> "/password/reset?token=" + token;
+            case GOOGLE -> "/login";
         };
+        if (!devLinks.isEmpty() && !mailer.isOn()) {
+            log.info("No e-mail on this machine (no BREVO_API_KEY): the {} e-mail's link is {}", kind, devLinks + path);
+            return;
+        }
+        String link = mailer.siteUrl() + path;
         String lang = Mailer.languageOf(locale);
         String template = "account-" + kind.name().toLowerCase(Locale.ROOT);
         AfterCommit.run(() -> mailer.later(() -> {

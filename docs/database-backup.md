@@ -5,7 +5,10 @@ Railway's scheduled volume backups are not on the Hobby plan. Two copies instead
 - **every night, by itself** — the Railway service `db-backup` (`tools/db-backup`) runs `pg_dump` over Railway's private network
   and puts the file in a Cloudflare R2 bucket: another provider than the database's, so a lost Railway project does not take the
   copies with it. Set up once, below;
-- **by hand, before every release with a migration** — `pg_dump` from the owner's computer ("Take a copy (PowerShell)").
+- **by hand, before a release whose migration changes or moves existing rows** (an `UPDATE`, a `DELETE`, a column dropped or
+  changed, rows moved between tables) — `pg_dump` from the owner's computer ("Take a copy (PowerShell)"). A migration that only
+  adds (a new table, a new column with a default, an index) needs none: it touches no row, a failed one is rolled back whole and
+  the old deploy keeps running — the nightly copy is enough (the owner, 2026-11-18).
 
 ## The nightly copy to Cloudflare R2 (set up once)
 
@@ -37,7 +40,7 @@ bucket in Cloudflare first). When PostgreSQL on Railway moves to a new major ver
 The script was tried against a local PostgreSQL with a stand-in for the upload (2026-11-16); the upload to R2 itself and the
 image are first run in step 5.
 
-## A copy by hand (before a release with a migration)
+## A copy by hand (before a migration that changes existing rows)
 
 The owner takes a copy with `pg_dump` from their own computer (Section 10 of `PROJECT_CONTEXT.md`). A copy is one small file (the data is well under the volume's 500 MB).
 
