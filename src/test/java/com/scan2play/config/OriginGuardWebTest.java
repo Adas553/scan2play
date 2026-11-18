@@ -67,7 +67,7 @@ class OriginGuardWebTest {
         MvcResult djPage = mockMvc.perform(get("/dj/dashboard").header(OriginGuardFilter.HEADER, SECRET)
                         .header("Sec-Fetch-Mode", "navigate"))
                 .andExpect(status().is3xxRedirection()).andReturn();
-        assertThat(djPage.getResponse().getRedirectedUrl()).endsWith("/oauth2/authorization/google");
+        assertThat(djPage.getResponse().getRedirectedUrl()).endsWith("/login");
         assertThat(madeASession(djPage)).as("the login remembers the page in a session, as before").isTrue();
     }
 }

@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en" th:lang="#{html.lang}">
+<head>
+    <meta charset="UTF-8">
+    <title th:text="#{account.register.title}">Create an account - Scan2Play</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="dark">
+    <meta name="robots" content="noindex">
+    <link href="/webjars/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/css/app.css" th:href="@{/css/app.css}" rel="stylesheet">
+</head>
+<!--/* A new account with a password (V72, PasswordLoginController): the name (the staff see it), the address, the password. Then
+     always "Sprawdź skrzynkę" — the e-mail says the rest (a confirmation link; or that the address has an account, or logs in with
+     Google). */-->
+<body class="page-guest page-account">
+<div class="container d-flex flex-column align-items-center">
+    <div class="card p-4 shadow-lg w-100 text-white mb-4 s2p-mw-500">
+        <h1 class="display-6 fw-bold text-center"><a th:replace="~{fragments/components :: home-logo}" href="/">Scan2Play</a></h1>
+        <h2 class="h4 fw-bold mt-2 text-center" id="registerHeading" th:text="#{account.register.heading}">Create an account</h2>
+
+        <div th:if="${formError != null}" id="formError" class="alert alert-danger mt-2" role="alert"
+             th:text="#{__${formError}__(${T(com.scan2play.service.PasswordAccountService).PASSWORD_MIN}, ${T(com.scan2play.service.PasswordAccountService).PASSWORD_MAX})}">
+            The password needs at least 8 characters.
+        </div>
+
+        <form th:action="@{/register}" method="post" id="registerForm" class="m-0">
+            <label for="registerName" class="form-label" th:text="#{account.field.name}">Your name or DJ name</label>
+            <input type="text" id="registerName" name="name" class="form-control mb-3" maxlength="100" autocomplete="name" th:value="${name}">
+            <label for="registerEmail" class="form-label" th:text="#{account.field.email}">E-mail address</label>
+            <input type="email" id="registerEmail" name="email" class="form-control mb-3" required maxlength="254" autocomplete="email"
+                   th:value="${email}">
+            <label for="registerPassword" class="form-label" th:text="#{account.field.password}">Password</label>
+            <input type="password" id="registerPassword" name="password" class="form-control" required minlength="8" maxlength="64"
+                   autocomplete="new-password" aria-describedby="registerPasswordHint">
+            <p class="form-text text-secondary-bright mb-3" id="registerPasswordHint"
+               th:text="#{account.password.hint(${T(com.scan2play.service.PasswordAccountService).PASSWORD_MIN})}">At least 8 characters.</p>
+            <button type="submit" class="btn btn-action btn-lg w-100" th:text="#{account.register.submit}">Create an account</button>
+            <p class="small text-secondary-bright mt-3 mb-0">
+                <span th:text="#{account.register.terms}">By creating an account you accept the</span>
+                <a href="/terms" th:text="#{account.register.terms_link}">Terms of Service</a>
+                <span th:text="#{account.register.and}">and the</span>
+                <a href="/privacy" th:text="#{account.register.privacy_link}">Privacy Policy</a>.
+            </p>
+        </form>
+
+        <p class="text-center mt-3 mb-0">
+            <span class="text-secondary-bright" th:text="#{account.register.have_account}">Have an account?</span>
+            <a href="/login" id="loginLink" th:text="#{account.register.login}">Log in</a>
+        </p>
+    </div>
+</div>
+<div th:replace="~{fragments/components :: footer}"></div>
+</body>
+</html>

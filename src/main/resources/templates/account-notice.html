@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en" th:lang="#{html.lang}">
+<head>
+    <meta charset="UTF-8">
+    <title th:text="#{__${noticeTitle}__} + ' - Scan2Play'">Check your mailbox - Scan2Play</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="dark">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="referrer" content="no-referrer">
+    <link href="/webjars/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/css/app.css" th:href="@{/css/app.css}" rel="stylesheet">
+</head>
+<!--/* What a password's form says after it (V72, PasswordLoginController): "Sprawdź skrzynkę" — the same whether the address has an
+     account or not —, or a link of an e-mail that no longer works. */-->
+<body class="page-guest page-account">
+<div class="container d-flex flex-column align-items-center">
+    <div class="card p-4 shadow-lg w-100 text-white mb-4 s2p-mw-500 text-center">
+        <h1 class="display-6 fw-bold"><a th:replace="~{fragments/components :: home-logo}" href="/">Scan2Play</a></h1>
+        <h2 class="h4 fw-bold mt-2" id="noticeHeading" th:text="#{__${noticeTitle}__}">Check your mailbox</h2>
+        <p class="text-light" id="noticeText" th:text="${noticeEmail != null} ? #{__${noticeText}__(${noticeEmail})} : #{__${noticeText}__}">
+            We have sent an e-mail to ola@example.com.</p>
+        <p th:if="${noticeEmail != null}" class="small text-secondary-bright" th:text="#{account.sent.spam}">Nothing in a few minutes? Look in the spam folder.</p>
+        <a href="/login" class="btn btn-outline-light" th:text="#{account.back_to_login}">Back to the login</a>
+    </div>
+</div>
+<div th:replace="~{fragments/components :: footer}"></div>
+</body>
+</html>

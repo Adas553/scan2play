@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<!--/* To an address that has a confirmed account and was registered again (V72), English: no new account, the new password's link. Mail programs read little CSS — inline styles only, one column, no images. */-->
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head><meta charset="UTF-8"><title>Scan2Play</title></head>
+<body style="margin:0;padding:24px;background:#ffffff;color:#1a1a1a;font-family:-apple-system,'Segoe UI',Roboto,Arial,sans-serif;font-size:16px;line-height:1.5;">
+<div style="max-width:560px;">
+<p>Hi!</p>
+<p>Someone tried to create a Scan2Play account with this address, but you have one already. Log in at <a href="https://www.scan2play.com.pl/login" th:href="${siteUrl} + '/login'" style="color:#0a7f99;">www.scan2play.com.pl/login</a>, and if you have forgotten your password, set a new one:</p>
+<p><a th:href="${link}" href="https://www.scan2play.com.pl/" style="display:inline-block;padding:12px 20px;background:#0a7f99;color:#ffffff;text-decoration:none;border-radius:8px;font-weight:600;">Set a new password</a></p>
+<p>The link works for an hour. If it was not you, ignore this e-mail: nothing changes.</p>
+<p>Scan2Play</p>
+</div>
+</body>
+</html>

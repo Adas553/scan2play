@@ -18,6 +18,7 @@ import org.springframework.cache.CacheManager;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -49,6 +50,8 @@ class AccountDeletionServiceTest {
     private com.scan2play.repository.StaffInvitationRepository staffInvitationRepository;
     @Mock
     private com.scan2play.repository.DjPlanRepository djPlanRepository;
+    @Mock
+    private com.scan2play.repository.DjAccountRepository djAccountRepository;
     @Mock
     private CacheManager cacheManager;
     @Mock
@@ -92,6 +95,18 @@ class AccountDeletionServiceTest {
 
         verify(cache, times(AccountDeletionService.PARTY_CACHES.size())).evict(PARTY);
         assertThat(AccountDeletionService.PARTY_CACHES).contains("partySettings");
+    }
+
+    @Test
+    @DisplayName("a password account (V72, local:<id>) loses its login too; a Google account has none to lose")
+    void aPasswordAccount_losesItsLogin_aGoogleOneHasNone() {
+        when(partySettingsRepository.findByOwnerId(any())).thenReturn(Optional.empty());
+
+        service.deleteAllUserData("local:42");
+        verify(djAccountRepository).deleteById(42L);
+
+        service.deleteAllUserData(OWNER);
+        verifyNoMoreInteractions(djAccountRepository);
     }
 
     @Test

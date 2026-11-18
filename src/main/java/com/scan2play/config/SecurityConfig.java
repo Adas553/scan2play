@@ -34,7 +34,7 @@ import org.springframework.web.servlet.LocaleResolver;
 /**
  * Main security configuration for Scan2Play.
  * <p>
- * Handles OAuth2 login for DJs and public access for guests.
+ * Handles the DJs' login (Google's OAuth2, or an e-mail address and a password — PasswordLoginController) and public access for guests.
  * </p>
  */
 @Configuration
@@ -75,7 +75,13 @@ public class SecurityConfig {
     static final String PERMISSIONS_POLICY = "camera=(), microphone=(), geolocation=(), payment=(), usb=(), serial=(), bluetooth=(), "
             + "browsing-topics=()";
 
-    /** Google's login (Spring's OAuth 2 client): where a DJ's page opened without a session goes. */
+    /**
+     * The login page (PasswordLoginController): Google's login or an e-mail address and a password (V72) — where a DJ's page opened
+     * without a session goes.
+     */
+    static final String LOGIN_PAGE = "/login";
+
+    /** Google's login (Spring's OAuth 2 client): the login page's Google button. */
     static final String GOOGLE_LOGIN = "/oauth2/authorization/google";
 
     /** The DJ's pages and their fetches. */
@@ -91,9 +97,9 @@ public class SecurityConfig {
     /**
      * Where a request without a login goes (the review of 2026-10-21, C2, C3):
      * <ul>
-     * <li>a DJ's page opened in the browser — straight to Google's login, which usually lets a person signed in to Google through
-     *     without a question, and back to that page ({@link #djPagesRemembered}): a DJ whose session expired while the phone was in
-     *     the pocket (30 minutes; a hidden panel does not poll) comes back to their panel, not to the landing page for DJs;</li>
+     * <li>a DJ's page opened in the browser — the login page (Google or a password), and after it back to that page
+     *     ({@link #djPagesRemembered}): a DJ whose session expired while the phone was in the pocket (30 minutes; a hidden panel does
+     *     not poll) comes back to their panel, not to the landing page for DJs;</li>
      * <li>a fetch of the panel's scripts — the landing page, as before: the script sees the redirect and loads its page again
      *     ({@code polling.js} {@code reloadOnce}), which is then a page opened in the browser;</li>
      * <li>any other address no handler is public for — 404: a mistyped address is "not found", not the landing page (for a search
@@ -101,13 +107,13 @@ public class SecurityConfig {
      * </ul>
      */
     static AuthenticationEntryPoint loginEntryPoint() {
-        AuthenticationEntryPoint google = new LoginUrlAuthenticationEntryPoint(GOOGLE_LOGIN);
+        AuthenticationEntryPoint login = new LoginUrlAuthenticationEntryPoint(LOGIN_PAGE);
         AuthenticationEntryPoint landing = new LoginUrlAuthenticationEntryPoint("/");
         return (request, response, refused) -> {
             if (!DJ_PAGES.matches(request)) {
                 response.sendError(HttpServletResponse.SC_NOT_FOUND);
             } else if (NAVIGATION.matches(request)) {
-                google.commence(request, response, refused);
+                login.commence(request, response, refused);
             } else {
                 landing.commence(request, response, refused);
             }
@@ -118,17 +124,17 @@ public class SecurityConfig {
      * The DJ's page asked for before the login, remembered in the session for after it — only a page opened in the browser: a poll of
      * the queue or a fragment of the history would open bare after the login.
      */
-    static RequestCache djPagesRemembered() {
+    public static RequestCache djPagesRemembered() {
         HttpSessionRequestCache cache = new HttpSessionRequestCache();
         cache.setRequestMatcher(request -> DJ_PAGES.matches(request) && NAVIGATION.matches(request));
         return cache;
     }
 
     /**
-     * After the login: the DJ's page remembered before it ({@link #djPagesRemembered}), else the panel. {@code loggedIn} runs first —
-     * the site's counter of logins (V40).
+     * After the login — Google's, or a password's (PasswordLoginController): the DJ's page remembered before it
+     * ({@link #djPagesRemembered}), else the panel. {@code loggedIn} runs first — the site's counter of logins (V40).
      */
-    static AuthenticationSuccessHandler loginSuccess(RequestCache remembered, Runnable loggedIn) {
+    public static AuthenticationSuccessHandler loginSuccess(RequestCache remembered, Runnable loggedIn) {
         SavedRequestAwareAuthenticationSuccessHandler success = new SavedRequestAwareAuthenticationSuccessHandler();
         success.setDefaultTargetUrl("/dj/dashboard");
         success.setRequestCache(remembered);
@@ -195,7 +201,7 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.ignoringRequestMatchers("/csp-report", "/email/stop/*"))
                 // a guest's request from a page open longer than its session: back to the party with the typed song, not a 403
                 .exceptionHandling(denied -> denied.accessDeniedHandler(new GuestFormExpiredHandler(messageSource, localeResolver))
-                        // no login: a DJ's page → Google's login and back; a fetch of the panel → "/"; any other address → 404
+                        // no login: a DJ's page → the login page and back; a fetch of the panel → "/"; any other address → 404
                         .authenticationEntryPoint(loginEntryPoint()))
                 .requestCache(cache -> cache.requestCache(remembered))
                 .authorizeHttpRequests(auth -> auth
@@ -239,14 +245,17 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/demo", "/demo/**").permitAll()
                         // OAuth2 login endpoints must be public
                         .requestMatchers("/oauth2/**", "/login/**").permitAll()
+                        // the login with a password (V72, PasswordLoginController): a new account, its confirmation, a new
+                        // password — "/login" and "/login/**" (the login page, its form, "Sprawdź skrzynkę") are above
+                        .requestMatchers("/register", "/register/confirm", "/password/forgot", "/password/reset").permitAll()
                         // DJ dashboard is protected
                         .requestMatchers("/dj/**").authenticated()
                         // Everything else requires authentication
                         .anyRequest().authenticated()
                 )
                 .oauth2Login(oauth2 -> oauth2
-                        // Use root landing page as custom login entry point
-                        .loginPage("/")
+                        // the login page: Google's button and the password's form
+                        .loginPage(LOGIN_PAGE)
                         // Google asks which account every time, also after "Wyloguj"
                         .authorizationEndpoint(endpoint -> endpoint.authorizationRequestResolver(accountPicker(clients)))
                         // back to the DJ's page asked for before the login (with its ?party=), else the panel

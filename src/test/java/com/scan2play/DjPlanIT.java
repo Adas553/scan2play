@@ -1,5 +1,6 @@
 package com.scan2play;
 
+import com.scan2play.entity.DjAccountEntity;
 import com.scan2play.entity.DjPlanEntity;
 import com.scan2play.model.Plan;
 import com.scan2play.model.PlanSource;
@@ -22,6 +23,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class DjPlanIT extends PostgresIntegrationTest {
 
     @Autowired DjPlanRepository plans;
+    @Autowired com.scan2play.repository.DjAccountRepository accounts;
     @Autowired PlanService planService;
     @Autowired AccountDeletionService accountDeletion;
     @Autowired org.springframework.cache.CacheManager caches;
@@ -45,6 +47,33 @@ class DjPlanIT extends PostgresIntegrationTest {
         assertThat(plans.existsById(owner)).as("the same Google account again: no second trial").isFalse();
         assertThat(jdbc.queryForObject("SELECT count(*) FROM trial_used WHERE owner_hash = encode(sha256(convert_to(?, 'UTF8')), 'hex')",
                 Integer.class, owner)).as("the key, as PostgreSQL computes it").isOne();
+    }
+
+    /**
+     * A password account (V72) deleted and made again with the same address — a new id — gets no second trial either: its trial is
+     * remembered by its address (Gmail's dots not counting), not by its id.
+     */
+    @Test
+    void aPasswordAccountMadeAgain_withTheSameAddress_getsNoSecondTrial() {
+        PlanService enforced = new PlanService(plans, caches, true, "", 14);
+        String stamp = String.valueOf(System.nanoTime());
+        DjAccountEntity first = accounts.saveAndFlush(account("ola.k" + stamp + "@gmail.com"));
+        enforced.startTrial(first.userId());
+        assertThat(plans.existsById(first.userId())).isTrue();
+
+        accountDeletion.deleteAllUserData(first.userId());
+        DjAccountEntity again = accounts.saveAndFlush(account("olak" + stamp + "@gmail.com"));
+        enforced.startTrial(again.userId());
+
+        assertThat(again.getId()).isNotEqualTo(first.getId());
+        assertThat(plans.existsById(again.userId())).as("the same address again: no second trial").isFalse();
+        DjAccountEntity other = accounts.saveAndFlush(account("inna" + stamp + "@example.com"));
+        enforced.startTrial(other.userId());
+        assertThat(plans.existsById(other.userId())).as("another address: its trial").isTrue();
+    }
+
+    private static DjAccountEntity account(String email) {
+        return DjAccountEntity.builder().email(email).passwordHash("{bcrypt}x").createdAt(java.time.Instant.now()).build();
     }
 
     @Test

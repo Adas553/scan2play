@@ -1,5 +1,6 @@
 package com.scan2play.service;
 
+import com.scan2play.entity.DjAccountEntity;
 import com.scan2play.entity.DjPlanEntity;
 import com.scan2play.entity.PartySettingsEntity;
 import com.scan2play.model.CommentStyle;
@@ -7,6 +8,7 @@ import com.scan2play.model.Plan;
 import com.scan2play.model.PlanFeature;
 import com.scan2play.model.PlanSource;
 import com.scan2play.repository.DjPlanRepository;
+import com.scan2play.util.EmailAddresses;
 import com.scan2play.util.AfterCommit;
 import com.scan2play.util.Times;
 import lombok.extern.slf4j.Slf4j;
@@ -250,7 +252,7 @@ public class PlanService {
 
     /**
      * A new DJ's trial of Pro ({@code scan2play.plans.trial-days}), when their party is made: only while the plans are enforced and
-     * only once per Google account — a DJ with a row of {@code dj_plan} gets none, and neither does one who had a trial and deleted
+     * only once per Google account or e-mail address of a password account (V72) — a DJ with a row of {@code dj_plan} gets none, and neither does one who had a trial and deleted
      * the account since ({@code trial_used}, V36: only the account's {@link #trialKey} outlives it — the owner, 2026-10-15). The
      * caller's transaction (the party's creation); the cached plan goes after its commit — before it, a request reading the plan
      * meanwhile found no row and kept Free for {@code CACHE_TTL} (the review of 2026-10-14).
@@ -259,7 +261,7 @@ public class PlanService {
         if (!enforced || trialDays == 0 || planRepository.existsById(ownerId)) {
             return;
         }
-        String key = trialKey(ownerId);
+        String key = trialKeyOf(ownerId);
         if (planRepository.trialUsed(key)) {
             log.info("DJ {}: had a trial of Pro before (an account deleted since) — none again", ownerId);
             return;
@@ -272,6 +274,25 @@ public class PlanService {
         planRepository.markTrialUsed(key);
         AfterCommit.run(() -> cache().evict(ownerId));
         log.info("DJ {}: a trial of Pro for {} days", ownerId, trialDays);
+    }
+
+    /**
+     * The key an account's trial is remembered by: a Google account's {@link #trialKey} of its subject; a password account's (V72)
+     * of its address as an account is matched by ({@code "email:" + EmailAddresses.key}, Gmail's dots and "+…" not counting) — its
+     * id is new when it is made again, its address is not. Its id's key when the account is gone already.
+     */
+    String trialKeyOf(String ownerId) {
+        if (ownerId.startsWith(DjAccountEntity.USER_ID_PREFIX)) {
+            try {
+                String email = planRepository.passwordAccountEmail(Long.parseLong(ownerId.substring(DjAccountEntity.USER_ID_PREFIX.length())));
+                if (email != null) {
+                    return trialKey("email:" + EmailAddresses.key(email));
+                }
+            } catch (NumberFormatException notAnAccount) {
+                // not a password account's id: its own key
+            }
+        }
+        return trialKey(ownerId);
     }
 
     /**
