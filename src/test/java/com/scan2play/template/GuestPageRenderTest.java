@@ -902,7 +902,7 @@ class GuestPageRenderTest {
             assertThat(section(html, "landingWho")).contains("href=\"/dj-weselny" + q + "\"", "href=\"/kluby" + q + "\"",
                     "href=\"/puby" + q + "\"").doesNotContain("karaoke\"");
             assertThat(section(html, "landingWho").split("class=\"stretched-link\"", -1)).as("three cards are links").hasSize(4);
-            assertThat(section(html, "landingFaq").split("<details", -1)).as("seven questions — the tips' one too").hasSize(8);
+            assertThat(section(html, "landingFaq").split("<details", -1)).as("eight questions — the tips' and the weak signal's too").hasSize(9);
             assertThat(html.split("href=\"/start\"", -1)).as("the start at the top and at the end").hasSize(3);
             assertThat(html).contains("id=\"staffLogin\"", "id=\"landingGuide\"", "id=\"landingFinal\"", "href=\"/privacy\"");
             // no "PRO" on one card (the owner, 2026-10-18); Pro only while the plans are enforced — the pricing page always, beside the
@@ -916,12 +916,17 @@ class GuestPageRenderTest {
             context.setVariable("plansEnforced", true);
             assertThat(section(engine.process("landing", context), "landingFaq")).as("the plans enforced")
                     .contains(pricing, locale == PL ? "Pro dodaje" : "Pro adds");
+            // what the DJ keeps in hand at once under the hero (a DJ's first fear), the first party after what one gets
+            assertThat(html.indexOf("id=\"landingControl\"")).as("\"Ty decydujesz\" before the steps")
+                    .isPositive().isLessThan(html.indexOf("id=\"landingSteps\""));
+            assertThat(html.indexOf("id=\"landingFirstParty\"")).as("the first party after the features, before for whom")
+                    .isGreaterThan(html.indexOf("id=\"landingFeatures\"")).isLessThan(html.indexOf("id=\"landingWho\""));
             if (locale == Locale.ENGLISH) {
-                assertThat(html).contains(">Guests request songs. AI keeps the vibe. You play.<", ">Wedding DJs<");
+                assertThat(html).contains(">Fewer people at the booth. More control over the room.<", ">You decide<", ">Wedding DJs<");
                 continue;
             }
-            assertThat(html).contains(">Goście proszą o piosenki. AI pilnuje klimatu. Ty grasz.<", ">Czy goście muszą coś instalować?<",
-                    ">DJ weselny<");
+            assertThat(html).contains(">Mniej ludzi przy konsoli. Więcej kontroli nad salą.<", ">Ty decydujesz<",
+                    ">Czy goście muszą coś instalować?<", ">DJ weselny<");
         }
     }
 

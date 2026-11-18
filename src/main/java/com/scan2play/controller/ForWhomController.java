@@ -30,7 +30,7 @@ public class ForWhomController {
 
     /** The pages, in the landing page's order. */
     public static final List<Page> PAGES = List.of(
-            new Page("/dj-weselny", "wedding", Set.of("step2", "step4", "feature4")),   // the hosts' lists, the profiles, the summary
+            new Page("/dj-weselny", "wedding", Set.of("step2", "step4", "feature1", "feature4")),   // the hosts' lists, the profiles, the wishes, the summary
             new Page("/kluby", "club", Set.of("feature3", "feature4")),                // the limits, the comment styles
             new Page("/puby", "pub", Set.of("feature1", "feature3")));                 // the limits, the tips
 

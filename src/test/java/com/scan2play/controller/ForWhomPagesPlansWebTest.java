@@ -37,9 +37,9 @@ class ForWhomPagesPlansWebTest {
         }
     }
 
-    /** Which steps and features of each page are Pro: the hosts' lists, the profiles, the summary, the limits, the comment styles, the tips. */
+    /** Which steps and features of each page are Pro: the hosts' lists, the profiles, the wishes, the summary, the limits, the comment styles, the tips. */
     static final Map<String, List<String>> PRO = Map.of(
-            "/dj-weselny", List.of("step2", "step4", "feature4"),
+            "/dj-weselny", List.of("step2", "step4", "feature1", "feature4"),
             "/kluby", List.of("feature3", "feature4"),
             "/puby", List.of("feature1", "feature3"));
 
