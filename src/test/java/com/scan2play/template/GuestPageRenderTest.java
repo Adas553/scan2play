@@ -399,7 +399,7 @@ class GuestPageRenderTest {
                 writePreview("join.html", html);
                 assertThat(html).contains(">Ola Kowalska zaprasza Cię do obsługi imprezy: Klub Ola<",
                         "Zaczynasz z rolą „Obsługa kolejki”. Możesz:", ">Zagrane, Pomiń, Cofnij, Przywróć, Dodaj piosenkę<", ">Historia<",
-                        ">Zaloguj się przez Google i dołącz<");
+                        ">Zaloguj się i dołącz<");
             }
 
             assertThat(html).doesNotContain("??", "action=\"/join/invite\"");
@@ -481,7 +481,7 @@ class GuestPageRenderTest {
         // the owner, 2026-10-18 ("czy ten przycisk jest profesjonalny"): words a newcomer knows, no "→" on what only unfolds, and
         // under the last "Zbieraj prośby gości" — not floating between the hero and the steps
         assertThat(pages[0]).contains("id=\"staffLogin\"", ">Masz link z zaproszeniem od DJ-a? Wklej go tutaj<", "action=\"/join\" method=\"get\"",
-                "name=\"link\"", ">Zaloguj się przez Google i dołącz<").doesNotContain("id=\"staffLinkInvalid\"", "obsługi imprezy? Dołącz");
+                "name=\"link\"", ">Zaloguj się i dołącz<").doesNotContain("id=\"staffLinkInvalid\"", "obsługi imprezy? Dołącz");
         assertThat(pages[0].indexOf("id=\"staffLogin\"")).as("under the final start, above the footer")
                 .isGreaterThan(pages[0].indexOf("id=\"landingFinal\"")).isLessThan(pages[0].indexOf("<footer"));
         assertThat(tag(pages[0], "staffLogin")).as("folded at first").doesNotContain("open");

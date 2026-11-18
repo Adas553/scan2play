@@ -38,7 +38,14 @@ GuestQueueService          → DjService
 | Method | Path | Handler / notes |
 |--------|------|-----------------|
 | GET | `/` | `HomeController.home` |
-| GET | `/start`, `/start/{kind}` | → Google's login (`{kind}`: the old tile links, ignored) |
+| GET | `/start`, `/start/{kind}` | → the login page `/login` (`{kind}`: the old tile links, ignored) |
+| GET | `/login` | the login page (`PasswordLoginController`): Google's button (`/oauth2/authorization/google`) and the password's form; logged in → the panel |
+| POST | `/login/password` | `email`, `password` (V72): logged in → the page asked for before, or the panel; else the page again, "Zły adres e-mail albo hasło" (or locked, or not confirmed — the link sent again) |
+| GET | `/login/sent` | "Sprawdź skrzynkę" after the forms below (flash attributes; without them → `/login`) |
+| GET, POST | `/register` | a new password account: `name`, `email`, `password` → always `/login/sent` |
+| GET, POST | `/register/confirm` | the e-mail's link `?token=`: asks the password, then confirms and logs in; an old link 410 |
+| GET, POST | `/password/forgot` | `email` → always `/login/sent` |
+| GET, POST | `/password/reset` | the e-mail's link `?token=` (1 h, once): a new password, the account's other sessions end, logged in; an old link 410 |
 | GET | `/p/{partyCode}` | the guest's page (`party_ended` when closed); an unknown code is a 404 — the error page's "Ten kod imprezy nie istnieje lub link jest niepoprawny" (until 2026-10-21 the landing page for DJs; a request sent to one, too). No session is made for an unknown code or a party that has ended (review 2026-10-14 W3: every `GET /p/{anything}` was a row in `spring_session`); an open party's page makes one — its form's CSRF token |
 | GET | `/p/{partyCode}/library/has` | `song` (repeated, "Artist - Title", the first 10 looked at): which of them the DJ has — JSON `[true, false, …]` in their order (V58, `LibraryHintService`); 404 for an unknown party or one with nothing to tell (ended, no library, no Pro, switched off); 429 past 120 asks a minute of the address (the suggestions shown unmarked); no session made |
 | GET | `/p/{partyCode}/queue` | the guest's list alone: the first five (empty when closed, 404 for an unknown party) |

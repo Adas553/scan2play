@@ -1,4 +1,4 @@
-# Session Handoff — 2026-11-17
+# Session Handoff — 2026-11-18
 
 The current state only: the branch, what waits for the owner, what comes next. **Kept short: the whole file ≤ 15 KB, "Start here"
 ≤ 4 KB, an item ≤ 4 lines.** After each release move to `docs/history/session-handoff-<date>.md`, word for word: the released
@@ -24,6 +24,10 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
 - **2026-11-17 — `claude/optimistic-hamilton-zc7qq6` = that branch + its review (`docs/history/review-2026-11-17-landing-message.md`)
   and the fixes P1–P13 (texts, the 🎤 of the mic card, comments; P9 left: three cards stay three).** Waits for the owner: the read, then
   this branch into #278 / #279 (or merged instead of them).
+- **2026-11-18 — `claude/funny-wozniak-sxv682`, PRs #280 (`main`) and #281 (`dev`), not merged, migration V72:** the login with an e-mail address and a password beside
+  Google's (`/login`, `PasswordLoginController`, table `dj_account`; the owner's picks: the address confirmed by the e-mail's link,
+  no linking with a Google account of the same address, "Nie pamiętasz hasła?" now). Rules: `docs/context/07-09-…` Section 8. V72 only
+  adds a table and an index (no rows moved): the nightly copy is enough (the owner). After the release: try a registration on production (Brevo must send). The trial: once per Google account or address (the terms).
 - **Waits for the owner (from #269):** after the first commit the deploy window holds back (Fri–Sun 18:00–6:00): does Railway
   deploy it on the workflow's re-run? UptimeRobot is set up (the owner, 2026-11-17; `docs/monitoring.md`).
 - **Waits for the owner (the wishes, #263):** the three older Polish texts with "DJ" and a masculine verb (`guest.vote.gone`,
@@ -35,8 +39,8 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
   `ORIGIN_SECRET`; Railway's own address is 403. To change the secret: the rule and the variable together — between the two the
   site is 403 for a minute (`PROJECT_CONTEXT.md` Sections 8, 10).
 - **The database's copies:** nightly to Cloudflare R2 (the Railway service `db-backup`, since 2026-11-16; 2026-11-17 03:19 UTC
-  `scan2play-2026-11-17.dump`, 255 KB, done — the bucket itself and a restore not checked yet). By hand before a release with a
-  migration (`docs/database-backup.md`: the Postgres TCP proxy only for the copy, removed after it).
+  `scan2play-2026-11-17.dump`, 255 KB, done — the bucket itself and a restore not checked yet). By hand only before a migration that
+  changes existing rows (`docs/database-backup.md`: the Postgres TCP proxy only for the copy, removed after it).
 - **The repository is public** (`LICENSE`: viewing only) — GitHub Actions have no minute limit. Nothing secret in the repo, the docs
   or a commit — ever.
 - **Cloud sessions:** the environment `scan2play` (personal) allows `www.scan2play.com.pl` — the curl of a release check; the

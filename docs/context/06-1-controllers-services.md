@@ -6,7 +6,7 @@
 
 | Class | Purpose |
 |-------|---------|
-| `HomeController` | `/`: the landing page, for everyone — a logged-in DJ too (the owner, 2026-10-24: the panel's logo leads here; it sent them back to the panel and seemed dead), their start buttons "Przejdź do panelu" (`/dj/dashboard`), their visit not counted; `/start` → Google's login. The landing page makes no session: its invitation form is a GET, without a CSRF token (review 2026-10-21, S2). A form that posts there would need its token loaded before rendering — after the first 8 KB no session can be made and a first visit got the page cut off (production, 2026-10-18); `LandingPageSessionWebTest` — with Spring Session's filter, which the other `@WebMvcTest`s lack — checks the whole page and no `SESSION` cookie |
+| `HomeController` | `/`: the landing page, for everyone — a logged-in DJ too (the owner, 2026-10-24: the panel's logo leads here; it sent them back to the panel and seemed dead), their start buttons "Przejdź do panelu" (`/dj/dashboard`), their visit not counted; `/start` → the login page `/login`. The landing page makes no session: its invitation form is a GET, without a CSRF token (review 2026-10-21, S2). A form that posts there would need its token loaded before rendering — after the first 8 KB no session can be made and a first visit got the page cut off (production, 2026-10-18); `LandingPageSessionWebTest` — with Spring Session's filter, which the other `@WebMvcTest`s lack — checks the whole page and no `SESSION` cookie |
 | `DjDashboardController` | the dashboard, the queue poll (`/dj/dashboard/updates`), the history page and fragment, the QR print page |
 | `StaffController` | the staff's invitation `/join/{token}` (public; "Dołącz" a POST), the panel switcher `POST /dj/panel`, leaving a staff, a pasted link (V30); the owner's page "Obsługa" `/dj/staff`: permissions, the link and its role (V33), removing (V32), invitations by e-mail and their answer `/dj/invitation` (V34) |
 | `DjPartySettingsController` | start / end party, vibe, vibe note, "Kto gra", limits (bounded), the hosts' lists and link (V29), account deletion |
@@ -36,10 +36,14 @@
 | `LegalController` | `/privacy`, `/terms`, the guide `/jak-to-dziala` = `/how-it-works` (a file per language; the guide's way back is the panel when logged in, else the landing page), the pricing page `/pro` (V35: Free and Pro, a file per language; `/cennik`, `/pricing` redirect to it; while the plans are not enforced one card "Za darmo" — 6.7) |
 | `ViewAttributes` | names of the model attributes |
 
+| `PasswordLoginController` | the login page `/login` (Google's button and the password's form) and the password accounts' pages (V72): `/register`, `/register/confirm`, `/password/forgot`, `/password/reset`, `/login/sent`; logs a password account in as Google's login does (an `OAuth2AuthenticationToken` named `local:<id>`, Section 8). Each page loads its CSRF token before rendering (`PasswordLoginSessionWebTest`, with Spring Session's filter) |
+
 ### 6.2 Services
 
 | Class | Purpose |
 |-------|---------|
+| `PasswordAccountService` | the password accounts (V72, Section 8): register, confirm (the link and the password), log in, a new password; the e-mails about an account; never says whether an address has an account |
+| `LoginLimiter` | the password login's limits in memory: wrong passwords by address and by client, e-mails by address and by client |
 | `SongEvaluationService` | the guest's request: Gemini (`askAi`) → the "Podejrzyj" link → save or vote |
 | `PromptBuilder` | the prompt of a request (`src/main/resources/prompts`, per language): the request, the genre, the DJ's note, the songs played lately, the comment style, the dedication — pure text, out of `SongEvaluationService` since the review of 2026-10-21 (R1); `GeminiComparison` builds the same prompts, or a proposed rewrite of them |
 | `DjService` | the guest queue (`dashboardQueue` cache; `getWaiting` uncached, for the poll), its fingerprint (ETag), mark played (a conditional `UPDATE`), skip (`dismissSong`, a conditional `UPDATE` too), clear the queue |

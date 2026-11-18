@@ -19,13 +19,13 @@ public class HomeController {
     private final SiteCounter siteCounter;
 
     /**
-     * The landing page's button: Google's login (then the DJ's party — {@link DjSessionHelper#getPartySettings}). The old links of
-     * the landing page's tiles ({@code /start/requests} and the like) lead there too.
+     * The landing page's button: the login page — Google or a password (then the DJ's party — {@link DjSessionHelper#getPartySettings}).
+     * The old links of the landing page's tiles ({@code /start/requests} and the like) lead there too.
      */
     @GetMapping({"/start", "/start/{kind}"})
     public String start(@RequestHeader(value = "User-Agent", required = false) String userAgent) {
         siteCounter.countVisit(SiteCounter.Event.START, userAgent);
-        return "redirect:/oauth2/authorization/google";
+        return "redirect:/login";
     }
 
     /**
