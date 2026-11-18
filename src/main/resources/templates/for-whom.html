@@ -10,8 +10,8 @@
     <link href="/webjars/bootstrap/css/bootstrap.min.css" rel="stylesheet">
     <link href="/css/app.css" th:href="@{/css/app.css}" rel="stylesheet">
 </head>
-<!--/* A page "Dla kogo" (2026-10-21, ForWhomController): the landing page's look — its hero with the same pictures, then four steps,
-     four features and up to three questions of this kind of party (forWhom.KEY.*), the start again and the other kinds. A step or a
+<!--/* A page "Dla kogo" (ForWhomController): the landing page's look — its hero with the same pictures, then four steps, the
+     landing page's "Ty decydujesz", four features and up to three questions of this kind of party (forWhom.KEY.*), the start again and the other kinds. A step or a
      feature of the Pro plan carries "PRO" once the plans are enforced (ForWhomController.Page.pro), none before. The links stay in
      the page's language (?lang=en on an English page), so a search engine follows each language through. */-->
 <body class="page-landing">
@@ -70,6 +70,12 @@
             </ol>
         </div>
     </section>
+
+    <!--/* The landing page's "Ty decydujesz", word for word on every kind: the fear of an AI turning guests down unseen is the same
+         at a wedding, in a club and in a pub, so its texts name no console or DJ. Three cards between grids of four: the section has
+         three points, not padded to four. Between the steps and the features: ForWhomPagesPlansWebTest reads the features up to the
+         questions */-->
+    <section th:replace="~{landing :: control}"></section>
 
     <section class="s2p-landing-section" id="forWhomFeatures">
         <div class="container">
