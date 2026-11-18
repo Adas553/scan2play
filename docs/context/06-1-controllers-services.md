@@ -42,8 +42,9 @@
 
 | Class | Purpose |
 |-------|---------|
-| `PasswordAccountService` | the password accounts (V72, Section 8): register, confirm (the link and the password), log in, a new password; the e-mails about an account; never says whether an address has an account |
-| `LoginLimiter` | the password login's limits in memory: wrong passwords by address and by client, e-mails by address and by client |
+| `PasswordAccountService` | the password accounts (V72, Section 8): register, confirm (the link and the password), log in, a new password; the e-mails about an account; never says whether an address has an account — the forms "Załóż konto" and "Nie pamiętam hasła" do their work on a thread of their own |
+| `LoginLimiter` | the password login's limits in memory: wrong passwords by address and client, by address, by client; e-mails by address and client, by address, by client; new accounts by client (an IPv6 client by its /64) |
+| `AccountSessions` | an account's sessions by Spring Session's principal index: ended after a new password (but the request's own) and after the account's deletion |
 | `SongEvaluationService` | the guest's request: Gemini (`askAi`) → the "Podejrzyj" link → save or vote |
 | `PromptBuilder` | the prompt of a request (`src/main/resources/prompts`, per language): the request, the genre, the DJ's note, the songs played lately, the comment style, the dedication — pure text, out of `SongEvaluationService` since the review of 2026-10-21 (R1); `GeminiComparison` builds the same prompts, or a proposed rewrite of them |
 | `DjService` | the guest queue (`dashboardQueue` cache; `getWaiting` uncached, for the poll), its fingerprint (ETag), mark played (a conditional `UPDATE`), skip (`dismissSong`, a conditional `UPDATE` too), clear the queue |

@@ -39,8 +39,9 @@ GuestQueueService          → DjService
 |--------|------|-----------------|
 | GET | `/` | `HomeController.home` |
 | GET | `/start`, `/start/{kind}` | → the login page `/login` (`{kind}`: the old tile links, ignored) |
-| GET | `/login` | the login page (`PasswordLoginController`): Google's button (`/oauth2/authorization/google`) and the password's form; logged in → the panel |
-| POST | `/login/password` | `email`, `password` (V72): logged in → the page asked for before, or the panel; else the page again, "Zły adres e-mail albo hasło" (or locked, or not confirmed — the link sent again) |
+| GET | `/login` | the login page (`PasswordLoginController`): one form — the box "Nie wylogowuj mnie na tym urządzeniu" (`remember-me`), Google's button and the password's fields; logged in → the panel |
+| POST | `/login/google` | Google's button: `remember-me` kept in the session for the return from Google (`StayLoggedIn`) → `/oauth2/authorization/google`; CSRF |
+| POST | `/login/password` | `email`, `password`, `remember-me` (the box: a 14-day session) (V72): logged in → the page asked for before, or the panel; else the page again, "Zły adres e-mail albo hasło" — also for a right password of an account not confirmed yet (its link goes again) — or locked |
 | GET | `/login/sent` | "Sprawdź skrzynkę" after the forms below (flash attributes; without them → `/login`) |
 | GET, POST | `/register` | a new password account: `name`, `email`, `password` → always `/login/sent` |
 | GET, POST | `/register/confirm` | the e-mail's link `?token=`: asks the password, then confirms and logs in; an old link 410 |

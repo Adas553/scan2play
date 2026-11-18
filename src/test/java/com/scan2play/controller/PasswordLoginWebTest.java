@@ -50,6 +50,8 @@ class PasswordLoginWebTest {
     private PasswordAccountService accounts;
     @MockitoBean
     private SiteCounter siteCounter;
+    @MockitoBean
+    private com.scan2play.service.AccountSessions accountSessions;
 
     private static DjAccountEntity account() {
         return DjAccountEntity.builder().id(7L).email("ola@example.com").displayName("DJ Ola").passwordHash("{bcrypt}x")
@@ -141,7 +143,7 @@ class PasswordLoginWebTest {
         mockMvc.perform(from("/register").header("Accept-Language", "pl-PL")
                         .param("name", "DJ Ola").param("email", "Ola@Example.com").param("password", "dobre-haslo-1"))
                 .andExpect(redirectedUrl("/login/sent"));
-        verify(accounts).register(eq("ola@example.com"), eq("dobre-haslo-1"), eq("DJ Ola"), any(), any());
+        verify(accounts).requestRegistration(eq("ola@example.com"), eq("dobre-haslo-1"), eq("DJ Ola"), any(), any());
 
         String page = html(mockMvc.perform(get("/login/sent").header("Accept-Language", "pl-PL")
                         .flashAttr("noticeTitle", "account.sent.title").flashAttr("noticeText", "account.sent.register")
@@ -160,7 +162,7 @@ class PasswordLoginWebTest {
 
         assertThat(shortOne).contains("Hasło musi mieć co najmniej 8 znaków.", "value=\"ola@example.com\"");
         assertThat(noAddress).contains("To nie jest adres e-mail.");
-        verify(accounts, never()).register(any(), any(), any(), any(), any());
+        verify(accounts, never()).requestRegistration(any(), any(), any(), any(), any());
     }
 
     @Test
@@ -200,15 +202,19 @@ class PasswordLoginWebTest {
                 .andExpect(status().isOk());
         verify(accounts, never()).resetPassword(any(), any());
 
-        mockMvc.perform(from("/password/reset?token=good").param("token", "good").param("password", "nowe-haslo-22"))
-                .andExpect(redirectedUrl("/dj/dashboard"));
+        var form = from("/password/reset?token=good").param("token", "good").param("password", "nowe-haslo-22");
+        String before = opened.getId();
+        MvcResult result = mockMvc.perform(form).andExpect(redirectedUrl("/dj/dashboard")).andReturn();
+        // the other sessions end, this one stays — it is the one logged in now (under a new id)
+        verify(accountSessions).endAllBut("local:7", before);
+        assertThat(result.getRequest().getSession().getId()).isNotEqualTo(before);
     }
 
     @Test
     void forgotThePassword_alwaysCheckTheMailbox() throws Exception {
         mockMvc.perform(from("/password/forgot").param("email", "nikt@example.com"))
                 .andExpect(redirectedUrl("/login/sent"));
-        verify(accounts).forgotPassword(eq("nikt@example.com"), any(), any());
+        verify(accounts).requestPasswordReset(eq("nikt@example.com"), any(), any());
     }
 
     @Test

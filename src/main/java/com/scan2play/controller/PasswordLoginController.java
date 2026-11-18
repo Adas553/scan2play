@@ -1,7 +1,9 @@
 package com.scan2play.controller;
 
 import com.scan2play.config.SecurityConfig;
+import com.scan2play.config.StayLoggedIn;
 import com.scan2play.entity.DjAccountEntity;
+import com.scan2play.service.AccountSessions;
 import com.scan2play.service.GuestRequestLimiter;
 import com.scan2play.service.PasswordAccountService;
 import com.scan2play.service.PasswordAccountService.LoginOutcome;
@@ -17,14 +19,13 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.AuthorityUtils;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.context.SecurityContextHolderStrategy;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.security.web.csrf.CsrfToken;
-import org.springframework.session.FindByIndexNameSessionRepository;
-import org.springframework.session.Session;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -46,7 +47,9 @@ import java.util.Optional;
  * A password account logs in as a Google account does — an {@link OAuth2AuthenticationToken} whose user says {@code sub},
  * {@code name}, {@code email} and {@code email_verified} ({@link #authentication}) — so the rest of the app, which reads those, knows
  * no difference; its id is {@code local:<id>} ({@link DjAccountEntity#userId()}). After the login the same as Google's: a new session
- * id, the DJ's page asked for before it or the panel, the site's counter ({@link SecurityConfig#loginSuccess}).
+ * id, the DJ's page asked for before it or the panel, the site's counter ({@link SecurityConfig#loginSuccess}). "Nie wylogowuj mnie na
+ * tym urządzeniu" ({@link StayLoggedIn}): the login form's box — the account's confirmation and a new password log in for the usual
+ * time, their pages have no box (the link of an e-mail is often opened on a device that is not one's own).
  */
 @Controller
 @Slf4j
@@ -58,17 +61,20 @@ public class PasswordLoginController {
 
     private final PasswordAccountService accounts;
     private final GuestRequestLimiter clientAddress;
-    private final ObjectProvider<FindByIndexNameSessionRepository<? extends Session>> sessions;
+    private final AccountSessions sessions;
     private final SecurityContextRepository contexts = new HttpSessionSecurityContextRepository();
+    private final SecurityContextHolderStrategy contextHolder = SecurityContextHolder.getContextHolderStrategy();
+    private final StayLoggedIn stayLoggedIn;
     private final AuthenticationSuccessHandler success;
 
     public PasswordLoginController(PasswordAccountService accounts, GuestRequestLimiter clientAddress, ObjectProvider<SiteCounter> siteCounter,
-                                   ObjectProvider<FindByIndexNameSessionRepository<? extends Session>> sessions) {
+                                   AccountSessions sessions, StayLoggedIn stayLoggedIn) {
         this.accounts = accounts;
         this.clientAddress = clientAddress;
         this.sessions = sessions;
+        this.stayLoggedIn = stayLoggedIn;
         this.success = SecurityConfig.loginSuccess(SecurityConfig.djPagesRemembered(),
-                () -> siteCounter.ifAvailable(counter -> counter.count(SiteCounter.Event.LOGIN)));
+                () -> siteCounter.ifAvailable(counter -> counter.count(SiteCounter.Event.LOGIN)), stayLoggedIn);
     }
 
     private static boolean loggedIn(Authentication authentication) {
@@ -86,11 +92,25 @@ public class PasswordLoginController {
         return "login";
     }
 
+    /**
+     * "Zaloguj się przez Google": a button of the login page's one form, so that the box "Nie wylogowuj mnie na tym urządzeniu" above
+     * it counts for Google's login too — the box's state kept in the session ({@link StayLoggedIn#keepForGoogle}), then Google's login.
+     * A POST with the form's CSRF token: another site cannot make a browser's next login a long one. The form's address and
+     * password fields come along when they are filled in, unread.
+     */
+    @PostMapping("/login/google")
+    public String toGoogle(HttpServletRequest request) {
+        stayLoggedIn.keepForGoogle(request);
+        return "redirect:" + SecurityConfig.GOOGLE_LOGIN;
+    }
+
     @PostMapping("/login/password")
     public String logIn(@RequestParam(defaultValue = "") String email, @RequestParam(defaultValue = "") String password, Model model,
                         Locale locale, HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException {
         Optional<String> address = PasswordAccountService.cleanEmail(email);
         model.addAttribute("email", email.strip());
+        // a wrong password: the page again with the box as it was (StayLoggedIn reads the request's own parameter at the login)
+        model.addAttribute("stayLoggedIn", request.getParameter(StayLoggedIn.PARAMETER) != null);
         if (address.isEmpty()) {
             model.addAttribute("loginError", "account.login.wrong");
             return "login";
@@ -100,11 +120,7 @@ public class PasswordLoginController {
             logIn(result.account(), request, response);
             return null;
         }
-        model.addAttribute("loginError", switch (result.outcome()) {
-            case LOCKED -> "account.login.locked";
-            case NOT_CONFIRMED -> "account.login.not_confirmed";
-            default -> "account.login.wrong";
-        });
+        model.addAttribute("loginError", result.outcome() == LoginOutcome.LOCKED ? "account.login.locked" : "account.login.wrong");
         return "login";
     }
 
@@ -131,7 +147,7 @@ public class PasswordLoginController {
             model.addAttribute("formError", address.isEmpty() ? "account.email.invalid" : passwordKey(problem));
             return "register";
         }
-        accounts.register(address.get(), password, name, clientAddress.clientIp(request), locale);
+        accounts.requestRegistration(address.get(), password, name, clientAddress.clientIp(request), locale);
         return sent(redirect, "account.sent.register", address.get());
     }
 
@@ -209,7 +225,7 @@ public class PasswordLoginController {
             model.addAttribute("formError", "account.email.invalid");
             return "password-forgot";
         }
-        accounts.forgotPassword(address.get(), clientAddress.clientIp(request), locale);
+        accounts.requestPasswordReset(address.get(), clientAddress.clientIp(request), locale);
         return sent(redirect, "account.sent.forgot", address.get());
     }
 
@@ -244,17 +260,10 @@ public class PasswordLoginController {
         if (changed.isEmpty()) {
             return oldLink(model, response, "account.reset.old_link");
         }
-        endSessions(changed.get().userId());
+        // every other session of the account ends; this one stays (deleted under the request, it would log the person out)
+        sessions.endAllBut(changed.get().userId(), request.getSession().getId());
         logIn(changed.get(), request, response);
         return null;
-    }
-
-    /** Every session of the account (Spring Session's index of the login's name); none in a test without Spring Session. */
-    private void endSessions(String userId) {
-        FindByIndexNameSessionRepository<? extends Session> repository = sessions.getIfAvailable();
-        if (repository != null) {
-            repository.findByPrincipalName(userId).keySet().forEach(repository::deleteById);
-        }
     }
 
     // ---------------------------------------------------------------- the login itself
@@ -267,11 +276,11 @@ public class PasswordLoginController {
             throws IOException, ServletException {
         request.getSession();
         request.changeSessionId();
-        request.getSession().removeAttribute("org.springframework.security.web.csrf.HttpSessionCsrfTokenRepository.CSRF_TOKEN");
-        SecurityContext context = SecurityContextHolder.createEmptyContext();
+        SecurityConfig.CSRF_TOKENS.saveToken(null, request, response);   // the next page makes a new one
+        SecurityContext context = contextHolder.createEmptyContext();
         Authentication authentication = authentication(account);
         context.setAuthentication(authentication);
-        SecurityContextHolder.setContext(context);
+        contextHolder.setContext(context);
         contexts.saveContext(context, request, response);
         log.info("Password account {} logged in", account.userId());
         success.onAuthenticationSuccess(request, response, authentication);
