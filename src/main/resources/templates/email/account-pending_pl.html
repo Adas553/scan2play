@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<!--/* An account not confirmed yet registered again (V72, PasswordAccountService): the new password's link, which confirms it, Polish. Mail programs read little CSS — inline styles only, one column, no images. */-->
+<html xmlns:th="http://www.thymeleaf.org" lang="pl">
+<head><meta charset="UTF-8"><title>Scan2Play</title></head>
+<body style="margin:0;padding:24px;background:#ffffff;color:#1a1a1a;font-family:-apple-system,'Segoe UI',Roboto,Arial,sans-serif;font-size:16px;line-height:1.5;">
+<div style="max-width:560px;">
+<p>Cześć!</p>
+<p>Ktoś — mamy nadzieję, że Ty — zakłada konto w Scan2Play na ten adres, a konto na ten adres już czeka na potwierdzenie. Żeby je dokończyć, ustaw hasło tym przyciskiem — adres zostanie potwierdzony i od razu zalogujesz się do panelu:</p>
+<p><a th:href="${link}" href="https://www.scan2play.com.pl/" style="display:inline-block;padding:12px 20px;background:#0a7f99;color:#ffffff;text-decoration:none;border-radius:8px;font-weight:600;">Ustaw hasło</a></p>
+<p style="color:#666666;font-size:13px;">Albo skopiuj ten adres do przeglądarki: <span th:text="${link}">https://www.scan2play.com.pl/</span></p>
+<p>Link działa godzinę i tylko raz. Jeśli to nie Ty — zignoruj tego maila, nic się nie zmieni.</p>
+<p>Scan2Play</p>
+</div>
+</body>
+</html>

@@ -72,7 +72,7 @@
 
     /**
      * A folded card's state on a phone: "Nieustawione" beside "Profile, kontakt i napiwki" whole — the heading wraps, never a word of
-     * the state (the owner's phone, 2026-11-18: "Nieustawion / e"). Every state set to the longest one-word state, one to three words.
+     * the state ("Nieustawion / e" otherwise). Every state set to the longest one-word state, one to three words.
      */
     async function stateWordsWhole(t) {
         const states = Array.from(document.querySelectorAll('details.s2p-fold > summary .s2p-fold-state'));

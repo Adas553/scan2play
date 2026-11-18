@@ -13,6 +13,7 @@ import org.springframework.security.oauth2.core.OAuth2Error;
 import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 
+import java.time.Duration;
 import java.util.Map;
 import org.springframework.security.web.savedrequest.RequestCache;
 
@@ -40,7 +41,7 @@ class LoginReturnTest {
     /** Where the login sends the person, with what the session remembers. */
     private String afterTheLogin(MockHttpSession session) throws Exception {
         MockHttpServletResponse response = new MockHttpServletResponse();
-        SecurityConfig.loginSuccess(remembered, () -> logins++).onAuthenticationSuccess(
+        SecurityConfig.loginSuccess(remembered, () -> logins++, new StayLoggedIn(Duration.ofMinutes(30), java.time.Clock.systemUTC())).onAuthenticationSuccess(
                 request(session, "/login/oauth2/code/google", null, "navigate"), response, new TestingAuthenticationToken("dj", null));
         return response.getRedirectedUrl();
     }

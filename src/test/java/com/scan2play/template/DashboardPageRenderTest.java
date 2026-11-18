@@ -461,6 +461,8 @@ class DashboardPageRenderTest {
         assertThat(playForm.substring(0, playForm.indexOf("</form>"))).contains("name=\"partyCode\" value=\"HARN1\"");
         assertThat(html).as("the owner deletes their account; leaving a staff is not theirs")
                 .contains("action=\"/dj/delete-account\"").doesNotContain("id=\"leaveStaffBtn\"", "action=\"/dj/staff/leave\"");
+        assertThat(html).as("every other device of the account logged out from the menu, after a question")
+                .contains("action=\"/dj/logout-others\"", "Wylogować to konto na wszystkich innych urządzeniach");
         assertThat(html).as("the heading in one row: our logo (the way home, 2026-10-24) beside \"Zakończ\" (a word on a phone) and \"Konto\"")
                 .containsPattern("s2p-account-bar\">\\s*<div class=\"fs-4 fw-bold text-white me-auto s2p-min-w-0\">"
                         + "<a href=\"/\" class=\"s2p-home-logo\"[^>]*><span class=\"s2p-logo\">")
@@ -585,6 +587,7 @@ class DashboardPageRenderTest {
         assertThat(html).as("one panel only: nothing to switch to").doesNotContain("id=\"panelSwitcher\"", "Mój panel");
         assertThat(html).as("the staff's button opens the QR code only").contains(">Kod QR<").doesNotContain(">Impreza i kod QR<");
         assertThat(html).doesNotContain("action=\"/dj/delete-account\"", "id=\"staffMenuLink\"");
+        assertThat(html).as("the staff's own other devices: theirs to log out too").contains("action=\"/dj/logout-others\"");
         assertThat(html).as("no \"Wklej link\" on another's party: she has joined already (the owner, 2026-10-10)")
                 .doesNotContain("id=\"joinStaffForm\"", "action=\"/dj/join\"");
         assertThat(html).as("the QR code, its link and its print: the staff's too — it is on the tables anyway (the owner, 2026-10-09)")

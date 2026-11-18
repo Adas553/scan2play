@@ -2,7 +2,7 @@
 
 ### 6.3 Configuration
 
-`SecurityConfig` (routes, OAuth2 login, logout, CSRF, the CSP — Section 8), `AppConfig` (caching, scheduling, the Caffeine caches,
+`SecurityConfig` (routes, OAuth2 login, logout, CSRF, the CSP — Section 8), `StayLoggedIn` ("Nie wylogowuj mnie na tym urządzeniu": a 14-day session at the login — Section 8), `AppConfig` (caching, scheduling, the Caffeine caches,
 the `webmanifest` MIME type), **versioned static addresses** (`spring.web.resources.chain.strategy.fixed`: the templates link
 `th:src` / `th:href="@{/js/...}"`, served as `/<RAILWAY_GIT_COMMIT_SHA>/js/...` — locally `/dev/...` —, so a deploy changes every
 script's and style's address and no cache on the way keeps an old one; the dashboard's modules import each other relatively and stay

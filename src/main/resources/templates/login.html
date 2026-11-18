@@ -11,7 +11,10 @@
 </head>
 <!--/* The login page (PasswordLoginController): where "Zacznij" and a DJ's page opened without a session lead. Google's button
      first — most DJs have an account there —, then an e-mail address and a password (V72). A wrong address and a wrong password
-     read the same (loginError): the page never says whether an address has an account. */-->
+     read the same (loginError): the page never says whether an address has an account.
+     One form for both ways, so that the box "Nie wylogowuj mnie na tym urządzeniu" above them counts for either (StayLoggedIn): Google's
+     button posts the box to /login/google (formaction, formnovalidate — the address and the password are not needed for it), the
+     password's to /login/password. No script: the page's policy has none inline, and the box works without one. */-->
 <body class="page-guest page-account">
 <div class="container d-flex flex-column align-items-center">
     <div class="card p-4 shadow-lg w-100 text-white mb-4 s2p-mw-500">
@@ -22,18 +25,32 @@
             Wrong e-mail address or password.
         </div>
 
-        <a href="/oauth2/authorization/google" id="googleLogin" class="btn btn-action btn-lg w-100 mt-2" th:text="#{account.login.google}">Log in with Google</a>
+        <form th:action="@{/login/password}" method="post" id="loginForm" class="m-0">
+            <!--/* Enter in a field submits by the form's first submit button: this one, the password's — not Google's below it. Out
+                 of sight and out of the tab order; the visible "Zaloguj się" does the same. */-->
+            <button type="submit" class="visually-hidden" tabindex="-1" aria-hidden="true" th:text="#{account.login.submit}">Log in</button>
 
-        <p class="text-center text-secondary-bright my-3" th:text="#{account.login.or}">or with an e-mail address</p>
+            <div class="form-check s2p-stay-logged-in mt-2">
+                <input type="checkbox" class="form-check-input" id="stayLoggedIn" name="remember-me" value="true"
+                       aria-describedby="stayLoggedInHelp" th:checked="${stayLoggedIn == true}">
+                <label class="form-check-label" for="stayLoggedIn" th:text="#{account.login.stay}">Keep me logged in on this device</label>
+            </div>
+            <p id="stayLoggedInHelp" class="small text-secondary-bright mb-2" th:text="#{account.login.stay_help}">
+                Tick it only on your own phone or computer — the login stays for 14 days after the last use.
+            </p>
 
-        <form th:action="@{/login/password}" method="post" id="passwordLoginForm" class="m-0">
+            <button type="submit" id="googleLogin" class="btn btn-action btn-lg w-100" th:formaction="@{/login/google}" formnovalidate
+                    th:text="#{account.login.google}">Log in with Google</button>
+
+            <p class="text-center text-secondary-bright my-3" th:text="#{account.login.or}">or with an e-mail address</p>
+
             <label for="loginEmail" class="form-label" th:text="#{account.field.email}">E-mail address</label>
             <input type="email" id="loginEmail" name="email" class="form-control mb-3" required maxlength="254" autocomplete="email"
                    th:value="${email}">
             <label for="loginPassword" class="form-label" th:text="#{account.field.password}">Password</label>
             <input type="password" id="loginPassword" name="password" class="form-control mb-3" required maxlength="64"
                    autocomplete="current-password">
-            <button type="submit" class="btn btn-outline-light btn-lg w-100" th:text="#{account.login.submit}">Log in</button>
+            <button type="submit" id="passwordLogin" class="btn btn-outline-light btn-lg w-100" th:text="#{account.login.submit}">Log in</button>
         </form>
 
         <p class="text-center mt-3 mb-1"><a href="/password/forgot" id="forgotLink" th:text="#{account.login.forgot}">Forgot your password?</a></p>

@@ -44,12 +44,13 @@ public class AccountDeletionService {
     private final StaffInvitationRepository staffInvitationRepository;
     private final DjPlanRepository djPlanRepository;
     private final DjAccountRepository djAccountRepository;
+    private final AccountSessions accountSessions;
     private final CacheManager cacheManager;
 
     /**
      * Deletes all data associated with the given DJ (owner).
-     * This includes: song requests, feedback, party settings, the devices that took notifications, the DJ's plan (V35) and a password
-     * account's login (V72).
+     * This includes: song requests, feedback, party settings, the devices that took notifications, the DJ's plan (V35), a password
+     * account's login (V72) and the account's sessions on every device.
      * <p>
      * The party's locks come first, in the order the rest of the app takes them (review 2026-10-14 W9, {@code AccountDeletionIT}):
      * the guests' requests' lock ("S2PR", {@link SongRequestCommandService}), then the party's row. Holding the first, the deletion
@@ -112,6 +113,9 @@ public class AccountDeletionService {
                 log.warn("Account deletion: {} is no password account's id", ownerId);
             }
         }
+
+        // 9. Every session of the account, after the commit: another device logged in would make the deleted account a new party
+        AfterCommit.run(() -> accountSessions.endAll(ownerId));
 
         log.info("Account deletion completed for ownerId={}", ownerId);
     }
