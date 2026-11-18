@@ -24,10 +24,10 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
 - **2026-11-17 — `claude/optimistic-hamilton-zc7qq6` = that branch + its review (`docs/history/review-2026-11-17-landing-message.md`)
   and the fixes P1–P13 (texts, the 🎤 of the mic card, comments; P9 left: three cards stay three).** Waits for the owner: the read, then
   this branch into #278 / #279 (or merged instead of them).
-- **2026-11-18 — `claude/funny-wozniak-sxv682`, not merged, migration V72:** the login with an e-mail address and a password beside
+- **2026-11-18 — `claude/funny-wozniak-sxv682`, PRs #280 (`main`) and #281 (`dev`), not merged, migration V72:** the login with an e-mail address and a password beside
   Google's (`/login`, `PasswordLoginController`, table `dj_account`; the owner's picks: the address confirmed by the e-mail's link,
   no linking with a Google account of the same address, "Nie pamiętasz hasła?" now). Rules: `docs/context/07-09-…` Section 8. Before
-  the release: a database copy (V72); after it, try a registration on production (Brevo must send). Terms' "raz na konto Google": the owner's words.
+  the release: a database copy (V72); after it, try a registration on production (Brevo must send). The trial: once per Google account or address (the terms).
 - **Waits for the owner (from #269):** after the first commit the deploy window holds back (Fri–Sun 18:00–6:00): does Railway
   deploy it on the workflow's re-run? UptimeRobot is set up (the owner, 2026-11-17; `docs/monitoring.md`).
 - **Waits for the owner (the wishes, #263):** the three older Polish texts with "DJ" and a masculine verb (`guest.vote.gone`,
