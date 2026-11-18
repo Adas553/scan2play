@@ -97,7 +97,7 @@ the party's code, without the IP — the privacy policy says so, W14), newlines 
 **no `'unsafe-inline'` at all**: no inline script, no `on…=` handler, no `style="…"` (the templates use `s2p-…` classes of `app.css`;
 scripts change styles through `element.style`, which the policy allows), checked over every template by
 `NoInlineCodeInTemplatesTest`; images from the app and `data:`; `connect-src` the app and `itunes.apple.com`; no frames;
-`object-src 'none'`, `base-uri 'self'`, `form-action 'self'`, `frame-ancestors 'none'`; `report-uri /csp-report`. **Report-only**
+`object-src 'none'`, `base-uri 'self'`, `form-action 'self' https://accounts.google.com` (the login page's Google button is a form whose redirects end at Google's login — a browser holds the whole chain to `form-action`), `frame-ancestors 'none'`; `report-uri /csp-report`. **Report-only**
 while `security.csp.enforce=false` (env `CSP_ENFORCE`): the log says `CSP violation: …` for what it would block. **Enforced on
 Railway since 2026-10-15** (`CSP_ENFORCE=true`; the response header is `Content-Security-Policy`, not `-Report-Only`; no `CSP
 violation` in the log since); the owner watches the log for a week; back: delete the variable (a restart, no deploy). The browser tests run the dashboard, the guest page and the QR print page under this policy, enforced

@@ -202,3 +202,20 @@ innych urządzeń — długie sesje bez tego są problemem dla kont Google). P3 
 Dokumentacja: Sekcje 6 (`OtherDevicesController`, `AccountSessions`), 8 (pole, 10 min, `/login/password`, ciasteczko, „Wyloguj na innych urządzeniach”, limity maili, NFC), 10-1 (atrybuty ciasteczka), 12 (`POST /dj/logout-others`).
 
 Sprawdzenia po poprawkach (`tools/check.py`, ta gałąź): `unit` 1373 OK, `it` 185 OK (z `SessionCookieIT` i dwoma nowymi w `StayLoggedInIT`), `browser` 437 scenariuszy OK (`account-menu`: menu ma teraz 7 pozycji), `audit -t login,dashboard,privacy,settings` 27 stron × 3 szerokości bez przewijania w bok i błędów konsoli (wypisane małe cele „Szczegóły” i godziny imprezy na panelu — sprzed tej zmiany, nie dotyczą jej).
+
+## P12 — „Zaloguj się przez Google” nic nie robi (CSP `form-action`) — **błąd, przeoczony w tym przeglądzie**
+
+- Zgłoszone przez właściciela po wciągnięciu poprawek (zrzut `/login`: przycisk wciśnięty, strona zostaje). Przyczyna w commicie
+  `08ab42b`, nie w poprawkach: przycisk Google stał się przyciskiem formularza (`POST /login/google`), odpowiedź to przekierowania
+  `/oauth2/authorization/google` → `https://accounts.google.com/…`, a przeglądarka sprawdza `form-action` na **całym** łańcuchu
+  przekierowań wysłanego formularza. Polityka miała `form-action 'self'`, więc Chrome zatrzymywał logowanie na naszej stronie
+  (w konsoli: „Sending form data to '…/login/google' violates … form-action 'self'”). Dawny przycisk był linkiem — `form-action`
+  go nie dotyczył. Scenariusz `login-stay-logged-in` łapał nawigację i ją zatrzymywał, więc przekierowań nie widział; testy MockMvc
+  nie wykonują CSP.
+- Odtworzone w Chrome (dwa lokalne serwery: `'self'` → zostaje na stronie; z dozwolonym celem → przechodzi).
+- Poprawka: `form-action 'self' https://accounts.google.com` (`SecurityConfig.GOOGLE_AUTHORIZATION`, komentarz dlaczego), Sekcja 8;
+  test `ContentSecurityPolicyTest` (adres z `CommonOAuth2Provider.GOOGLE`). Sprawdzone na uruchomionej aplikacji (profil `local`,
+  CSP wymuszana, jednorazowa baza) w Chrome: `POST /login/google` → `/oauth2/authorization/google` → `accounts.google.com`, bez
+  naruszeń CSP. Ryzyko poszerzenia: wstrzyknięty formularz mógłby wysłać dane tylko do strony logowania Google.
+- Lekcja: zmiana linku w formularz (albo formularza z przekierowaniem poza stronę) = sprawdzić `form-action`; warto kiedyś dać
+  scenariuszom przeglądarki prawdziwy serwer z przekierowaniami.
