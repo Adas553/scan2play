@@ -41,7 +41,8 @@ public class DjAccountEntity {
     @Column(nullable = false, unique = true, length = EMAIL_MAX)
     private String email;
 
-    @Column(nullable = false, length = 100)
+    /** DelegatingPasswordEncoder's form, {@code {bcrypt}$2a$…}; 255 leaves room for a later kind's (V73). */
+    @Column(nullable = false, length = 255)
     private String passwordHash;
 
     @Column(length = DISPLAY_NAME_MAX)

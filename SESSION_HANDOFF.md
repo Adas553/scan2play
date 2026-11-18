@@ -28,6 +28,18 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
   Google's (`/login`, `PasswordLoginController`, table `dj_account`; the owner's picks: the address confirmed by the e-mail's link,
   no linking with a Google account of the same address, "Nie pamiętasz hasła?" now). Rules: `docs/context/07-09-…` Section 8. V72 only
   adds a table and an index (no rows moved): the nightly copy is enough (the owner). After the release: try a registration on production (Brevo must send). The trial: once per Google account or address (the terms).
+- **2026-11-18 — `claude/beautiful-darwin-19krex` = that branch + its review (`docs/history/review-2026-11-18-password-login.md`)
+  and the fixes P1–P14, migration V73 (one column wider, no rows moved):** no account told by the login or the forms' time, limits
+  a stranger cannot turn against the owner, the forms' work on its own thread, links used once by one `UPDATE`, sessions kept /
+  ended right. Waits for the owner: the read, then this branch into #280 / #281 (or merged instead of them).
+- **2026-11-18 — `claude/blissful-ritchie-36scit` = `beautiful-darwin-19krex` + "Nie wylogowuj mnie na tym urządzeniu", PRs #282 (`main`) and #283 (`dev`), V73 (#280 merged):**
+  a box on `/login` (clear by default) for Google and the password: 14 days without a request (`StayLoggedIn`, the session's own
+  `MAX_INACTIVE_INTERVAL`), a persistent cookie; Google's button posts to `POST /login/google`. Waits for the owner: a review in a new
+  session, then the merge. After the release: curl `/login` without cookies — `SESSION` with `Secure; HttpOnly; SameSite=Lax` (as `/demo` today).
+- **2026-11-18 — in #282 / #283 since: its review (`docs/history/review-2026-11-18-stay-logged-in.md`) and the fixes P1–P11 (no
+  migration; P7, P10 left):** "Wyloguj na innych urządzeniach" (`POST /dj/logout-others`), a ceiling of account e-mails, the cookie's
+  attributes in `application.properties` (`SessionCookieIT`), the Google choice valid 10 min. Waits for the owner: the merge; to try
+  on an iPhone: Enter ("Idź") on `/login` = the password's login.
 - **Waits for the owner (from #269):** after the first commit the deploy window holds back (Fri–Sun 18:00–6:00): does Railway
   deploy it on the workflow's re-run? UptimeRobot is set up (the owner, 2026-11-17; `docs/monitoring.md`).
 - **Waits for the owner (the wishes, #263):** the three older Polish texts with "DJ" and a masculine verb (`guest.vote.gone`,

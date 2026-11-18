@@ -53,6 +53,8 @@ class AccountDeletionServiceTest {
     @Mock
     private com.scan2play.repository.DjAccountRepository djAccountRepository;
     @Mock
+    private AccountSessions accountSessions;
+    @Mock
     private CacheManager cacheManager;
     @Mock
     private Cache cache;
@@ -107,6 +109,18 @@ class AccountDeletionServiceTest {
 
         service.deleteAllUserData(OWNER);
         verifyNoMoreInteractions(djAccountRepository);
+    }
+
+    /** Another device logged in to the account would make it a new party: every session ends, Google's and a password's. */
+    @Test
+    void theAccountsSessions_endEverywhere() {
+        when(partySettingsRepository.findByOwnerId(any())).thenReturn(Optional.empty());
+
+        service.deleteAllUserData("local:42");
+        service.deleteAllUserData(OWNER);
+
+        verify(accountSessions).endAll("local:42");
+        verify(accountSessions).endAll(OWNER);
     }
 
     @Test

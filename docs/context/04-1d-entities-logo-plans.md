@@ -77,8 +77,8 @@ decides, as `DjSessionHelper.require` for the staff): Pro for ever for the Googl
   Przelewy24 / Tpay) writing `dj_plan` (PAID, `validUntil`), the terms (a paid service, renewal, the consumer's withdrawal), the
   privacy policy (the payment provider, the billing data), invoices and VAT (KSeF, OSS) — the review's list.
 
-**`dj_account` (V72, `DjAccountEntity`)** — an account that logs in with an e-mail address and a password, beside Google's: the
-address (lower case, unique), the password's bcrypt hash, an optional name (the staff see it, as a Google account's name), when the
+**`dj_account` (V72, V73, `DjAccountEntity`)** — an account that logs in with an e-mail address and a password, beside Google's: the
+address (lower case, unique), the password's bcrypt hash (varchar 255: room for a later kind, V73), an optional name (the staff see it, as a Google account's name), when the
 address was confirmed (null: cannot log in), the SHA-256 of the confirmation's and the new password's links with their ends. The
 rest of the app knows it only by `local:<id>` (`userId()`) — in `party_settings.owner_id`, `party_staff.user_id` and the like, where
 a Google account is its subject; deleted with the account (`AccountDeletionService`). The rules: Section 8.

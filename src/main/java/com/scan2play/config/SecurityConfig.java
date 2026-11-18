@@ -15,6 +15,8 @@ import org.springframework.security.oauth2.client.registration.ClientRegistratio
 import org.springframework.security.oauth2.client.web.DefaultOAuth2AuthorizationRequestResolver;
 import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestRedirectFilter;
 import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestResolver;
+import org.springframework.security.web.csrf.CsrfTokenRepository;
+import org.springframework.security.web.csrf.HttpSessionCsrfTokenRepository;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.core.Authentication;
@@ -30,6 +32,9 @@ import org.springframework.security.web.savedrequest.RequestCache;
 import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
 import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.web.servlet.LocaleResolver;
+
+import java.time.Clock;
+import java.time.Duration;
 
 /**
  * Main security configuration for Scan2Play.
@@ -81,8 +86,14 @@ public class SecurityConfig {
      */
     static final String LOGIN_PAGE = "/login";
 
-    /** Google's login (Spring's OAuth 2 client): the login page's Google button. */
-    static final String GOOGLE_LOGIN = "/oauth2/authorization/google";
+    /**
+     * Where the forms' CSRF tokens are kept (the session) — one instance, so that a login made outside Spring Security's filters
+     * (PasswordLoginController) can give the session a new token the way Spring Security reads it.
+     */
+    public static final CsrfTokenRepository CSRF_TOKENS = new HttpSessionCsrfTokenRepository();
+
+    /** Google's login (Spring's OAuth 2 client): where the login page's Google button leads (through {@code POST /login/google}). */
+    public static final String GOOGLE_LOGIN = "/oauth2/authorization/google";
 
     /** The DJ's pages and their fetches. */
     private static final RequestMatcher DJ_PAGES = PathPatternRequestMatcher.withDefaults().matcher("/dj/**");
@@ -131,17 +142,28 @@ public class SecurityConfig {
     }
 
     /**
-     * After the login — Google's, or a password's (PasswordLoginController): the DJ's page remembered before it
+     * After the login — Google's, or a password's (PasswordLoginController), its session's id new already: the session long or
+     * usual by "Nie wylogowuj mnie na tym urządzeniu" ({@link StayLoggedIn}), then the DJ's page remembered before it
      * ({@link #djPagesRemembered}), else the panel. {@code loggedIn} runs first — the site's counter of logins (V40).
      */
-    public static AuthenticationSuccessHandler loginSuccess(RequestCache remembered, Runnable loggedIn) {
+    public static AuthenticationSuccessHandler loginSuccess(RequestCache remembered, Runnable loggedIn, StayLoggedIn stayLoggedIn) {
         SavedRequestAwareAuthenticationSuccessHandler success = new SavedRequestAwareAuthenticationSuccessHandler();
         success.setDefaultTargetUrl("/dj/dashboard");
         success.setRequestCache(remembered);
         return (request, response, authentication) -> {
             loggedIn.run();
+            stayLoggedIn.atLogin(request, response, authentication);
             success.onAuthenticationSuccess(request, response, authentication);
         };
+    }
+
+    /**
+     * "Nie wylogowuj mnie na tym urządzeniu" — a bean of this configuration, so that every test that imports it has it. The usual
+     * life is Spring Session's own default ({@code spring.session.timeout}, else {@code server.servlet.session.timeout}, else 30 min).
+     */
+    @Bean
+    StayLoggedIn stayLoggedIn(@Value("${spring.session.timeout:${server.servlet.session.timeout:30m}}") Duration usual) {
+        return new StayLoggedIn(usual, Clock.systemUTC());
     }
 
     /**
@@ -153,6 +175,7 @@ public class SecurityConfig {
     static AuthenticationFailureHandler loginFailure() {
         HttpSessionSecurityContextRepository contexts = new HttpSessionSecurityContextRepository();
         return (request, response, failure) -> {
+            StayLoggedIn.forgetGoogleChoice(request);   // "Nie wylogowuj mnie" was for this login, not a later one
             // the context of this request was cleared before the handler runs; the session still holds the person's login
             Authentication already = contexts.loadDeferredContext(request).get().getAuthentication();
             if (already instanceof OAuth2AuthenticationToken && already.isAuthenticated()) {
@@ -183,7 +206,8 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http, MessageSource messageSource, LocaleResolver localeResolver,
-                                           ObjectProvider<SiteCounter> siteCounter, ClientRegistrationRepository clients) throws Exception {
+                                           ObjectProvider<SiteCounter> siteCounter, ClientRegistrationRepository clients,
+                                           StayLoggedIn stayLoggedIn) throws Exception {
         RequestCache remembered = djPagesRemembered();
         http
                 .headers(headers -> headers.contentSecurityPolicy(csp -> {
@@ -198,7 +222,7 @@ public class SecurityConfig {
                         .permissionsPolicyHeader(permissions -> permissions.policy(PERMISSIONS_POLICY)))
                 // A browser sends its CSP report without a CSRF token
                 // A mail program's one-click "Unsubscribe" (RFC 8058, the automatic e-mails' "Nie wysyłaj mi tego", V64) neither
-                .csrf(csrf -> csrf.ignoringRequestMatchers("/csp-report", "/email/stop/*"))
+                .csrf(csrf -> csrf.csrfTokenRepository(CSRF_TOKENS).ignoringRequestMatchers("/csp-report", "/email/stop/*"))
                 // a guest's request from a page open longer than its session: back to the party with the typed song, not a 403
                 .exceptionHandling(denied -> denied.accessDeniedHandler(new GuestFormExpiredHandler(messageSource, localeResolver))
                         // no login: a DJ's page → the login page and back; a fetch of the panel → "/"; any other address → 404
@@ -243,7 +267,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.HEAD, "/healthz").permitAll()
                         // the demo (DemoController): the demo party's panel, only to look at, and its queue and history
                         .requestMatchers(HttpMethod.GET, "/demo", "/demo/**").permitAll()
-                        // OAuth2 login endpoints must be public
+                        // OAuth2 login endpoints must be public; "/login/**" holds the password's form and "/login/google" (the
+                        // Google button: the box "Nie wylogowuj mnie" kept, then Google's login) — both POSTs with the CSRF token
                         .requestMatchers("/oauth2/**", "/login/**").permitAll()
                         // the login with a password (V72, PasswordLoginController): a new account, its confirmation, a new
                         // password — "/login" and "/login/**" (the login page, its form, "Sprawdź skrzynkę") are above
@@ -259,7 +284,8 @@ public class SecurityConfig {
                         // Google asks which account every time, also after "Wyloguj"
                         .authorizationEndpoint(endpoint -> endpoint.authorizationRequestResolver(accountPicker(clients)))
                         // back to the DJ's page asked for before the login (with its ?party=), else the panel
-                        .successHandler(loginSuccess(remembered, () -> siteCounter.ifAvailable(counter -> counter.count(SiteCounter.Event.LOGIN))))
+                        .successHandler(loginSuccess(remembered, () -> siteCounter.ifAvailable(counter -> counter.count(SiteCounter.Event.LOGIN)),
+                                stayLoggedIn))
                         .failureHandler(loginFailure())
                 )
                 .logout(logout -> logout

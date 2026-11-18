@@ -6,7 +6,7 @@
 - No user table: the DJ is the `owner_id` of the party; one party per DJ. Old parties are never cleaned up (their requests are,
   after 30 days).
 - **The demo's daily limit** is one for all its visitors: a flood blocks its guest page until the nightly reset (Section 5.5).
-- **Single instance:** the caches and the guest limits are in memory — a second instance would need them shared. A restart keeps
+- **Single instance:** the caches, the guest limits and the password login's (`LoginLimiter`, V72) are in memory — a second instance would need them shared. A restart keeps
   the parties' day and the Free plan's AI checks (V71, `GuestLimitStore`, less the last minute); a guest's own limit and the
   address windows start again. The HTTP sessions
   are in the database (review 2.3); each request with a session reads it and writes its last access time (the dashboard: one request
