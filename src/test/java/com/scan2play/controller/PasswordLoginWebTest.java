@@ -50,6 +50,8 @@ class PasswordLoginWebTest {
     private PasswordAccountService accounts;
     @MockitoBean
     private SiteCounter siteCounter;
+    @MockitoBean
+    private com.scan2play.service.AccountSessions accountSessions;
 
     private static DjAccountEntity account() {
         return DjAccountEntity.builder().id(7L).email("ola@example.com").displayName("DJ Ola").passwordHash("{bcrypt}x")
@@ -200,8 +202,12 @@ class PasswordLoginWebTest {
                 .andExpect(status().isOk());
         verify(accounts, never()).resetPassword(any(), any());
 
-        mockMvc.perform(from("/password/reset?token=good").param("token", "good").param("password", "nowe-haslo-22"))
-                .andExpect(redirectedUrl("/dj/dashboard"));
+        var form = from("/password/reset?token=good").param("token", "good").param("password", "nowe-haslo-22");
+        String before = opened.getId();
+        MvcResult result = mockMvc.perform(form).andExpect(redirectedUrl("/dj/dashboard")).andReturn();
+        // the other sessions end, this one stays — it is the one logged in now (under a new id)
+        verify(accountSessions).endAllBut("local:7", before);
+        assertThat(result.getRequest().getSession().getId()).isNotEqualTo(before);
     }
 
     @Test

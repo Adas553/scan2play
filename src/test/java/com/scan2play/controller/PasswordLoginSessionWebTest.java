@@ -62,6 +62,8 @@ class PasswordLoginSessionWebTest {
     private PasswordAccountService accounts;
     @MockitoBean
     private SiteCounter siteCounter;
+    @MockitoBean
+    private com.scan2play.service.AccountSessions accountSessions;
 
     private static DjAccountEntity account() {
         return DjAccountEntity.builder().id(7L).email("ola@example.com").passwordHash("{bcrypt}x").createdAt(Instant.EPOCH)

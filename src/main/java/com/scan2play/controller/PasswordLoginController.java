@@ -2,6 +2,7 @@ package com.scan2play.controller;
 
 import com.scan2play.config.SecurityConfig;
 import com.scan2play.entity.DjAccountEntity;
+import com.scan2play.service.AccountSessions;
 import com.scan2play.service.GuestRequestLimiter;
 import com.scan2play.service.PasswordAccountService;
 import com.scan2play.service.PasswordAccountService.LoginOutcome;
@@ -17,14 +18,13 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.AuthorityUtils;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.context.SecurityContextHolderStrategy;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.security.web.csrf.CsrfToken;
-import org.springframework.session.FindByIndexNameSessionRepository;
-import org.springframework.session.Session;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -58,12 +58,13 @@ public class PasswordLoginController {
 
     private final PasswordAccountService accounts;
     private final GuestRequestLimiter clientAddress;
-    private final ObjectProvider<FindByIndexNameSessionRepository<? extends Session>> sessions;
+    private final AccountSessions sessions;
     private final SecurityContextRepository contexts = new HttpSessionSecurityContextRepository();
+    private final SecurityContextHolderStrategy contextHolder = SecurityContextHolder.getContextHolderStrategy();
     private final AuthenticationSuccessHandler success;
 
     public PasswordLoginController(PasswordAccountService accounts, GuestRequestLimiter clientAddress, ObjectProvider<SiteCounter> siteCounter,
-                                   ObjectProvider<FindByIndexNameSessionRepository<? extends Session>> sessions) {
+                                   AccountSessions sessions) {
         this.accounts = accounts;
         this.clientAddress = clientAddress;
         this.sessions = sessions;
@@ -240,17 +241,10 @@ public class PasswordLoginController {
         if (changed.isEmpty()) {
             return oldLink(model, response, "account.reset.old_link");
         }
-        endSessions(changed.get().userId());
+        // every other session of the account ends; this one stays (deleted under the request, it would log the person out)
+        sessions.endAllBut(changed.get().userId(), request.getSession().getId());
         logIn(changed.get(), request, response);
         return null;
-    }
-
-    /** Every session of the account (Spring Session's index of the login's name); none in a test without Spring Session. */
-    private void endSessions(String userId) {
-        FindByIndexNameSessionRepository<? extends Session> repository = sessions.getIfAvailable();
-        if (repository != null) {
-            repository.findByPrincipalName(userId).keySet().forEach(repository::deleteById);
-        }
     }
 
     // ---------------------------------------------------------------- the login itself
@@ -263,11 +257,11 @@ public class PasswordLoginController {
             throws IOException, ServletException {
         request.getSession();
         request.changeSessionId();
-        request.getSession().removeAttribute("org.springframework.security.web.csrf.HttpSessionCsrfTokenRepository.CSRF_TOKEN");
-        SecurityContext context = SecurityContextHolder.createEmptyContext();
+        SecurityConfig.CSRF_TOKENS.saveToken(null, request, response);   // the next page makes a new one
+        SecurityContext context = contextHolder.createEmptyContext();
         Authentication authentication = authentication(account);
         context.setAuthentication(authentication);
-        SecurityContextHolder.setContext(context);
+        contextHolder.setContext(context);
         contexts.saveContext(context, request, response);
         log.info("Password account {} logged in", account.userId());
         success.onAuthenticationSuccess(request, response, authentication);

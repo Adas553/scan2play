@@ -3,11 +3,14 @@ package com.scan2play.repository;
 import com.scan2play.PostgresIntegrationTest;
 import com.scan2play.entity.DjAccountEntity;
 import com.scan2play.service.AccountDeletionService;
+import com.scan2play.service.AccountSessions;
 import com.scan2play.service.PartySettingsCommandService;
 import com.scan2play.service.PasswordAccountService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.session.FindByIndexNameSessionRepository;
+import org.springframework.session.Session;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -30,6 +33,8 @@ class DjAccountRepositoryIT extends PostgresIntegrationTest {
     @Autowired PartySettingsCommandService commands;
     @Autowired AccountDeletionService deletion;
     @Autowired PlatformTransactionManager transactionManager;
+    @Autowired AccountSessions accountSessions;
+    @Autowired FindByIndexNameSessionRepository<? extends Session> sessionRepository;
 
     private DjAccountEntity account(String email) {
         return DjAccountEntity.builder().email(email).passwordHash("{bcrypt}$2a$10$x").createdAt(Instant.now()).build();
@@ -114,5 +119,29 @@ class DjAccountRepositoryIT extends PostgresIntegrationTest {
         assertThat(accounts.findById(id)).get().extracting(DjAccountEntity::getResetTokenHash).isNull();
         Integer otherKind = transaction.execute(status -> accounts.useVerifyToken(id, hash));
         assertThat(otherKind).as("a link of the other kind").isZero();
+    }
+
+    /** Spring Session's JDBC sessions of an account, found by the login's name: all but the request's own end. */
+    @Test
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    void theAccountsOtherSessionsEnd_theRequestsOwnStays() {
+        FindByIndexNameSessionRepository repository = sessionRepository;
+        String principal = "local:" + System.nanoTime();
+        String[] ids = new String[3];
+        for (int i = 0; i < ids.length; i++) {
+            Session session = (Session) repository.createSession();
+            session.setAttribute(FindByIndexNameSessionRepository.PRINCIPAL_NAME_INDEX_NAME, i < 2 ? principal : "someone-else");
+            repository.save(session);
+            ids[i] = session.getId();
+        }
+
+        accountSessions.endAllBut(principal, ids[0]);
+        assertThat(repository.findById(ids[0])).as("the request's own").isNotNull();
+        assertThat(repository.findById(ids[1])).isNull();
+        assertThat(repository.findById(ids[2])).as("another account's").isNotNull();
+
+        accountSessions.endAll(principal);
+        assertThat(repository.findById(ids[0])).isNull();
+        assertThat(repository.findById(ids[2])).isNotNull();
     }
 }

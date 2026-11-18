@@ -15,6 +15,8 @@ import org.springframework.security.oauth2.client.registration.ClientRegistratio
 import org.springframework.security.oauth2.client.web.DefaultOAuth2AuthorizationRequestResolver;
 import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestRedirectFilter;
 import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestResolver;
+import org.springframework.security.web.csrf.CsrfTokenRepository;
+import org.springframework.security.web.csrf.HttpSessionCsrfTokenRepository;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.core.Authentication;
@@ -80,6 +82,12 @@ public class SecurityConfig {
      * without a session goes.
      */
     static final String LOGIN_PAGE = "/login";
+
+    /**
+     * Where the forms' CSRF tokens are kept (the session) — one instance, so that a login made outside Spring Security's filters
+     * (PasswordLoginController) can give the session a new token the way Spring Security reads it.
+     */
+    public static final CsrfTokenRepository CSRF_TOKENS = new HttpSessionCsrfTokenRepository();
 
     /** Google's login (Spring's OAuth 2 client): the login page's Google button. */
     static final String GOOGLE_LOGIN = "/oauth2/authorization/google";
@@ -198,7 +206,7 @@ public class SecurityConfig {
                         .permissionsPolicyHeader(permissions -> permissions.policy(PERMISSIONS_POLICY)))
                 // A browser sends its CSP report without a CSRF token
                 // A mail program's one-click "Unsubscribe" (RFC 8058, the automatic e-mails' "Nie wysyłaj mi tego", V64) neither
-                .csrf(csrf -> csrf.ignoringRequestMatchers("/csp-report", "/email/stop/*"))
+                .csrf(csrf -> csrf.csrfTokenRepository(CSRF_TOKENS).ignoringRequestMatchers("/csp-report", "/email/stop/*"))
                 // a guest's request from a page open longer than its session: back to the party with the typed song, not a 403
                 .exceptionHandling(denied -> denied.accessDeniedHandler(new GuestFormExpiredHandler(messageSource, localeResolver))
                         // no login: a DJ's page → the login page and back; a fetch of the panel → "/"; any other address → 404
