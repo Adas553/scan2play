@@ -212,6 +212,97 @@ body {
     margin-top: 1vh;
 }
 
+/* ---- The DJ's question (V74): the question large, a bar for each answer, the leading ones in the accent ---- */
+
+.tv-poll-question {
+    margin: 0 0 2vh;
+    color: var(--tv-white);
+    font-size: 5vh;
+    font-weight: 700;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+}
+
+.tv-poll {
+    display: flex;
+    flex-direction: column;
+    gap: 2.2vh;
+    margin: 1vh 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+.tv-poll-answer {
+    display: flex;
+    align-items: baseline;
+    gap: 1.5vw;
+    font-size: 3.8vh;
+    line-height: 1.2;
+}
+
+.tv-poll-share {
+    flex: none;
+    color: var(--tv-muted);
+    font-weight: 700;
+}
+
+.tv-poll-lead .tv-poll-share {
+    color: var(--tv-accent);
+}
+
+.tv-poll-bar {
+    display: block;
+    width: 100%;
+    height: 2.4vh;
+    margin-top: 0.8vh;
+    border: 0;
+    border-radius: 999px;
+    overflow: hidden;
+    -webkit-appearance: none;
+    appearance: none;
+    background: var(--tv-card);
+    color: var(--tv-muted);
+}
+
+.tv-poll-bar::-webkit-progress-bar {
+    background: var(--tv-card);
+    border-radius: 999px;
+}
+
+.tv-poll-bar::-webkit-progress-value {
+    background: var(--tv-muted);
+    border-radius: 999px;
+}
+
+.tv-poll-bar::-moz-progress-bar {
+    background: var(--tv-muted);
+    border-radius: 999px;
+}
+
+.tv-poll-lead .tv-poll-bar {
+    color: var(--tv-accent);
+}
+
+.tv-poll-lead .tv-poll-bar::-webkit-progress-value {
+    background: var(--tv-accent);
+}
+
+.tv-poll-lead .tv-poll-bar::-moz-progress-bar {
+    background: var(--tv-accent);
+}
+
+.tv-poll-total {
+    margin: 2.4vh 0 0;
+    color: var(--tv-muted);
+    font-size: 2.8vh;
+}
+
+.tv-poll-total .second {
+    display: inline;
+    margin-left: 0.6vw;
+    font-size: 1em;
+}
+
 /* a screen standing upright (a phone, a portrait TV): the code above the list, and scrolling allowed */
 @media (orientation: portrait) {
     body {

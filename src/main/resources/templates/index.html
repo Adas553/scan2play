@@ -15,6 +15,10 @@
 
     <div th:replace="~{fragments/components :: back-to-dashboard}"></div>
 
+    <!--/* The DJ's question to the room (V74, GuestPollController): above the form while it is asked — the DJ said "zeskanujcie kod"
+         for it —, its results a while after; an empty place otherwise, filled when the guest comes back to the page. */-->
+    <section th:replace="~{fragments/guest-poll :: guestPoll}"></section>
+
     <!--/* The party page in the order a guest uses it (the design review, 2026-10-09: the field came only after the profiles and the
          tip): who plays, the vibe in one quiet line, the field and "Wyślij prośbę", the list — and the DJ's profiles and tip under it. */-->
     <div class="card p-4 shadow-lg w-100 text-white mb-4">
@@ -100,6 +104,8 @@
 </div>
 
 <script src="/js/guest-party.js" th:src="@{/js/guest-party.js}"></script>
+
+<script th:if="${pollOn == true}" src="/js/guest-poll.js" th:src="@{/js/guest-poll.js}"></script>
 
 <script src="/js/song-autocomplete.js" th:src="@{/js/song-autocomplete.js}"></script>
 

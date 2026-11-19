@@ -76,7 +76,7 @@ class StaffPermissionEndpointsTest {
         when(history.getHistory(any(), org.mockito.ArgumentMatchers.anyInt(), any())).thenReturn(new PlayHistoryService.Page(List.of(), false));
         com.scan2play.service.WishService wishes = WishControllers.wishes(PUB);
         DjDashboardController dashboard = new DjDashboardController(mock(DjService.class), mock(PartySettingsCommandService.class),
-                mock(QrCodeService.class), helper, history, mock(GuestRequestLimiter.class), mock(PushNotificationService.class), staff, mock(com.scan2play.service.StaffInvitationService.class), com.scan2play.service.Plans.off(), new com.scan2play.service.AiHealthMonitor(), com.scan2play.service.PartySchedules.texts(), mock(com.scan2play.service.WelcomeEmailService.class), com.scan2play.service.FreeAiLimit.off(), wishes);
+                mock(QrCodeService.class), helper, history, mock(GuestRequestLimiter.class), mock(PushNotificationService.class), staff, mock(com.scan2play.service.StaffInvitationService.class), com.scan2play.service.Plans.off(), new com.scan2play.service.AiHealthMonitor(), com.scan2play.service.PartySchedules.texts(), mock(com.scan2play.service.WelcomeEmailService.class), com.scan2play.service.FreeAiLimit.off(), wishes, org.mockito.Mockito.mock(com.scan2play.service.PollService.class));
         ReflectionTestUtils.setField(dashboard, "rawBaseUrl", "http://localhost:8080");
         dashboard.init();
         mockMvc = MockMvcBuilders.standaloneSetup(
@@ -93,7 +93,8 @@ class StaffPermissionEndpointsTest {
                         new PartyLogoController(mock(com.scan2play.service.PartyLogoService.class), query, helper,
                                 com.scan2play.service.Plans.off(), codesAsTexts()),
                         WishControllers.djWishes(wishes, helper, com.scan2play.service.Plans.off(),
-                                mock(PartySettingsCommandService.class), codesAsTexts()))
+                                mock(PartySettingsCommandService.class), codesAsTexts()),
+                        new DjPollsController(PollControllers.polls(PUB), helper, com.scan2play.service.Plans.off(), codesAsTexts()))
                 .setViewResolvers(new InternalResourceViewResolver("/WEB-INF/views/", ".html")).build();
     }
 
@@ -148,7 +149,15 @@ class StaffPermissionEndpointsTest {
                 Arguments.of(StaffPermission.WISHES, post("/dj/wishes/1/delete").param("partyCode", PUB)),
                 Arguments.of(StaffPermission.WISHES, post("/dj/wishes/1/must-play").param("partyCode", PUB).param("song", "Wilki - Baśka")),
                 Arguments.of(StaffPermission.WISHES, get("/dj/wishes/1/csv").param("party", PUB)),
-                Arguments.of(StaffPermission.WISHES, get("/dj/qr-print").param("party", PUB).param("wish", "1")));
+                Arguments.of(StaffPermission.WISHES, get("/dj/qr-print").param("party", PUB).param("wish", "1")),
+                // "Pytanie do gości" (V74): the questions, their results, asking, ending, deleting
+                Arguments.of(StaffPermission.POLLS, get("/dj/polls").param("party", PUB)),
+                Arguments.of(StaffPermission.POLLS, get("/dj/polls/1/results").param("party", PUB)),
+                Arguments.of(StaffPermission.POLLS, post("/dj/polls/create").param("partyCode", PUB).param("question", "Disco polo?")
+                        .param("ask", "true")),
+                Arguments.of(StaffPermission.POLLS, post("/dj/polls/1/ask").param("partyCode", PUB)),
+                Arguments.of(StaffPermission.POLLS, post("/dj/polls/1/end").param("partyCode", PUB)),
+                Arguments.of(StaffPermission.POLLS, post("/dj/polls/1/delete").param("partyCode", PUB)));
     }
 
     @ParameterizedTest(name = "{1}: {0}")

@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<body>
+<!--/*
+    "Pytanie do gości" (V74) on the guest's page (GuestPollController, PollView): the DJ's question with a button for each answer;
+    once the guest answered — or the DJ ended it — the results: each answer's share as a bar (a <progress>: no inline style under the
+    Content-Security-Policy), the guest's own marked, and while it is asked the other answers to change their mind. An empty, hidden
+    place when nothing is asked: guest-poll.js fetches the card again when the guest comes back to the page, so a question the DJ
+    asked meanwhile shows up. The question and the answers are the DJ's own words.
+*/-->
+<section th:fragment="guestPoll" id="guestPoll" class="w-100 s2p-mw-500 mb-4 s2p-poll"
+         th:if="${pollOn == true}" th:hidden="${poll == null}" aria-live="polite"
+         th:attr="data-url=@{/p/{code}/poll(code=${partyCode})},data-text-failed=#{guest.poll.failed}">
+    <div th:if="${poll != null}" class="card p-3 p-sm-4 text-white"
+         th:with="asked=${poll.asked()},answered=${pollMine != null},showResults=${pollMine != null or !poll.asked()}">
+        <p class="s2p-poll-kicker mb-1" th:text="${asked} ? #{guest.poll.kicker} : #{guest.poll.kicker.ended}">🗳 The DJ asks</p>
+        <h2 class="s2p-poll-question mb-3" id="pollQuestion" th:text="${poll.question()}">Disco polo — yes or no?</h2>
+
+        <!--/* not answered yet: one tap answers */-->
+        <form th:if="${asked and !answered}" th:action="@{/p/{code}/poll/{id}(code=${partyCode},id=${poll.id()})}" method="POST"
+              class="m-0 d-grid gap-2 s2p-poll-form" id="pollForm">
+            <button th:each="answer, it : ${poll.answers()}" type="submit" name="choice" th:value="${it.index}"
+                    class="btn btn-outline-light btn-lg text-break s2p-poll-answer-btn" th:text="${answer}">Yes</button>
+        </form>
+
+        <th:block th:if="${showResults}">
+            <ul th:replace="~{fragments/guest-poll :: pollRows(${pollResults}, ${pollMine})}"></ul>
+            <p class="small text-secondary mt-2 mb-0" id="pollTotal">
+                <span th:text="#{guest.poll.total(${pollResults.total()})}">Votes: 12</span><th:block
+                    th:if="${!asked}"> · <span th:text="#{guest.poll.ended}">The DJ ended the question.</span></th:block></p>
+            <!--/* answered, still asked: the other answers, to change one's mind */-->
+            <form th:if="${asked and answered}" th:action="@{/p/{code}/poll/{id}(code=${partyCode},id=${poll.id()})}" method="POST"
+                  class="m-0 mt-3 d-flex flex-wrap align-items-center gap-2 s2p-poll-form" id="pollChangeForm">
+                <span class="small text-secondary" th:text="#{guest.poll.change}">Change your answer:</span>
+                <th:block th:each="answer, it : ${poll.answers()}">
+                    <button th:if="${it.index != pollMine}" type="submit" name="choice" th:value="${it.index}"
+                            class="btn btn-sm btn-outline-secondary text-break" th:text="${answer}">No</button>
+                </th:block>
+            </form>
+        </th:block>
+        <p th:if="${pollNote != null}" class="small text-warning mt-2 mb-0" id="pollNote" role="status" th:text="#{${pollNote}}">Not counted.</p>
+    </div>
+</section>
+
+<!--/* The results as rows (the guest's card and the DJ's page): the answer, its share and votes, a bar; the guest's own marked ✓,
+     the leading ones in the accent colour. */-->
+<ul th:fragment="pollRows(results, mine)" class="list-unstyled m-0 d-flex flex-column gap-2 s2p-poll-results">
+    <li th:each="row : ${results.rows()}" class="s2p-poll-row"
+        th:classappend="${(row.leads() ? 's2p-poll-lead ' : '') + (mine != null and row.choice() == mine ? 's2p-poll-mine' : '')}">
+        <div class="d-flex justify-content-between align-items-baseline gap-2">
+            <span class="s2p-poll-answer text-break"><span th:text="${row.answer()}">Yes</span><th:block
+                    th:if="${mine != null and row.choice() == mine}"> <span class="s2p-poll-mine-mark" th:text="#{guest.poll.mine}">✓ your answer</span></th:block></span>
+            <span class="s2p-poll-share text-nowrap"><span class="fw-bold" th:text="${row.percent()} + '%'">58%</span> <span
+                    class="text-secondary" th:text="'(' + ${row.votes()} + ')'">(7)</span></span>
+        </div>
+        <progress class="s2p-poll-bar" max="100" th:value="${row.percent()}" th:attr="aria-label=${row.answer()}"
+                  th:text="${row.percent()} + '%'">58%</progress>
+    </li>
+</ul>
+</body>
+</html>

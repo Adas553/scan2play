@@ -54,6 +54,7 @@ public class GuestController {
     private final GuestRequestService guestRequestService;
     private final PartyScheduleService partyScheduleService;
     private final LibraryHintService libraryHintService;
+    private final PollView pollView;
 
     /**
      * The party page. It takes no {@code HttpSession} of its own (review 2026-10-14 W3): a parameter of that type made a session — a
@@ -68,9 +69,13 @@ public class GuestController {
             PartySettingsEntity settings = planService.asPlanned(partySettingsQueryService.getSettings(partyCode));
 
             if (!settings.isActive()) {
+                // the DJ's question (V74) stands here too: a DJ who closed the requests asks the room alone
+                pollView.addForGuest(model, settings, request);
                 return partyEnded(model, partyCode, settings);
             }
 
+            // the DJ's question (V74) above the form, before the list: the session its form needs is made before the page is drawn
+            pollView.addForGuest(model, settings, request);
             model.addAttribute(GLOBAL_VIBE, settings.getGlobalVibe());
             model.addAttribute(VIBE_NOTE, settings.getVibeNote());
             model.addAttribute(DJ_NAME, settings.getDjName());

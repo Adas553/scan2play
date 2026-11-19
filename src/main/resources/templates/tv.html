@@ -30,6 +30,27 @@
     </section>
 
     <section id="tvList" class="tv-list" th:fragment="tvList" th:attr="data-url=@{/p/{code}/tv/list(code=${partyCode},lang=${#locale.language == 'pl' ? 'pl' : 'en'})}">
+        <!--/* the DJ's question (V74) in place of the list while it is asked, and its results a quarter of an hour after: the
+             question and the answers in the DJ's own words, the rest in the screen's languages */-->
+        <th:block th:if="${poll != null}">
+        <h2><span aria-hidden="true">🗳</span> <span th:if="${#locale.language == 'pl'}" lang="pl" th:text="${poll.asked()} ? 'Pytanie DJ-a' : 'Wyniki pytania'">Pytanie DJ-a</span>
+            <span lang="en" th:class="${#locale.language == 'pl'} ? 'second'" th:text="${poll.asked()} ? 'The DJ asks' : 'The results'">The DJ asks</span></h2>
+        <p class="tv-poll-question" id="tvPollQuestion" th:text="${poll.question()}">Disco polo — tak czy nie?</p>
+        <p th:if="${poll.asked()}" class="tv-hint" id="tvPollHint">
+            <span th:if="${#locale.language == 'pl'}" lang="pl">Zeskanuj kod i odpowiedz na telefonie</span>
+            <span lang="en" th:class="${#locale.language == 'pl'} ? 'second'">Scan the code and answer on your phone</span></p>
+        <ol class="tv-poll" id="tvPoll">
+            <li th:each="row : ${pollResults.rows()}" class="tv-poll-row" th:classappend="${row.leads()} ? 'tv-poll-lead'">
+                <span class="tv-poll-answer"><span class="tv-name" th:text="${row.answer()}">Tak</span>
+                    <span class="tv-poll-share" th:text="${row.percent()} + '%'">58%</span></span>
+                <progress class="tv-poll-bar" max="100" th:value="${row.percent()}" th:attr="aria-label=${row.answer()}"
+                          th:text="${row.percent()} + '%'">58%</progress>
+            </li>
+        </ol>
+        <p class="tv-poll-total" id="tvPollTotal"><span th:if="${#locale.language == 'pl'}" lang="pl" th:text="'Głosy: ' + ${pollResults.total()}">Głosy: 12</span>
+            <span lang="en" th:class="${#locale.language == 'pl'} ? 'second'" th:text="'Votes: ' + ${pollResults.total()}">Votes: 12</span></p>
+        </th:block>
+        <th:block th:if="${poll == null}">
         <h2><span aria-hidden="true">🔥</span> <span th:if="${#locale.language == 'pl'}" lang="pl">Najczęściej wybierane</span>
             <span lang="en" th:class="${#locale.language == 'pl'} ? 'second'">Most wanted</span></h2>
         <!--/* the votes are given on the phone: the screen shows them, so it says where */-->
@@ -53,6 +74,7 @@
             <span th:if="${#locale.language == 'pl'}" lang="pl" th:text="${opensAtPl != null} ? ${opensAtPl} : 'DJ nie przyjmuje teraz próśb'">DJ nie przyjmuje teraz próśb</span>
             <span lang="en" th:class="${#locale.language == 'pl'} ? 'second'"
                   th:text="${opensAtEn != null} ? ${opensAtEn} : 'The DJ is not taking requests now'">The DJ is not taking requests now</span></p>
+        </th:block>
     </section>
 </main>
 <script src="/js/tv.js" th:src="@{/js/tv.js}"></script>
