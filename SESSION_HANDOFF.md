@@ -44,7 +44,7 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
   (`docs/ideas.md` item 15, `docs/context/05-1j-polls.md`): the DJ's question with 2–4 answers above the guests' form (and on "nie
   przyjmuje"), results live on `/dj/polls` and the TV, or kept for later (a game); Pro, permission POLLS. Waits for the owner: a read, a try on a phone, the merge.
 - **2026-11-19 — `claude/admiring-cannon-fud6t3` = `upbeat-franklin-3aa8i3` + its review (`docs/history/review-2026-11-19-polls.md`)
-  and the fixes P1–P15 (P13 left: no migration changed):** the DJ's percents readable, a question asked ends by itself after 12 h,
+  and the fixes P1–P15 (P13 left: the owner's local `scan2play` has V74–V76, so they stay as they are):** the DJ's percents readable, a question asked ends by itself after 12 h,
   the TV switch only the TV, the guest's card folded after an answer, its own limit, the shown question cached 2 s. Waits for the
   owner: the read, a try on a phone, then this branch into #286 / #287 (or merged instead of them).
 - **Waits for the owner (from #269):** after the first commit the deploy window holds back (Fri–Sun 18:00–6:00): does Railway
