@@ -146,6 +146,19 @@ public class DjPollsController {
         return back(partyCode);
     }
 
+    /**
+     * "📺 TV: pytanie" ({@code onTv=true}) or "📺 TV: lista piosenek" (V76): whether the TV screen shows the question or keeps the
+     * guests' most wanted songs; the phones are not changed. Any plan, as ending: it asks nothing new.
+     */
+    @PostMapping("/{id}/tv")
+    public String tv(@PathVariable long id, @RequestParam String partyCode, @RequestParam boolean onTv,
+                     OAuth2AuthenticationToken authentication, HttpSession session, RedirectAttributes redirectAttributes) {
+        sessionHelper.require(partyCode, StaffPermission.POLLS, authentication, session);
+        found(pollService.setOnTv(partyCode, id, onTv));
+        done(redirectAttributes, onTv ? "tv_question" : "tv_songs");
+        return back(partyCode);
+    }
+
     /** "Usuń": the question and its votes, at once — any plan. */
     @PostMapping("/{id}/delete")
     public String delete(@PathVariable long id, @RequestParam String partyCode, OAuth2AuthenticationToken authentication,

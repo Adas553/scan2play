@@ -93,6 +93,10 @@
            th:text="${poll.resultsHidden()} ? #{polls.results.hidden} : #{polls.results.shown}">The guests see the results.</p>
         <p th:if="${state == 'SAVED' and poll.resultsHidden()}" class="small text-warning mt-1 mb-0 s2p-poll-visibility"
            th:text="#{polls.results.later}">Results for the guests: only when you show them.</p>
+        <!--/* what the TV screen shows (V76): the question, or the most wanted songs while it is asked — the phones are not changed */-->
+        <p th:if="${state != 'SAVED' or !poll.onTv()}" class="small mt-1 mb-0 s2p-poll-tv"
+           th:classappend="${poll.onTv()} ? 'text-secondary' : 'text-warning'"
+           th:text="${poll.onTv()} ? #{polls.tv.question} : #{polls.tv.songs}">TV screen: the question.</p>
 
         <div class="s2p-btn-row mt-3">
             <form th:if="${state == 'ASKED'}" th:action="@{/dj/polls/{id}/end(id=${poll.id()})}" method="POST" class="m-0">
@@ -112,6 +116,12 @@
                 <button type="submit" class="btn btn-sm text-nowrap s2p-poll-results-toggle"
                         th:classappend="${poll.resultsHidden()} ? 'btn-action' : 'btn-outline-secondary'"
                         th:text="${poll.resultsHidden()} ? #{polls.results.show} : #{polls.results.hide}">Show the results to the guests</button>
+            </form>
+            <form th:action="@{/dj/polls/{id}/tv(id=${poll.id()})}" method="POST" class="m-0">
+                <input type="hidden" name="partyCode" th:value="${partyCode}">
+                <input type="hidden" name="onTv" th:value="${!poll.onTv()}">
+                <button type="submit" class="btn btn-sm btn-outline-secondary text-nowrap s2p-poll-tv-toggle"
+                        th:text="${poll.onTv()} ? #{polls.tv.to_songs} : #{polls.tv.to_question}">📺 TV: show the songs</button>
             </form>
             <form th:action="@{/dj/polls/{id}/delete(id=${poll.id()})}" method="POST" class="m-0" th:data-confirm="#{polls.delete.confirm}">
                 <input type="hidden" name="partyCode" th:value="${partyCode}">

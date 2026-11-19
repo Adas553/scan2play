@@ -152,6 +152,24 @@ class PollServiceIT extends PostgresIntegrationTest {
         assertThat(polls.create(party, "Disco polo?", List.of("Tak", "Nie"), false, false).orElseThrow().resultsHidden()).isFalse();
     }
 
+    /** The TV keeps the songs (V76): switched per question; back on the TV, the question stays on the screens a while from then. */
+    @Test
+    void theTvSwitch_isKeptPerQuestion_andBackOnTheTvTheQuestionStaysAWhile() {
+        String party = party();
+        PollService.Poll poll = asked(party);
+        assertThat(poll.onTv()).as("on the TV by default").isTrue();
+        assertThat(polls.setOnTv(party, poll.id(), false)).isTrue();
+        assertThat(polls.poll(party, poll.id()).orElseThrow().onTv()).isFalse();
+        assertThat(polls.shown(party)).as("the phones still show it").map(PollService.Poll::id).contains(poll.id());
+
+        polls.end(party, poll.id());
+        jdbc.update("UPDATE party_poll SET closed_at = now() - interval '40 minutes' WHERE id = ?", poll.id());
+        assertThat(polls.shown(party)).isEmpty();
+        assertThat(polls.setOnTv(party, poll.id(), true)).isTrue();
+        assertThat(polls.shown(party)).as("back on the TV: a quarter of an hour from now").map(PollService.Poll::id).contains(poll.id());
+        assertThat(polls.setOnTv("NOPE1", poll.id(), false)).isFalse();
+    }
+
     /** Two "Zadaj" of two questions at once: one is asked, never two (the partial unique index would refuse the second anyway). */
     @Test
     void twoAsksAtOnce_leaveOneAsked() throws Exception {

@@ -158,6 +158,7 @@ class StaffPermissionEndpointsTest {
                 Arguments.of(StaffPermission.POLLS, post("/dj/polls/1/ask").param("partyCode", PUB)),
                 Arguments.of(StaffPermission.POLLS, post("/dj/polls/1/end").param("partyCode", PUB)),
                 Arguments.of(StaffPermission.POLLS, post("/dj/polls/1/results").param("partyCode", PUB).param("hidden", "false")),
+                Arguments.of(StaffPermission.POLLS, post("/dj/polls/1/tv").param("partyCode", PUB).param("onTv", "false")),
                 Arguments.of(StaffPermission.POLLS, post("/dj/polls/1/delete").param("partyCode", PUB)));
     }
 

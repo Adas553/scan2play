@@ -58,15 +58,22 @@ public class PollService {
 
     /**
      * One question of a party, its answers in their order and how many voted; whether the guests see its results
-     * ({@code resultsHidden}: not until the DJ shows them, V75) and when the DJ last showed them.
+     * ({@code resultsHidden}: not until the DJ shows them, V75), when the DJ last brought it to the screens (its results shown, or
+     * the TV switched to it), and whether the TV shows it ({@code onTv}, V76) or keeps the most wanted songs.
      */
     public record Poll(long id, String partyCode, String question, List<String> answers, int voteCount, Instant createdAt,
-                       Instant openedAt, Instant closedAt, boolean resultsHidden, Instant revealedAt) {
+                       Instant openedAt, Instant closedAt, boolean resultsHidden, Instant revealedAt, boolean onTv) {
+
+        /** A question on the TV (V76's default). */
+        public Poll(long id, String partyCode, String question, List<String> answers, int voteCount, Instant createdAt,
+                    Instant openedAt, Instant closedAt, boolean resultsHidden, Instant revealedAt) {
+            this(id, partyCode, question, answers, voteCount, createdAt, openedAt, closedAt, resultsHidden, revealedAt, true);
+        }
 
         /** A question whose results the guests see (V75's default). */
         public Poll(long id, String partyCode, String question, List<String> answers, int voteCount, Instant createdAt,
                     Instant openedAt, Instant closedAt) {
-            this(id, partyCode, question, answers, voteCount, createdAt, openedAt, closedAt, false, null);
+            this(id, partyCode, question, answers, voteCount, createdAt, openedAt, closedAt, false, null, true);
         }
 
         public State state() {
@@ -92,10 +99,10 @@ public class PollService {
     private static final RowMapper<Poll> POLL = (row, n) -> new Poll(row.getLong("id"), row.getString("party_code"),
             row.getString("question"), answers(row.getArray("answers")), row.getInt("vote_count"), instant(row.getTimestamp("created_at")),
             instant(row.getTimestamp("opened_at")), instant(row.getTimestamp("closed_at")), row.getBoolean("results_hidden"),
-            instant(row.getTimestamp("revealed_at")));
+            instant(row.getTimestamp("revealed_at")), row.getBoolean("on_tv"));
 
     private static final String COLUMNS = "id, party_code, question, answers, vote_count, created_at, opened_at, closed_at,"
-            + " results_hidden, revealed_at";
+            + " results_hidden, revealed_at, on_tv";
 
     private final JdbcTemplate jdbc;
     /** A question's votes per answer, by its id — counted at most every {@link #RESULTS_FRESH}, at once after a vote. */
@@ -142,6 +149,16 @@ public class PollService {
     public boolean setResultsHidden(String partyCode, long id, boolean hidden) {
         return jdbc.update("UPDATE party_poll SET results_hidden = ?, revealed_at = CASE WHEN ? THEN revealed_at ELSE now() END"
                 + " WHERE party_code = ? AND id = ?", hidden, hidden, partyCode, id) == 1;
+    }
+
+    /**
+     * "📺 TV: pytanie" ({@code onTv=true}: the screen shows the question, and keeps it a quarter of an hour from now) or "📺 TV: lista
+     * piosenek" — the guests' most wanted stay on the screen while the question is asked; the phones are not changed. False for no
+     * such question.
+     */
+    public boolean setOnTv(String partyCode, long id, boolean onTv) {
+        return jdbc.update("UPDATE party_poll SET on_tv = ?, revealed_at = CASE WHEN ? THEN now() ELSE revealed_at END"
+                + " WHERE party_code = ? AND id = ?", onTv, onTv, partyCode, id) == 1;
     }
 
     /** How many questions the party keeps. */

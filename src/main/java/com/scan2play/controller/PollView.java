@@ -32,7 +32,7 @@ class PollView {
      * once (the landing page, 2026-10-18).
      */
     void addForGuest(Model model, PartySettingsEntity settings, HttpServletRequest request) {
-        if (!add(model, settings)) {
+        if (!add(model, settings, false)) {
             return;
         }
         PollService.Poll poll = (PollService.Poll) model.getAttribute(POLL);
@@ -44,18 +44,18 @@ class PollView {
         model.addAttribute(POLL_MINE, mine.orElse(null));
     }
 
-    /** For the TV: the question and its results, no guest. */
+    /** For the TV: the question and its results, no guest — none when the DJ keeps the most wanted songs on the screen (V76). */
     void addForScreen(Model model, PartySettingsEntity settings) {
-        add(model, settings);
+        add(model, settings, true);
     }
 
-    private boolean add(Model model, PartySettingsEntity settings) {
+    private boolean add(Model model, PartySettingsEntity settings, boolean screen) {
         boolean on = planService.allows(settings, PlanFeature.POLLS);
         model.addAttribute(POLL_ON, on);
         if (!on) {
             return false;
         }
-        pollService.shown(settings.getPartyCode()).ifPresent(poll -> {
+        pollService.shown(settings.getPartyCode()).filter(poll -> !screen || poll.onTv()).ifPresent(poll -> {
             model.addAttribute(POLL, poll);
             // results the DJ keeps hidden (V75) are not in the page at all — not hidden by the look: its source would tell them
             if (!poll.resultsHidden()) {

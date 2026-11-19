@@ -72,7 +72,7 @@ class PollsPageRenderTest {
     private final PollService.Poll saved = new PollService.Poll(2, PARTY, "Kto pierwszy na parkiet?", List.of("Ania", "Kuba"), 0,
             Instant.now(), null, null);
     private final PollService.Poll ended = new PollService.Poll(1, PARTY, "Wolniej czy szybciej?", List.of("Wolniej", "Szybciej", "Tak jak jest"),
-            9, Instant.now(), Instant.now(), Instant.now(), true, null);
+            9, Instant.now(), Instant.now(), Instant.now(), true, null, false);
 
     @BeforeAll
     static void setUpEngine() {
@@ -162,6 +162,10 @@ class PollsPageRenderTest {
                 "Goście i ekran TV widzą wyniki.", "action=\"/dj/polls/3/results\"", ">Ukryj wyniki przed gośćmi<",
                 "Wyniki ukryte — goście i ekran TV widzą tylko liczbę głosów.", "action=\"/dj/polls/1/results\"", ">👀 Pokaż wyniki gościom<");
         assertThat(html).doesNotContain("action=\"/dj/polls/2/results\"");
+        // the TV screen (V76): the question asked is on it, the ended one left the songs there; switched each way
+        assertThat(html).contains("Ekran TV: pytanie.", "Ekran TV: lista piosenek — pytanie widać tylko na telefonach gości.",
+                "action=\"/dj/polls/3/tv\"", ">📺 TV: pokaż listę piosenek<", "action=\"/dj/polls/1/tv\"", ">📺 TV: pokaż pytanie<",
+                ">📺 Otwórz ekran TV<");
         DashboardPageRenderTest.assertNothingInline(html);
         write("polls.html", html);
     }

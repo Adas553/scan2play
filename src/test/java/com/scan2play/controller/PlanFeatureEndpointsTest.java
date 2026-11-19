@@ -212,6 +212,7 @@ class PlanFeatureEndpointsTest {
                 Arguments.of(get("/dj/polls/1/results").param("party", PUB)),
                 Arguments.of(post("/dj/polls/1/end").param("partyCode", PUB)),
                 Arguments.of(post("/dj/polls/1/results").param("partyCode", PUB).param("hidden", "false")),
+                Arguments.of(post("/dj/polls/1/tv").param("partyCode", PUB).param("onTv", "false")),
                 Arguments.of(post("/dj/polls/1/delete").param("partyCode", PUB)));
     }
 

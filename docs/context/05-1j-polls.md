@@ -9,7 +9,9 @@ phones, one vote each, and the DJ sees the results live, the TV screen too. Noth
 `polls.yes` / `polls.no`), `vote_count`, `opened_at` / `closed_at` — the state: neither = saved for later ("Zapisz na później"),
 `opened_at` alone = asked now, both = ended. `results_hidden` (V75, picked when it is made: "Od razu po ich głosie" — the default — or
 "Dopiero gdy je pokażę", and switched on each question asked or ended: "👀 Pokaż wyniki gościom" / "Ukryj wyniki przed gośćmi",
-`POST /dj/polls/{id}/results`, any plan) and `revealed_at` (when the DJ last showed them). **One question of a party is asked at a time** (the partial unique index
+`POST /dj/polls/{id}/results`, any plan) and `revealed_at` (when the DJ last brought it to the screens: its results shown, or the TV switched to it). `on_tv` (V76, true
+by default): whether the TV shows it — "📺 TV: pokaż listę piosenek" / "📺 TV: pokaż pytanie" on each question, any time, any plan,
+`POST /dj/polls/{id}/tv`; the phones are not changed by it. **One question of a party is asked at a time** (the partial unique index
 `uk_party_poll_asked`): "Zadaj teraz" ends the one asked before in the same transaction, under the party row's lock (two "Zadaj" at
 once leave one asked, `PollServiceIT`); an ended one asked again ("Zadaj ponownie") keeps its votes and takes more. A party keeps at
 most `MAX_POLLS` = 30 (counted under the same lock); deleted by "Usuń" (any plan), with the party, 90 days after it was made
@@ -40,7 +42,7 @@ tap sends one; an expired form goes back to the party's page (`GuestFormExpiredH
 (`GET /p/{code}/poll`) when the guest comes back to the page — no timer, as the list. Without the plan's `POLLS` no card and no
 script. The kiosk has none (one device, many guests).
 
-**The TV** (`tv.html`, `TvScreenController`): while a question is asked, and 15 minutes after, the list's place shows it — the
+**The TV** (`tv.html`, `TvScreenController`): unless the DJ keeps the songs there (`on_tv`, `PollView.addForScreen`), while a question is asked, and 15 minutes after, the list's place shows it — the
 question, "Zeskanuj kod i odpowiedz na telefonie", a bar for each answer with its share, the votes — in the screen's languages; with the results kept for later
 "Wyniki pokaże DJ" and the votes coming in, no bars — the moment the DJ shows them is here. The words of the question are the DJ's.
 

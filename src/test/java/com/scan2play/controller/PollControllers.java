@@ -35,6 +35,7 @@ final class PollControllers {
         when(polls.create(anyString(), anyString(), anyList(), anyBoolean(), anyBoolean())).thenReturn(Optional.of(poll));
         when(polls.ask(partyCode, POLL)).thenReturn(true);
         when(polls.end(partyCode, POLL)).thenReturn(true);
+        when(polls.setOnTv(org.mockito.ArgumentMatchers.eq(partyCode), org.mockito.ArgumentMatchers.eq(POLL), anyBoolean())).thenReturn(true);
         when(polls.setResultsHidden(org.mockito.ArgumentMatchers.eq(partyCode), org.mockito.ArgumentMatchers.eq(POLL), anyBoolean()))
                 .thenReturn(true);
         when(polls.delete(partyCode, POLL)).thenReturn(true);

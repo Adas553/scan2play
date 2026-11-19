@@ -257,6 +257,21 @@ class GuestPollWebTest {
                 .doesNotContain("%", "tv-poll-bar", "tv-poll-lead");
     }
 
+    /** The DJ keeps the songs on the TV (V76): the screen shows the most wanted, the phones still the question. */
+    @Test
+    void aQuestionOffTheTv_leavesTheSongsOnTheScreen_andStaysOnThePhones() throws Exception {
+        PollService.Poll offTv = new PollService.Poll(5, PARTY, asked.question(), asked.answers(), 12, Instant.now(), Instant.now(), null,
+                false, null, false);
+        when(pollService.shown(PARTY)).thenReturn(Optional.of(offTv));
+        when(pollService.results(offTv)).thenReturn(results);
+        String tv = mockMvc.perform(get("/p/" + PARTY + "/tv/list").param("lang", "pl")).andReturn().getResponse()
+                .getContentAsString(StandardCharsets.UTF_8);
+        assertThat(tv).contains("Najczęściej wybierane").doesNotContain("Disco polo", "tv-poll");
+        String card = mockMvc.perform(get("/p/" + PARTY + "/poll").header("Accept-Language", "pl-PL")).andReturn().getResponse()
+                .getContentAsString(StandardCharsets.UTF_8);
+        assertThat(card).contains(">Disco polo — tak czy nie?<", "id=\"pollForm\"");
+    }
+
     @Test
     void theTv_showsTheQuestionWithItsResults_inPlaceOfTheList() throws Exception {
         String html = mockMvc.perform(get("/p/" + PARTY + "/tv/list").param("lang", "pl")).andExpect(status().isOk()).andReturn()
