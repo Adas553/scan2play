@@ -56,9 +56,18 @@ public class PollService {
     /** Where a question is: saved for later, asked now, or ended. */
     public enum State { SAVED, ASKED, ENDED }
 
-    /** One question of a party, its answers in their order and how many voted. */
+    /**
+     * One question of a party, its answers in their order and how many voted; whether the guests see its results
+     * ({@code resultsHidden}: not until the DJ shows them, V75) and when the DJ last showed them.
+     */
     public record Poll(long id, String partyCode, String question, List<String> answers, int voteCount, Instant createdAt,
-                       Instant openedAt, Instant closedAt) {
+                       Instant openedAt, Instant closedAt, boolean resultsHidden, Instant revealedAt) {
+
+        /** A question whose results the guests see (V75's default). */
+        public Poll(long id, String partyCode, String question, List<String> answers, int voteCount, Instant createdAt,
+                    Instant openedAt, Instant closedAt) {
+            this(id, partyCode, question, answers, voteCount, createdAt, openedAt, closedAt, false, null);
+        }
 
         public State state() {
             return openedAt == null ? State.SAVED : closedAt == null ? State.ASKED : State.ENDED;
@@ -82,9 +91,11 @@ public class PollService {
 
     private static final RowMapper<Poll> POLL = (row, n) -> new Poll(row.getLong("id"), row.getString("party_code"),
             row.getString("question"), answers(row.getArray("answers")), row.getInt("vote_count"), instant(row.getTimestamp("created_at")),
-            instant(row.getTimestamp("opened_at")), instant(row.getTimestamp("closed_at")));
+            instant(row.getTimestamp("opened_at")), instant(row.getTimestamp("closed_at")), row.getBoolean("results_hidden"),
+            instant(row.getTimestamp("revealed_at")));
 
-    private static final String COLUMNS = "id, party_code, question, answers, vote_count, created_at, opened_at, closed_at";
+    private static final String COLUMNS = "id, party_code, question, answers, vote_count, created_at, opened_at, closed_at,"
+            + " results_hidden, revealed_at";
 
     private final JdbcTemplate jdbc;
     /** A question's votes per answer, by its id — counted at most every {@link #RESULTS_FRESH}, at once after a vote. */
@@ -114,13 +125,23 @@ public class PollService {
     }
 
     /**
-     * The question the guests' page and the TV show: the one asked now, else the one ended in the last
-     * {@link #SHOWN_AFTER_END} with its results.
+     * The question the guests' page and the TV show: the one asked now, else the one that ended — or whose results the DJ showed —
+     * in the last {@link #SHOWN_AFTER_END}, the latest of them. A party has at most {@value #MAX_POLLS}: the sort is of those.
      */
     public Optional<Poll> shown(String partyCode) {
         return jdbc.query("SELECT " + COLUMNS + " FROM party_poll WHERE party_code = ? AND opened_at IS NOT NULL"
-                + " AND (closed_at IS NULL OR closed_at > ?) ORDER BY closed_at IS NULL DESC, closed_at DESC LIMIT 1", POLL, partyCode,
+                + " AND (closed_at IS NULL OR greatest(closed_at, revealed_at) > ?)"
+                + " ORDER BY closed_at IS NULL DESC, greatest(closed_at, revealed_at) DESC LIMIT 1", POLL, partyCode,
                 Timestamp.from(Instant.now().minus(SHOWN_AFTER_END))).stream().findFirst();
+    }
+
+    /**
+     * "Pokaż wyniki gościom" ({@code hidden=false}: the guests' page and the TV show the numbers from now, and the question stays
+     * there a quarter of an hour after this) or "Ukryj wyniki przed gośćmi". False for no such question.
+     */
+    public boolean setResultsHidden(String partyCode, long id, boolean hidden) {
+        return jdbc.update("UPDATE party_poll SET results_hidden = ?, revealed_at = CASE WHEN ? THEN revealed_at ELSE now() END"
+                + " WHERE party_code = ? AND id = ?", hidden, hidden, partyCode, id) == 1;
     }
 
     /** How many questions the party keeps. */
@@ -135,14 +156,15 @@ public class PollService {
      *
      * @param question a question {@link #tidyQuestion} kept
      * @param answers  answers {@link #tidyAnswers} kept
+     * @param hideResults the guests see no numbers until the DJ shows them (V75)
      */
     @Transactional
-    public Optional<Poll> create(String partyCode, String question, List<String> answers, boolean ask) {
+    public Optional<Poll> create(String partyCode, String question, List<String> answers, boolean hideResults, boolean ask) {
         if (!lockParty(partyCode) || count(partyCode) >= MAX_POLLS) {
             return Optional.empty();
         }
-        Long id = jdbc.queryForObject("INSERT INTO party_poll (party_code, question, answers) VALUES (?, ?, ?) RETURNING id", Long.class,
-                partyCode, question, answers.toArray(String[]::new));
+        Long id = jdbc.queryForObject("INSERT INTO party_poll (party_code, question, answers, results_hidden) VALUES (?, ?, ?, ?)"
+                + " RETURNING id", Long.class, partyCode, question, answers.toArray(String[]::new), hideResults);
         if (ask) {
             askLocked(partyCode, id);
         }

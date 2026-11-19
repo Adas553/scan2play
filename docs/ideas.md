@@ -245,6 +245,8 @@ piece of work or when a task names an item. A finished item stays here until its
    the request form (the guests came to ask for a song), and on the page "DJ nie przyjmuje teraz próśb" — a DJ who closes the requests
    asks alone. Pro (`PlanFeature.POLLS`, as the kiosk and the wishes), the permission POLLS (V74 gives it to the co-organisers' whole
    sets). The guest sees the results after answering (and everyone 15 minutes after the end); the TV shows the question and its bars.
+   The DJ may keep the results for later (V75; the owner, 2026-11-19: "poczekać na końcu w razie zabawy"): picked per question,
+   switched any time; then the guests and the TV see only how many voted, "↻ Sprawdź wyniki" on the phone.
    Details: `docs/context/05-1j-polls.md`. **Later, only if DJs ask:** the questions in "Podsumowanie wieczoru"; a CSV. **Rejected:**
    the guests' own words as answers (moderation, the AI, the privacy policy); quizzes with points and names (personal data, a bigger
    feature); the AI checking the DJ's question (their own words, as the vibe note); the kiosk (one device, many guests).

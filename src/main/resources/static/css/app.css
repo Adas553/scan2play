@@ -1796,7 +1796,8 @@ a.s2p-schedule-text:focus-visible { color: var(--s2p-white); text-decoration: un
 .s2p-poll-kicker { color: var(--s2p-action); font-weight: 600; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.04em; }
 .s2p-poll-question { font-size: 1.35rem; font-weight: 700; color: var(--s2p-white); overflow-wrap: anywhere; }
 .s2p-poll-answer-btn { min-height: 48px; }
-.s2p-poll-form .btn-sm { min-height: 44px; min-width: 44px; }
+.s2p-poll-form .btn-sm,
+.s2p-poll-refresh { min-height: 44px; min-width: 44px; }
 .s2p-poll-bar {
     display: block; width: 100%; height: 0.6rem; margin-top: 0.3rem; border: 0; border-radius: 999px; overflow: hidden;
     -webkit-appearance: none; appearance: none; background: var(--s2p-bg-hover); color: var(--s2p-grey);

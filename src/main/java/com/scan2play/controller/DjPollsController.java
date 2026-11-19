@@ -86,11 +86,12 @@ public class DjPollsController {
 
     /**
      * "Zadaj teraz" ({@code ask=true}) or "Zapisz na później": a new question with the answers given — none typed is "Tak" / "Nie" in
-     * the DJ's language. Pro.
+     * the DJ's language —, its results shown to the guests after their vote or kept for later ({@code hideResults}, V75). Pro.
      */
     @PostMapping("/create")
     public String create(@RequestParam String partyCode, @RequestParam(required = false) String question,
                          @RequestParam(name = "answer", required = false) List<String> answers,
+                         @RequestParam(defaultValue = "false") boolean hideResults,
                          @RequestParam(defaultValue = "false") boolean ask, OAuth2AuthenticationToken authentication,
                          HttpSession session, RedirectAttributes redirectAttributes, Locale locale) {
         planService.require(sessionHelper.require(partyCode, StaffPermission.POLLS, authentication, session), PlanFeature.POLLS);
@@ -103,7 +104,7 @@ public class DjPollsController {
             done(redirectAttributes, "invalid");
             return back(partyCode);
         }
-        return pollService.create(partyCode, kept, keptAnswers, ask).map(made -> {
+        return pollService.create(partyCode, kept, keptAnswers, hideResults, ask).map(made -> {
             done(redirectAttributes, ask ? "asked" : "saved");
             return back(partyCode);
         }).orElseGet(() -> {
@@ -129,6 +130,19 @@ public class DjPollsController {
         sessionHelper.require(partyCode, StaffPermission.POLLS, authentication, session);
         found(pollService.end(partyCode, id));
         done(redirectAttributes, "ended");
+        return back(partyCode);
+    }
+
+    /**
+     * "Pokaż wyniki gościom" ({@code hidden=false}) or "Ukryj wyniki przed gośćmi" (V75): whether the guests' page and the TV show the
+     * numbers — the DJ keeps them for a game's end, and shows them when they say so. Any plan, as ending: it asks nothing new.
+     */
+    @PostMapping("/{id}/results")
+    public String results(@PathVariable long id, @RequestParam String partyCode, @RequestParam boolean hidden,
+                          OAuth2AuthenticationToken authentication, HttpSession session, RedirectAttributes redirectAttributes) {
+        sessionHelper.require(partyCode, StaffPermission.POLLS, authentication, session);
+        found(pollService.setResultsHidden(partyCode, id, hidden));
+        done(redirectAttributes, hidden ? "results_hidden" : "results_shown");
         return back(partyCode);
     }
 

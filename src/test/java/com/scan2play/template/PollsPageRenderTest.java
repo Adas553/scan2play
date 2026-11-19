@@ -72,7 +72,7 @@ class PollsPageRenderTest {
     private final PollService.Poll saved = new PollService.Poll(2, PARTY, "Kto pierwszy na parkiet?", List.of("Ania", "Kuba"), 0,
             Instant.now(), null, null);
     private final PollService.Poll ended = new PollService.Poll(1, PARTY, "Wolniej czy szybciej?", List.of("Wolniej", "Szybciej", "Tak jak jest"),
-            9, Instant.now(), Instant.now(), Instant.now());
+            9, Instant.now(), Instant.now(), Instant.now(), true, null);
 
     @BeforeAll
     static void setUpEngine() {
@@ -101,7 +101,7 @@ class PollsPageRenderTest {
                 new PollService.Row(1, "Kuba", 0, 0, false)), 0));
         when(polls.results(ended)).thenReturn(new PollService.Results(ended, List.of(new PollService.Row(0, "Wolniej", 2, 22, false),
                 new PollService.Row(1, "Szybciej", 6, 67, true), new PollService.Row(2, "Tak jak jest", 1, 11, false)), 9));
-        when(polls.create(anyString(), anyString(), anyList(), anyBoolean())).thenReturn(Optional.of(asked));
+        when(polls.create(anyString(), anyString(), anyList(), anyBoolean(), anyBoolean())).thenReturn(Optional.of(asked));
     }
 
     private static OAuth2AuthenticationToken user(String sub) {
@@ -157,6 +157,11 @@ class PollsPageRenderTest {
                 ">Wolniej czy szybciej?<", ">zakończone<", ">Zadaj ponownie<", "action=\"/dj/polls/1/ask\"",
                 "data-confirm=\"Usunąć to pytanie razem z głosami?\"");
         assertThat(html).containsOnlyOnce("data-poll-live=");
+        // the guests' results (V75): picked when made; on each question asked or ended, whether they see them and the switch
+        assertThat(html).contains("name=\"hideResults\"", ">Od razu po ich głosie<", ">Dopiero gdy je pokażę (np. zabawa)<",
+                "Goście i ekran TV widzą wyniki.", "action=\"/dj/polls/3/results\"", ">Ukryj wyniki przed gośćmi<",
+                "Wyniki ukryte — goście i ekran TV widzą tylko liczbę głosów.", "action=\"/dj/polls/1/results\"", ">👀 Pokaż wyniki gościom<");
+        assertThat(html).doesNotContain("action=\"/dj/polls/2/results\"");
         DashboardPageRenderTest.assertNothingInline(html);
         write("polls.html", html);
     }
@@ -197,22 +202,22 @@ class PollsPageRenderTest {
     void askingWithNoAnswerTyped_isYesOrNo_inTheDjsLanguage_andOneAnswerIsRefused() {
         DjPollsController controller = controller(Plans.off());
         RedirectAttributesModelMap flash = new RedirectAttributesModelMap();
-        assertThat(controller.create(PARTY, "Disco polo?", List.of("", " ", "", ""), true, user("owner"), new MockHttpSession(), flash, PL))
+        assertThat(controller.create(PARTY, "Disco polo?", List.of("", " ", "", ""), false, true, user("owner"), new MockHttpSession(), flash, PL))
                 .isEqualTo("redirect:/dj/polls?party=POLL1");
-        verify(polls).create(PARTY, "Disco polo?", List.of("Tak", "Nie"), true);
+        verify(polls).create(PARTY, "Disco polo?", List.of("Tak", "Nie"), false, true);
         assertThat(flash.getFlashAttributes().get("pollDone")).isEqualTo("asked");
 
         RedirectAttributesModelMap refused = new RedirectAttributesModelMap();
-        controller.create(PARTY, "Disco polo?", List.of("Tak", "", "", ""), false, user("owner"), new MockHttpSession(), refused, PL);
+        controller.create(PARTY, "Disco polo?", List.of("Tak", "", "", ""), false, false, user("owner"), new MockHttpSession(), refused, PL);
         assertThat(refused.getFlashAttributes().get("pollDone")).isEqualTo("invalid");
-        controller.create(PARTY, "   ", List.of(), false, user("owner"), new MockHttpSession(), refused, PL);
-        verify(polls, never()).create(eq(PARTY), anyString(), eq(List.of("Tak")), anyBoolean());
+        controller.create(PARTY, "   ", List.of(), false, false, user("owner"), new MockHttpSession(), refused, PL);
+        verify(polls, never()).create(eq(PARTY), anyString(), eq(List.of("Tak")), anyBoolean(), anyBoolean());
     }
 
     @Test
     void withoutPro_nothingIsMadeOrAsked() {
         DjPollsController controller = controller(Plans.enforced());
-        assertThatThrownBy(() -> controller.create(PARTY, "Disco polo?", List.of(), true, user("owner"), new MockHttpSession(),
+        assertThatThrownBy(() -> controller.create(PARTY, "Disco polo?", List.of(), false, true, user("owner"), new MockHttpSession(),
                 new RedirectAttributesModelMap(), PL)).isInstanceOf(com.scan2play.service.PlanRequiredException.class);
         assertThatThrownBy(() -> controller.ask(2L, PARTY, user("owner"), new MockHttpSession(), new RedirectAttributesModelMap()))
                 .isInstanceOf(com.scan2play.service.PlanRequiredException.class);

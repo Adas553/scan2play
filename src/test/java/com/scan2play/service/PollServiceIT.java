@@ -38,7 +38,7 @@ class PollServiceIT extends PostgresIntegrationTest {
     }
 
     private PollService.Poll asked(String party) {
-        return polls.create(party, "Disco polo?", List.of("Tak", "Nie", "Nie wiem"), true).orElseThrow();
+        return polls.create(party, "Disco polo?", List.of("Tak", "Nie", "Nie wiem"), false, true).orElseThrow();
     }
 
     private int[] votes(PollService.Poll poll) {
@@ -103,7 +103,7 @@ class PollServiceIT extends PostgresIntegrationTest {
         String party = party();
         PollService.Poll first = asked(party);
         polls.vote(party, first.id(), "voter-a", 1);
-        PollService.Poll second = polls.create(party, "Wolniej czy szybciej?", List.of("Wolniej", "Szybciej"), false).orElseThrow();
+        PollService.Poll second = polls.create(party, "Wolniej czy szybciej?", List.of("Wolniej", "Szybciej"), false, false).orElseThrow();
         assertThat(second.state()).isEqualTo(PollService.State.SAVED);
         assertThat(polls.vote(party, second.id(), "voter-a", 0)).as("a saved one takes no vote").isEqualTo(PollService.Voted.NOT_ASKED);
         assertThat(polls.asked(party)).map(PollService.Poll::id).contains(first.id());
@@ -126,13 +126,39 @@ class PollServiceIT extends PostgresIntegrationTest {
         assertThat(polls.ask("NOPE1", first.id())).as("another party's question").isFalse();
     }
 
+    /**
+     * Results kept for later (V75): made so, hidden until the DJ shows them; shown, the question stays on the guests' page and the
+     * TV a quarter of an hour from then — even shown long after it ended.
+     */
+    @Test
+    void resultsKeptForLater_areShownWhenTheDjSays_andTheQuestionStaysAWhileFromThen() {
+        String party = party();
+        PollService.Poll poll = polls.create(party, "Kto pierwszy na parkiet?", List.of("Ania", "Kuba"), true, true).orElseThrow();
+        assertThat(poll.resultsHidden()).isTrue();
+        assertThat(poll.revealedAt()).isNull();
+        assertThat(polls.end(party, poll.id())).isTrue();
+        jdbc.update("UPDATE party_poll SET closed_at = now() - interval '40 minutes' WHERE id = ?", poll.id());
+        assertThat(polls.shown(party)).as("ended long ago, never shown").isEmpty();
+
+        assertThat(polls.setResultsHidden(party, poll.id(), false)).isTrue();
+        PollService.Poll shown = polls.poll(party, poll.id()).orElseThrow();
+        assertThat(shown.resultsHidden()).isFalse();
+        assertThat(shown.revealedAt()).isNotNull();
+        assertThat(polls.shown(party)).map(PollService.Poll::id).as("shown now: on the guests' page a while").contains(poll.id());
+
+        assertThat(polls.setResultsHidden(party, poll.id(), true)).isTrue();
+        assertThat(polls.poll(party, poll.id()).orElseThrow().resultsHidden()).isTrue();
+        assertThat(polls.setResultsHidden("NOPE1", poll.id(), false)).as("another party's question").isFalse();
+        assertThat(polls.create(party, "Disco polo?", List.of("Tak", "Nie"), false, false).orElseThrow().resultsHidden()).isFalse();
+    }
+
     /** Two "Zadaj" of two questions at once: one is asked, never two (the partial unique index would refuse the second anyway). */
     @Test
     void twoAsksAtOnce_leaveOneAsked() throws Exception {
         String party = party();
         List<Long> ids = new ArrayList<>();
         for (int i = 0; i < 6; i++) {
-            ids.add(polls.create(party, "Pytanie " + i, List.of("Tak", "Nie"), false).orElseThrow().id());
+            ids.add(polls.create(party, "Pytanie " + i, List.of("Tak", "Nie"), false, false).orElseThrow().id());
         }
         List<Boolean> answers = atOnce(6, n -> polls.ask(party, ids.get(n)));
         assertThat(answers).containsOnly(true);
@@ -144,12 +170,12 @@ class PollServiceIT extends PostgresIntegrationTest {
     void aParty_keepsAtMostItsQuestions_andDeletingOneMakesRoom() {
         String party = party();
         for (int i = 0; i < PollService.MAX_POLLS; i++) {
-            assertThat(polls.create(party, "Pytanie " + i, List.of("Tak", "Nie"), false)).isPresent();
+            assertThat(polls.create(party, "Pytanie " + i, List.of("Tak", "Nie"), false, false)).isPresent();
         }
-        assertThat(polls.create(party, "Jeszcze jedno", List.of("Tak", "Nie"), true)).isEmpty();
+        assertThat(polls.create(party, "Jeszcze jedno", List.of("Tak", "Nie"), false, true)).isEmpty();
         assertThat(polls.pollsOf(party)).hasSize(PollService.MAX_POLLS).first().extracting(PollService.Poll::question).isEqualTo("Pytanie 29");
         assertThat(polls.delete(party, polls.pollsOf(party).get(0).id())).isTrue();
-        assertThat(polls.create(party, "Jeszcze jedno", List.of("Tak", "Nie"), true)).isPresent();
+        assertThat(polls.create(party, "Jeszcze jedno", List.of("Tak", "Nie"), false, true)).isPresent();
     }
 
     @Test
@@ -163,7 +189,7 @@ class PollServiceIT extends PostgresIntegrationTest {
 
         jdbc.update("UPDATE party_poll SET created_at = ? WHERE id = ?", java.sql.Timestamp.from(Instant.now().minus(91, ChronoUnit.DAYS)),
                 poll.id());
-        PollService.Poll fresh = polls.create(moved, "Świeże", List.of("Tak", "Nie"), false).orElseThrow();
+        PollService.Poll fresh = polls.create(moved, "Świeże", List.of("Tak", "Nie"), false, false).orElseThrow();
         assertThat(polls.purgeBefore(Instant.now().minus(PollService.KEPT_DAYS, ChronoUnit.DAYS))).isGreaterThanOrEqualTo(1);
         assertThat(polls.poll(moved, poll.id())).isEmpty();
         assertThat(polls.poll(moved, fresh.id())).isPresent();

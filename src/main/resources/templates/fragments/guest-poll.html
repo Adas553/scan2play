@@ -13,7 +13,7 @@
          th:attr="data-url=@{/p/{code}/poll(code=${partyCode})},data-text-failed=#{guest.poll.failed}">
     <div th:if="${poll != null}" class="card p-3 p-sm-4 text-white"
          th:with="asked=${poll.asked()},answered=${pollMine != null},showResults=${pollMine != null or !poll.asked()}">
-        <p class="s2p-poll-kicker mb-1" th:text="${asked} ? #{guest.poll.kicker} : #{guest.poll.kicker.ended}">🗳 The DJ asks</p>
+        <p class="s2p-poll-kicker mb-1" th:text="${asked or pollResults == null} ? #{guest.poll.kicker} : #{guest.poll.kicker.ended}">🗳 The DJ asks</p>
         <h2 class="s2p-poll-question mb-3" id="pollQuestion" th:text="${poll.question()}">Disco polo — yes or no?</h2>
 
         <!--/* not answered yet: one tap answers */-->
@@ -24,10 +24,19 @@
         </form>
 
         <th:block th:if="${showResults}">
-            <ul th:replace="~{fragments/guest-poll :: pollRows(${pollResults}, ${pollMine})}"></ul>
+            <th:block th:if="${pollResults != null}"><ul th:replace="~{fragments/guest-poll :: pollRows(${pollResults}, ${pollMine})}"></ul></th:block>
+            <!--/* the DJ keeps the results for later (V75): the guest's own answer, how many voted, and a way to look again — the page
+                 asks the server only when someone looks, so the moment the DJ shows them is on the TV, and here on "↻" */-->
+            <th:block th:if="${pollResults == null}">
+                <p th:if="${answered}" class="mb-1 s2p-poll-mine" id="pollMineHidden"><span class="s2p-poll-answer"
+                        th:text="${poll.answers()[pollMine]}">Kuba</span> <span class="s2p-poll-mine-mark" th:text="#{guest.poll.mine}">✓ Yours</span></p>
+                <p class="mb-0 text-secondary" id="pollHidden" th:text="#{guest.poll.hidden}">The DJ will show the results.</p>
+            </th:block>
             <p class="small text-secondary mt-2 mb-0" id="pollTotal">
-                <span th:text="#{guest.poll.total(${pollResults.total()})}">Votes: 12</span><th:block
+                <span th:text="#{guest.poll.total(${pollResults != null ? pollResults.total() : poll.voteCount()})}">Votes: 12</span><th:block
                     th:if="${!asked}"> · <span th:text="#{guest.poll.ended}">The DJ ended the question.</span></th:block></p>
+            <button th:if="${pollResults == null}" type="button" class="btn btn-sm btn-outline-light mt-3 s2p-poll-refresh" data-poll-refresh
+                    th:text="#{guest.poll.check}">↻ Check the results</button>
             <!--/* answered, still asked: the other answers, to change one's mind */-->
             <form th:if="${asked and answered}" th:action="@{/p/{code}/poll/{id}(code=${partyCode},id=${poll.id()})}" method="POST"
                   class="m-0 mt-3 d-flex flex-wrap align-items-center gap-2 s2p-poll-form" id="pollChangeForm">

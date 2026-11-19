@@ -40,9 +40,9 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
   migration; P7, P10 left):** "Wyloguj na innych urządzeniach" (`POST /dj/logout-others`), a ceiling of account e-mails, the cookie's
   attributes in `application.properties` (`SessionCookieIT`), the Google choice valid 10 min. Waits for the owner: the merge; to try
   on an iPhone: Enter ("Idź") on `/login` = the password's login.
-- **2026-11-19 — `claude/upbeat-franklin-3aa8i3`, migration V74 (two new tables, no rows moved), no PR yet:** "Pytanie do gości"
+- **2026-11-19 — `claude/upbeat-franklin-3aa8i3`, migrations V74 (two new tables) and V75 (two columns), no rows moved, no PR yet:** "Pytanie do gości"
   (`docs/ideas.md` item 15, `docs/context/05-1j-polls.md`): the DJ's question with 2–4 answers above the guests' form (and on "nie
-  przyjmuje"), results live on `/dj/polls` and the TV; Pro, permission POLLS. Waits for the owner: a read, a try on a phone, then a PR.
+  przyjmuje"), results live on `/dj/polls` and the TV, or kept for later (a game); Pro, permission POLLS. Waits for the owner: a read, a try on a phone, then a PR.
 - **Waits for the owner (from #269):** after the first commit the deploy window holds back (Fri–Sun 18:00–6:00): does Railway
   deploy it on the workflow's re-run? UptimeRobot is set up (the owner, 2026-11-17; `docs/monitoring.md`).
 - **Waits for the owner (the wishes, #263):** the three older Polish texts with "DJ" and a masculine verb (`guest.vote.gone`,

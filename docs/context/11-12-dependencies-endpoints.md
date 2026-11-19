@@ -100,7 +100,7 @@ GuestQueueService          → DjService
 | GET | `/dj/wishes/{id}/csv` | `party`: the event's wishes as CSV — every song, how many wrote it, the library's mark |
 | GET | `/dj/polls` | `party`: "Pytanie do gości" (V74, POLLS) — the form and the party's questions with their results (Section 5.1, `05-1j-polls.md`) |
 | GET | `/dj/polls/{id}/results` | `party`: the results of one question alone (`polls :: pollResults`), fetched by `polls.js` every 3 s while it is asked; 404 for another party's |
-| POST | `/dj/polls/create`, `/dj/polls/{id}/ask`, `/dj/polls/{id}/end`, `/dj/polls/{id}/delete` | `partyCode`; a new question (`question`, `answer` repeated — none typed: "Tak" / "Nie" —, `ask=true` asks it now; Pro, 30 kept), "Zadaj teraz" / "Zadaj ponownie" (Pro; the one asked before ends), "Zakończ pytanie", "Usuń" (any plan) — back to the page with what was done |
+| POST | `/dj/polls/create`, `/dj/polls/{id}/ask`, `/dj/polls/{id}/end`, `/dj/polls/{id}/results`, `/dj/polls/{id}/delete` | `partyCode`; a new question (`question`, `answer` repeated — none typed: "Tak" / "Nie" —, `hideResults=true` keeps the guests' results for later (V75), `ask=true` asks it now; Pro, 30 kept), the guests' results shown or hidden (`hidden`, any plan), "Zadaj teraz" / "Zadaj ponownie" (Pro; the one asked before ends), "Zakończ pytanie", "Usuń" (any plan) — back to the page with what was done |
 | POST | `/dj/dashboard/vibe`, `/comment-style`, `/limits` | settings |
 | POST | `/dj/dashboard/dedications` | `on`: the guests' dedications on or off (V38, permission VIBE) |
 | POST | `/dj/dashboard/party-words` | `vibeNote`, `djName`: the card "Impreza"'s words under one "Zapisz" (one line each, empty clears; until 2026-10-10 `/vibe-note` and `/dj-name`) |

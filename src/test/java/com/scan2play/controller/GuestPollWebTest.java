@@ -235,6 +235,28 @@ class GuestPollWebTest {
         verify(pollService, never()).vote(anyString(), anyLong(), anyString(), org.mockito.ArgumentMatchers.anyInt());
     }
 
+    /** The DJ keeps the results for a game's end (V75): no number of an answer anywhere in the guest's card, only how many voted. */
+    @Test
+    void resultsKeptForLater_areNotInTheGuestsCard_onlyTheirAnswerAndHowManyVoted() throws Exception {
+        PollService.Poll hidden = new PollService.Poll(5, PARTY, "Kto pierwszy na parkiet?", List.of("Ania", "Kuba"), 23, Instant.now(),
+                Instant.now(), null, true, null);
+        when(pollService.shown(PARTY)).thenReturn(Optional.of(hidden));
+        when(pollService.choiceOf(eq(5L), anyString())).thenReturn(Optional.of(1));
+        String html = mockMvc.perform(get("/p/" + PARTY + "/poll").header("Accept-Language", "pl-PL")).andReturn().getResponse()
+                .getContentAsString(StandardCharsets.UTF_8);
+        assertThat(html).contains(">🗳 Pytanie od DJ-a<", "id=\"pollMineHidden\"", ">Kuba<", "✓ Twoja", "Wyniki pokaże DJ.", ">Głosy: 23<",
+                "data-poll-refresh", "↻ Sprawdź wyniki", "id=\"pollChangeForm\"");
+        assertThat(html).as("no share, no bar, no count of an answer").doesNotContain("%", "s2p-poll-bar", "s2p-poll-lead", "(7)");
+        verify(pollService, never()).results(any());
+        write("guest-poll-hidden.html", mockMvc.perform(get("/p/" + PARTY).header("Accept-Language", "pl-PL")).andReturn().getResponse()
+                .getContentAsString(StandardCharsets.UTF_8));
+
+        String tv = mockMvc.perform(get("/p/" + PARTY + "/tv/list").param("lang", "pl")).andReturn().getResponse()
+                .getContentAsString(StandardCharsets.UTF_8);
+        assertThat(tv).contains(">Pytanie DJ-a<", "id=\"tvPollHidden\"", "Wyniki pokaże DJ", ">Głosy: 23<", ">Votes: 23<")
+                .doesNotContain("%", "tv-poll-bar", "tv-poll-lead");
+    }
+
     @Test
     void theTv_showsTheQuestionWithItsResults_inPlaceOfTheList() throws Exception {
         String html = mockMvc.perform(get("/p/" + PARTY + "/tv/list").param("lang", "pl")).andExpect(status().isOk()).andReturn()

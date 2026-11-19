@@ -32,9 +32,11 @@ final class PollControllers {
         when(polls.poll(partyCode, POLL)).thenReturn(Optional.of(poll));
         when(polls.pollsOf(partyCode)).thenReturn(List.of(poll));
         when(polls.results(any())).thenAnswer(call -> new PollService.Results(call.getArgument(0), List.of(), 0));
-        when(polls.create(anyString(), anyString(), anyList(), anyBoolean())).thenReturn(Optional.of(poll));
+        when(polls.create(anyString(), anyString(), anyList(), anyBoolean(), anyBoolean())).thenReturn(Optional.of(poll));
         when(polls.ask(partyCode, POLL)).thenReturn(true);
         when(polls.end(partyCode, POLL)).thenReturn(true);
+        when(polls.setResultsHidden(org.mockito.ArgumentMatchers.eq(partyCode), org.mockito.ArgumentMatchers.eq(POLL), anyBoolean()))
+                .thenReturn(true);
         when(polls.delete(partyCode, POLL)).thenReturn(true);
         return polls;
     }

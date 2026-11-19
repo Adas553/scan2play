@@ -57,6 +57,12 @@
                 </div>
             </div>
             <p class="small text-secondary mt-2 mb-0" id="pollAnswersHelp" th:text="#{polls.new.answers.help}">Leave them empty for Yes / No.</p>
+            <!--/* the guests' results (V75): after their vote, or kept for later — a game told at the end, shown when the DJ says so */-->
+            <label for="pollHideResults" class="form-label small text-secondary mt-3 mb-1" th:text="#{polls.new.results}">Results for the guests</label>
+            <select id="pollHideResults" name="hideResults" class="form-select bg-black text-light border-secondary">
+                <option value="false" selected th:text="#{polls.new.results.after_vote}">Right after their vote</option>
+                <option value="true" th:text="#{polls.new.results.later}">Only when I show them (a game)</option>
+            </select>
             <div class="s2p-btn-row mt-3">
                 <button type="submit" name="ask" value="true" id="pollAskNowBtn" class="btn btn-sm btn-action" th:text="#{polls.new.ask}">Ask now</button>
                 <button type="submit" name="ask" value="false" id="pollSaveBtn" class="btn btn-sm btn-outline-light" th:text="#{polls.new.save}">Save for later</button>
@@ -81,6 +87,12 @@
         </div>
         <p th:if="${state == 'SAVED'}" class="small text-secondary mt-1 mb-0" th:text="${#strings.listJoin(poll.answers(), ' · ')}">Tak · Nie</p>
         <p th:if="${state == 'ASKED'}" class="small text-secondary mt-2 mb-0" th:text="#{polls.asked.help}">The guests see it above the form…</p>
+        <!--/* whether the guests and the TV see the numbers (V75): the DJ always does */-->
+        <p th:if="${state != 'SAVED'}" class="small mt-2 mb-0 s2p-poll-visibility"
+           th:classappend="${poll.resultsHidden()} ? 'text-warning' : 'text-secondary'"
+           th:text="${poll.resultsHidden()} ? #{polls.results.hidden} : #{polls.results.shown}">The guests see the results.</p>
+        <p th:if="${state == 'SAVED' and poll.resultsHidden()}" class="small text-warning mt-1 mb-0 s2p-poll-visibility"
+           th:text="#{polls.results.later}">Results for the guests: only when you show them.</p>
 
         <div class="s2p-btn-row mt-3">
             <form th:if="${state == 'ASKED'}" th:action="@{/dj/polls/{id}/end(id=${poll.id()})}" method="POST" class="m-0">
@@ -94,6 +106,13 @@
             </form>
             <a th:if="${state == 'ASKED'}" th:href="@{/p/{code}/tv(code=${partyCode},lang=${#locale.language == 'pl' ? 'pl' : 'en'})}"
                target="_blank" rel="noopener" class="btn btn-sm btn-outline-light text-nowrap" th:text="#{polls.tv}">Show on the TV</a>
+            <form th:if="${state != 'SAVED'}" th:action="@{/dj/polls/{id}/results(id=${poll.id()})}" method="POST" class="m-0">
+                <input type="hidden" name="partyCode" th:value="${partyCode}">
+                <input type="hidden" name="hidden" th:value="${!poll.resultsHidden()}">
+                <button type="submit" class="btn btn-sm text-nowrap s2p-poll-results-toggle"
+                        th:classappend="${poll.resultsHidden()} ? 'btn-action' : 'btn-outline-secondary'"
+                        th:text="${poll.resultsHidden()} ? #{polls.results.show} : #{polls.results.hide}">Show the results to the guests</button>
+            </form>
             <form th:action="@{/dj/polls/{id}/delete(id=${poll.id()})}" method="POST" class="m-0" th:data-confirm="#{polls.delete.confirm}">
                 <input type="hidden" name="partyCode" th:value="${partyCode}">
                 <button type="submit" class="btn btn-sm btn-outline-danger text-nowrap s2p-poll-delete" th:text="#{polls.delete}">Delete</button>

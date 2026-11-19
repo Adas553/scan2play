@@ -1,8 +1,9 @@
 // "Pytanie do gości" (V74) on the guest's page (index.html, party_ended.html; fragments/guest-poll.html): an answer goes in the
 // background and the card comes back with the results — the page does not load again, the typed song stays in its field. The card is
-// fetched again, as the list is, when the guest comes back to the page (no timer: a room of phones asks only when someone looks), so a
-// question the DJ asked meanwhile shows up. An answer that is not the card (the session ended, a Wi-Fi login page) loads the page
-// again. A file of its own, not an inline script, for the Content-Security-Policy.
+// fetched again, as the list is, when the guest comes back to the page (no timer: a room of phones asks only when someone looks), so
+// a question the DJ asked meanwhile shows up — and on "↻ Sprawdź wyniki" while the DJ keeps the results for later. An answer that is
+// not the card (the session ended, a Wi-Fi login page) loads the page again. A file of its own, not an inline script, for the
+// Content-Security-Policy.
 (function () {
     let box = document.getElementById('guestPoll');
     if (!box) return;
@@ -73,6 +74,16 @@
         }
         buttons.forEach(function (b) { b.disabled = false; });
         showFailed(form);
+    });
+
+    // "↻ Sprawdź wyniki" while the DJ keeps them for later (V75): the card again, now — the guest asks, so no wait between asks
+    document.addEventListener('click', async function (e) {
+        const button = e.target.closest('[data-poll-refresh]');
+        if (!button || !box.contains(button) || button.disabled) return;
+        button.disabled = true;
+        lastRefresh = 0;
+        await refresh();
+        if (box.contains(button)) button.disabled = false;   // the same card came back (nothing new, or offline): it works again
     });
 
     document.addEventListener('visibilitychange', function () {

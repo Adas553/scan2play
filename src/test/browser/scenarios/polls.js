@@ -132,6 +132,25 @@
         }
     });
 
+    // The DJ keeps the results for a game's end (V75): the guest sees their answer and "Wyniki pokaże DJ"; "↻ Sprawdź wyniki" asks
+    // again at once — and the results are there once the DJ showed them.
+    S2P.scenario({
+        name: 'guest-poll-hidden-check',
+        title: 'results kept for later: "↻ Sprawdź wyniki" fetches the card at once and shows the results the DJ showed meanwhile',
+        page: 'guest-poll-hidden',
+        viewport: '390,844',
+        run: async function (t) {
+            t.check('their answer and "Wyniki pokaże DJ", no bars', !!document.getElementById('pollHidden')
+                && !!document.getElementById('pollMineHidden') && !document.querySelector('#guestPoll .s2p-poll-bar'));
+            const check = document.querySelector('#guestPoll [data-poll-refresh]');
+            t.check('"↻ Sprawdź wyniki" tappable', check.getBoundingClientRect().height >= 44);
+            check.click();
+            await t.waitFor(function () { return document.querySelector('#guestPoll .s2p-poll-bar'); }, 'the results', 5000);
+            t.step('asked once', await t.stand.count('GET /p/ABC12/poll'), 1);
+            t.check('nothing sideways', fits());
+        }
+    });
+
     S2P.scenario({
         name: 'polls-live-results',
         title: 'the DJ\'s page: the results of the question asked are fetched again and put in place — the new numbers, nothing else moves',

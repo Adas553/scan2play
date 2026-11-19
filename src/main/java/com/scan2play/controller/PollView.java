@@ -16,7 +16,8 @@ import static com.scan2play.controller.ViewAttributes.*;
 
 /**
  * What a guest's page and the TV show of "Pytanie do gości" (V74): the question asked now — or the one ended a moment ago, with its
- * results —, its results once the guest answered, and the guest's answer. Nothing without the plan's {@link PlanFeature#POLLS}.
+ * results —, its results once the guest answered (none while the DJ keeps them hidden, V75), and the guest's answer. Nothing without
+ * the plan's {@link PlanFeature#POLLS}.
  */
 @Component
 @RequiredArgsConstructor
@@ -56,7 +57,10 @@ class PollView {
         }
         pollService.shown(settings.getPartyCode()).ifPresent(poll -> {
             model.addAttribute(POLL, poll);
-            model.addAttribute(POLL_RESULTS, pollService.results(poll));
+            // results the DJ keeps hidden (V75) are not in the page at all — not hidden by the look: its source would tell them
+            if (!poll.resultsHidden()) {
+                model.addAttribute(POLL_RESULTS, pollService.results(poll));
+            }
         });
         return true;
     }
