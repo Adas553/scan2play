@@ -31,13 +31,16 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * form carries the CSRF token, which lives in the session.
  */
 @WebMvcTest(GuestController.class)
-@Import({SecurityConfig.class, com.scan2play.service.PlansOffConfig.class,
+@Import({PollView.class, SecurityConfig.class, com.scan2play.service.PlansOffConfig.class,
         com.scan2play.service.PartySchedulesConfig.class, com.scan2play.service.GuestRequestService.class})
 class GuestNoSessionWebTest {
 
     @Autowired
     private MockMvc mockMvc;
 
+    /** "Pytanie do gości" (V74): no question asked here (an empty Optional, the mock's default). */
+    @MockitoBean
+    private com.scan2play.service.PollService pollService;
     @MockitoBean
     private com.scan2play.service.LibraryHintService libraryHintService;
     @MockitoBean

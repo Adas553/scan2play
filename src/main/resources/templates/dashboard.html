@@ -226,6 +226,10 @@
                              TV or a laptop by a projector, no login there */-->
                         <a th:href="@{/p/{code}/tv(code=${partyCode},lang=${#locale.language == 'pl' ? 'pl' : 'en'})}" target="_blank" rel="noopener" id="tvScreenLink"
                            class="btn btn-sm btn-outline-light" th:text="#{dashboard.qr.tv}">Screen for a TV</a>
+                        <!--/* "Pytanie do gości" (V74): the DJ's question to the room and its results live — during the party, so here,
+                             beside the code the guests scan for it (whoever has POLLS, with the plan for it) */-->
+                        <a th:if="${access.may('POLLS') and (plan == null or plan.allows('POLLS'))}" th:href="@{/dj/polls(party=${partyCode})}"
+                           id="pollsLink" class="btn btn-sm btn-outline-light" th:text="#{dashboard.qr.polls}">🗳 Question for the guests</a>
                     </div>
                 </div>
             </section>

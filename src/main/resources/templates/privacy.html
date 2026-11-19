@@ -50,7 +50,11 @@
                 (up to 150 characters) and how many people wrote the same — no name, no e-mail address, no IP address. Only the DJ sees it (and
                 the people of their staff they allow), not the other guests; the hosts see only the songs the DJ moves to their list “⭐ Must
                 play”. It goes neither to the AI nor to the server’s logs</li>
-            <li>A session identifier (a cookie) — for the limits of requests and of wishes before the party, and to recognise your earlier requests and your 👍 at the party (marked “Yours”, a vote counted once); no personal data</li>
+            <li>An answer to the DJ’s question (“Question for the guests”), when you answer it: the answer you picked and a hash (SHA-256) of
+                your session’s identifier, so that your vote counts once and you can change it — no name, no e-mail address, no IP address.
+                The DJ, the TV screen and the other guests see only how many votes each answer has, never who answered what. It goes neither
+                to the AI nor to the server’s logs</li>
+            <li>A session identifier (a cookie) — for the limits of requests and of wishes before the party, and to recognise your earlier requests, your 👍 and your answer to the DJ’s question at the party (marked “Yours”, a vote counted once); no personal data</li>
             <li>IP address — Cloudflare and the hosting provider (section 6), which every connection to the site passes through, see it. The application itself keeps it in the server’s memory only, for the limits of requests, of 👍 and of wishes before the party from one network (against abuse); it never stores it in the database or in its own logs</li>
         </ul>
 
@@ -88,7 +92,7 @@
             <li>The evening summary: when a request is deleted (after 30 days, or when the DJ clears the history), only what the summary counts is kept of it — the song’s name, the times, the number of votes, tips and dedications, why the AI rejected it (played already / off the vibe) — and only the number of requests stopped before the AI (on the hosts’ list, skipped lately, not a song) — without the guest’s words, the dedications’ text, the AI’s comment or anything that tells who asked (of a request the AI rejected not even the name); with it the evening’s title the DJ typed and the hosts’ link (it works 30 days). Deleted 13 months after the evening, or with the DJ’s account</li>
             <li>Sessions (the DJ’s login, a guest’s session identifier): stored in the database and deleted after 30 minutes without activity. A DJ’s login with “Keep me logged in on this device” ticked: deleted after 14 days without activity, at logging out (“Log out other devices” too), when a new password is set, or with the account; its cookie (only the session’s identifier) then stays in the browser after it is closed too — browsers keep it about 400 days at most —, but once the session has ended it opens nothing</li>
             <li>The page’s language you picked: when you pick it by an address with <code>?lang=pl</code> or <code>?lang=en</code>, the cookie <code>lang</code>, holding only the language’s code, keeps it in your browser for a year, so the next pages are in that language; nothing goes to the database</li>
-            <li>A guest’s IP address: in the server’s memory only, forgotten 10 minutes after the last request, 👍 or wish from that network</li>
+            <li>A guest’s IP address: in the server’s memory only, forgotten 10 minutes after the last request, 👍, wish or answer to a question from that network</li>
             <li>The login with a password: the number of wrong passwords of an e-mail address and of an IP address, the number of e-mails sent about the account and of accounts made from an IP address — only in the server’s memory, forgotten after 15 minutes (wrong passwords), an hour (new accounts) or a day (e-mails); the link that confirms the address works for 48 hours, the new password’s link for an hour</li>
             <li>DJ account data: stored until the DJ deletes their account</li>
             <li>The party owner’s e-mail address and the day the account was made: until the DJ deletes their account (the messages we exchanged stay in our mailbox, as any correspondence); the log of the e-mails sent through Brevo (the recipient’s address, the subject, the delivery status) — 1 month from the sending, also after the account is deleted; Brevo does not keep the content of the e-mails sent</li>
@@ -101,6 +105,8 @@
             <li>The DJ’s library of songs: until a new one is uploaded (it replaces the previous one), the DJ deletes it or deletes their account</li>
             <li>Wishes before the party (the event, its link and the guests’ wishes): deleted by themselves 7 days after the party’s date (two
                 years after the event was made at the latest), earlier when the DJ deletes the event or their account</li>
+            <li>Questions for the guests (the DJ’s question, its answers and the guests’ votes): deleted by themselves 90 days after the
+                question was made, earlier when the DJ deletes the question or their account</li>
             <li>The DJ’s e-mail address and phone number for bookings: until the DJ changes or deletes them, or deletes their account</li>
             <li>Feedback and the account’s plan: until the DJ deletes their account</li>
             <li>When the account had a trial of the Pro plan: a hash (SHA-256) of the Google account’s identifier or, for an account with a password, of its e-mail address — the hash alone: no name, not the address itself, nothing of a party — stays after the account is deleted too, for as long as Scan2Play offers a trial of the Pro plan, so that the same account gets no second trial (our legitimate interest: preventing abuse of the trial)</li>

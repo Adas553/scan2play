@@ -50,7 +50,10 @@
                 i liczba osób, które wpisały tę samą — bez imienia, adresu e-mail i adresu IP. Widzi je tylko DJ (i osoby z jego obsługi, którym
                 na to pozwoli), nie inni goście; gospodarze widzą tylko piosenki, które DJ przeniesie na listę „⭐ Koniecznie zagrać”. Nie trafia do
                 AI ani do logów serwera</li>
-            <li>Identyfikator sesji (ciasteczko) — do limitu próśb i życzeń przed imprezą oraz do rozpoznania Twoich wcześniejszych próśb i 👍 na tej imprezie (oznaczenie „Twoja”, głos liczony raz); bez danych osobowych</li>
+            <li>Odpowiedź na pytanie DJ-a („Pytanie do gości”), gdy na nie odpowiesz: wybrana odpowiedź i skrót (SHA-256) identyfikatora Twojej
+                sesji, żeby głos liczył się raz i dało się go zmienić — bez imienia, adresu e-mail i adresu IP. DJ, ekran TV i inni goście
+                widzą tylko liczbę głosów na każdą odpowiedź, nigdy to, kto jak odpowiedział. Nie trafia do AI ani do logów serwera</li>
+            <li>Identyfikator sesji (ciasteczko) — do limitu próśb i życzeń przed imprezą oraz do rozpoznania Twoich wcześniejszych próśb, 👍 i odpowiedzi na pytanie DJ-a na tej imprezie (oznaczenie „Twoja”, głos liczony raz); bez danych osobowych</li>
             <li>Adres IP — widzą go Cloudflare i dostawca hostingu (pkt 6), przez których przechodzi każde połączenie ze stroną. Sama aplikacja trzyma go tylko w pamięci serwera, do limitów próśb, 👍 i życzeń przed imprezą z jednej sieci (ochrona przed nadużyciami); nie zapisuje go w bazie danych ani w swoich logach</li>
         </ul>
 
@@ -88,7 +91,7 @@
             <li>Podsumowanie wieczoru: gdy zamówienie jest usuwane (po 30 dniach albo gdy DJ wyczyści historię), zostaje z niego tylko to, co liczy podsumowanie — nazwa piosenki, godziny, liczba głosów, napiwków i dedykacji, powód odrzucenia przez AI (już grała / nie pasowała) — oraz sama liczba próśb zatrzymanych przed AI (z listy „nie grać”, niedawno pominięte, nie piosenka) — bez słów gościa, treści dedykacji, komentarza AI i bez niczego, co wskazuje, kto prosił (z prośby odrzuconej przez AI nie zostaje nawet nazwa); do tego tytuł wieczoru wpisany przez DJ-a i link dla gospodarzy (działa 30 dni). Usuwane po 13 miesiącach od wieczoru albo z kontem DJ-a</li>
             <li>Sesje (logowanie DJ-a, identyfikator sesji gościa): przechowywane w bazie danych i usuwane po 30 minutach bez aktywności. Logowanie DJ-a z zaznaczonym „Nie wylogowuj mnie na tym urządzeniu”: usuwane po 14 dniach bez aktywności, przy wylogowaniu (także „Wyloguj na innych urządzeniach”), po ustawieniu nowego hasła albo z kontem; jego ciasteczko (sam identyfikator sesji) zostaje wtedy w przeglądarce także po jej zamknięciu — przeglądarki trzymają je najwyżej około 400 dni —, ale po końcu sesji niczego już nie otwiera</li>
             <li>Wybrany język strony: gdy wybierzesz go adresem z <code>?lang=pl</code> albo <code>?lang=en</code>, ciasteczko <code>lang</code> z samym kodem języka zapamiętuje go w Twojej przeglądarce na rok, żeby kolejne strony były w tym języku; nic nie trafia do bazy danych</li>
-            <li>Adres IP gościa: tylko w pamięci serwera, zapominany 10 minut po ostatniej prośbie, 👍 lub życzeniu z tej sieci</li>
+            <li>Adres IP gościa: tylko w pamięci serwera, zapominany 10 minut po ostatniej prośbie, 👍, życzeniu lub odpowiedzi na pytanie z tej sieci</li>
             <li>Logowanie hasłem: liczba błędnych haseł danego adresu e-mail i adresu IP oraz liczba wysłanych maili o koncie i kont zakładanych z adresu IP — tylko w pamięci serwera, zapominane po 15 minutach (błędne hasła), godzinie (nowe konta) albo dobie (maile); link potwierdzający adres działa 48 godzin, link do nowego hasła godzinę</li>
             <li>Dane konta DJ-a: przechowywane do momentu usunięcia konta przez DJ-a</li>
             <li>Adres e-mail właściciela imprezy i dzień założenia konta: do usunięcia konta (wiadomości, które sobie wymieniliśmy, zostają w naszej skrzynce pocztowej jak każda korespondencja); dziennik maili wysłanych przez Brevo (adres odbiorcy, temat, stan doręczenia) — 1 miesiąc od wysyłki, także po usunięciu konta; treści wysłanych maili Brevo nie przechowuje</li>
@@ -101,6 +104,8 @@
             <li>Biblioteka utworów DJ-a: do wgrania nowej (zastępuje poprzednią), usunięcia jej przez DJ-a albo usunięcia konta</li>
             <li>Życzenia przed imprezą (wydarzenie, jego link i życzenia gości): usuwane automatycznie 7 dni po dacie imprezy (najpóźniej dwa
                 lata od utworzenia wydarzenia), wcześniej, gdy DJ usunie wydarzenie albo swoje konto</li>
+            <li>Pytania do gości (pytanie DJ-a, jego odpowiedzi i głosy gości): usuwane automatycznie 90 dni od utworzenia pytania, wcześniej, gdy
+                DJ usunie pytanie albo swoje konto</li>
             <li>Adres e-mail i telefon DJ-a do rezerwacji: do ich zmiany lub usunięcia przez DJ-a albo usunięcia konta</li>
             <li>Zgłoszenia i plan konta: do usunięcia konta przez DJ-a</li>
             <li>Gdy konto miało okres próbny planu Pro: skrót (SHA-256) identyfikatora konta Google albo, dla konta z hasłem, jego adresu e-mail — sam skrót, bez imienia, samego adresu i danych imprezy — zostaje także po usunięciu konta, dopóki Scan2Play oferuje okres próbny planu Pro, żeby to samo konto nie dostało drugiego okresu próbnego (nasz prawnie uzasadniony interes: zapobieganie nadużyciom okresu próbnego)</li>

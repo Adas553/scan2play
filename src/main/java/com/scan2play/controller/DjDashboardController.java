@@ -98,6 +98,7 @@ public class DjDashboardController {
     private final FreeAiLimit freeAiLimit;
     /** "Życzenia przed imprezą" (V68): the settings card's state, the invitation's print. */
     private final WishService wishService;
+    private final com.scan2play.service.PollService pollService;
 
     /**
      * On every answer of the queue poll, 304 too: the warnings above the queue that hold now, comma-separated —
@@ -305,6 +306,8 @@ public class DjDashboardController {
         model.addAttribute(KIOSK_LINK, settings.kioskLink(cleanBaseUrl));
         // "Życzenia przed imprezą" (V68): the card's state, the events collecting now
         model.addAttribute(WISH_OPEN, wishService.openEvents(partyCode));
+        // "Pytanie do gości" (V74): the card's state, the question asked now
+        model.addAttribute(POLL_ASKED, pollService.asked(partyCode).orElse(null));
         model.addAttribute(REQUEST_LIMIT, planned.getRequestLimit());
         model.addAttribute(COOLDOWN_MINUTES, planned.getCooldownMinutes());
         model.addAttribute(DUPLICATE_CHECK_WINDOW, planned.getDuplicateCheckWindow());

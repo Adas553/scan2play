@@ -53,6 +53,7 @@ class StaffRoleTest {
     @Test
     void theKiosksMigration_matchesTheWholeSetAsItWasStored() throws java.io.IOException {
         EnumSet<StaffPermission> before = EnumSet.allOf(StaffPermission.class);
+        before.remove(StaffPermission.POLLS);    // V74's, after V68
         before.remove(StaffPermission.WISHES);   // V68's, after V56
         before.remove(StaffPermission.KIOSK);
         assertThat(sql("/db/migration/V56__kiosk.sql").split("= '" + StaffPermission.format(before) + "';", -1))
@@ -63,10 +64,22 @@ class StaffRoleTest {
     @Test
     void theWishesMigration_matchesTheWholeSetAsItWasStored() throws java.io.IOException {
         EnumSet<StaffPermission> before = EnumSet.allOf(StaffPermission.class);
+        before.remove(StaffPermission.POLLS);   // V74's, after V68
         before.remove(StaffPermission.WISHES);
         assertThat(sql("/db/migration/V68__guest_wishes.sql").split("= '" + StaffPermission.format(before) + "';", -1))
                 .as("the three tables").hasSize(4);
         before.add(StaffPermission.WISHES);
+        assertThat(StaffRole.of(StaffPermission.parse(StaffPermission.format(before)))).isNotEqualTo(StaffRole.CO_ORGANISER);
+    }
+
+    /** V74 gave POLLS to the sets that were the whole set before it (WISHES included), the same way. */
+    @Test
+    void thePollsMigration_matchesTheWholeSetAsItWasStored() throws java.io.IOException {
+        EnumSet<StaffPermission> before = EnumSet.allOf(StaffPermission.class);
+        before.remove(StaffPermission.POLLS);
+        assertThat(sql("/db/migration/V74__guest_polls.sql").split("= '" + StaffPermission.format(before) + "';", -1))
+                .as("the three tables").hasSize(4);
+        before.add(StaffPermission.POLLS);
         assertThat(StaffRole.of(StaffPermission.parse(StaffPermission.format(before)))).isEqualTo(StaffRole.CO_ORGANISER);
     }
 

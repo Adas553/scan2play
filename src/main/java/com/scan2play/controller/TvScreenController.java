@@ -41,6 +41,7 @@ public class TvScreenController {
     private final QrCodeService qrCodeService;
     private final PlanService planService;
     private final PartyScheduleService partyScheduleService;
+    private final PollView pollView;
 
     @Value("${scan2play.guest-url}")
     private String rawBaseUrl;
@@ -69,6 +70,8 @@ public class TvScreenController {
 
     private void addList(Model model, PartySettingsEntity settings) {
         model.addAttribute(IS_ACTIVE, settings.isActive());
+        // the DJ's question (V74) in place of the list while it is asked, and its results a while after: the room sees them
+        pollView.addForScreen(model, settings);
         if (settings.isActive()) {
             model.addAttribute(TV_SONGS, guestQueueService.mostWanted(settings.getPartyCode()));
         } else {
