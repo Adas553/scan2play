@@ -130,14 +130,10 @@ class PollsPageRenderTest {
     }
 
     private String render(PlanService plans, Map<String, Object> flash) {
-        return render(plans, flash, null, null);
-    }
-
-    private String render(PlanService plans, Map<String, Object> flash, Long edit, Long copy) {
         LocaleContextHolder.setLocale(PL);
         ConcurrentModel model = new ConcurrentModel();
         model.addAllAttributes(flash);
-        String view = controller(plans).page(PARTY, edit, copy, model, user("owner"), new MockHttpSession());
+        String view = controller(plans).page(PARTY, model, user("owner"), new MockHttpSession());
         assertThat(view).isEqualTo("polls");
         return process(view, model.asMap());
     }
@@ -226,36 +222,41 @@ class PollsPageRenderTest {
     }
 
     /**
-     * The words changed: "Edytuj" on a question saved for later fills the form with its words, and the form saves the changes; one
-     * asked (now or before) has "Popraw jako nowe" — a new question's form with its words, the old one keeps its votes.
+     * The words changed, in the question's own card (no page load, nothing on the screen moves): "Edytuj" on one saved for later — a
+     * folded form filled with its words that saves the changes; "Popraw jako nowe" on one asked now or before — a new question's
+     * form with its words, the old one keeps its votes. Each form's fields have ids of their own.
      */
     @Test
-    void aSavedQuestion_isEdited_andAnAskedOne_isCorrectedAsANewOne() throws IOException {
-        when(polls.poll(PARTY, 2L)).thenReturn(Optional.of(saved));
-        when(polls.poll(PARTY, 1L)).thenReturn(Optional.of(ended));
+    void aSavedQuestion_isEditedInItsCard_andAnAskedOne_isCorrectedAsANewOne() throws IOException {
         String page = render(Plans.off(), Map.of());
-        assertThat(page).contains("href=\"/dj/polls?party=POLL1&amp;edit=2#pollNewCard\"", ">Edytuj<",
-                "href=\"/dj/polls?party=POLL1&amp;copy=3#pollNewCard\"", "href=\"/dj/polls?party=POLL1&amp;copy=1#pollNewCard\"",
-                ">Popraw jako nowe<");
-        assertThat(page).as("no edit of a question asked").doesNotContain("edit=3", "edit=1");
+        String saved = card(page, 2);
+        assertThat(saved).contains("<details class=\"s2p-poll-change\"", ">Edytuj</summary>", "action=\"/dj/polls/2/edit\"",
+                "id=\"poll2EditQuestionInput\"", "value=\"Kto pierwszy na parkiet?\"", "value=\"Ania\"", "value=\"Kuba\"",
+                ">Zapisz zmiany<", "type=\"reset\"", "data-poll-change-close", ">Anuluj<")
+                .doesNotContain("Popraw jako nowe", "name=\"ask\"", "<details class=\"s2p-poll-change\" open");
+        String asked = card(page, 3);
+        assertThat(asked).contains(">Popraw jako nowe</summary>", "Nowe pytanie z treścią poprzedniego", "action=\"/dj/polls/create\"",
+                "id=\"poll3CopyQuestionInput\"", "value=\"Disco polo — tak czy nie?\"", "value=\"Tak\"", ">Zadaj teraz<",
+                ">Zapisz na później<", ">Anuluj<").doesNotContain("/dj/polls/3/edit", ">Edytuj<");
+        assertThat(card(page, 1)).as("ended: its results kept for later, as before").contains(">Popraw jako nowe</summary>",
+                "value=\"Tak jak jest\"").containsPattern("<option value=\"true\" selected");
+        assertThat(page).as("the page's own form stays new").contains("id=\"pollNewForm\"", "id=\"pollQuestionInput\"")
+                .doesNotContain("?edit=", "?copy=", "autofocus");
+        assertThat(page).containsOnlyOnce("id=\"pollQuestionInput\"").containsOnlyOnce("id=\"poll2EditQuestionInput\"");
+        DashboardPageRenderTest.assertNothingInline(page);
 
-        String editing = render(Plans.off(), Map.of(), 2L, null);
-        assertThat(editing).contains(">Edytuj pytanie<", "action=\"/dj/polls/2/edit\"", "value=\"Kto pierwszy na parkiet?\"",
-                "value=\"Ania\"", "value=\"Kuba\"", ">Zapisz zmiany<", "id=\"pollEditCancel\"", "autofocus")
-                .doesNotContain("id=\"pollAskNowBtn\"", "id=\"pollCountLine\"");
-        write("polls-edit.html", editing);
+        // refused, the card's form is open again (the page audit's look at an open form, at every width)
+        String reopened = render(Plans.off(), Map.of("pollDone", "invalid", "pollEditOpen", 2L));
+        assertThat(card(reopened, 2)).contains("<details class=\"s2p-poll-change\" open");
+        write("polls-edit.html", reopened);
+        // without Pro: nothing to change
+        assertThat(render(Plans.enforced(), Map.of())).doesNotContain("s2p-poll-change\"");
+    }
 
-        String copying = render(Plans.off(), Map.of(), null, 1L);
-        assertThat(copying).contains(">Nowe pytanie<", "id=\"pollCopyHelp\"", "action=\"/dj/polls/create\"",
-                "value=\"Wolniej czy szybciej?\"", "value=\"Wolniej\"", "value=\"Szybciej\"", "value=\"Tak jak jest\"",
-                "id=\"pollAskNowBtn\"");
-        assertThat(copying).as("its results kept for later, as before").containsPattern("<option value=\"true\" selected");
-
-        // asked meanwhile, or another party's: the form stays new
-        when(polls.poll(PARTY, 3L)).thenReturn(Optional.of(asked));
-        assertThat(render(Plans.off(), Map.of(), 3L, null)).contains(">Nowe pytanie<", "action=\"/dj/polls/create\"")
-                .doesNotContain("/edit\"", "value=\"Disco polo — tak czy nie?\"");
-        assertThat(render(Plans.off(), Map.of(), 99L, null)).contains("action=\"/dj/polls/create\"");
+    /** One question's card of the page, by its id. */
+    private static String card(String page, long id) {
+        String from = page.substring(page.indexOf("data-poll-id=\"" + id + "\""));
+        return from.substring(0, from.indexOf("</section>"));
     }
 
     @Test
@@ -277,8 +278,10 @@ class PollsPageRenderTest {
         when(polls.poll(PARTY, 2L)).thenReturn(Optional.of(saved));
         RedirectAttributesModelMap invalid = new RedirectAttributesModelMap();
         assertThat(controller.edit(2L, PARTY, "  ", List.of("Ania"), false, user("owner"), new MockHttpSession(), invalid, PL))
-                .as("back to the same form").isEqualTo("redirect:/dj/polls?party=POLL1&edit=2#pollNewCard");
+                .as("back where the DJ was").isEqualTo("redirect:/dj/polls?party=POLL1");
         assertThat(invalid.getFlashAttributes().get("pollDone")).isEqualTo("invalid");
+        assertThat(invalid.getFlashAttributes().get("pollEditOpen")).as("its form open again").isEqualTo(2L);
+        assertThat(asked.getFlashAttributes().get("pollEditOpen")).isEqualTo(3L);
 
         when(polls.edit(eq(PARTY), eq(99L), anyString(), anyList(), anyBoolean())).thenReturn(PollService.Edited.NOT_FOUND);
         assertThatThrownBy(() -> controller.edit(99L, PARTY, "Disco polo?", List.of(), false, user("owner"), new MockHttpSession(),

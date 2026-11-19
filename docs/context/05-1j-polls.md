@@ -67,9 +67,10 @@ dla gości i na TV" / "ukryte …" · "TV: pytanie" / "TV: lista piosenek"). The
 page is shown (`GET /dj/polls/{id}/results`, the fragment `polls :: pollResults`; the login ended: no more asking; the question ended
 meanwhile — by someone of the staff, or by itself —: the page again), "Zakończ pytanie", the results' switch, "Na TV: [Pytanie]
 [Piosenki]" and "Otwórz ekran TV ↗"; a saved one "Zadaj teraz", an ended one its results, the results' switch and "Zadaj ponownie";
-"Usuń" apart, and it asks first. **The words changed:** a saved one has "Edytuj" — the form filled with its words, "Zapisz zmiany"
-(`POST /dj/polls/{id}/edit`, Pro; `PollService.edit`, `WHERE opened_at IS NULL`); one asked now or before is never changed — a vote
-is the answer's place (0 … 3), so changed answers would make the votes say what nobody chose, and a card drawn before the change
-would send a tap to another answer —: it has "Popraw jako nowe", the new question's form filled with its words (`?copy=`), the old one
-keeps its votes and ends when the new one is asked. Both links go to `#pollNewCard` (an anchor wins over the remembered scroll), no
-script. Without Pro the offer; questions made before may be ended and deleted. Not in the evening summary (yet).
+"Usuń" at the end of the card's last line, and it asks first. **The words changed, in the card itself** (a `<details>` on that
+line, the form of `fragments/poll-form.html`; no page load, nothing above it moves; "Anuluj" folds it back, the words as they were —
+`polls.js`): a saved one has "Edytuj" — "Zapisz zmiany" (`POST /dj/polls/{id}/edit`, Pro; `PollService.edit`,
+`WHERE opened_at IS NULL`); one asked now or before is never changed — a vote is the answer's place (0 … 3), so changed answers would
+make the votes say what nobody chose, and a card drawn before the change would send a tap to another answer —: it has "Popraw jako
+nowe", a new question's form with its words; the old one keeps its votes and ends when the new one is asked. A refused save opens the
+card's form again (`pollEditOpen`). Without Pro the offer; questions made before may be ended and deleted. Not in the evening summary (yet).
