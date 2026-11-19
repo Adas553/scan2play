@@ -71,7 +71,9 @@ public class TvScreenController {
     private void addList(Model model, PartySettingsEntity settings) {
         model.addAttribute(IS_ACTIVE, settings.isActive());
         // the DJ's question (V74) in place of the list while it is asked, and its results a while after: the room sees them
-        pollView.addForScreen(model, settings);
+        if (pollView.addForScreen(model, settings)) {
+            return;   // the screen shows the question alone: the songs and the opening hour are not counted for nothing
+        }
         if (settings.isActive()) {
             model.addAttribute(TV_SONGS, guestQueueService.mostWanted(settings.getPartyCode()));
         } else {

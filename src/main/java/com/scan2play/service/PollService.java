@@ -2,7 +2,10 @@ package com.scan2play.service;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import com.scan2play.util.AfterCommit;
 import com.scan2play.util.Texts;
+import com.scan2play.util.Times;
+import jakarta.servlet.http.HttpSession;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
@@ -10,6 +13,9 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.sql.Array;
 import java.sql.SQLException;
 import java.sql.Timestamp;
@@ -17,14 +23,18 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HexFormat;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /**
  * "Pytanie do gości" (V74, Pro): the DJ asks the room a question of their own with two to four answers ("Disco polo — tak czy
  * nie?"), the guests answer on the party page — one vote each, which they may change while it is asked — and the DJ sees the results
  * live, the TV screen too. One question of a party is asked at a time: asking another ends the one before. Nothing of the guest is
- * kept: a token made of their session's id ({@link #voterOf}) and the answer they picked.
+ * kept: a token made of their session's id ({@link #voterOf}) and the answer they picked. A question asked longer than
+ * {@link #ASKED_FOR} counts as ended: a DJ who packs up without "Zakończ pytanie" does not leave it to the next party on the same code.
  * <p>
  * Plain SQL, as {@link WishService}: a vote is a few statements under the question's row lock — the question still asked, the
  * guest's answer changed or a new one counted under the ceiling — and the results one bounded {@code GROUP BY}.
@@ -43,10 +53,18 @@ public class PollService {
     public static final int MAX_ANSWERS = 4;
     /** Voters of one question: a ball of a thousand guests, with room; a script dropping its cookie stops there. */
     public static final int MAX_VOTES = 5_000;
-    /** A question is kept this many days after it was made — the privacy policy says so — and then deleted with its votes. */
+    /** A question is kept this many days after it was last used — the privacy policy says so — and then deleted with its votes. */
     public static final int KEPT_DAYS = 90;
     /** An ended question's results stay on the guests' page and the TV this long: the room sees how it came out. */
     public static final Duration SHOWN_AFTER_END = Duration.ofMinutes(15);
+    /**
+     * A question asked longer than this counts as ended at that moment — the longest evening, with room. Without it a question the
+     * DJ forgot to end stayed asked for the next party on the same code (a party is kept from week to week), on its guests' page and
+     * its TV. Not ended when the requests open again: a DJ may ask the room while they are paused and open them during the vote.
+     */
+    public static final Duration ASKED_FOR = Duration.ofHours(12);
+    /** The moment an asked question ends by itself, in SQL: as {@link #endOf} in Java. */
+    private static final String ENDS = "coalesce(closed_at, opened_at + interval '" + ASKED_FOR.toHours() + " hours')";
     /**
      * The results are counted again at most this often: every guest who voted, the DJ's page and the TV ask for them; a vote counts
      * them again at once ({@link #vote}).
@@ -57,24 +75,13 @@ public class PollService {
     public enum State { SAVED, ASKED, ENDED }
 
     /**
-     * One question of a party, its answers in their order and how many voted; whether the guests see its results
-     * ({@code resultsHidden}: not until the DJ shows them, V75), when the DJ last brought it to the screens (its results shown, or
-     * the TV switched to it), and whether the TV shows it ({@code onTv}, V76) or keeps the most wanted songs.
+     * One question of a party, its answers in their order and how many voted; when it was last asked ({@code openedAt}) and when
+     * it ended ({@code closedAt} — the DJ's "Zakończ pytanie", or {@link #ASKED_FOR} after it was asked); whether the guests see
+     * its results ({@code resultsHidden}: not until the DJ shows them, V75), when the DJ last showed them ({@code revealedAt}), and
+     * whether the TV shows it ({@code onTv}, V76) or keeps the most wanted songs.
      */
     public record Poll(long id, String partyCode, String question, List<String> answers, int voteCount, Instant createdAt,
                        Instant openedAt, Instant closedAt, boolean resultsHidden, Instant revealedAt, boolean onTv) {
-
-        /** A question on the TV (V76's default). */
-        public Poll(long id, String partyCode, String question, List<String> answers, int voteCount, Instant createdAt,
-                    Instant openedAt, Instant closedAt, boolean resultsHidden, Instant revealedAt) {
-            this(id, partyCode, question, answers, voteCount, createdAt, openedAt, closedAt, resultsHidden, revealedAt, true);
-        }
-
-        /** A question whose results the guests see (V75's default). */
-        public Poll(long id, String partyCode, String question, List<String> answers, int voteCount, Instant createdAt,
-                    Instant openedAt, Instant closedAt) {
-            this(id, partyCode, question, answers, voteCount, createdAt, openedAt, closedAt, false, null, true);
-        }
 
         public State state() {
             return openedAt == null ? State.SAVED : closedAt == null ? State.ASKED : State.ENDED;
@@ -96,10 +103,13 @@ public class PollService {
     /** What became of a guest's vote. */
     public enum Voted { VOTED, CHANGED, NOT_ASKED, FULL, INVALID }
 
-    private static final RowMapper<Poll> POLL = (row, n) -> new Poll(row.getLong("id"), row.getString("party_code"),
-            row.getString("question"), answers(row.getArray("answers")), row.getInt("vote_count"), instant(row.getTimestamp("created_at")),
-            instant(row.getTimestamp("opened_at")), instant(row.getTimestamp("closed_at")), row.getBoolean("results_hidden"),
-            instant(row.getTimestamp("revealed_at")), row.getBoolean("on_tv"));
+    private static final RowMapper<Poll> POLL = (row, n) -> {
+        Instant openedAt = instant(row.getTimestamp("opened_at"));
+        return new Poll(row.getLong("id"), row.getString("party_code"), row.getString("question"), answers(row.getArray("answers")),
+                row.getInt("vote_count"), instant(row.getTimestamp("created_at")), openedAt,
+                endOf(openedAt, instant(row.getTimestamp("closed_at")), Instant.now()), row.getBoolean("results_hidden"),
+                instant(row.getTimestamp("revealed_at")), row.getBoolean("on_tv"));
+    };
 
     private static final String COLUMNS = "id, party_code, question, answers, vote_count, created_at, opened_at, closed_at,"
             + " results_hidden, revealed_at, on_tv";
@@ -107,10 +117,17 @@ public class PollService {
     private final JdbcTemplate jdbc;
     /** A question's votes per answer, by its id — counted at most every {@link #RESULTS_FRESH}, at once after a vote. */
     private final Cache<Long, int[]> counts;
+    /**
+     * The question a party's guests' page and TV show ({@link #shown}), by the party's code — asked for on every guest's page of a
+     * Pro party, most of which never ask one: looked up at most every {@link #RESULTS_FRESH}, at once after anything the DJ does
+     * to a question or a vote (its count is on the card).
+     */
+    private final Cache<String, Optional<Poll>> shownByParty;
 
     public PollService(JdbcTemplate jdbc) {
         this.jdbc = jdbc;
         this.counts = Caffeine.newBuilder().expireAfterWrite(RESULTS_FRESH).maximumSize(10_000).build();
+        this.shownByParty = Caffeine.newBuilder().expireAfterWrite(RESULTS_FRESH).maximumSize(10_000).build();
     }
 
     /** The party's questions, the newest first — every one it keeps. */
@@ -127,19 +144,23 @@ public class PollService {
 
     /** The question the party asks now, if any. */
     public Optional<Poll> asked(String partyCode) {
-        return jdbc.query("SELECT " + COLUMNS + " FROM party_poll WHERE party_code = ? AND opened_at IS NOT NULL AND closed_at IS NULL",
-                POLL, partyCode).stream().findFirst();
+        return jdbc.query("SELECT " + COLUMNS + " FROM party_poll WHERE party_code = ? AND opened_at > ? AND closed_at IS NULL",
+                POLL, partyCode, Timestamp.from(Instant.now().minus(ASKED_FOR))).stream().findFirst();
     }
 
     /**
      * The question the guests' page and the TV show: the one asked now, else the one that ended — or whose results the DJ showed —
      * in the last {@link #SHOWN_AFTER_END}, the latest of them. A party has at most {@value #MAX_POLLS}: the sort is of those.
+     * Looked up at most every {@link #RESULTS_FRESH}.
      */
     public Optional<Poll> shown(String partyCode) {
-        return jdbc.query("SELECT " + COLUMNS + " FROM party_poll WHERE party_code = ? AND opened_at IS NOT NULL"
-                + " AND (closed_at IS NULL OR greatest(closed_at, revealed_at) > ?)"
-                + " ORDER BY closed_at IS NULL DESC, greatest(closed_at, revealed_at) DESC LIMIT 1", POLL, partyCode,
-                Timestamp.from(Instant.now().minus(SHOWN_AFTER_END))).stream().findFirst();
+        return shownByParty.get(partyCode, code -> {
+            Instant now = Instant.now();
+            return jdbc.query("SELECT " + COLUMNS + " FROM party_poll WHERE party_code = ? AND opened_at IS NOT NULL"
+                    + " AND greatest(" + ENDS + ", revealed_at) > ?"
+                    + " ORDER BY (closed_at IS NULL AND opened_at > ?) DESC, greatest(" + ENDS + ", revealed_at) DESC LIMIT 1", POLL, code,
+                    Timestamp.from(now.minus(SHOWN_AFTER_END)), Timestamp.from(now.minus(ASKED_FOR))).stream().findFirst();
+        });
     }
 
     /**
@@ -147,18 +168,21 @@ public class PollService {
      * there a quarter of an hour after this) or "Ukryj wyniki przed gośćmi". False for no such question.
      */
     public boolean setResultsHidden(String partyCode, long id, boolean hidden) {
-        return jdbc.update("UPDATE party_poll SET results_hidden = ?, revealed_at = CASE WHEN ? THEN revealed_at ELSE now() END"
+        boolean changed = jdbc.update("UPDATE party_poll SET results_hidden = ?, revealed_at = CASE WHEN ? THEN revealed_at ELSE now() END"
                 + " WHERE party_code = ? AND id = ?", hidden, hidden, partyCode, id) == 1;
+        forgetShown(partyCode);
+        return changed;
     }
 
     /**
-     * "📺 TV: pytanie" ({@code onTv=true}: the screen shows the question, and keeps it a quarter of an hour from now) or "📺 TV: lista
-     * piosenek" — the guests' most wanted stay on the screen while the question is asked; the phones are not changed. False for no
-     * such question.
+     * "Na TV: pytanie" ({@code onTv=true}) or "Na TV: piosenki" — the guests' most wanted stay on the screen while the question is
+     * asked. Only the TV: the guests' phones and how long the question stays on the screens are not changed by it (no
+     * {@code revealed_at}). False for no such question.
      */
     public boolean setOnTv(String partyCode, long id, boolean onTv) {
-        return jdbc.update("UPDATE party_poll SET on_tv = ?, revealed_at = CASE WHEN ? THEN now() ELSE revealed_at END"
-                + " WHERE party_code = ? AND id = ?", onTv, onTv, partyCode, id) == 1;
+        boolean changed = jdbc.update("UPDATE party_poll SET on_tv = ? WHERE party_code = ? AND id = ?", onTv, partyCode, id) == 1;
+        forgetShown(partyCode);
+        return changed;
     }
 
     /** How many questions the party keeps. */
@@ -186,12 +210,14 @@ public class PollService {
             askLocked(partyCode, id);
         }
         log.info("Party [{}]: question {} made{}", partyCode, id, ask ? " and asked" : "");
+        forgetShown(partyCode);
         return poll(partyCode, id);
     }
 
     /**
      * "Zadaj teraz": the question is asked — the one asked before ends. One asked again after it ended keeps its votes and takes
-     * more. Under the party row's lock: two "Zadaj" at once leave one asked, never two (the unique index would refuse the second).
+     * more, for another {@link #ASKED_FOR} from now. Under the party row's lock: two "Zadaj" at once leave one asked, never two (the
+     * unique index would refuse the second).
      */
     @Transactional
     public boolean ask(String partyCode, long id) {
@@ -199,27 +225,32 @@ public class PollService {
             return false;
         }
         askLocked(partyCode, id);
+        forgetShown(partyCode);
         return true;
     }
 
     private void askLocked(String partyCode, long id) {
-        jdbc.update("UPDATE party_poll SET closed_at = now() WHERE party_code = ? AND opened_at IS NOT NULL AND closed_at IS NULL"
-                + " AND id <> ?", partyCode, id);
-        jdbc.update("UPDATE party_poll SET opened_at = coalesce(opened_at, now()), closed_at = NULL WHERE party_code = ? AND id = ?",
-                partyCode, id);
+        jdbc.update("UPDATE party_poll SET closed_at = least(now(), " + ENDS + ") WHERE party_code = ? AND opened_at IS NOT NULL"
+                + " AND closed_at IS NULL AND id <> ?", partyCode, id);
+        jdbc.update("UPDATE party_poll SET opened_at = now(), closed_at = NULL WHERE party_code = ? AND id = ?", partyCode, id);
     }
 
-    /** "Zakończ pytanie": the guests answer it no more; its results stay. False for no such question; one not asked stays as it was. */
+    /**
+     * "Zakończ pytanie": the guests answer it no more; its results stay. False for no such question; one not asked stays as it was
+     * (one that ended by itself keeps that moment).
+     */
     public boolean end(String partyCode, long id) {
-        jdbc.update("UPDATE party_poll SET closed_at = now() WHERE party_code = ? AND id = ? AND opened_at IS NOT NULL"
-                + " AND closed_at IS NULL", partyCode, id);
-        return poll(partyCode, id).isPresent();
+        boolean ended = jdbc.update("UPDATE party_poll SET closed_at = least(now(), " + ENDS + ") WHERE party_code = ? AND id = ?"
+                + " AND opened_at IS NOT NULL AND closed_at IS NULL", partyCode, id) == 1;
+        forgetShown(partyCode);
+        return ended || poll(partyCode, id).isPresent();
     }
 
     /** The question and its votes, at once. */
     public boolean delete(String partyCode, long id) {
         boolean deleted = jdbc.update("DELETE FROM party_poll WHERE party_code = ? AND id = ?", partyCode, id) == 1;
         counts.invalidate(id);
+        forgetShown(partyCode);
         return deleted;
     }
 
@@ -251,8 +282,12 @@ public class PollService {
             jdbc.update("UPDATE party_poll SET vote_count = vote_count + 1 WHERE id = ?", pollId);
             voted = Voted.VOTED;
         }
-        // counted again once the vote is in: a count made between this and the commit would keep the old numbers for a while
-        com.scan2play.util.AfterCommit.run(() -> counts.invalidate(pollId));
+        // counted again once the vote is in: a count made between this and the commit would keep the old numbers for a while — and
+        // the question shown with its count of voters, which the card of a question whose results are kept for later says
+        AfterCommit.run(() -> {
+            counts.invalidate(pollId);
+            shownByParty.invalidate(partyCode);
+        });
         return voted;
     }
 
@@ -271,7 +306,37 @@ public class PollService {
         return results(poll, votes);
     }
 
-    /** The results of these votes per answer: the shares in whole percents, the answers with the most votes leading (none at 0). */
+    /**
+     * The results of the party's questions, in their order, counted by one query: the ones without a vote are not asked for (a
+     * question saved for later has none). The DJ's page lists up to {@value #MAX_POLLS}.
+     */
+    public List<Results> resultsOf(List<Poll> polls) {
+        List<Long> counted = polls.stream().filter(poll -> poll.voteCount() > 0 && counts.getIfPresent(poll.id()) == null)
+                .map(Poll::id).toList();
+        Map<Long, int[]> fresh = new HashMap<>();
+        if (!counted.isEmpty()) {
+            Map<Long, Integer> sizes = new HashMap<>();
+            polls.forEach(poll -> sizes.put(poll.id(), poll.answers().size()));
+            jdbc.query("SELECT poll_id, choice, count(*) FROM party_poll_vote WHERE poll_id = ANY(?) GROUP BY poll_id, choice", row -> {
+                long id = row.getLong(1);
+                int choice = row.getInt(2);
+                int[] votes = fresh.computeIfAbsent(id, key -> new int[sizes.get(key)]);
+                if (choice >= 0 && choice < votes.length) {
+                    votes[choice] = row.getInt(3);
+                }
+            }, (Object) counted.toArray(Long[]::new));
+            counted.forEach(id -> counts.put(id, fresh.computeIfAbsent(id, key -> new int[sizes.get(key)])));
+        }
+        return polls.stream().map(poll -> {
+            int[] votes = poll.voteCount() == 0 ? new int[poll.answers().size()] : counts.getIfPresent(poll.id());
+            return votes == null ? results(poll) : results(poll, votes);
+        }).toList();
+    }
+
+    /**
+     * The results of these votes per answer: the shares in whole percents, the answers with the most votes leading (none at 0). Each
+     * share is rounded on its own, so three of 33 % make 99: the room reads the bars and the leader, not the sum.
+     */
     static Results results(Poll poll, int[] votes) {
         int total = Arrays.stream(votes).sum();
         int most = Arrays.stream(votes).max().orElse(0);
@@ -294,17 +359,26 @@ public class PollService {
         return votes;
     }
 
-    /** Deletes the questions made more than {@value #KEPT_DAYS} days ago, their votes with them. Daily at 04:55 Polish time. */
-    @Scheduled(cron = "0 55 4 * * *", zone = com.scan2play.util.Times.SCHEDULE_ZONE)
+    /**
+     * Deletes the questions last used — made, asked or ended — more than {@value #KEPT_DAYS} days ago, their votes with them. Daily
+     * at 04:55 Polish time.
+     */
+    @Scheduled(cron = "0 55 4 * * *", zone = Times.SCHEDULE_ZONE)
     public void purge() {
         int deleted = purgeBefore(Instant.now().minus(Duration.ofDays(KEPT_DAYS)));
         // a line also for none: the log shows the purge ran
         log.info("Polls purge: {} question(s) deleted with their votes", deleted);
     }
 
-    /** {@link #purge}: the questions made before {@code madeBefore}. */
-    int purgeBefore(Instant madeBefore) {
-        return jdbc.update("DELETE FROM party_poll WHERE created_at < ?", Timestamp.from(madeBefore));
+    /**
+     * {@link #purge}: the questions last used before {@code usedBefore}. The last use is the latest of the three moments, and each comes
+     * after the one before (a question asked again has no {@code closed_at}): made before it ({@code idx_party_poll_created}) and the
+     * last of the others before it too.
+     */
+    int purgeBefore(Instant usedBefore) {
+        Timestamp before = Timestamp.from(usedBefore);
+        return jdbc.update("DELETE FROM party_poll WHERE created_at < ? AND coalesce(closed_at, opened_at, created_at) < ?", before,
+                before);
     }
 
     /** The party's row locked for this transaction: what counts its questions, or asks one, is one at a time. False: no such party. */
@@ -319,12 +393,11 @@ public class PollService {
      * address — a hall's guests share the venue's Wi-Fi. A guest who drops the cookie is a new voter: a question to the room is a
      * hint for the DJ, as a 👍 is; {@link #MAX_VOTES} bounds a script.
      */
-    public static String voterOf(jakarta.servlet.http.HttpSession session) {
+    public static String voterOf(HttpSession session) {
         try {
-            byte[] hash = java.security.MessageDigest.getInstance("SHA-256")
-                    .digest(session.getId().getBytes(java.nio.charset.StandardCharsets.UTF_8));
-            return java.util.HexFormat.of().formatHex(hash, 0, 16);
-        } catch (java.security.NoSuchAlgorithmException e) {
+            byte[] hash = MessageDigest.getInstance("SHA-256").digest(session.getId().getBytes(StandardCharsets.UTF_8));
+            return HexFormat.of().formatHex(hash, 0, 16);
+        } catch (NoSuchAlgorithmException e) {
             throw new IllegalStateException("SHA-256 is part of every Java", e);
         }
     }
@@ -357,6 +430,26 @@ public class PollService {
 
     private static List<String> answers(Array array) throws SQLException {
         return array == null ? List.of() : List.of((String[]) array.getArray());
+    }
+
+    /** The moment a question ended: the DJ's, or {@link #ASKED_FOR} after it was asked once that has passed; null while asked. */
+    static Instant endOf(Instant openedAt, Instant closedAt, Instant now) {
+        if (closedAt != null || openedAt == null) {
+            return closedAt;
+        }
+        Instant ends = openedAt.plus(ASKED_FOR);
+        return ends.isAfter(now) ? null : ends;
+    }
+
+    /** Everything counted or looked up again at once: for tests that change the rows by SQL, past this service. */
+    void forgetCaches() {
+        counts.invalidateAll();
+        shownByParty.invalidateAll();
+    }
+
+    /** What the guests' page and the TV show is looked up again — once the change is in. */
+    private void forgetShown(String partyCode) {
+        AfterCommit.run(() -> shownByParty.invalidate(partyCode));
     }
 
     private static Instant instant(Timestamp timestamp) {

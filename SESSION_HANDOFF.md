@@ -43,10 +43,10 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
 - **2026-11-19 — `claude/upbeat-franklin-3aa8i3`, migrations V74 (two new tables), V75 and V76 (columns), no rows moved, PRs #286 (`main`) and #287 (`dev`), not merged:** "Pytanie do gości"
   (`docs/ideas.md` item 15, `docs/context/05-1j-polls.md`): the DJ's question with 2–4 answers above the guests' form (and on "nie
   przyjmuje"), results live on `/dj/polls` and the TV, or kept for later (a game); Pro, permission POLLS. Waits for the owner: a read, a try on a phone, the merge.
-- **2026-11-19 — the review of "Pytanie do gości" (`claude/upbeat-franklin-3aa8i3`, PRs #286 / #287, V74–V76, not merged):**
-  `docs/history/review-2026-11-19-polls.md`, P1–P15, no code changed. Not for release before P1 (the DJ's percents invisible), P2 (a
-  question left asked carries over to the next party) and P3 (the TV switch brings it back on the phones). Waits for the owner: the
-  read, the picks (P6 the card folded after an answer, P13 one migration), then the fixes.
+- **2026-11-19 — `claude/admiring-cannon-fud6t3` = `upbeat-franklin-3aa8i3` + its review (`docs/history/review-2026-11-19-polls.md`)
+  and the fixes P1–P15 (P13 left: no migration changed):** the DJ's percents readable, a question asked ends by itself after 12 h,
+  the TV switch only the TV, the guest's card folded after an answer, its own limit, the shown question cached 2 s. Waits for the
+  owner: the read, a try on a phone, then this branch into #286 / #287 (or merged instead of them).
 - **Waits for the owner (from #269):** after the first commit the deploy window holds back (Fri–Sun 18:00–6:00): does Railway
   deploy it on the workflow's re-run? UptimeRobot is set up (the owner, 2026-11-17; `docs/monitoring.md`).
 - **Waits for the owner (the wishes, #263):** the three older Polish texts with "DJ" and a masculine verb (`guest.vote.gone`,

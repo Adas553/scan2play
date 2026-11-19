@@ -42,6 +42,9 @@ class MigrationIT extends PostgresIntegrationTest {
         List<String> indexes = jdbc.queryForList("SELECT indexname FROM pg_indexes WHERE schemaname = 'public'", String.class);
 
         assertThat(indexes).contains("idx_party_decision_time");
+        // "Pytanie do gości" (V74): a party's questions (the DJ's page, the guests' page and the TV), the one asked (one a party),
+        // the nightly purge
+        assertThat(indexes).contains("idx_party_poll_party", "uk_party_poll_asked", "idx_party_poll_created");
         assertThat(indexes).as("duplicates of another index or of a UNIQUE constraint").doesNotContain("idx_owner_id", "idx_party_code");
         assertThat(indexes).as("the player's tables went with V19").noneMatch(index -> index.startsWith("idx_fallback"));
     }

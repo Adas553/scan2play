@@ -1809,6 +1809,13 @@ a.s2p-schedule-text:focus-visible { color: var(--s2p-white); text-decoration: un
 .s2p-poll-lead .s2p-poll-bar::-webkit-progress-value { background: var(--s2p-action); }
 .s2p-poll-lead .s2p-poll-bar::-moz-progress-bar { background: var(--s2p-action); }
 .s2p-poll-answer { color: var(--s2p-light); }
+/* the share in the guests' card and on the DJ's page alike: its own colour, not the card's (a card without text-white made it the
+   card's own dark grey on its dark grey) */
+.s2p-poll-share { color: var(--s2p-light); }
+/* the guest's card folded to one line once they answered: the question smaller there, the kicker above it */
+.s2p-poll-question-folded { font-size: 1.05rem; line-height: 1.3; margin: 0; overflow-wrap: anywhere; }
+.s2p-poll-question-folded .s2p-poll-kicker { font-size: 0.75rem; margin-bottom: 0.15rem; }
+.s2p-poll-fold { border: 0; }
 .s2p-poll-mine .s2p-poll-answer { font-weight: 700; }
 .s2p-poll-mine-mark { color: var(--s2p-green); font-size: 0.85rem; white-space: nowrap; }
 /* the DJ's page: the question asked now stands out from the saved and ended ones */

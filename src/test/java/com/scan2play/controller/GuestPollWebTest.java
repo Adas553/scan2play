@@ -8,6 +8,7 @@ import com.scan2play.service.GuestSessionService;
 import com.scan2play.service.GuestVoteService;
 import com.scan2play.service.PartySettingsQueryService;
 import com.scan2play.service.PollService;
+import com.scan2play.service.TestPolls;
 import com.scan2play.service.QrCodeService;
 import com.scan2play.service.SongEvaluationService;
 import org.junit.jupiter.api.BeforeEach;
@@ -102,8 +103,8 @@ class GuestPollWebTest {
     @MockitoBean
     private QrCodeService qrCodeService;
 
-    private final PollService.Poll asked = new PollService.Poll(5, PARTY, "Disco polo — tak czy nie?", List.of("Tak", "Nie", "Tylko jedna"),
-            12, Instant.now(), Instant.now(), null);
+    private final PollService.Poll asked = TestPolls.asked(5, PARTY, "Disco polo — tak czy nie?", List.of("Tak", "Nie", "Tylko jedna"),
+            12);
     private final PollService.Results results = new PollService.Results(asked, List.of(new PollService.Row(0, "Tak", 7, 58, true),
             new PollService.Row(1, "Nie", 4, 33, false), new PollService.Row(2, "Tylko jedna", 1, 8, false)), 12);
 
@@ -116,7 +117,7 @@ class GuestPollWebTest {
                 .thenReturn(new GuestQueueService.GuestQueue(List.of(), List.of(), Set.of(), null, 0, Set.of()));
         when(guestQueueService.mostWanted(anyString())).thenReturn(List.of());
         when(guestRequestLimiter.clientIp(any())).thenReturn("203.0.113.7");
-        when(guestRequestLimiter.tryAcquireVote(anyString(), anyString())).thenReturn(Optional.empty());
+        when(guestRequestLimiter.tryAcquirePollAnswer(anyString(), anyString())).thenReturn(Optional.empty());
         when(pollService.shown(PARTY)).thenReturn(Optional.of(asked));
         when(pollService.results(asked)).thenReturn(results);
     }
@@ -157,13 +158,14 @@ class GuestPollWebTest {
         String change = html.substring(html.indexOf("id=\"pollChangeForm\""));
         change = change.substring(0, change.indexOf("</form>"));
         assertThat(change).contains("value=\"0\"", "value=\"2\"").doesNotContain("value=\"1\"");
+        // folded to one line on the page: the question and the guest's answer — the request field stays near the top
+        assertThat(html).contains("id=\"pollFold\"", ">Twoja: Nie<").doesNotContain("id=\"pollFold\" open");
         write("guest-poll-answered.html", html);
     }
 
     @Test
     void anEndedQuestion_showsItsResultsToEveryone_withNoForm() throws Exception {
-        PollService.Poll ended = new PollService.Poll(5, PARTY, asked.question(), asked.answers(), 12, Instant.now(), Instant.now(),
-                Instant.now());
+        PollService.Poll ended = TestPolls.ended(5, PARTY, asked.question(), asked.answers(), 12);
         when(pollService.shown(PARTY)).thenReturn(Optional.of(ended));
         when(pollService.results(ended)).thenReturn(new PollService.Results(ended, results.rows(), 12));
         String html = mockMvc.perform(get("/p/" + PARTY + "/poll").header("Accept-Language", "pl-PL")).andReturn().getResponse()
@@ -185,8 +187,7 @@ class GuestPollWebTest {
     /** The DJ closed the requests to ask the room alone: the question on "DJ nie przyjmuje teraz próśb", with the session its form needs. */
     @Test
     void thePageOfAClosedParty_asksTheQuestion_andMakesTheSessionItsFormNeeds() throws Exception {
-        PollService.Poll endedParty = new PollService.Poll(6, ENDED, "Kto pierwszy na parkiet?", List.of("Ania", "Kuba"), 0, Instant.now(),
-                Instant.now(), null);
+        PollService.Poll endedParty = TestPolls.asked(6, ENDED, "Kto pierwszy na parkiet?", List.of("Ania", "Kuba"), 0);
         when(pollService.shown(ENDED)).thenReturn(Optional.of(endedParty));
         when(pollService.results(endedParty)).thenReturn(new PollService.Results(endedParty, List.of(), 0));
         MvcResult result = mockMvc.perform(get("/p/" + ENDED).header("Accept-Language", "pl-PL")).andExpect(status().isOk()).andReturn();
@@ -212,8 +213,11 @@ class GuestPollWebTest {
                         .header("X-Requested-With", "fetch").header("Accept-Language", "pl-PL"))
                 .andExpect(status().isOk()).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
         assertThat(card.strip()).startsWith("<section id=\"guestPoll\"");
-        assertThat(card).contains("s2p-poll-bar", "✓ Twoja").doesNotContain("id=\"pollNote\"");
+        assertThat(card).contains("s2p-poll-bar", "✓ Twoja", "open").doesNotContain("id=\"pollNote\"");
+        assertThat(card).as("unfolded right after the answer").containsPattern("id=\"pollFold\"[^>]*open");
         verify(pollService).vote(eq(PARTY), eq(5L), anyString(), eq(2));
+        verify(guestRequestLimiter).tryAcquirePollAnswer("203.0.113.7", PARTY);
+        verify(guestRequestLimiter, never()).tryAcquireVote(anyString(), anyString());
         write("guest-poll-answer.html", card);
     }
 
@@ -226,6 +230,13 @@ class GuestPollWebTest {
                         .param("_csrf", token).header("X-Requested-With", "fetch").header("Accept-Language", "pl-PL"))
                 .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
         assertThat(card).contains("id=\"pollNote\"", "To pytanie jest już zakończone.");
+
+        when(pollService.vote(anyString(), anyLong(), anyString(), org.mockito.ArgumentMatchers.anyInt())).thenReturn(PollService.Voted.INVALID);
+        String invalid = mockMvc.perform(post("/p/" + PARTY + "/poll/5").cookie(page.getResponse().getCookie("SESSION")).param("choice", "9")
+                        .param("_csrf", token).header("X-Requested-With", "fetch").header("Accept-Language", "pl-PL"))
+                .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+        assertThat(invalid).as("an answer the question has not: not \"ended\"").contains("Tej odpowiedzi nie ma w pytaniu")
+                .doesNotContain("To pytanie jest już zakończone.");
     }
 
     @Test
@@ -238,8 +249,8 @@ class GuestPollWebTest {
     /** The DJ keeps the results for a game's end (V75): no number of an answer anywhere in the guest's card, only how many voted. */
     @Test
     void resultsKeptForLater_areNotInTheGuestsCard_onlyTheirAnswerAndHowManyVoted() throws Exception {
-        PollService.Poll hidden = new PollService.Poll(5, PARTY, "Kto pierwszy na parkiet?", List.of("Ania", "Kuba"), 23, Instant.now(),
-                Instant.now(), null, true, null);
+        PollService.Poll hidden = TestPolls.resultsHidden(TestPolls.asked(5, PARTY, "Kto pierwszy na parkiet?",
+                List.of("Ania", "Kuba"), 23));
         when(pollService.shown(PARTY)).thenReturn(Optional.of(hidden));
         when(pollService.choiceOf(eq(5L), anyString())).thenReturn(Optional.of(1));
         String html = mockMvc.perform(get("/p/" + PARTY + "/poll").header("Accept-Language", "pl-PL")).andReturn().getResponse()
@@ -260,8 +271,7 @@ class GuestPollWebTest {
     /** The DJ keeps the songs on the TV (V76): the screen shows the most wanted, the phones still the question. */
     @Test
     void aQuestionOffTheTv_leavesTheSongsOnTheScreen_andStaysOnThePhones() throws Exception {
-        PollService.Poll offTv = new PollService.Poll(5, PARTY, asked.question(), asked.answers(), 12, Instant.now(), Instant.now(), null,
-                false, null, false);
+        PollService.Poll offTv = TestPolls.offTv(asked);
         when(pollService.shown(PARTY)).thenReturn(Optional.of(offTv));
         when(pollService.results(offTv)).thenReturn(results);
         String tv = mockMvc.perform(get("/p/" + PARTY + "/tv/list").param("lang", "pl")).andReturn().getResponse()
@@ -284,6 +294,19 @@ class GuestPollWebTest {
         when(qrCodeService.generateQrCodeBase64(anyString(), org.mockito.ArgumentMatchers.anyInt(), org.mockito.ArgumentMatchers.anyInt()))
                 .thenAnswer(call -> new QrCodeService().generateQrCodeBase64(call.getArgument(0), call.getArgument(1), call.getArgument(2)));
         write("tv-poll.html", mockMvc.perform(get("/p/" + PARTY + "/tv").param("lang", "pl")).andReturn().getResponse()
+                .getContentAsString(StandardCharsets.UTF_8));
+
+        // the longest a DJ can type: the question's 120 characters and four answers of 40 (tv-poll-longest)
+        PollService.Poll longest = TestPolls.asked(5, PARTY, ("Która piosenka ma zagrać jako ostatnia tej nocy, kiedy już wszyscy "
+                + "zmęczeni, ale nikt nie chce iść do domu? ").repeat(2).substring(0, PollService.QUESTION_MAX),
+                List.of("Pierwsza z długich odpowiedzi DJ-a, ta!!", "Druga odpowiedź, równie długa jak tamta!",
+                        "Trzecia odpowiedź, by zająć całe miejsce", "Czwarta i ostatnia, też czterdzieści zn."), 40);
+        when(pollService.shown(PARTY)).thenReturn(Optional.of(longest));
+        when(pollService.results(longest)).thenReturn(new PollService.Results(longest, List.of(
+                new PollService.Row(0, longest.answers().get(0), 10, 25, false), new PollService.Row(1, longest.answers().get(1), 15, 38, true),
+                new PollService.Row(2, longest.answers().get(2), 5, 13, false), new PollService.Row(3, longest.answers().get(3), 10, 25, false)),
+                40));
+        write("tv-poll-long.html", mockMvc.perform(get("/p/" + PARTY + "/tv").param("lang", "pl")).andReturn().getResponse()
                 .getContentAsString(StandardCharsets.UTF_8));
     }
 }

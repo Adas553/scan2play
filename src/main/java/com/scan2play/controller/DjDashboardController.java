@@ -25,6 +25,7 @@ import com.scan2play.service.PlanService;
 import com.scan2play.service.StaffInvitationService;
 import com.scan2play.service.QrCodeService;
 import com.scan2play.service.WishService;
+import com.scan2play.service.PollService;
 import com.scan2play.model.PlanFeature;
 import com.scan2play.service.DjLibraryParser;
 import com.scan2play.service.DjLibraryService;
@@ -98,7 +99,8 @@ public class DjDashboardController {
     private final FreeAiLimit freeAiLimit;
     /** "Życzenia przed imprezą" (V68): the settings card's state, the invitation's print. */
     private final WishService wishService;
-    private final com.scan2play.service.PollService pollService;
+    /** "Pytanie do gości" (V74): the settings card's state. */
+    private final PollService pollService;
 
     /**
      * On every answer of the queue poll, 304 too: the warnings above the queue that hold now, comma-separated —

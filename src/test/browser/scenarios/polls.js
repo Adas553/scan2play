@@ -29,6 +29,11 @@
             t.step('one answer sent, in the background, with its choice and the form\'s token',
                 sent.map(function (r) { return [r.q.choice, r.q['X-Requested-With'], !!r.q._csrf]; }), [['2', 'fetch', true]]);
             t.check('the guest\'s answer marked', document.querySelector('#guestPoll .s2p-poll-mine').textContent.indexOf('Tylko jedna') >= 0);
+            t.check('unfolded right after the answer: the results seen', document.getElementById('pollFold').open
+                && document.querySelector('#guestPoll .s2p-poll-bar').getBoundingClientRect().height > 0);
+            t.check('the focus on the card\'s line, not lost with the tapped button',
+                document.activeElement === document.querySelector('#pollFold > summary'));
+            t.check('the same live region (put in place, not a new section)', document.querySelectorAll('#guestPoll').length === 1);
             t.step('the typed song stayed (no page load)', [field.value, document.getElementById('songInput') === field], ['Wilki - Baśka', true]);
             t.check('nothing sideways', fits());
         }
@@ -105,6 +110,15 @@
         viewport: '320,640',
         run: async function (t) {
             t.check('nothing sideways', fits());
+            const fold = document.getElementById('pollFold');
+            t.check('answered, the card is one line: folded', !fold.open);
+            t.check('folded, the request field is on the first screen',
+                document.getElementById('songInput').getBoundingClientRect().bottom <= window.innerHeight);
+            const line = fold.querySelector('summary');
+            t.check('its line at least 44 px high, with the guest\'s answer', line.getBoundingClientRect().height >= 44
+                && line.textContent.indexOf('Twoja: Nie') >= 0);
+            line.click();
+            t.check('a tap unfolds it', fold.open);
             const bars = Array.from(document.querySelectorAll('#guestPoll .s2p-poll-bar'));
             t.step('a bar for each answer, inside the screen', [bars.length, bars.filter(function (b) {
                 return b.getBoundingClientRect().right > document.documentElement.clientWidth;
@@ -142,11 +156,13 @@
         run: async function (t) {
             t.check('their answer and "Wyniki pokaże DJ", no bars', !!document.getElementById('pollHidden')
                 && !!document.getElementById('pollMineHidden') && !document.querySelector('#guestPoll .s2p-poll-bar'));
+            document.querySelector('#pollFold > summary').click();
             const check = document.querySelector('#guestPoll [data-poll-refresh]');
             t.check('"↻ Sprawdź wyniki" tappable', check.getBoundingClientRect().height >= 44);
             check.click();
             await t.waitFor(function () { return document.querySelector('#guestPoll .s2p-poll-bar'); }, 'the results', 5000);
             t.step('asked once', await t.stand.count('GET /p/ABC12/poll'), 1);
+            t.check('the card stays unfolded as the guest left it', document.getElementById('pollFold').open);
             t.check('nothing sideways', fits());
         }
     });
@@ -165,6 +181,27 @@
             t.check('the leader moved to "Nie"', live.querySelector('.s2p-poll-lead').textContent.indexOf('Nie') >= 0);
             t.check('the form stayed (no page load)', document.getElementById('pollNewForm') === form);
             t.check('asked for the question asked', (await t.stand.requests('GET /dj/polls/3/results')).length >= 1);
+        }
+    });
+
+    S2P.scenario({
+        name: 'polls-shares-readable',
+        title: 'the DJ\'s page: every share is readable — its colour is not the card\'s background',
+        page: 'polls',
+        viewport: '390,844',
+        run: async function (t) {
+            const shares = Array.from(document.querySelectorAll('.s2p-poll-card .s2p-poll-share .fw-bold'));
+            const background = function (el) {
+                for (let node = el; node; node = node.parentElement) {
+                    const color = getComputedStyle(node).backgroundColor;
+                    if (color !== 'rgba(0, 0, 0, 0)' && color !== 'transparent') return color;
+                }
+                return getComputedStyle(document.body).backgroundColor;
+            };
+            t.check('shares on the page', shares.length >= 2);
+            t.step('a share drawn in its card\'s background colour', shares.filter(function (s) {
+                return getComputedStyle(s).color === background(s);
+            }).length, 0);
         }
     });
 
@@ -192,6 +229,21 @@
             t.step('three answers, every one on the screen', [rows.length, rows.filter(function (r) {
                 return r.getBoundingClientRect().bottom > window.innerHeight;
             }).length], [3, 0]);
+            t.check('the total on the screen', document.getElementById('tvPollTotal').getBoundingClientRect().bottom <= window.innerHeight);
+            t.check('nothing sideways', fits());
+        }
+    });
+
+    S2P.scenario({
+        name: 'tv-poll-longest',
+        title: 'the TV (1280 × 720) with the longest question and four answers of the longest: all on the one screen, nothing sideways',
+        page: 'tv-poll-long',
+        viewport: '1280,720',
+        run: async function (t) {
+            const rows = Array.from(document.querySelectorAll('.tv-poll-row'));
+            t.step('four answers, every one on the screen', [rows.length, rows.filter(function (r) {
+                return r.getBoundingClientRect().bottom > window.innerHeight;
+            }).length], [4, 0]);
             t.check('the total on the screen', document.getElementById('tvPollTotal').getBoundingClientRect().bottom <= window.innerHeight);
             t.check('nothing sideways', fits());
         }

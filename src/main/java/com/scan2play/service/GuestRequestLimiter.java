@@ -235,6 +235,18 @@ public class GuestRequestLimiter {
     }
 
     /**
+     * Counts one guest's answer to the DJ's question (V74), or its change, against the address's limit at the party — as many as
+     * the 👍, but a count of its own: a hall on the venue's Wi-Fi is one address, and the 👍 given before the DJ says "answer now"
+     * must not refuse the answers the DJ waits for on the stage.
+     *
+     * @return empty if the answer may go on (it has been counted), otherwise the seconds to wait
+     */
+    public Optional<Long> tryAcquirePollAnswer(String clientIp, String partyCode) {
+        return acquire(voteWindows, clientIp + "|" + partyCode + "|poll", perClientVoteLimit, clientWindow,
+                "one address's answers @ " + partyCode);
+    }
+
+    /**
      * The organiser's "Odblokuj prośby gości": the party's 24-hour window starts again. One guest with a script can spend the
      * party's whole day (60 per 10 min from one address reach 300 in under an hour), and every other guest would be refused until
      * the next day, with nothing the DJ could do. The addresses keep their windows, so the one that spent it is

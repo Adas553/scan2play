@@ -297,3 +297,37 @@ najważniejsze. **Do wydania jeszcze nie**, bo trzy rzeczy psują ją w normalny
 Przed wydaniem zalecam też **P4** i **P5** (czytelność przycisków i etykiet DJ-a), **P9** (osobny limit odpowiedzi, sala na jednym
 Wi-Fi) i decyzję właściciela w **P6** (karta zwinięta po odpowiedzi). P7 i P8 (zapytania) są tanie i warto je zrobić od razu. P10–P15
 mogą iść w tej samej poprawce albo później. Przy P13 trzeba zdecydować przed wydaniem, czy łączyć migracje.
+
+## Poprawki (2026-11-19, gałąź `claude/admiring-cannon-fud6t3`)
+
+Ta gałąź to `claude/upbeat-franklin-3aa8i3` (scalona, bez zmian w samej gałęzi PR) + ten przegląd + poprawki poniżej. Migracji nie
+dodano i istniejących nie zmieniano.
+
+| Punkt | Co zrobiono |
+|---|---|
+| P1 | `.s2p-poll-share { color: var(--s2p-light) }` (kolor procentu we fragmencie, niezależny od karty) i `text-white` na karcie DJ-a. Scenariusz `polls-shares-readable` porównuje kolor procentu z tłem: **czerwony** bez poprawki (5 procentów w kolorze tła), zielony z nią |
+| P2 | `PollService.ASKED_FOR` = 12 h. Pytanie zadane dawniej liczy się jako zakończone w chwili `opened_at + 12 h`: `endOf` w Javie, `ENDS` w SQL `shown`, warunek w `asked`, a w `vote` przez stan rekordu. „Zadaj” zapisuje wtedy `closed_at` tamtego na tę chwilę, a nie na „teraz”. „Zadaj ponownie” ustawia `opened_at = now()`, czyli pytanie jest zadane na nowo. Część (a), czyli kończenie pytania przy „Wznów imprezę”, **odrzucona**: zakończyłaby pytanie zadane w przerwie, gdy DJ otwiera prośby w trakcie głosowania. Testy: `PollServiceIT.aQuestionLeftAsked_endsByItself_andIsNotTheNextPartys`, `PollServiceTest` (`endOf`). Na stronie DJ-a: „samo kończy się po 12 godzinach” |
+| P3 | `setOnTv` zmienia tylko `on_tv` (bez `revealed_at`). Przełącznik TV jest tylko przy pytaniu zadanym. `PollServiceIT.theTvSwitch_isKeptPerQuestion_andTouchesOnlyTheTv`: zakończone pytanie po „Na TV: Pytanie” nie wraca ani na telefony, ani na TV |
+| P4 | Jedna linijka stanu („Wyniki: … · TV: …”). „Na TV: [Pytanie] [Piosenki]” jako grupa z `aria-pressed`, tylko przy zadanym pytaniu. „Otwórz ekran TV ↗” jako link. „Usuń” osobno, po prawej, nie na całą szerokość. Bez 📺 na przyciskach |
+| P5 | „👀 Pokaż wyniki (goście i TV)” / „🙈 Ukryj wyniki (goście i TV)”, „Od razu po oddaniu głosu”, „Zadanie nowego pytania zakończy to; samo kończy się po 12 godzinach.”, EN „(e.g. a game)”. `INVALID` ma własną notkę `guest.poll.note.invalid` („Tej odpowiedzi nie ma w pytaniu — odśwież stronę.”, `GuestPollWebTest`) |
+| P6 | Po odpowiedzi (albo po zakończeniu pytania) karta gościa zwija się do jednej linii `<details>`: „🗳 pytanie · Twoja: Nie ▾”, a wyniki są w środku. Zaraz po głosie karta jest otwarta (`pollOpen`), a przy ponownym pobraniu zostaje otwarta, jeśli gość ją otworzył. Przed odpowiedzią wygląda jak przedtem. Miejsce karty (nad nagłówkiem z logo) bez zmian: wymagałoby podzielenia głównej karty strony, a po zwinięciu karta zajmuje jedną linię. Scenariusze: `guest-poll-results-phone-320` (zwinięta, pole prośby na pierwszym ekranie 320 × 640, linia ≥ 44 px), `guest-poll-answer`, `guest-poll-hidden-check` |
+| P7 | `shown()` w Caffeine na 2 s według kodu imprezy, czyszczone po commicie każdego działania DJ-a i głosu (licznik głosów jest na karcie). TV nie liczy `mostWanted` ani godziny otwarcia, gdy pokazuje pytanie (`PollView.addForScreen` zwraca, czy je pokazuje) |
+| P8 | `PollService.resultsOf(List<Poll>)`: jedno `GROUP BY poll_id, choice` z `poll_id = ANY(?)`, bez zapytania dla pytań bez głosu. Test `PollServiceIT.theResultsOfManyQuestions_areCountedAtOnce` |
+| P9 | `GuestRequestLimiter.tryAcquirePollAnswer`: ten sam limit co 👍, ale własny licznik (`ip\|party\|poll`). `GuestPollWebTest` sprawdza, że odpowiedź nie zużywa licznika 👍 |
+| P10 | `guest-poll.js`: bez `submitter` zwykły formularz; zawartość podmieniana w tej samej sekcji (`aria-live`); fokus na linii karty po odpowiedzi (`guest-poll-answer`). `polls.js`: po przekierowaniu (koniec logowania) koniec odpytywania; gdy pytanie zakończyło się w międzyczasie (`data-poll-ended` we fragmencie), strona ładuje się od nowa |
+| P11 | Dodatkowe konstruktory `Poll` usunięte, w testach jest `TestPolls` (saved / asked / ended / resultsHidden / offTv). Pełne nazwy klas zamienione na importy (`PollService`, `DjDashboardController`). `end()` bez drugiego zapytania, gdy `UPDATE` coś zmienił. Zaokrąglanie procentów zostawione, z komentarzem |
+| P12 | Czyszczenie liczy 90 dni od ostatniego użycia: `created_at < ? AND coalesce(closed_at, opened_at, created_at) < ?`, czyli dalej z `idx_party_poll_created`. Zmienione zdanie w polityce prywatności PL/EN („od ostatniego użycia pytania (utworzenia, zadania albo zakończenia)”). Test w `PollServiceIT`: pytanie zrobione dawno, a zadane wczoraj, zostaje |
+| P13 | **Bez zmian.** Złożenie V75 / V76 w V74 i poprawka komentarza V74 zmieniłyby sumy kontrolne Flyway. Baza, która ma już V74–V76 (np. lokalna `scan2play` właściciela, jeśli gałąź była uruchomiona), przestałaby wtedy startować (`validate`). Komentarz „random token” zostaje; prawdę mówią `10-2-migrations.md` i `05-1j-polls.md` |
+| P14 | Testy dodane (wyżej) oraz `tv-poll-longest` (pytanie 120 znaków i 4 odpowiedzi po 40 znaków na 1280 × 720, renderowane w `GuestPollWebTest` jako `tv-poll-long`). Głos na pytanie innej imprezy w `PollServiceIT`. Nazwy trzech indeksów w `MigrationIT`. Uwaga: zwykły `tv-poll` był już sprawdzany na 1280 × 720, przegląd mylił się, pisząc, że nie był |
+| P15 | `05-1j-polls.md` przepisany na stan obecny (12 h, zwinięta karta, przełącznik TV, cache, limit, czyszczenie), w tabeli `PROJECT_CONTEXT.md` 8 KB. Zaktualizowane `11-12`, `06-1`, `06-3`, a w `06-7-look.md` zdanie o paskach `<progress>` |
+
+### Sprawdzenia po poprawkach
+
+| Krok | Wynik |
+|---|---|
+| `unit` | 1425 testów, 0 błędów — OK |
+| `it` | 198 testów (3 nowe), 0 błędów — OK |
+| `browser` | 452 scenariusze (2 nowe: `polls-shares-readable`, `tv-poll-longest`) — OK |
+| `audit -t "guest-poll,polls,tv-poll,settings,dashboard"` | 35 stron × 3 szerokości: bez przewijania w bok i błędów konsoli. Cele < 44 px tylko 4 znane z panelu — OK |
+| mutacja: bez koloru `.s2p-poll-share` i bez `text-white` | **czerwony** `polls-shares-readable` (5 procentów w kolorze tła) |
+| zrzuty `guest-poll*`, `polls*`, `tv-poll` po poprawkach | obejrzane: procenty widać, karta gościa po odpowiedzi to jedna linia nad formularzem, na karcie DJ-a jeden wybór TV |

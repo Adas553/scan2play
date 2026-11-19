@@ -118,6 +118,7 @@ class PollServiceIT extends PostgresIntegrationTest {
         assertThat(polls.asked(party)).isEmpty();
         assertThat(polls.shown(party)).map(PollService.Poll::id).as("the one ended last, a while").contains(second.id());
         jdbc.update("UPDATE party_poll SET closed_at = now() - interval '16 minutes' WHERE party_code = ?", party);
+        polls.forgetCaches();
         assertThat(polls.shown(party)).as("after a quarter of an hour, none").isEmpty();
 
         assertThat(polls.ask(party, first.id())).isTrue();
@@ -138,6 +139,7 @@ class PollServiceIT extends PostgresIntegrationTest {
         assertThat(poll.revealedAt()).isNull();
         assertThat(polls.end(party, poll.id())).isTrue();
         jdbc.update("UPDATE party_poll SET closed_at = now() - interval '40 minutes' WHERE id = ?", poll.id());
+        polls.forgetCaches();
         assertThat(polls.shown(party)).as("ended long ago, never shown").isEmpty();
 
         assertThat(polls.setResultsHidden(party, poll.id(), false)).isTrue();
@@ -152,9 +154,12 @@ class PollServiceIT extends PostgresIntegrationTest {
         assertThat(polls.create(party, "Disco polo?", List.of("Tak", "Nie"), false, false).orElseThrow().resultsHidden()).isFalse();
     }
 
-    /** The TV keeps the songs (V76): switched per question; back on the TV, the question stays on the screens a while from then. */
+    /**
+     * The TV keeps the songs (V76): switched per question — only the TV: the question stays on the phones while asked, and switching an
+     * ended one back to the TV brings it back on no screen (it touches no {@code revealed_at}).
+     */
     @Test
-    void theTvSwitch_isKeptPerQuestion_andBackOnTheTvTheQuestionStaysAWhile() {
+    void theTvSwitch_isKeptPerQuestion_andTouchesOnlyTheTv() {
         String party = party();
         PollService.Poll poll = asked(party);
         assertThat(poll.onTv()).as("on the TV by default").isTrue();
@@ -164,10 +169,69 @@ class PollServiceIT extends PostgresIntegrationTest {
 
         polls.end(party, poll.id());
         jdbc.update("UPDATE party_poll SET closed_at = now() - interval '40 minutes' WHERE id = ?", poll.id());
+        polls.forgetCaches();
         assertThat(polls.shown(party)).isEmpty();
         assertThat(polls.setOnTv(party, poll.id(), true)).isTrue();
-        assertThat(polls.shown(party)).as("back on the TV: a quarter of an hour from now").map(PollService.Poll::id).contains(poll.id());
+        assertThat(polls.poll(party, poll.id()).orElseThrow().revealedAt()).isNull();
+        assertThat(polls.shown(party)).as("not back on the phones, nor on the TV").isEmpty();
         assertThat(polls.setOnTv("NOPE1", poll.id(), false)).isFalse();
+    }
+
+    /**
+     * A question the DJ forgot to end: asked longer than {@link PollService#ASKED_FOR} it has ended — at that moment —, so the next
+     * party on the same code shows none, takes no vote for it and may ask another; asked again it is asked anew.
+     */
+    @Test
+    void aQuestionLeftAsked_endsByItself_andIsNotTheNextPartys() {
+        String party = party();
+        PollService.Poll poll = asked(party);
+        polls.vote(party, poll.id(), "voter-a", 0);
+        jdbc.update("UPDATE party_poll SET opened_at = now() - interval '7 days' WHERE id = ?", poll.id());
+        polls.forgetCaches();
+
+        assertThat(polls.asked(party)).isEmpty();
+        assertThat(polls.shown(party)).as("a week later: not on the guests' page nor the TV").isEmpty();
+        PollService.Poll left = polls.poll(party, poll.id()).orElseThrow();
+        assertThat(left.state()).isEqualTo(PollService.State.ENDED);
+        assertThat(left.closedAt()).isEqualTo(left.openedAt().plus(PollService.ASKED_FOR));
+        assertThat(polls.vote(party, poll.id(), "voter-b", 1)).isEqualTo(PollService.Voted.NOT_ASKED);
+
+        PollService.Poll next = polls.create(party, "Wolniej czy szybciej?", List.of("Wolniej", "Szybciej"), false, true).orElseThrow();
+        assertThat(polls.asked(party)).map(PollService.Poll::id).contains(next.id());
+        assertThat(jdbc.queryForObject("SELECT closed_at = opened_at + interval '12 hours' FROM party_poll WHERE id = ?", Boolean.class,
+                poll.id())).as("the one left ended when it ended by itself, not now").isTrue();
+
+        assertThat(polls.ask(party, poll.id())).isTrue();
+        assertThat(polls.asked(party)).as("asked again: asked anew").map(PollService.Poll::id).contains(poll.id());
+        assertThat(votes(poll)).as("with its votes").containsExactly(1, 0, 0);
+    }
+
+    /** A question of another party is never voted on: its id with this party's code is no question. */
+    @Test
+    void aVote_forAnotherPartysQuestion_isNotCounted() {
+        String party = party();
+        String other = party();
+        PollService.Poll poll = asked(other);
+        assertThat(polls.vote(party, poll.id(), "voter-a", 0)).isEqualTo(PollService.Voted.NOT_ASKED);
+        assertThat(voteCount(poll)).isZero();
+    }
+
+    /** The DJ's page counts every question's results in one query; the ones without a vote are not asked for. */
+    @Test
+    void theResultsOfManyQuestions_areCountedAtOnce() {
+        String party = party();
+        PollService.Poll first = asked(party);
+        polls.vote(party, first.id(), "voter-a", 2);
+        polls.vote(party, first.id(), "voter-b", 2);
+        PollService.Poll second = asked(party);
+        polls.vote(party, second.id(), "voter-a", 0);
+        PollService.Poll saved = polls.create(party, "Na później", List.of("Tak", "Nie"), false, false).orElseThrow();
+        polls.forgetCaches();
+        List<PollService.Results> results = polls.resultsOf(polls.pollsOf(party));
+        assertThat(results).extracting(r -> r.poll().id()).containsExactly(saved.id(), second.id(), first.id());
+        assertThat(results).extracting(PollService.Results::total).containsExactly(0, 1, 2);
+        assertThat(results.get(2).rows()).extracting(PollService.Row::votes).containsExactly(0, 0, 2);
+        assertThat(results.get(1).rows().get(0).leads()).isTrue();
     }
 
     /** Two "Zadaj" of two questions at once: one is asked, never two (the partial unique index would refuse the second anyway). */
@@ -205,12 +269,17 @@ class PollServiceIT extends PostgresIntegrationTest {
         jdbc.update("UPDATE party_settings SET party_code = ? WHERE party_code = ?", moved, party);
         assertThat(polls.asked(moved)).map(PollService.Poll::id).contains(poll.id());
 
-        jdbc.update("UPDATE party_poll SET created_at = ? WHERE id = ?", java.sql.Timestamp.from(Instant.now().minus(91, ChronoUnit.DAYS)),
-                poll.id());
+        java.sql.Timestamp longAgo = java.sql.Timestamp.from(Instant.now().minus(91, ChronoUnit.DAYS));
+        jdbc.update("UPDATE party_poll SET created_at = ?, opened_at = ?, closed_at = ? WHERE id = ?", longAgo, longAgo, longAgo, poll.id());
         PollService.Poll fresh = polls.create(moved, "Świeże", List.of("Tak", "Nie"), false, false).orElseThrow();
+        // made long ago, but asked yesterday: last used yesterday — kept (the privacy policy: 90 days from the last use)
+        PollService.Poll old = polls.create(moved, "Stałe pytanie", List.of("Tak", "Nie"), false, false).orElseThrow();
+        jdbc.update("UPDATE party_poll SET created_at = ?, opened_at = now() - interval '1 day', closed_at = now() - interval '1 day'"
+                + " WHERE id = ?", longAgo, old.id());
         assertThat(polls.purgeBefore(Instant.now().minus(PollService.KEPT_DAYS, ChronoUnit.DAYS))).isGreaterThanOrEqualTo(1);
         assertThat(polls.poll(moved, poll.id())).isEmpty();
         assertThat(polls.poll(moved, fresh.id())).isPresent();
+        assertThat(polls.poll(moved, old.id())).isPresent();
         assertThat(jdbc.queryForObject("SELECT count(*) FROM party_poll_vote WHERE poll_id = ?", Integer.class, poll.id())).isZero();
 
         jdbc.update("DELETE FROM party_settings WHERE party_code = ?", moved);

@@ -325,6 +325,8 @@ public final class ViewAttributes {
     public static final String POLL_MINE = "pollMine";
     /** What became of the guest's vote when it did not count ({@code guest.poll.note.*}), or null. */
     public static final String POLL_NOTE = "pollNote";
+    /** The guest's card comes back unfolded — right after their answer: they see how it stands. */
+    public static final String POLL_OPEN = "pollOpen";
     /** Whether the party may ask questions at all (its plan): the guests' page keeps a place for one only then. */
     public static final String POLL_ON = "pollOn";
     /** The DJ's page: the party's questions, the one opened with its results, and the limits the form and the page say. */
@@ -334,6 +336,8 @@ public final class ViewAttributes {
     public static final String POLL_QUESTION_MAX = "pollQuestionMax";
     public static final String POLL_ANSWER_MAX = "pollAnswerMax";
     public static final String POLL_MAX_ANSWERS = "pollMaxAnswers";
+    /** How long a question stays asked before it ends by itself ({@code PollService.ASKED_FOR}), in hours. */
+    public static final String POLL_ASKED_HOURS = "askedHours";
     /** Flash: what the DJ's page says after a form ({@code polls.done.*}). */
     public static final String POLL_DONE = "pollDone";
     /** The settings' card: the question asked now, or null. */

@@ -16,7 +16,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class PollServiceTest {
 
     private static PollService.Poll poll(String... answers) {
-        return new PollService.Poll(1, "PARTY", "Disco polo?", List.of(answers), 0, Instant.now(), Instant.now(), null);
+        return TestPolls.asked(1, "PARTY", "Disco polo?", List.of(answers), 0);
     }
 
     @Test
@@ -53,9 +53,15 @@ class PollServiceTest {
     @Test
     void aQuestion_isSaved_asked_orEnded() {
         Instant now = Instant.now();
-        assertThat(new PollService.Poll(1, "P", "Q", List.of("A", "B"), 0, now, null, null).state()).isEqualTo(PollService.State.SAVED);
-        assertThat(new PollService.Poll(1, "P", "Q", List.of("A", "B"), 0, now, now, null).asked()).isTrue();
-        assertThat(new PollService.Poll(1, "P", "Q", List.of("A", "B"), 0, now, now, now).state()).isEqualTo(PollService.State.ENDED);
+        assertThat(TestPolls.saved(1, "P", "Q", List.of("A", "B")).state()).isEqualTo(PollService.State.SAVED);
+        assertThat(TestPolls.asked(1, "P", "Q", List.of("A", "B"), 0).asked()).isTrue();
+        assertThat(TestPolls.ended(1, "P", "Q", List.of("A", "B"), 0).state()).isEqualTo(PollService.State.ENDED);
+        // asked and forgotten: ended by itself ASKED_FOR after it was asked, at that moment
+        Instant asked = now.minus(PollService.ASKED_FOR).minusSeconds(60);
+        assertThat(PollService.endOf(asked, null, now)).isEqualTo(asked.plus(PollService.ASKED_FOR));
+        assertThat(PollService.endOf(now.minusSeconds(60), null, now)).as("asked a minute ago: still asked").isNull();
+        assertThat(PollService.endOf(asked, now, now)).as("the DJ's end stays").isEqualTo(now);
+        assertThat(PollService.endOf(null, null, now)).as("saved for later").isNull();
     }
 
     @Test

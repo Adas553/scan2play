@@ -28,8 +28,8 @@ class PollView {
 
     /**
      * For a guest's page ({@code request}: their session, if they have one). A question they may answer needs a form, whose CSRF token
-     * lives in the session: the session is made here, before the page is drawn — made while the response is written, it came too late
-     * once (the landing page, 2026-10-18).
+     * lives in the session: the session is made here, before the page is drawn — made while the response is written, it comes too
+     * late (CLAUDE.md "Mind" 1).
      */
     void addForGuest(Model model, PartySettingsEntity settings, HttpServletRequest request) {
         if (!add(model, settings, false)) {
@@ -44,9 +44,13 @@ class PollView {
         model.addAttribute(POLL_MINE, mine.orElse(null));
     }
 
-    /** For the TV: the question and its results, no guest — none when the DJ keeps the most wanted songs on the screen (V76). */
-    void addForScreen(Model model, PartySettingsEntity settings) {
-        add(model, settings, true);
+    /**
+     * For the TV: the question and its results, no guest — none when the DJ keeps the most wanted songs on the screen (V76).
+     *
+     * @return whether the screen shows a question (in the list's place)
+     */
+    boolean addForScreen(Model model, PartySettingsEntity settings) {
+        return add(model, settings, true) && model.getAttribute(POLL) != null;
     }
 
     private boolean add(Model model, PartySettingsEntity settings, boolean screen) {

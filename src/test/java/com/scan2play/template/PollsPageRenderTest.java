@@ -8,6 +8,7 @@ import com.scan2play.service.PartyStaffService;
 import com.scan2play.service.PlanService;
 import com.scan2play.service.Plans;
 import com.scan2play.service.PollService;
+import com.scan2play.service.TestPolls;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -67,12 +68,10 @@ class PollsPageRenderTest {
 
     private final PollService polls = mock(PollService.class);
     private PartySettingsEntity party;
-    private final PollService.Poll asked = new PollService.Poll(3, PARTY, "Disco polo — tak czy nie?", List.of("Tak", "Nie"), 12,
-            Instant.now(), Instant.now(), null);
-    private final PollService.Poll saved = new PollService.Poll(2, PARTY, "Kto pierwszy na parkiet?", List.of("Ania", "Kuba"), 0,
-            Instant.now(), null, null);
-    private final PollService.Poll ended = new PollService.Poll(1, PARTY, "Wolniej czy szybciej?", List.of("Wolniej", "Szybciej", "Tak jak jest"),
-            9, Instant.now(), Instant.now(), Instant.now(), true, null, false);
+    private final PollService.Poll asked = TestPolls.asked(3, PARTY, "Disco polo — tak czy nie?", List.of("Tak", "Nie"), 12);
+    private final PollService.Poll saved = TestPolls.saved(2, PARTY, "Kto pierwszy na parkiet?", List.of("Ania", "Kuba"));
+    private final PollService.Poll ended = TestPolls.offTv(TestPolls.resultsHidden(
+            TestPolls.ended(1, PARTY, "Wolniej czy szybciej?", List.of("Wolniej", "Szybciej", "Tak jak jest"), 9)));
 
     @BeforeAll
     static void setUpEngine() {
@@ -102,6 +101,7 @@ class PollsPageRenderTest {
         when(polls.results(ended)).thenReturn(new PollService.Results(ended, List.of(new PollService.Row(0, "Wolniej", 2, 22, false),
                 new PollService.Row(1, "Szybciej", 6, 67, true), new PollService.Row(2, "Tak jak jest", 1, 11, false)), 9));
         when(polls.create(anyString(), anyString(), anyList(), anyBoolean(), anyBoolean())).thenReturn(Optional.of(asked));
+        when(polls.resultsOf(anyList())).thenAnswer(call -> call.<List<PollService.Poll>>getArgument(0).stream().map(polls::results).toList());
     }
 
     private static OAuth2AuthenticationToken user(String sub) {
@@ -158,14 +158,17 @@ class PollsPageRenderTest {
                 "data-confirm=\"Usunąć to pytanie razem z głosami?\"");
         assertThat(html).containsOnlyOnce("data-poll-live=");
         // the guests' results (V75): picked when made; on each question asked or ended, whether they see them and the switch
-        assertThat(html).contains("name=\"hideResults\"", ">Od razu po ich głosie<", ">Dopiero gdy je pokażę (np. zabawa)<",
-                "Goście i ekran TV widzą wyniki.", "action=\"/dj/polls/3/results\"", ">Ukryj wyniki przed gośćmi<",
-                "Wyniki ukryte — goście i ekran TV widzą tylko liczbę głosów.", "action=\"/dj/polls/1/results\"", ">👀 Pokaż wyniki gościom<");
+        assertThat(html).contains("name=\"hideResults\"", ">Od razu po oddaniu głosu<", ">Dopiero gdy je pokażę (np. zabawa)<",
+                ">Wyniki: widoczne dla gości i na TV<", "action=\"/dj/polls/3/results\"", ">🙈 Ukryj wyniki (goście i TV)<",
+                ">Wyniki: ukryte (goście i TV widzą tylko liczbę głosów)<", "action=\"/dj/polls/1/results\"",
+                ">👀 Pokaż wyniki (goście i TV)<", "samo kończy się po 12 godzinach");
         assertThat(html).doesNotContain("action=\"/dj/polls/2/results\"");
-        // the TV screen (V76): the question asked is on it, the ended one left the songs there; switched each way
-        assertThat(html).contains("Ekran TV: pytanie.", "Ekran TV: lista piosenek — pytanie widać tylko na telefonach gości.",
-                "action=\"/dj/polls/3/tv\"", ">📺 TV: pokaż listę piosenek<", "action=\"/dj/polls/1/tv\"", ">📺 TV: pokaż pytanie<",
-                ">📺 Otwórz ekran TV<");
+        // the TV screen (V76): only while the question is asked — "Na TV: [Pytanie] [Piosenki]", the one shown pressed —, and the link
+        // to the screen; the ended and the saved ones have no switch (it would bring nothing back, and nothing on the phones)
+        assertThat(html).contains(">TV: pytanie<", ">Na TV:<", "action=\"/dj/polls/3/tv\"", ">Pytanie<", ">Piosenki<",
+                "aria-pressed=\"true\"", "aria-pressed=\"false\"", ">Otwórz ekran TV ↗<");
+        assertThat(html).doesNotContain("action=\"/dj/polls/1/tv\"", "action=\"/dj/polls/2/tv\"", "📺");
+        assertThat(html.indexOf(">Pytanie<")).as("the question's choice first").isLessThan(html.indexOf(">Piosenki<"));
         DashboardPageRenderTest.assertNothingInline(html);
         write("polls.html", html);
     }

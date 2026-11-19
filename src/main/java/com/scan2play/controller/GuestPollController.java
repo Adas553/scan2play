@@ -52,7 +52,7 @@ public class GuestPollController {
 
     /**
      * A guest's answer ({@code choice}: the answer's index) to the question {@code id} — or a new one in place of the one they gave.
-     * The same limit of an address as a 👍 ({@link GuestRequestLimiter#tryAcquireVote}). Sent by guest-poll.js
+     * An address's limit as a 👍 has, counted apart ({@link GuestRequestLimiter#tryAcquirePollAnswer}). Sent by guest-poll.js
      * ({@code X-Requested-With: fetch}): the card again, with a note when it did not count; without the script back to the page.
      */
     @PostMapping("/{partyCode}/poll/{id}")
@@ -63,12 +63,13 @@ public class GuestPollController {
         String note = null;
         if (!planService.allows(settings, PlanFeature.POLLS)) {
             note = "guest.poll.note.ended";
-        } else if (guestRequestLimiter.tryAcquireVote(guestRequestLimiter.clientIp(request), partyCode).isPresent()) {
+        } else if (guestRequestLimiter.tryAcquirePollAnswer(guestRequestLimiter.clientIp(request), partyCode).isPresent()) {
             note = "guest.poll.note.too_many";
         } else {
             note = switch (pollService.vote(partyCode, id, PollService.voterOf(session), choice)) {
                 case VOTED, CHANGED -> null;
-                case NOT_ASKED, INVALID -> "guest.poll.note.ended";
+                case NOT_ASKED -> "guest.poll.note.ended";
+                case INVALID -> "guest.poll.note.invalid";
                 case FULL -> "guest.poll.note.full";
             };
         }
@@ -77,6 +78,7 @@ public class GuestPollController {
         }
         model.addAttribute(PARTY_CODE, partyCode);
         model.addAttribute(POLL_NOTE, note);
+        model.addAttribute(POLL_OPEN, true);
         pollView.addForGuest(model, settings, request);
         return CARD;
     }

@@ -60,13 +60,14 @@ public class DjPollsController {
         model.addAttribute(ACCESS, access);
         model.addAttribute(PARTY_NAME, PartyStaffService.nameOf(settings));
         model.addAttribute(PLAN, planService.view(settings, access.owner()));
-        List<PollService.Results> polls = pollService.pollsOf(partyCode).stream().map(pollService::results).toList();
+        List<PollService.Results> polls = pollService.resultsOf(pollService.pollsOf(partyCode));
         model.addAttribute(POLLS, polls);
         model.addAttribute(POLL_COUNT, polls.size());   // pollsOf lists every question a party keeps
         model.addAttribute(POLL_MAX, PollService.MAX_POLLS);
         model.addAttribute(POLL_QUESTION_MAX, PollService.QUESTION_MAX);
         model.addAttribute(POLL_ANSWER_MAX, PollService.ANSWER_MAX);
         model.addAttribute(POLL_MAX_ANSWERS, PollService.MAX_ANSWERS);
+        model.addAttribute(POLL_ASKED_HOURS, PollService.ASKED_FOR.toHours());
         return "polls";
     }
 
@@ -134,7 +135,7 @@ public class DjPollsController {
     }
 
     /**
-     * "Pokaż wyniki gościom" ({@code hidden=false}) or "Ukryj wyniki przed gośćmi" (V75): whether the guests' page and the TV show the
+     * "👀 Pokaż wyniki (goście i TV)" ({@code hidden=false}) or "🙈 Ukryj wyniki" (V75): whether the guests' page and the TV show the
      * numbers — the DJ keeps them for a game's end, and shows them when they say so. Any plan, as ending: it asks nothing new.
      */
     @PostMapping("/{id}/results")
@@ -147,8 +148,8 @@ public class DjPollsController {
     }
 
     /**
-     * "📺 TV: pytanie" ({@code onTv=true}) or "📺 TV: lista piosenek" (V76): whether the TV screen shows the question or keeps the
-     * guests' most wanted songs; the phones are not changed. Any plan, as ending: it asks nothing new.
+     * "Na TV: Pytanie" ({@code onTv=true}) or "Piosenki" (V76): whether the TV screen shows the question or keeps the guests' most
+     * wanted songs; the phones are not changed. Any plan, as ending: it asks nothing new.
      */
     @PostMapping("/{id}/tv")
     public String tv(@PathVariable long id, @RequestParam String partyCode, @RequestParam boolean onTv,
