@@ -47,9 +47,14 @@ public class DjPollsController {
     private final PlanService planService;
     private final MessageSource messageSource;
 
-    /** The page: the form, and the party's questions with their results, the newest first. */
+    /**
+     * The page: the form, and the party's questions with their results, the newest first. {@code edit}: the form is that question's,
+     * to change ("Edytuj", a question saved for later only); {@code copy}: the form is a new question filled with that one's words
+     * ("Popraw jako nowe", one asked now or before). Another party's question, or one that cannot be edited, leaves the form new.
+     */
     @GetMapping
-    public String page(@RequestParam(required = false) String party, Model model, OAuth2AuthenticationToken authentication,
+    public String page(@RequestParam(required = false) String party, @RequestParam(required = false) Long edit,
+                       @RequestParam(required = false) Long copy, Model model, OAuth2AuthenticationToken authentication,
                        HttpSession session) {
         PartyStaffService.Access access = sessionHelper.access(party, authentication, session);
         PartySettingsEntity settings = sessionHelper.require(access.party().getPartyCode(), StaffPermission.POLLS, authentication, session);
@@ -68,6 +73,13 @@ public class DjPollsController {
         model.addAttribute(POLL_ANSWER_MAX, PollService.ANSWER_MAX);
         model.addAttribute(POLL_MAX_ANSWERS, PollService.MAX_ANSWERS);
         model.addAttribute(POLL_ASKED_HOURS, PollService.ASKED_FOR.toHours());
+        // the form filled from a question of this party: one saved for later to change, or any to ask again corrected
+        if (edit != null) {
+            pollService.poll(partyCode, edit).filter(poll -> poll.state() == PollService.State.SAVED)
+                    .ifPresent(poll -> model.addAttribute(POLL_EDIT, poll));
+        } else if (copy != null) {
+            pollService.poll(partyCode, copy).ifPresent(poll -> model.addAttribute(POLL_COPY, poll));
+        }
         return "polls";
     }
 
@@ -97,10 +109,7 @@ public class DjPollsController {
                          HttpSession session, RedirectAttributes redirectAttributes, Locale locale) {
         planService.require(sessionHelper.require(partyCode, StaffPermission.POLLS, authentication, session), PlanFeature.POLLS);
         String kept = PollService.tidyQuestion(question);
-        boolean noneTyped = answers == null || answers.stream().allMatch(one -> one == null || one.isBlank());
-        List<String> keptAnswers = PollService.tidyAnswers(noneTyped
-                ? Stream.of("polls.yes", "polls.no").map(key -> messageSource.getMessage(key, null, locale)).toList()
-                : answers);
+        List<String> keptAnswers = keptAnswers(answers, locale);
         if (kept == null || keptAnswers == null) {
             done(redirectAttributes, "invalid");
             return back(partyCode);
@@ -112,6 +121,39 @@ public class DjPollsController {
             done(redirectAttributes, "too_many");
             return back(partyCode);
         });
+    }
+
+    /**
+     * "Edytuj" — "Zapisz zmiany": a question saved for later changed, as a new one is made (none typed is "Tak" / "Nie"). One asked
+     * meanwhile is not changed ({@link PollService#edit}): the page says to correct it as a new one. Pro, as making one.
+     */
+    @PostMapping("/{id}/edit")
+    public String edit(@PathVariable long id, @RequestParam String partyCode, @RequestParam(required = false) String question,
+                       @RequestParam(name = "answer", required = false) List<String> answers,
+                       @RequestParam(defaultValue = "false") boolean hideResults, OAuth2AuthenticationToken authentication,
+                       HttpSession session, RedirectAttributes redirectAttributes, Locale locale) {
+        planService.require(sessionHelper.require(partyCode, StaffPermission.POLLS, authentication, session), PlanFeature.POLLS);
+        String kept = PollService.tidyQuestion(question);
+        List<String> keptAnswers = keptAnswers(answers, locale);
+        if (kept == null || keptAnswers == null) {
+            found(pollService.poll(partyCode, id).isPresent());
+            done(redirectAttributes, "invalid");
+            return "redirect:/dj/polls?party=" + partyCode + "&edit=" + id + "#pollNewCard";
+        }
+        switch (pollService.edit(partyCode, id, kept, keptAnswers, hideResults)) {
+            case EDITED -> done(redirectAttributes, "edited");
+            case ASKED_BEFORE -> done(redirectAttributes, "not_editable");
+            case NOT_FOUND -> throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        return back(partyCode);
+    }
+
+    /** The answers as kept ({@link PollService#tidyAnswers}); none typed: "Tak" / "Nie" in the DJ's language. Null: too few. */
+    private List<String> keptAnswers(List<String> answers, Locale locale) {
+        boolean noneTyped = answers == null || answers.stream().allMatch(one -> one == null || one.isBlank());
+        return PollService.tidyAnswers(noneTyped
+                ? Stream.of("polls.yes", "polls.no").map(key -> messageSource.getMessage(key, null, locale)).toList()
+                : answers);
     }
 
     /** "Zadaj teraz" / "Zadaj ponownie": the question asked — the one asked before ends. Pro. */

@@ -1818,5 +1818,11 @@ a.s2p-schedule-text:focus-visible { color: var(--s2p-white); text-decoration: un
 .s2p-poll-fold { border: 0; }
 .s2p-poll-mine .s2p-poll-answer { font-weight: 700; }
 .s2p-poll-mine-mark { color: var(--s2p-green); font-size: 0.85rem; white-space: nowrap; }
+/* the DJ's page on a phone: "Edytuj", "Popraw jako nowe" and "Anuluj" are links among the forms of a row — as wide as their
+   neighbours (.s2p-btn-row > form) */
+@media (max-width: 575.98px) {
+    .s2p-poll-card .s2p-btn-row > a.btn,
+    #pollNewCard .s2p-btn-row > a.btn { flex: 1 1 0; }
+}
 /* the DJ's page: the question asked now stands out from the saved and ended ones */
 .s2p-poll-asked { border-color: var(--s2p-action) !important; }

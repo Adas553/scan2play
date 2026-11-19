@@ -31,7 +31,7 @@
 
     <!--/* what the last form did: at the bottom of the screen, over the page; a success goes by itself, a refusal stays until read */-->
     <div th:if="${pollDone != null}" id="pollDone" class="s2p-undo-toast s2p-done-toast" role="status"
-         th:with="refused=${pollDone == 'invalid' or pollDone == 'too_many'}"
+         th:with="refused=${pollDone == 'invalid' or pollDone == 'too_many' or pollDone == 'not_editable'}"
          th:classappend="${refused} ? 's2p-done-toast-warning'" th:attr="data-toast-hide=${refused ? null : 4000}">
         <span th:text="${#messages.msg('polls.done.' + pollDone, pollMax)}">Saved</span>
         <button type="button" class="btn-close btn-close-white flex-shrink-0" data-toast-close th:attr="aria-label=#{dashboard.form.refused.close}"></button>
@@ -40,35 +40,48 @@
     <!--/* without Pro: the offer, and the questions made before only to end or delete */-->
     <th:block th:if="${plan.pro('POLLS')}"><div th:replace="~{fragments/components :: proOffer(#{plan.polls.offer})}"></div></th:block>
 
-    <!--/* a new question: its words and two to four answers — none typed is "Tak" / "Nie" */-->
-    <section th:unless="${plan.pro('POLLS')}" class="card bg-dark border-secondary p-3" id="pollNewCard">
-        <h2 class="s2p-card-title" th:text="#{polls.new.title}">New question</h2>
-        <form th:if="${pollCount < pollMax}" th:action="@{/dj/polls/create}" method="POST" class="m-0" id="pollNewForm">
+    <!--/* a new question: its words and two to four answers — none typed is "Tak" / "Nie". Filled from a question of the party:
+         "Edytuj" (pollEdit, saved for later only — the form saves its changes) or "Popraw jako nowe" (pollCopy — a new question with
+         its words, the old one keeps its votes). A question asked is never changed: a vote is the answer's place, so changed answers
+         would make the votes say what nobody chose. The links come here by #pollNewCard; the field takes the focus. */-->
+    <section th:unless="${plan.pro('POLLS')}" class="card bg-dark border-secondary p-3" id="pollNewCard"
+             th:with="filled=${pollEdit != null ? pollEdit : pollCopy},editing=${pollEdit != null}">
+        <h2 class="s2p-card-title" th:text="${editing} ? #{polls.edit.title} : #{polls.new.title}">New question</h2>
+        <p th:if="${pollCopy != null}" class="s2p-card-help" id="pollCopyHelp" th:text="#{polls.copy.help}">A new question with its words…</p>
+        <form th:if="${editing or pollCount < pollMax}" method="POST" class="m-0" id="pollNewForm"
+              th:action="${editing} ? @{/dj/polls/{id}/edit(id=${pollEdit.id()})} : @{/dj/polls/create}">
             <input type="hidden" name="partyCode" th:value="${partyCode}">
             <label for="pollQuestionInput" class="form-label small text-secondary mb-1" th:text="#{polls.new.question}">The question (the guests see it)</label>
             <input type="text" id="pollQuestionInput" name="question" required th:attr="maxlength=${pollQuestionMax}" autocomplete="off"
-                   class="form-control bg-black text-light border-secondary" th:placeholder="#{polls.new.question.placeholder}">
+                   class="form-control bg-black text-light border-secondary" th:placeholder="#{polls.new.question.placeholder}"
+                   th:value="${filled != null ? filled.question() : null}" th:autofocus="${filled != null}">
             <p class="form-label small text-secondary mt-3 mb-1" id="pollAnswersLabel" th:text="#{polls.new.answers(${pollMaxAnswers})}">Answers (2–4)</p>
             <div class="row g-2" role="group" aria-labelledby="pollAnswersLabel">
                 <div class="col-12 col-sm-6" th:each="i : ${#numbers.sequence(1, pollMaxAnswers)}">
                     <input type="text" name="answer" th:id="${'pollAnswer' + i}" th:attr="maxlength=${pollAnswerMax},aria-label=#{polls.new.answer(${i})}"
                            autocomplete="off" class="form-control bg-black text-light border-secondary"
+                           th:value="${filled != null and i <= filled.answers().size() ? filled.answers()[i - 1] : null}"
                            th:placeholder="${i == 1} ? #{polls.yes} : (${i == 2} ? #{polls.no} : #{polls.new.answer.optional})">
                 </div>
             </div>
             <p class="small text-secondary mt-2 mb-0" id="pollAnswersHelp" th:text="#{polls.new.answers.help}">Leave them empty for Yes / No.</p>
             <!--/* the guests' results (V75): after their vote, or kept for later — a game told at the end, shown when the DJ says so */-->
             <label for="pollHideResults" class="form-label small text-secondary mt-3 mb-1" th:text="#{polls.new.results}">Results for the guests</label>
-            <select id="pollHideResults" name="hideResults" class="form-select bg-black text-light border-secondary">
-                <option value="false" selected th:text="#{polls.new.results.after_vote}">Right after their vote</option>
-                <option value="true" th:text="#{polls.new.results.later}">Only when I show them (a game)</option>
+            <select id="pollHideResults" name="hideResults" class="form-select bg-black text-light border-secondary"
+                    th:with="hidden=${filled != null and filled.resultsHidden()}">
+                <option value="false" th:selected="${!hidden}" th:text="#{polls.new.results.after_vote}">Right after their vote</option>
+                <option value="true" th:selected="${hidden}" th:text="#{polls.new.results.later}">Only when I show them (a game)</option>
             </select>
-            <div class="s2p-btn-row mt-3">
+            <div class="s2p-btn-row mt-3" th:unless="${editing}">
                 <button type="submit" name="ask" value="true" id="pollAskNowBtn" class="btn btn-sm btn-action" th:text="#{polls.new.ask}">Ask now</button>
                 <button type="submit" name="ask" value="false" id="pollSaveBtn" class="btn btn-sm btn-outline-light" th:text="#{polls.new.save}">Save for later</button>
             </div>
+            <div class="s2p-btn-row mt-3" th:if="${editing}">
+                <button type="submit" id="pollEditSaveBtn" class="btn btn-sm btn-action" th:text="#{polls.edit.save}">Save the changes</button>
+                <a th:href="@{/dj/polls(party=${partyCode})}" id="pollEditCancel" class="btn btn-sm btn-outline-light" th:text="#{polls.edit.cancel}">Cancel</a>
+            </div>
         </form>
-        <p class="small text-secondary mt-2 mb-0" id="pollCountLine"
+        <p th:unless="${editing}" class="small text-secondary mt-2 mb-0" id="pollCountLine"
            th:text="${pollCount < pollMax} ? #{polls.new.kept(${pollCount}, ${pollMax})} : #{polls.done.too_many(${pollMax})}">Questions: 2 of 30.</p>
     </section>
 
@@ -109,6 +122,11 @@
                 <button type="submit" class="btn btn-sm btn-outline-light text-nowrap s2p-poll-ask"
                         th:text="${state == 'SAVED'} ? #{polls.ask} : #{polls.ask_again}">Ask now</button>
             </form>
+            <!--/* the words changed: a question saved for later is edited; one asked is corrected as a new one, it keeps its votes */-->
+            <a th:if="${state == 'SAVED' and !plan.pro('POLLS')}" th:href="@{/dj/polls(party=${partyCode},edit=${poll.id()})} + '#pollNewCard'"
+               class="btn btn-sm btn-outline-light text-nowrap s2p-poll-edit" th:text="#{polls.edit}">Edit</a>
+            <a th:if="${state != 'SAVED' and !plan.pro('POLLS')}" th:href="@{/dj/polls(party=${partyCode},copy=${poll.id()})} + '#pollNewCard'"
+               class="btn btn-sm btn-outline-light text-nowrap s2p-poll-copy" th:text="#{polls.copy}">Correct as a new one</a>
             <form th:if="${state != 'SAVED'}" th:action="@{/dj/polls/{id}/results(id=${poll.id()})}" method="POST" class="m-0">
                 <input type="hidden" name="partyCode" th:value="${partyCode}">
                 <input type="hidden" name="hidden" th:value="${!poll.resultsHidden()}">

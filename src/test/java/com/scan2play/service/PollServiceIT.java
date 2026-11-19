@@ -206,6 +206,37 @@ class PollServiceIT extends PostgresIntegrationTest {
         assertThat(votes(poll)).as("with its votes").containsExactly(1, 0, 0);
     }
 
+    /**
+     * "Edytuj": a question saved for later is changed — its words, its answers, its results' choice; one asked (now or before) never:
+     * its votes are the answers' places. Another party's is none.
+     */
+    @Test
+    void onlyAQuestionSavedForLater_isEdited() {
+        String party = party();
+        PollService.Poll saved = polls.create(party, "Disco plo?", List.of("Tak", "Ni"), false, false).orElseThrow();
+        assertThat(polls.edit(party, saved.id(), "Disco polo?", List.of("Tak", "Nie", "Nie wiem"), true))
+                .isEqualTo(PollService.Edited.EDITED);
+        PollService.Poll edited = polls.poll(party, saved.id()).orElseThrow();
+        assertThat(edited.question()).isEqualTo("Disco polo?");
+        assertThat(edited.answers()).containsExactly("Tak", "Nie", "Nie wiem");
+        assertThat(edited.resultsHidden()).isTrue();
+        assertThat(edited.state()).isEqualTo(PollService.State.SAVED);
+
+        PollService.Poll asked = asked(party);
+        polls.vote(party, asked.id(), "voter-a", 1);
+        assertThat(polls.edit(party, asked.id(), "Coś innego?", List.of("A", "B"), false)).isEqualTo(PollService.Edited.ASKED_BEFORE);
+        polls.end(party, asked.id());
+        assertThat(polls.edit(party, asked.id(), "Coś innego?", List.of("A", "B"), false)).as("ended")
+                .isEqualTo(PollService.Edited.ASKED_BEFORE);
+        PollService.Poll kept = polls.poll(party, asked.id()).orElseThrow();
+        assertThat(kept.question()).isEqualTo("Disco polo?");
+        assertThat(kept.answers()).containsExactly("Tak", "Nie", "Nie wiem");
+        assertThat(votes(kept)).containsExactly(0, 1, 0);
+
+        assertThat(polls.edit("NOPE1", saved.id(), "Cudze?", List.of("A", "B"), false)).isEqualTo(PollService.Edited.NOT_FOUND);
+        assertThat(polls.poll(party, saved.id()).orElseThrow().question()).isEqualTo("Disco polo?");
+    }
+
     /** A question of another party is never voted on: its id with this party's code is no question. */
     @Test
     void aVote_forAnotherPartysQuestion_isNotCounted() {

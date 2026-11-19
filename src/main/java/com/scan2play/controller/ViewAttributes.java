@@ -338,6 +338,10 @@ public final class ViewAttributes {
     public static final String POLL_MAX_ANSWERS = "pollMaxAnswers";
     /** How long a question stays asked before it ends by itself ({@code PollService.ASKED_FOR}), in hours. */
     public static final String POLL_ASKED_HOURS = "askedHours";
+    /** The DJ's page: the question saved for later whose words the form changes ("Edytuj"), or null. */
+    public static final String POLL_EDIT = "pollEdit";
+    /** The DJ's page: the question whose words fill the new question's form ("Popraw jako nowe"), or null. */
+    public static final String POLL_COPY = "pollCopy";
     /** Flash: what the DJ's page says after a form ({@code polls.done.*}). */
     public static final String POLL_DONE = "pollDone";
     /** The settings' card: the question asked now, or null. */
