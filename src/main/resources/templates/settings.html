@@ -301,6 +301,26 @@
             </div>
         </details>
 
+        <!--/* "Pytanie do gości" (V74): the DJ's own question to the room, answered on the guests' page — the card leads to the page of
+             the questions and their results (DjPollsController); its state the question asked now. Whoever has POLLS; without Pro
+             the organiser sees the offer here and on the page. */-->
+        <details th:if="${access.may('POLLS') and (plan.allows('POLLS') or plan.pro('POLLS'))}"
+                 class="card bg-dark border-secondary s2p-fold" id="pollsCard">
+            <summary class="s2p-fold-summary">
+                <h2 class="s2p-card-title s2p-fold-name"><span th:text="#{polls.title}">Question for the guests</span><th:block th:if="${plan.pro('POLLS')}"><span th:replace="~{fragments/components :: proMark}"></span></th:block></h2>
+                <span class="s2p-fold-state" id="pollsState" th:unless="${plan.pro('POLLS')}"
+                      th:text="${pollAsked != null} ? #{settings.polls.asked} : #{settings.polls.none}">None</span>
+            </summary>
+            <div class="s2p-fold-body">
+                <th:block th:if="${plan.pro('POLLS')}"><div th:replace="~{fragments/components :: proOffer(#{plan.polls.offer})}"></div></th:block>
+                <th:block th:unless="${plan.pro('POLLS')}">
+                <p class="s2p-card-help" th:text="#{settings.polls.help}">Ask the room a question of your own…</p>
+                <a th:href="@{/dj/polls(party=${partyCode})}" id="pollsOpen" class="btn btn-sm btn-outline-light"
+                   th:text="#{settings.polls.go}">Questions and results</a>
+                </th:block>
+            </div>
+        </details>
+
         <!--/* The DJ's profiles (V24) and tip link (V27) — the owner's alone (money): the guests see them under "Kto gra" and on the QR
              print. "@name" or a link copied from the app; the server keeps an https address on that site (SocialLinks, TipLinks) —
              400 when it is not one, and the form says why. One "Zapisz" for the profiles, one for the tip link (two endpoints). */-->

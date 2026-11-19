@@ -33,6 +33,8 @@ class GuestFormExpiredHandler implements AccessDeniedHandler {
     private static final Pattern GUEST_REQUEST = Pattern.compile("/p/([A-Za-z0-9]{1,10})/request");
     /** The venue's kiosk (V56): its request, its 👍 and "Następny gość" — the tablet's page back, a new session and token. */
     private static final Pattern KIOSK_FORM = Pattern.compile("/k/([A-Za-z0-9_-]{1,64})/(request|vote|next)");
+    /** "Pytanie do gości" (V74): an answer — the party's page back, the question on it with a new token. */
+    private static final Pattern POLL_FORM = Pattern.compile("/p/([A-Za-z0-9]{1,10})/poll/[0-9]{1,19}");
     /** "Życzenia przed imprezą" (V68): a guest's wish — the event's page back, a new session and token. */
     private static final Pattern WISH_FORM = Pattern.compile("/w/([A-Za-z0-9_-]{1,32})");
     /** The login's and the password accounts' forms (V72) and the page each comes from; nothing typed comes back (a password never). */
@@ -65,6 +67,11 @@ class GuestFormExpiredHandler implements AccessDeniedHandler {
             flash.setTargetRequestPath("/w/" + wishForm.group(1));
             flashes.saveOutputFlashMap(flash, request, response);
             response.sendRedirect(request.getContextPath() + "/w/" + wishForm.group(1));
+            return;
+        }
+        Matcher pollForm = POLL_FORM.matcher(path);
+        if (refused instanceof CsrfException && "POST".equals(request.getMethod()) && pollForm.matches()) {
+            response.sendRedirect(request.getContextPath() + "/p/" + pollForm.group(1));
             return;
         }
         String accountPage = ACCOUNT_FORMS.get(path);

@@ -64,6 +64,9 @@ What every page shares, so a new screen looks like the others:
   secondary words (the guest's, the AI's comment) in one muted line under it, the whole in the title; what is the same in every row is
   not a column; colour marks a state only where it tells something apart (a dot at the decision, ⚠, votes above 1) — the words stay
   quiet (the history, 2026-10-10; `history-wide-calm`).
+- **Shares as bars** ("Pytanie do gości", V74: the guest's card, the DJ's page, the TV): a `<progress>` per answer — its width needs
+  no inline style, which the CSP forbids —, the leading ones in the action's cyan, the others grey; the share's number in its own
+  colour (`.s2p-poll-share`), never the card's (`polls-shares-readable`).
 - **A feature of the Pro plan** (V35, variant B of the review 2026-10-14; the look: the review of the same day,
   https://claude.ai/artifact/PPSwW3nDrRdWFcbM8hWAoN — the owner: the cyan tag, the tidy-up, the page of the product) to an organiser
   without it, while the plans are enforced: **visible, marked** — the row and the card keep their place with "PRO" by the name, **said

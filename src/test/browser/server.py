@@ -21,6 +21,12 @@ the REAL static js and css of the repo, and answers the few endpoints the dashbo
   POST /p/ABC12/vote                 a guest's 👍 (guest-party.js): the REAL answer, that song's row (state 'voteAnswer':
                                      guest-vote-answer.html, or guest-vote-gone.html — GuestPageRenderTest); the X-Requested-With
                                      header is logged with the form's fields
+  GET  /p/ABC12/poll                 the REAL card of the DJ's question alone (V74, guest-poll.js: state 'guestPoll' —
+                                     guest-poll-card-ended.html, GuestPollWebTest)
+  POST /p/ABC12/poll/5               a guest's answer (guest-poll.js): the REAL card with the results (state 'pollAnswer':
+                                     guest-poll-answer.html); the X-Requested-With header is logged with the form's fields
+  GET  /dj/polls/3/results           the REAL results of the question asked (V74, polls.js: state 'pollResults' — polls-results.html,
+                                     polls-results-next.html, PollsPageRenderTest)
   GET  /__log                        {"requests": [{"m", "p", "q"}...], "state": {...}}
   POST /__result?name=NAME           a scenario's verdict: written to <results>/NAME.json and handed to the runner
 
@@ -132,6 +138,11 @@ def default_state():
         # What GET /p/ABC12/tv/list (the screen for a TV, tv.js) answers: the rendered list of that name, or the status instead
         'tvList': 'tv-list',
         'tvListStatus': None,
+        # "Pytanie do gości" (V74): what GET /p/ABC12/poll (the card fetched again), POST /p/ABC12/poll/<id> (an answer) and
+        # GET /dj/polls/<id>/results (the DJ's live results) answer — rendered files of target/browser-harness
+        'guestPoll': 'guest-poll-card-ended',
+        'pollAnswer': 'guest-poll-answer',
+        'pollResults': 'polls-results',
         'voteAnswer': 'guest-vote-answer',   # what POST /p/ABC12/vote answers ('guest-vote-gone': the song was played meanwhile)
         'requests': [],
     }
@@ -331,6 +342,12 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(state['tvListStatus'])
             with open(os.path.join(stand.rendered, state['tvList'] + '.html'), encoding='utf-8') as f:
                 return self._send(200, f.read(), 'text/html; charset=utf-8')
+        if path.startswith('/p/') and path.endswith('/poll'):   # the DJ's question fetched again (V74, guest-poll.js)
+            with open(os.path.join(stand.rendered, state['guestPoll'] + '.html'), encoding='utf-8') as f:
+                return self._send(200, f.read(), 'text/html; charset=utf-8')
+        if path.startswith('/dj/polls/') and path.endswith('/results'):   # the DJ's live results (V74, polls.js)
+            with open(os.path.join(stand.rendered, state['pollResults'] + '.html'), encoding='utf-8') as f:
+                return self._send(200, f.read(), 'text/html; charset=utf-8')
         if path.startswith('/p/') and path.endswith('/queue'):   # the guest's list fetched again: as the real server renders it
             if state['guestQueueStatus']:
                 return self._send(state['guestQueueStatus'])
@@ -417,7 +434,7 @@ class Handler(BaseHTTPRequestHandler):
         if path in ('/dj/library', '/dj/library/delete', '/dj/logo', '/dj/logo/delete', '/dj/qr-print/settings',
                     '/dj/dashboard/welcome-dismiss'):   # a fetch() with the CSRF token in its header
             fields['X-CSRF-TOKEN'] = self.headers.get('X-CSRF-TOKEN')
-        if path.startswith('/p/') and path.endswith('/vote'):
+        if path.startswith('/p/') and (path.endswith('/vote') or '/poll/' in path):   # a 👍, an answer to the DJ's question (V74)
             fields['X-Requested-With'] = self.headers.get('X-Requested-With')
         if path.startswith('/k/') and path.endswith('/vote'):   # a 👍 at the kiosk (V56), sent by fetch
             fields['X-Requested-With'] = self.headers.get('X-Requested-With')
@@ -434,6 +451,9 @@ class Handler(BaseHTTPRequestHandler):
         refused = state['postStatus'].get(path)
         if refused:
             return self._send(refused)
+        if path.startswith('/p/') and '/poll/' in path:   # an answer to the DJ's question (V74): the card with the results
+            with open(os.path.join(stand.rendered, state['pollAnswer'] + '.html'), encoding='utf-8') as f:
+                return self._send(200, f.read(), 'text/html; charset=utf-8')
         if path.startswith('/p/') and path.endswith('/vote'):   # a guest's 👍: the list as the real server renders it after the vote
             with open(os.path.join(stand.rendered, state['voteAnswer'] + '.html'), encoding='utf-8') as f:
                 return self._send(200, f.read(), 'text/html; charset=utf-8')

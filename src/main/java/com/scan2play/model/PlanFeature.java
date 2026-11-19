@@ -37,5 +37,10 @@ public enum PlanFeature {
      * "Życzenia przed imprezą" (V68): the guests write the songs they want before the event. Without Pro the guests' links open
      * nothing (a 404) and no event is made; the wishes are kept until they are purged, and an event may be deleted on any plan.
      */
-    WISHES
+    WISHES,
+    /**
+     * "Pytanie do gości" (V74): the DJ asks the guests a question of their own and sees the answers live. Without Pro no question is
+     * made or asked and the guests' page and the TV show none; the questions are kept, and ending or deleting one needs no plan.
+     */
+    POLLS
 }
