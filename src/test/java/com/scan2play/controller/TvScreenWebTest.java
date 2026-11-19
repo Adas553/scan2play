@@ -40,13 +40,16 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * ({@code target/browser-harness/tv*.html}).
  */
 @WebMvcTest(TvScreenController.class)
-@Import({SecurityConfig.class, com.scan2play.service.PlansOffConfig.class,
+@Import({PollView.class, SecurityConfig.class, com.scan2play.service.PlansOffConfig.class,
         com.scan2play.service.PartySchedulesConfig.class})
 class TvScreenWebTest {
 
     @Autowired
     private MockMvc mockMvc;
 
+    /** "Pytanie do gości" (V74): no question asked here (an empty Optional, the mock's default). */
+    @MockitoBean
+    private com.scan2play.service.PollService pollService;
     @MockitoBean
     private PartySettingsQueryService partySettingsQueryService;
     @MockitoBean

@@ -94,7 +94,8 @@ class GuestControllerTest {
         requests = new GuestRequestService(songEvaluationService, guestSessionService, guestVoteService,
                 guestRequestLimiter, messageSource, siteCounter);
         controller = new GuestController(guestQueueService, partySettingsQueryService, guestSessionService, guestVoteService,
-                guestRequestLimiter, messageSource, planService, requests, partyScheduleService, libraryHintService);
+                guestRequestLimiter, messageSource, planService, requests, partyScheduleService, libraryHintService,
+                new PollView(org.mockito.Mockito.mock(com.scan2play.service.PollService.class), planService));
         org.mockito.Mockito.lenient().when(guestRequestLimiter.clientIp(request)).thenReturn(IP); // not read by the party page
         org.mockito.Mockito.lenient().when(partySettingsQueryService.getSettings(PARTY)).thenReturn(settings); // not read by styleOf
         org.mockito.Mockito.lenient().when(guestQueueService.view(any(), any(), any()))   // an empty list, unless a test says otherwise
@@ -523,7 +524,7 @@ class GuestControllerTest {
         settings.setTipUrl("https://buycoffee.to/dj");
         GuestController free = new GuestController(guestQueueService, partySettingsQueryService, guestSessionService,
                 guestVoteService, guestRequestLimiter, messageSource, Plans.enforced(), requests, com.scan2play.service.PartySchedules.texts(),
-                libraryHintService);
+                libraryHintService, new PollView(org.mockito.Mockito.mock(com.scan2play.service.PollService.class), Plans.enforced()));
 
         ExtendedModelMap model = new ExtendedModelMap();
         assertThat(free.partyIndex(PARTY, model, request)).isEqualTo("index");
@@ -571,7 +572,7 @@ class GuestControllerTest {
 
         GuestController free = new GuestController(guestQueueService, partySettingsQueryService, guestSessionService,
                 guestVoteService, guestRequestLimiter, messageSource, Plans.enforced(), requests, com.scan2play.service.PartySchedules.texts(),
-                libraryHintService);
+                libraryHintService, new PollView(org.mockito.Mockito.mock(com.scan2play.service.PollService.class), Plans.enforced()));
         ExtendedModelMap freeEnded = new ExtendedModelMap();
         assertThat(free.partyIndex(PARTY, freeEnded, request)).isEqualTo("party_ended");
         assertThat(freeEnded.get("instagramUrl")).isNull();

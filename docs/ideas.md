@@ -238,3 +238,17 @@ piece of work or when a task names an item. A finished item stays here until its
    to iTunes's answer, never from the DJ's library; with it each song's versions once and no padding without the typed words. The
    list's review every few months (next 2027-02, `tools/check_artists.py`) and **the learning to come** — an endpoint of the
    artists guests asked for across parties, after a few dozen real parties: `docs/song-suggestions-artists.md`.
+
+15. **"Pytanie do gości" — the DJ's own question to the room** (the owner, 2026-11-19: "DJ miałby możliwość zamiany strony gościa na
+   swoje pytanie … TAK/NIE … wyniki, wykres"; then 2–4 answers "od razu", a new permission, the plan and the results to the guest
+   "jak wolisz") — **on `claude/upbeat-franklin-3aa8i3`, not released (V74, no rows moved).** Not the guest page swapped: a card above
+   the request form (the guests came to ask for a song), and on the page "DJ nie przyjmuje teraz próśb" — a DJ who closes the requests
+   asks alone. Pro (`PlanFeature.POLLS`, as the kiosk and the wishes), the permission POLLS (V74 gives it to the co-organisers' whole
+   sets). The guest sees the results after answering (and everyone 15 minutes after the end); the TV shows the question and its bars.
+   The DJ may keep the results for later (V75; the owner, 2026-11-19: "poczekać na końcu w razie zabawy"): picked per question,
+   switched any time; then the guests and the TV see only how many voted, "↻ Sprawdź wyniki" on the phone.
+   The TV may keep the song list while a question is asked (V76; the owner, 2026-11-19: "na TV dalej chcemy widzieć głosy"): a switch
+   on each question; rejected: both on one screen (unreadable across a hall), switching by itself (the DJ loses the moment).
+   Details: `docs/context/05-1j-polls.md`. **Later, only if DJs ask:** the questions in "Podsumowanie wieczoru"; a CSV. **Rejected:**
+   the guests' own words as answers (moderation, the AI, the privacy policy); quizzes with points and names (personal data, a bigger
+   feature); the AI checking the DJ's question (their own words, as the vibe note); the kiosk (one device, many guests).

@@ -36,7 +36,9 @@ public enum StaffPermission {
     /** The venue's kiosk (V56): its link made, made again or taken away. */
     KIOSK,
     /** "Życzenia przed imprezą" (V68): the events, their guests' links and the wishes, moved to "⭐ Koniecznie zagrać". */
-    WISHES;
+    WISHES,
+    /** "Pytanie do gości" (V74): the questions to the guests — made, asked, ended, deleted — and their results. */
+    POLLS;
 
     /** Everything that can be delegated. */
     public static Set<StaffPermission> all() {

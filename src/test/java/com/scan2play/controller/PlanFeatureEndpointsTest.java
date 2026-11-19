@@ -64,6 +64,7 @@ class PlanFeatureEndpointsTest {
     private PartyStaffService staff;
     private PartySettingsCommandService settings;
     private com.scan2play.service.WishService wishes;
+    private com.scan2play.service.PollService polls;
 
     private static OAuth2AuthenticationToken user(String sub) {
         return new OAuth2AuthenticationToken(new DefaultOAuth2User(AuthorityUtils.createAuthorityList("ROLE_USER"), Map.of("sub", sub), "sub"),
@@ -75,6 +76,7 @@ class PlanFeatureEndpointsTest {
         staff = mock(PartyStaffService.class);
         settings = mock(PartySettingsCommandService.class);
         wishes = WishControllers.wishes(PUB);
+        polls = PollControllers.polls(PUB);
         when(staff.partiesOf(anyString())).thenReturn(List.of(pub));
         when(staff.accessOf(pub, ORGANISER)).thenReturn(Optional.of(new PartyStaffService.Access(pub, true, StaffPermission.all())));
         when(staff.accessOf(pub, "kasia")).thenReturn(Optional.of(new PartyStaffService.Access(pub, false, StaffPermission.all())));
@@ -90,7 +92,7 @@ class PlanFeatureEndpointsTest {
         PlayHistoryService history = mock(PlayHistoryService.class);
         when(history.getHistory(any(), org.mockito.ArgumentMatchers.anyInt(), any())).thenReturn(new PlayHistoryService.Page(List.of(), false));
         DjDashboardController dashboard = new DjDashboardController(mock(DjService.class), settings, mock(QrCodeService.class), helper,
-                history, mock(GuestRequestLimiter.class), mock(PushNotificationService.class), staff, mock(StaffInvitationService.class), plans, new com.scan2play.service.AiHealthMonitor(), com.scan2play.service.PartySchedules.texts(), mock(com.scan2play.service.WelcomeEmailService.class), com.scan2play.service.FreeAiLimit.off(), wishes);
+                history, mock(GuestRequestLimiter.class), mock(PushNotificationService.class), staff, mock(StaffInvitationService.class), plans, new com.scan2play.service.AiHealthMonitor(), com.scan2play.service.PartySchedules.texts(), mock(com.scan2play.service.WelcomeEmailService.class), com.scan2play.service.FreeAiLimit.off(), wishes, org.mockito.Mockito.mock(com.scan2play.service.PollService.class));
         ReflectionTestUtils.setField(dashboard, "rawBaseUrl", "http://localhost:8080");
         dashboard.init();
         return MockMvcBuilders.standaloneSetup(
@@ -101,7 +103,8 @@ class PlanFeatureEndpointsTest {
                         new DjLibraryController(mock(com.scan2play.service.DjLibraryService.class), helper, plans, codesAsTexts(),
                                 settings, DjLibraryController.MAX_BYTES),
                         new PartyLogoController(mock(com.scan2play.service.PartyLogoService.class), query, helper, plans, codesAsTexts()),
-                        WishControllers.djWishes(wishes, helper, plans, settings, codesAsTexts()))
+                        WishControllers.djWishes(wishes, helper, plans, settings, codesAsTexts()),
+                        new DjPollsController(polls, helper, plans, codesAsTexts()))
                 .setViewResolvers(new InternalResourceViewResolver("/WEB-INF/views/", ".html")).build();
     }
 
@@ -141,7 +144,10 @@ class PlanFeatureEndpointsTest {
                 Arguments.of(PlanFeature.WISHES, true, post("/dj/wishes/1/link").param("partyCode", PUB)),
                 Arguments.of(PlanFeature.WISHES, true, post("/dj/wishes/1/theme").param("partyCode", PUB).param("theme", "WEDDING")),
                 Arguments.of(PlanFeature.WISHES, true, post("/dj/wishes/1/must-play").param("partyCode", PUB).param("song", "Wilki - Baśka")),
-                Arguments.of(PlanFeature.WISHES, true, get("/dj/qr-print").param("party", PUB).param("wish", "1")));
+                Arguments.of(PlanFeature.WISHES, true, get("/dj/qr-print").param("party", PUB).param("wish", "1")),
+                // "Pytanie do gości" (V74): a new question, asking one
+                Arguments.of(PlanFeature.POLLS, true, post("/dj/polls/create").param("partyCode", PUB).param("question", "Disco polo?")),
+                Arguments.of(PlanFeature.POLLS, true, post("/dj/polls/1/ask").param("partyCode", PUB)));
     }
 
     @ParameterizedTest(name = "{0}: {2}")
@@ -152,6 +158,7 @@ class PlanFeatureEndpointsTest {
                 .hasRootCauseInstanceOf(PlanRequiredException.class).rootCause().extracting("feature").isEqualTo(feature);
         verify(settings, never()).updateSettings(anyString(), any());
         org.mockito.Mockito.verifyNoInteractions(wishes);
+        org.mockito.Mockito.verifyNoInteractions(polls);
     }
 
     @ParameterizedTest(name = "{0}: {2}")
@@ -199,7 +206,14 @@ class PlanFeatureEndpointsTest {
                 Arguments.of(get("/dj/wishes").param("party", PUB).param("event", "1")),
                 Arguments.of(post("/dj/wishes/1/closed").param("partyCode", PUB).param("closed", "true")),
                 Arguments.of(get("/dj/wishes/1/csv").param("party", PUB)),
-                Arguments.of(post("/dj/wishes/1/delete").param("partyCode", PUB)));
+                Arguments.of(post("/dj/wishes/1/delete").param("partyCode", PUB)),
+                // nor the questions to the guests made before (V74): seen, ended, deleted
+                Arguments.of(get("/dj/polls").param("party", PUB)),
+                Arguments.of(get("/dj/polls/1/results").param("party", PUB)),
+                Arguments.of(post("/dj/polls/1/end").param("partyCode", PUB)),
+                Arguments.of(post("/dj/polls/1/results").param("partyCode", PUB).param("hidden", "false")),
+                Arguments.of(post("/dj/polls/1/tv").param("partyCode", PUB).param("onTv", "false")),
+                Arguments.of(post("/dj/polls/1/delete").param("partyCode", PUB)));
     }
 
     @ParameterizedTest(name = "{0}")
