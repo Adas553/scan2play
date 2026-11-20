@@ -1,4 +1,4 @@
-# Session Handoff — 2026-11-18
+# Session Handoff — 2026-11-20
 
 The current state only: the branch, what waits for the owner, what comes next. **Kept short: the whole file ≤ 15 KB, "Start here"
 ≤ 4 KB, an item ≤ 4 lines.** After each release move to `docs/history/session-handoff-<date>.md`, word for word: the released
@@ -43,10 +43,14 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
 - **2026-11-19 — "Pytanie do gości" merged (#286 `main` = `f393a90`, #287 `dev`), V74–V76 (no rows moved):** with its review
   (`docs/history/review-2026-11-19-polls.md`) and the fixes P1–P15 (P13 left: the owner's local `scan2play` has V74–V76). After the
   deploy: Flyway at 76, curl `/p/<code>` without cookies to `</html>`, a try on a phone with the TV.
-- **2026-11-19 — `claude/admiring-cannon-fud6t3`, PRs #288 (`main`) and #289 (`dev`), no migration:** a question's words changed in
-  its own card (`<details>`, `fragments/poll-form.html`; no page load, the screen does not jump) — "Edytuj" on one saved for later
-  (`POST /dj/polls/{id}/edit`, `WHERE opened_at IS NULL`), "Popraw jako nowe" on one asked; its review
-  (`docs/history/review-2026-11-19-poll-edit.md`, E1–E5 fixed). Waits for the owner: a try on a phone, the merge.
+- **2026-11-19 — the poll edit merged (#288 `main` = `553390e`, #289 `dev`), no migration:** "Edytuj" on a question saved for later,
+  "Popraw jako nowe" on one asked, in its own card (review `docs/history/review-2026-11-19-poll-edit.md`, E1–E5 fixed). After the
+  deploy: a try on a phone.
+- **2026-11-20 — `claude/admiring-cannon-fud6t3` (`71e7bbd`), new PRs to `main` and `dev`, no migration:** "Ustawienia imprezy" in
+  four groups (Impreza / Dla gości / Ty jako DJ / Dostęp, "Limity gości" under "Godziny"), "Życzenia" and "Pytanie" rows "›" like
+  "Obsługa", the folded states by one rule (`06-7-look.md`; nothing set greyed, `.s2p-fold-state-empty`). Checked live on a computer
+  (the owner's Chrome); browser 454/454, audit OK. Waits for the owner: the review in a new session, a look on a phone, the merge.
+  Unit: `ForWhomPagesWebTest`, `SongEvaluationServiceTest` red locally before this change too (Polish letters as "�" — Windows' charset?).
 - **Waits for the owner (from #269):** after the first commit the deploy window holds back (Fri–Sun 18:00–6:00): does Railway
   deploy it on the workflow's re-run? UptimeRobot is set up (the owner, 2026-11-17; `docs/monitoring.md`).
 - **Waits for the owner (the wishes, #263):** the three older Polish texts with "DJ" and a masculine verb (`guest.vote.gone`,
