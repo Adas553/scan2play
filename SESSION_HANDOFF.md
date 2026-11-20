@@ -46,7 +46,7 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
 - **2026-11-19 — the poll edit merged (#288 `main` = `553390e`, #289 `dev`), no migration:** "Edytuj" on a question saved for later,
   "Popraw jako nowe" on one asked, in its own card (review `docs/history/review-2026-11-19-poll-edit.md`, E1–E5 fixed). After the
   deploy: a try on a phone.
-- **2026-11-20 — `claude/admiring-cannon-fud6t3` (`71e7bbd`), new PRs to `main` and `dev`, no migration:** "Ustawienia imprezy" in
+- **2026-11-20 — `claude/admiring-cannon-fud6t3` (`71e7bbd`), PRs #290 (`main`) and #291 (`dev`), no migration:** "Ustawienia imprezy" in
   four groups (Impreza / Dla gości / Ty jako DJ / Dostęp, "Limity gości" under "Godziny"), "Życzenia" and "Pytanie" rows "›" like
   "Obsługa", the folded states by one rule (`06-7-look.md`; nothing set greyed, `.s2p-fold-state-empty`). Checked live on a computer
   (the owner's Chrome); browser 454/454, audit OK. Waits for the owner: the review in a new session, a look on a phone, the merge.
