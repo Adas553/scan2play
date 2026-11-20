@@ -195,7 +195,7 @@ class StaffPageRenderTest {
         assertThat(html).doesNotContain("??", "id=\"staffLinkInput\"", "id=\"staffLinkRole\"", "id=\"staffList\"");
         assertThat(html).as("\"Zaproś\" unfolded with what came of it; every place taken said in its line; no link yet")
                 .contains("id=\"staffInviteCard\" open=\"open\"", "class=\"s2p-fold-state s2p-row-warn\">Miejsca zajęte: 10 z 10<",
-                        "class=\"s2p-fold-state\">Brak linku<");
+                        "class=\"s2p-fold-state s2p-fold-state-empty\">Brak linku<");
         assertThat(html).contains("id=\"staffEmpty\"", "To nie wygląda na adres e-mail: ola@gmail", "alert alert-warning",
                 "value=\"ola@gmail\"", "id=\"staffFull\"", "Zajęte 10 z 10 miejsc", ">Utwórz link zaproszenia<",
                 ">Co może osoba, która dołączy przez link<");

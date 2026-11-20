@@ -286,7 +286,7 @@
 
     S2P.scenario({
         name: 'settings-kiosk-card',
-        title: '"Kiosk dla gości" on the settings page, on a phone: folded to "Włączone"; the link to copy and to open; "Nowy link" asks first, is sent in the background, the server\'s card with the new link takes the old one\'s place — "✓" on the button, the screen does not jump',
+        title: '"Kiosk dla gości" on the settings page, on a phone: folded to "Włączony"; the link to copy and to open; "Nowy link" asks first, is sent in the background, the server\'s card with the new link takes the old one\'s place — "✓" on the button, the screen does not jump',
         page: 'settings-kiosk',
         viewport: '390,844',
         run: async function (t) {
@@ -294,7 +294,7 @@
             const asked = [];
             window.confirm = function (text) { asked.push(text); return true; };
             const card = document.getElementById('kioskCard');
-            t.step('folded to its state', [!card.open, card.querySelector('#kioskState').textContent.trim()], [true, 'Włączone']);
+            t.step('folded to its state', [!card.open, card.querySelector('#kioskState').textContent.trim()], [true, 'Włączony']);
             card.querySelector('summary').click();
             const oldLink = document.getElementById('kioskLinkInput').value;
             t.step('the link, to copy and to open', [oldLink, shows(card.querySelector('[data-copy-target="kioskLinkInput"]')),

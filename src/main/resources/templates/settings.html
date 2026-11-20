@@ -122,10 +122,10 @@
                     </div>
                 </details>
 
-                <!--/* The guests' limits, and the use of the server's own in one line with their windows (the design review: three lines
-                     explained limits the DJ does not set; the owner: the line must say "30 na 10 min", "300 na 24 h") — what a network is,
-                     unfolded. The badges: grey, yellow from 80 %, red at the limit. */-->
-                <!--/* its state: the limits that hold (the plan's too) — or, from 80 % of a server limit, how much of it is used */-->
+                <!--/* The guests' limits, and the use of the server's own in one line with their windows ("30 na 10 min", "300 na 24 h": a
+                     DJ does not set them, so one line, not three explaining them) — what a network is, unfolded. The badges: grey, yellow
+                     from 80 %, red at the limit. Its state: the limits that hold (the plan's too) — or, from 80 % of a server limit, how much
+                     of it is used, in yellow (.s2p-row-warn). */-->
                 <details th:if="${access.may('LIMITS') and (plan.allows('GUEST_LIMITS') or plan.pro('GUEST_LIMITS'))}"
                          class="card bg-dark border-secondary s2p-fold" id="limitsCard"
                          th:with="partyNear=${serverLimitPerParty > 0 and partyRequestsUsed * 5 >= serverLimitPerParty * 4},
@@ -202,7 +202,8 @@
                         <span class="s2p-fold-state" th:unless="${plan.pro('HOST_LISTS')}"
                               th:classappend="${hostBlockedCount == 0 and hostWantedCount == 0 and hostLink == null} ? 's2p-fold-state-empty'"
                               th:text="${hostBlockedCount == 0 and hostWantedCount == 0 and hostLink == null} ? #{settings.row.hosts.unused}
-                                       : #{settings.row.hosts(${hostBlockedCount}, ${hostWantedCount})} + (${hostLink != null} ? ' · ' + #{settings.row.hosts.link} : '')">Not used</span>
+                                       : #{settings.row.hosts(${hostBlockedCount}, ${hostWantedCount})} + (${hostLink != null} ? #{settings.row.hosts.link} : '')">Not used</span>
+                        <!--/* the messages join their parts with non-breaking spaces: on a 320 px phone the heading wraps, never "link" alone below */-->
                     </summary>
                     <div class="s2p-fold-body">
                     <p class="s2p-card-help" th:text="#{dashboard.host.help}">One song or artist per line.</p>
@@ -365,7 +366,7 @@
                      state the events collecting now. Whoever has WISHES; without Pro "PRO" beside it and the page says what Pro adds. */-->
                 <a th:if="${access.may('WISHES') and (plan.allows('WISHES') or plan.pro('WISHES'))}" th:href="@{/dj/wishes(party=${partyCode})}"
                    href="/dj/wishes" id="wishesRow" class="card bg-dark border-secondary s2p-fold-link">
-                    <span class="s2p-card-title s2p-fold-name"><span th:text="#{wishes.title}">Wishes before the party</span><th:block th:if="${plan.pro('WISHES')}"><span th:replace="~{fragments/components :: proMark}"></span></th:block></span>
+                    <h3 class="s2p-card-title s2p-fold-name"><span th:text="#{wishes.title}">Wishes before the party</span><th:block th:if="${plan.pro('WISHES')}"><span th:replace="~{fragments/components :: proMark}"></span></th:block></h3>
                     <span class="s2p-fold-state" id="wishesState" th:unless="${plan.pro('WISHES')}" th:classappend="${wishOpen == 0} ? 's2p-fold-state-empty'"
                           th:text="${wishOpen > 0} ? #{settings.wishes.open(${wishOpen})} : #{settings.wishes.none}">Inactive</span>
                 </a>
@@ -375,7 +376,7 @@
                      without Pro "PRO" beside it and the page says what Pro adds. */-->
                 <a th:if="${access.may('POLLS') and (plan.allows('POLLS') or plan.pro('POLLS'))}" th:href="@{/dj/polls(party=${partyCode})}"
                    href="/dj/polls" id="pollsRow" class="card bg-dark border-secondary s2p-fold-link">
-                    <span class="s2p-card-title s2p-fold-name"><span th:text="#{polls.title}">Question for the guests</span><th:block th:if="${plan.pro('POLLS')}"><span th:replace="~{fragments/components :: proMark}"></span></th:block></span>
+                    <h3 class="s2p-card-title s2p-fold-name"><span th:text="#{polls.title}">Question for the guests</span><th:block th:if="${plan.pro('POLLS')}"><span th:replace="~{fragments/components :: proMark}"></span></th:block></h3>
                     <span class="s2p-fold-state" id="pollsState" th:unless="${plan.pro('POLLS')}" th:classappend="${pollAsked == null} ? 's2p-fold-state-empty'"
                           th:text="${pollAsked != null} ? #{settings.polls.asked} : #{settings.polls.none}">Inactive</span>
                 </a>
@@ -626,18 +627,19 @@
         </section>
 
         <section class="s2p-settings-group" aria-labelledby="settingsGroupAccess">
-            <h2 class="s2p-settings-group-title" id="settingsGroupAccess" th:text="#{settings.group.access}">Access</h2>
+            <!--/* "Dostęp" is the organiser's (the staff, the code); the staff see this device alone here, so the heading says that */-->
+            <h2 class="s2p-settings-group-title" id="settingsGroupAccess" th:text="${isOwner} ? #{settings.group.access} : #{settings.group.device}">Access</h2>
             <div class="d-flex flex-column gap-2">
                 <!--/* "Obsługa" is a page of its own (the organiser's): a row like a folded card, with its state, leading there */-->
                 <a th:if="${isOwner}" th:href="@{/dj/staff(party=${partyCode})}" href="/dj/staff" id="staffRow"
                    class="card bg-dark border-secondary s2p-fold-link">
-                    <span class="s2p-card-title s2p-fold-name" th:text="#{dashboard.staff.title}">Staff</span>
+                    <h3 class="s2p-card-title s2p-fold-name" th:text="#{dashboard.staff.title}">Staff</h3>
                     <span class="s2p-fold-state" th:classappend="${#lists.isEmpty(staff)} ? 's2p-fold-state-empty'"
                           th:text="${#lists.isEmpty(staff)} ? #{settings.row.staff.none} : #{settings.row.staff(${#lists.size(staff)})}">People: 1</span>
                 </a>
 
                 <!--/* This device: the notifications and the app (each shown by its script only where it helps), and an invitation to another
-                     party pasted here — on the person's own panel only (the owner, 2026-10-10: on another's party she has joined already). */-->
+                     party pasted here — on the person's own panel only (on another's party they have joined already). */-->
                 <details class="card bg-dark border-secondary s2p-fold" id="deviceCard">
                     <summary class="s2p-fold-summary">
                         <h3 class="s2p-card-title s2p-fold-name" th:text="#{dashboard.device.title}">This device</h3>

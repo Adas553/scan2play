@@ -362,7 +362,8 @@ class SongEvaluationServiceTest {
 
         assertThat(saved.getValue().getSongName()).isEqualTo("Zenon Martyniuk & Edward Hulewicz - Za zdrowie Pań");
         assertThat(response.songName()).isEqualTo("Zenon Martyniuk & Edward Hulewicz - Za zdrowie Pań");
-        assertThat(prompts.get(0)).contains("Hulewicz - Za zdrowie Pań").doesNotContain("–");
+        // the guest's words only: the Polish template has a dash of its own ("jedno–dwa zdania"), and the language is the JVM's here
+        assertThat(prompts.get(0)).contains("Hulewicz - Za zdrowie Pań").doesNotContain("Hulewicz – Za");
         assertThat(saved.getValue().getGuestText()).as("the DJ sees the guest's words as typed")
                 .isEqualTo("Zenon Martyniuk & Edward Hulewicz – Za zdrowie Pań");
     }

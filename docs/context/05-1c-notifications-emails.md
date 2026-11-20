@@ -2,7 +2,7 @@
 
 **Notifications on the DJ's devices** (Web Push; only when the server has the VAPID keys — Section 10): the switch "Powiadomienia
 o prośbach" in the card "To urządzenie" of the page "Ustawienia imprezy" (`js/dashboard/push.js`; the card's folded line says
-"Powiadomienia wł. / wył." for this browser, `settings-rows.js`), per browser — the permission, the service worker
+"Powiadomienia włączone / wyłączone" for this browser, off greyed, `settings-rows.js`), per browser — the permission, the service worker
 `/sw.js` (scope `/dj/`), the subscription with the server's key → `POST /dj/push/subscribe`; off → `/dj/push/unsubscribe`. A **new**
 song on the list (accepted, or unchecked with the AI down; not a vote on a waiting one) → `PushNotificationService` sends
 "🎵 Nowa prośba — <song>" to each of the DJ's devices, off the guest's thread (a pool of 2, queue 200, TTL 1 h, urgency high); the

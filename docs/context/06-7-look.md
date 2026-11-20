@@ -43,12 +43,19 @@ What every page shares, so a new screen looks like the others:
   goście)" after each. Nothing explains what the DJ does not set (the server's limits: one line, what they are unfolded).
 - **"Ustawienia imprezy"** (2026-11-20): the cards in four groups under a small grey heading (`.s2p-settings-group-title`) —
   **Impreza** (Godziny, Limity gości, Lista gospodarzy, Kiosk), **Dla gości** (Motyw, Życzenia, Pytanie), **Ty jako DJ** (Profile,
-  Logo, Biblioteka, Poranne podsumowanie), **Dostęp** (Obsługa, To urządzenie, Kod imprezy — last, rare and it kills the posters); a
+  Logo, Biblioteka, Poranne podsumowanie), **Dostęp** (Obsługa, To urządzenie, Kod imprezy — last, rare and it kills the posters;
+  for the staff, who see this device alone there, the heading is **Urządzenie**); a
   group shows only when a card of it does. A card with nothing to set that leads to a page of its own ("Obsługa", "Życzenia", "Pytanie")
-  is a row with "›" (`.s2p-fold-link`), not a card to unfold first. **The folded line's state**: a capital first letter, no
-  abbreviation; nothing set yet is "Nie ustawiono" (a file: "Nie wgrano"; a switch: "Wyłączone"; a page's feature: "Nieaktywne"; the
-  staff: "Tylko Ty") and greyed (`.s2p-fold-state-empty`), what is set light; a count rather than a list of names ("Ustawione: 3").
-  Browser scenario `settings-folded`.
+  is a row with "›" (`.s2p-fold-link`), not a card to unfold first; its name an `h3` like the cards' (a screen reader jumping by
+  headings meets them all). **The folded line's state**: a capital first letter, no
+  abbreviation but a unit's ("3 min"); nothing set yet is "Nie ustawiono" (a file: "Nie wgrano"; a switch: "Wyłączone", agreeing with
+  the card's name where it is a noun of its own — "Kiosk dla gości: Wyłączony"; a page's feature: "Nieaktywne"; the
+  staff: "Tylko Ty") and greyed (`.s2p-fold-state-empty`), what is set light, a server limit near yellow (`.s2p-row-warn`) — on
+  "Obsługa" too ("Brak linku" grey); the colours under `.page-dj`, so the guest's folded poll keeps its theme's grey. A count rather
+  than a list of names ("Ustawione: 3"); the parts of a state joined by non-breaking spaces ("Ustawione: 3", "🚫 0 · ⭐ 1 · link"):
+  on a phone the heading wraps, never a number or "link" alone on a second line.
+  Browser scenarios `settings-folded`, `settings-staff-groups`, `settings-fold-state-tones`, `staff-fold-state-tones`,
+  `settings-fold-state-count-one-line`, `settings-hosts-state-one-line-320`.
 - **What goes where** (the panel's clean-up, 2026-10-10): the panel holds what the DJ uses during a party (the queue, the vibe, "Kto gra",
   the QR code); what is set before it is on the page of the tab "Ustawienia" ("Ustawienia imprezy", "Obsługa") — never a card more on the
   panel, nor a second way to the same page (the rows of "Więcej", removed 2026-10-28). **Every page of the DJ's** (the panel, the

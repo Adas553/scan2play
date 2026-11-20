@@ -49,8 +49,13 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
 - **2026-11-20 — `claude/admiring-cannon-fud6t3` (`71e7bbd`), PRs #290 (`main`) and #291 (`dev`), no migration:** "Ustawienia imprezy" in
   four groups (Impreza / Dla gości / Ty jako DJ / Dostęp, "Limity gości" under "Godziny"), "Życzenia" and "Pytanie" rows "›" like
   "Obsługa", the folded states by one rule (`06-7-look.md`; nothing set greyed, `.s2p-fold-state-empty`). Checked live on a computer
-  (the owner's Chrome); browser 454/454, audit OK. Waits for the owner: the review in a new session, a look on a phone, the merge.
-  Unit: `ForWhomPagesWebTest`, `SongEvaluationServiceTest` red locally before this change too (Polish letters as "�" — Windows' charset?).
+  (the owner's Chrome); browser 454/454, audit OK.
+- **2026-11-20 — its review (`docs/history/review-2026-11-20-settings-groups.md`), uncommitted on the same branch:** P1–P7 fixed (the
+  states' colours under `.page-dj` — the guest's poll line and "Obsługa" as they were, "Brak linku" grey; a limit near yellow again;
+  "Ustawione: N" never split (a non-breaking space); a test that each group shows exactly its cards; docs). P8–P10, P13 done too (the owner: "zrób jak
+  będzie najlepiej"): "Urządzenie" over this device for the staff, "Kiosk — Włączony", the rows' names `h3`, the hosts' state one line
+  on 320 px. Waits for the owner: commit into #290 / #291, a look on a phone, the merge. P11 (the closed-party banner no
+  heading before `h1`) and P12 fixed too: the two unit tests red locally (not charset — CRLF, the JVM's Polish locale) pass on Windows.
 - **Waits for the owner (from #269):** after the first commit the deploy window holds back (Fri–Sun 18:00–6:00): does Railway
   deploy it on the workflow's re-run? UptimeRobot is set up (the owner, 2026-11-17; `docs/monitoring.md`).
 - **Waits for the owner (the wishes, #263):** the three older Polish texts with "DJ" and a masculine verb (`guest.vote.gone`,

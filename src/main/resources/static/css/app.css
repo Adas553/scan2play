@@ -1455,9 +1455,13 @@ th[data-sort].sort-desc::after {
 .s2p-fold-name { margin: 0 auto 0 0 !important; min-width: 0; line-height: 1.3; }
 /* the state never narrower than its longest word, broken only between words: on a phone the heading wraps instead — a state
    allowed to shrink (min-width: 0) breaks a word in two, "Nieustawion / e" beside "Profile, kontakt i napiwki" */
-.s2p-fold-state { color: var(--s2p-light); font-size: 0.875rem; text-align: right; min-width: min-content; overflow-wrap: normal; word-break: normal; }
-/* nothing set yet ("Nie ustawiono", "Wyłączone", "Tylko Ty"): greyed, so what is set stands out when the eye runs down the column */
-.s2p-fold-state-empty { color: var(--s2p-text-muted); }
+.s2p-fold-state { color: var(--s2p-text-muted); font-size: 0.875rem; text-align: right; min-width: min-content; overflow-wrap: normal; word-break: normal; }
+/* the DJ's pages ("Ustawienia imprezy", "Obsługa"): what is set light, nothing set yet ("Nie ustawiono", "Wyłączone", "Tylko Ty")
+   grey, so what is set stands out when the eye runs down the column; the guest's poll line keeps its theme's grey. A limit near
+   (.s2p-row-warn) stays yellow — a rule of one class declared earlier would lose to these. */
+.page-dj .s2p-fold-state { color: var(--s2p-light); }
+.page-dj .s2p-fold-state-empty { color: var(--s2p-text-muted); }
+.page-dj .s2p-fold-state.s2p-row-warn { color: var(--s2p-warning); }
 .s2p-fold[open] > .s2p-fold-summary > .s2p-fold-state { display: none; }
 .s2p-fold-body { padding: 0 1rem 1rem; }
 /* "Ustawienia imprezy": the cards in groups ("Impreza", "Dla gości", "Ty jako DJ", "Dostęp"), each under a small heading — a

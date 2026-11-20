@@ -23,7 +23,8 @@
     <div id="party-closed-banner"
          th:classappend="${isActive} ? 'd-none' : ''"
          class="alert alert-warning text-center border-warning mb-4 shadow s2p-alert-closed">
-        <h3 class="fw-bold mb-3" th:text="#{dashboard.alert.party_closed.title}">⚠️ Party is CLOSED</h3>
+        <!--/* a heading's look, not a heading: it stands above the page's h1, and a screen reader's list of headings starts there */-->
+        <p class="h3 fw-bold mb-3" th:text="#{dashboard.alert.party_closed.title}">⚠️ Party is CLOSED</p>
         <!--/* with an open planned (V55) the guests read when ("Prośby od 20:00"): said here; the poll puts the plain words back once
              the open is no longer planned (polling.js) */-->
         <p id="partyClosedDescription" th:attr="data-plain=#{dashboard.alert.party_closed.description}"
