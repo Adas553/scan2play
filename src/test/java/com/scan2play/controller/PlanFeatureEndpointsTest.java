@@ -92,7 +92,7 @@ class PlanFeatureEndpointsTest {
         PlayHistoryService history = mock(PlayHistoryService.class);
         when(history.getHistory(any(), org.mockito.ArgumentMatchers.anyInt(), any())).thenReturn(new PlayHistoryService.Page(List.of(), false));
         DjDashboardController dashboard = new DjDashboardController(mock(DjService.class), settings, mock(QrCodeService.class), helper,
-                history, mock(GuestRequestLimiter.class), mock(PushNotificationService.class), staff, mock(StaffInvitationService.class), plans, new com.scan2play.service.AiHealthMonitor(), com.scan2play.service.PartySchedules.texts(), mock(com.scan2play.service.WelcomeEmailService.class), com.scan2play.service.FreeAiLimit.off(), wishes, org.mockito.Mockito.mock(com.scan2play.service.PollService.class));
+                history, mock(GuestRequestLimiter.class), mock(PushNotificationService.class), staff, mock(StaffInvitationService.class), plans, new com.scan2play.service.AiHealthMonitor(), com.scan2play.service.PartySchedules.texts(), mock(com.scan2play.service.WelcomeEmailService.class), com.scan2play.service.FreeAiLimit.off(), wishes, org.mockito.Mockito.mock(com.scan2play.service.PollService.class), org.mockito.Mockito.mock(com.scan2play.service.EventPlanService.class));
         ReflectionTestUtils.setField(dashboard, "rawBaseUrl", "http://localhost:8080");
         dashboard.init();
         return MockMvcBuilders.standaloneSetup(
@@ -104,6 +104,7 @@ class PlanFeatureEndpointsTest {
                                 settings, DjLibraryController.MAX_BYTES),
                         new PartyLogoController(mock(com.scan2play.service.PartyLogoService.class), query, helper, plans, codesAsTexts()),
                         WishControllers.djWishes(wishes, helper, plans, settings, codesAsTexts()),
+                        WishControllers.djPlan(wishes, helper, plans, settings, codesAsTexts()),
                         new DjPollsController(polls, helper, plans, codesAsTexts()))
                 .setViewResolvers(new InternalResourceViewResolver("/WEB-INF/views/", ".html")).build();
     }
@@ -145,6 +146,11 @@ class PlanFeatureEndpointsTest {
                 Arguments.of(PlanFeature.WISHES, true, post("/dj/wishes/1/theme").param("partyCode", PUB).param("theme", "WEDDING")),
                 Arguments.of(PlanFeature.WISHES, true, post("/dj/wishes/1/must-play").param("partyCode", PUB).param("song", "Wilki - Baśka")),
                 Arguments.of(PlanFeature.WISHES, true, get("/dj/qr-print").param("party", PUB).param("wish", "1")),
+                // "Plan imprezy" (V77): a save, a template, the hosts' link, the event's lists put over the party's
+                Arguments.of(PlanFeature.WISHES, true, post("/dj/wishes/1/plan").param("partyCode", PUB).param("label", "Tort")),
+                Arguments.of(PlanFeature.WISHES, true, post("/dj/wishes/1/plan/template").param("partyCode", PUB).param("template", "wedding")),
+                Arguments.of(PlanFeature.WISHES, true, post("/dj/wishes/1/plan/host-link").param("partyCode", PUB)),
+                Arguments.of(PlanFeature.WISHES, true, post("/dj/wishes/1/plan/use-lists").param("partyCode", PUB)),
                 // "Pytanie do gości" (V74): a new question, asking one
                 Arguments.of(PlanFeature.POLLS, true, post("/dj/polls/create").param("partyCode", PUB).param("question", "Disco polo?")),
                 Arguments.of(PlanFeature.POLLS, true, post("/dj/polls/1/ask").param("partyCode", PUB)),
@@ -208,6 +214,10 @@ class PlanFeatureEndpointsTest {
                 Arguments.of(post("/dj/wishes/1/closed").param("partyCode", PUB).param("closed", "true")),
                 Arguments.of(get("/dj/wishes/1/csv").param("party", PUB)),
                 Arguments.of(post("/dj/wishes/1/delete").param("partyCode", PUB)),
+                // nor a plan made before (V77): seen, printed, its hosts' link taken away
+                Arguments.of(get("/dj/wishes/1/plan").param("party", PUB)),
+                Arguments.of(get("/dj/wishes/1/plan/print").param("party", PUB)),
+                Arguments.of(post("/dj/wishes/1/plan/host-link").param("partyCode", PUB).param("on", "false")),
                 // nor the questions to the guests made before (V74): seen, ended, deleted
                 Arguments.of(get("/dj/polls").param("party", PUB)),
                 Arguments.of(get("/dj/polls/1/results").param("party", PUB)),

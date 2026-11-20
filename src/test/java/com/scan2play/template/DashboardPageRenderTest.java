@@ -95,6 +95,9 @@ class DashboardPageRenderTest {
         engine.setTemplateEngineMessageSource(messages);
     }
 
+    /** Tonight's party plan as the dashboard asks for it (V77): none, unless a test sets one (and puts this one back). */
+    private static com.scan2play.service.EventPlanService eventPlans = mock(com.scan2play.service.EventPlanService.class);
+
     /** What the controller does for a DJ with these settings, rendered like the view resolver would. */
     private static String renderDashboard(PartySettingsEntity settings, List<SongRequestEntity> queue, Locale locale) {
         return renderDashboard(settings, queue, locale, new GuestRequestLimiter(30, 10, 300, ""));
@@ -137,7 +140,7 @@ class DashboardPageRenderTest {
         when(qrCodeService.generateQrCodeBase64(anyString(), anyInt(), anyInt())).thenReturn(null);
 
         DjDashboardController controller = new DjDashboardController(djService, mock(PartySettingsCommandService.class),
-                qrCodeService, sessionHelper, mock(PlayHistoryService.class), limiter, pushWithKey(), staff, mock(com.scan2play.service.StaffInvitationService.class), plans, new com.scan2play.service.AiHealthMonitor(), com.scan2play.service.PartySchedules.of(mock(PartySettingsCommandService.class), com.scan2play.service.PartySchedules.FRIDAY_NOON), mock(com.scan2play.service.WelcomeEmailService.class), freeAiLimit, org.mockito.Mockito.mock(com.scan2play.service.WishService.class), org.mockito.Mockito.mock(com.scan2play.service.PollService.class));
+                qrCodeService, sessionHelper, mock(PlayHistoryService.class), limiter, pushWithKey(), staff, mock(com.scan2play.service.StaffInvitationService.class), plans, new com.scan2play.service.AiHealthMonitor(), com.scan2play.service.PartySchedules.of(mock(PartySettingsCommandService.class), com.scan2play.service.PartySchedules.FRIDAY_NOON), mock(com.scan2play.service.WelcomeEmailService.class), freeAiLimit, org.mockito.Mockito.mock(com.scan2play.service.WishService.class), org.mockito.Mockito.mock(com.scan2play.service.PollService.class), eventPlans);
         ReflectionTestUtils.setField(controller, "rawBaseUrl", "http://localhost:8080/");
         controller.init();
 
@@ -224,6 +227,48 @@ class DashboardPageRenderTest {
         } catch (java.security.GeneralSecurityException e) {
             throw new IllegalStateException(e);
         }
+    }
+
+    /**
+     * "Plan wieczoru" above the queue (V77, variant B): tonight's event's plan — its name, the link to the whole plan, every moment with
+     * its time, song and note, a ✓ for each (shown by plan-card.js) — and "📋 z planu" on a request for one of its songs. Without a plan
+     * tonight: no card, no mark. {@code dashboard-plan.html} for the browser tests ({@code scenarios/plan-card.js}).
+     */
+    @Test
+    void tonightsPlan_isAboveTheQueue_andItsSongsAreMarked() throws IOException {
+        com.scan2play.service.EventPlanService plans = mock(com.scan2play.service.EventPlanService.class);
+        java.time.LocalDate evening = com.scan2play.service.EveningSummaryService.eveningOf(java.time.Instant.now());
+        when(plans.tonight(org.mockito.ArgumentMatchers.eq(PARTY), any())).thenReturn(java.util.Optional.of(
+                new com.scan2play.service.EventPlanService.Tonight(7L, "Wesele Ani i Kuby", evening, List.of(
+                        new com.scan2play.service.EventPlanService.Moment("Podziękowania dla rodziców", java.time.LocalTime.of(21, 0),
+                                "Wilki - Baśka", "imiona: Ewa i Marek"),
+                        new com.scan2play.service.EventPlanService.Moment("Tort", java.time.LocalTime.of(23, 0), null, "DJ wybiera"),
+                        new com.scan2play.service.EventPlanService.Moment("Oczepiny", java.time.LocalTime.of(0, 30), null, null),
+                        new com.scan2play.service.EventPlanService.Moment("Ostatni taniec", null, "Zespół - Na Koniec", null)))));
+        when(plans.tonightSongs(org.mockito.ArgumentMatchers.eq(PARTY), any())).thenReturn("Wilki - Baśka\nZespół - Na Koniec");
+        String html;
+        try {
+            eventPlans = plans;
+            html = renderDashboard(party(), List.of(song(1, "Wilki - Baśka"), song(2, "sanah - Szampan")), PL);
+        } finally {
+            eventPlans = mock(com.scan2play.service.EventPlanService.class);
+        }
+
+        assertWhatTheScriptsNeed(html);
+        assertThat(html).doesNotContain("??");
+        assertThat(html).contains("id=\"planCard\"", "data-plan-event=\"7\"", "data-plan-evening=\"" + evening + "\"",
+                ">📋 Plan wieczoru<", "· Wesele Ani i Kuby", "href=\"/dj/wishes/7/plan?party=" + PARTY + "\"", ">Cały wieczór (4)<",
+                "data-time=\"23:00\"", "data-time=\"00:30\"", "data-label=\"Oczepiny\"", "data-song=\"Zespół - Na Koniec\"",
+                ">imiona: Ewa i Marek<", "aria-label=\"Odhacz: Tort\"", "data-text-in=\"za {0} min\"");
+        assertThat(html.indexOf("id=\"planCard\"")).as("above the queue").isLessThan(html.indexOf("id=\"queueList\""));
+        String wilki = html.substring(html.indexOf("Wilki - Baśka", html.indexOf("id=\"queueList\"")));
+        assertThat(wilki.substring(0, wilki.indexOf("</tr>"))).as("the plan's song marked").contains(">📋 z planu<");
+        String szampan = html.substring(html.indexOf("sanah - Szampan", html.indexOf("id=\"queueList\"")));
+        assertThat(szampan.substring(0, szampan.indexOf("</tr>"))).as("another song not").doesNotContain("z planu");
+        write("dashboard-plan.html", html);
+
+        assertThat(renderDashboard(party(), List.of(song(1, "Wilki - Baśka")), PL)).as("no plan tonight: no card, no mark")
+                .doesNotContain("id=\"planCard\"", "z planu<");
     }
 
     /** A party of the product: the DJ plays from their own software, the guests' requests wait on the dashboard. */
@@ -695,7 +740,7 @@ class DashboardPageRenderTest {
         when(sessionHelper.access(any(), any(), any())).thenReturn(owner);
         when(sessionHelper.require(any(), any(), any(), any())).thenReturn(owner.party());
         DjDashboardController controller = new DjDashboardController(mock(DjService.class), mock(PartySettingsCommandService.class),
-                mock(QrCodeService.class), sessionHelper, history, mock(GuestRequestLimiter.class), mock(PushNotificationService.class), mock(PartyStaffService.class), mock(com.scan2play.service.StaffInvitationService.class), plans, new com.scan2play.service.AiHealthMonitor(), com.scan2play.service.PartySchedules.of(mock(PartySettingsCommandService.class), com.scan2play.service.PartySchedules.FRIDAY_NOON), mock(com.scan2play.service.WelcomeEmailService.class), com.scan2play.service.FreeAiLimit.off(), org.mockito.Mockito.mock(com.scan2play.service.WishService.class), org.mockito.Mockito.mock(com.scan2play.service.PollService.class));
+                mock(QrCodeService.class), sessionHelper, history, mock(GuestRequestLimiter.class), mock(PushNotificationService.class), mock(PartyStaffService.class), mock(com.scan2play.service.StaffInvitationService.class), plans, new com.scan2play.service.AiHealthMonitor(), com.scan2play.service.PartySchedules.of(mock(PartySettingsCommandService.class), com.scan2play.service.PartySchedules.FRIDAY_NOON), mock(com.scan2play.service.WelcomeEmailService.class), com.scan2play.service.FreeAiLimit.off(), org.mockito.Mockito.mock(com.scan2play.service.WishService.class), org.mockito.Mockito.mock(com.scan2play.service.PollService.class), org.mockito.Mockito.mock(com.scan2play.service.EventPlanService.class));
 
         ConcurrentModel model = new ConcurrentModel();
         String view = controller.historyFragment(PARTY, limit, filter.param(), model, ownerToken(), new MockHttpSession());
@@ -764,7 +809,7 @@ class DashboardPageRenderTest {
         when(sessionHelper.require(any(), any(), any(), any())).thenReturn(owner.party());
         DjDashboardController controller = new DjDashboardController(mock(DjService.class), mock(PartySettingsCommandService.class),
                 mock(QrCodeService.class), sessionHelper, history, mock(GuestRequestLimiter.class), mock(PushNotificationService.class),
-                mock(PartyStaffService.class), mock(com.scan2play.service.StaffInvitationService.class), com.scan2play.service.Plans.off(), new com.scan2play.service.AiHealthMonitor(), com.scan2play.service.PartySchedules.of(mock(PartySettingsCommandService.class), com.scan2play.service.PartySchedules.FRIDAY_NOON), mock(com.scan2play.service.WelcomeEmailService.class), com.scan2play.service.FreeAiLimit.off(), org.mockito.Mockito.mock(com.scan2play.service.WishService.class), org.mockito.Mockito.mock(com.scan2play.service.PollService.class));
+                mock(PartyStaffService.class), mock(com.scan2play.service.StaffInvitationService.class), com.scan2play.service.Plans.off(), new com.scan2play.service.AiHealthMonitor(), com.scan2play.service.PartySchedules.of(mock(PartySettingsCommandService.class), com.scan2play.service.PartySchedules.FRIDAY_NOON), mock(com.scan2play.service.WelcomeEmailService.class), com.scan2play.service.FreeAiLimit.off(), org.mockito.Mockito.mock(com.scan2play.service.WishService.class), org.mockito.Mockito.mock(com.scan2play.service.PollService.class), org.mockito.Mockito.mock(com.scan2play.service.EventPlanService.class));
 
         ConcurrentModel model = new ConcurrentModel();
         assertThat(controller.historyView(50, null, PARTY, model, ownerToken(), new MockHttpSession())).isEqualTo("history");

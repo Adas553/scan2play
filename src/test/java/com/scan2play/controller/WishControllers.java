@@ -48,6 +48,20 @@ final class WishControllers {
         return wishes;
     }
 
+    /** "Plan imprezy" (V77) of the party's event: the real {@link DjEventPlanController} over a plan service that finds every change made. */
+    static DjEventPlanController djPlan(WishService wishes, DjSessionHelper helper, PlanService plans, PartySettingsCommandService settings,
+                                        MessageSource messages) {
+        com.scan2play.service.EventPlanService eventPlans = mock(com.scan2play.service.EventPlanService.class);
+        when(eventPlans.plan(anyLong())).thenReturn(new com.scan2play.service.EventPlanService.Plan(List.of(), null, null, null, null));
+        when(eventPlans.hostToken(anyString(), anyLong())).thenReturn(Optional.empty());
+        when(eventPlans.newHostLink(anyString(), anyLong())).thenReturn(true);
+        when(eventPlans.removeHostLink(anyString(), anyLong())).thenReturn(true);
+        when(eventPlans.startFrom(anyLong(), any(), anyString())).thenReturn(true);
+        DjEventPlanController controller = new DjEventPlanController(wishes, eventPlans, helper, plans, settings, messages);
+        ReflectionTestUtils.setField(controller, "rawBaseUrl", "http://localhost:8080");
+        return controller;
+    }
+
     static DjWishesController djWishes(WishService wishes, DjSessionHelper helper, PlanService plans,
                                        PartySettingsCommandService settings, MessageSource messages) {
         DjWishesController controller = new DjWishesController(wishes, helper, plans, mock(DjService.class), mock(DjLibraryService.class),

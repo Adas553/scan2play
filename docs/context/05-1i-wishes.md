@@ -59,3 +59,32 @@ code, no tables. The editor shows every change and saves none (`data-preview-onl
 saved" note, no question on leaving; scenario `qr-print-invitation-saves-nothing`) — the party's own print stays as the DJ saved it;
 the pictures for social media work as on the party's print. Its line "Strona gościa: …" names the event's look and "Zmień" leads to
 the event (`QrPrintPageTest`), never the party's "Motyw dla gości", which acts on the party's page tonight.
+
+**"Plan imprezy"** (V77, Pro, the permission WISHES; `docs/ideas.md` item 17): the plan of one event's evening, shared by the DJ and the
+hosts — its moments in their order (`event_plan_item`: a name ≤ 60, a time or none, a song ≤ 150, a note ≤ 300; at most
+`EventPlanService.MAX_MOMENTS` = 30) and the event's own "🚫 Nie grać" / "⭐ Koniecznie zagrać" (`wish_event.plan_blocked` /
+`plan_wanted`, tidied as the party's, `SongList`). The DJ opens it from the event ("📋 Plan imprezy", `/dj/wishes/{id}/plan`,
+`DjEventPlanController`, `event-plan.html`); while it has no moments both sides may start from a template (wesele, osiemnastka,
+urodziny, impreza firmowa — the names only, `eventplan.template.*` in the page's language). **The hosts' link** of the event
+(`wish_event.host_token`, 128 bits; "Utwórz link", "Nowy link" kills the old one, "Wyłącz link"; it works while the event is kept and
+the party has Pro): `/h/e/{token}` (`HostController`, `host-plan.html`) — the same form, no account. Its forms carry no CSRF token
+(`th:attr` for the action, not `th:action`) and `SecurityConfig` asks none of `/h/e/*`: the link's secret is what lets it write, a plan
+is written slowly (a form open past the session must not be refused), and a page that makes no session cannot make one too late
+(`EventPlanHostWebTest`). A save is the whole plan, under the event row's lock (two at once leave one plan, `EventPlanIT`); last save
+wins, the page says who saved last and when ("Ostatni zapis: gospodarze, …"). The form's rows are the moments and three spare empty
+ones; `plan-form.js` adds, moves and removes rows (the order on the page is the order saved; scenarios `event-plan-*`); an emptied row is not saved, a row with a
+song or a note and no name is named "Moment"; the columns are read with `getParameterValues` (a `List<String>` of one value is split at
+its commas by Spring). **On the night:** the event's lists are not the party's — two weddings planned at once must not overwrite each
+other, and the party's lists are what the AI and the queue use tonight —; "Użyj list na imprezie" (HOST_LISTS too) puts them over
+the party's (asks first). "🖨 Drukuj plan" (`/dj/wishes/{id}/plan/print`, `event-plan-print.html`): one A4, black on white, the times
+big. Without Pro the DJ's page shows the plan read only (a disabled fieldset) and the hosts' link is a 404. Nothing of the plan goes
+to the guests, the TV or the AI; it is deleted with the event (7 days after its date) — the privacy policy says so.
+
+**"Plan wieczoru" in the panel** (variant B, Pro): on the evening of an event with moments (`EventPlanService.tonight`: the event dated
+`EveningSummaryService.eveningOf(now)` — until 6:00 the night is the day before's —, the first made if two share the day) a card above
+the queue (`dashboard.html` `#planCard`, `js/dashboard/plan-card.js`): the event's name, "Cały plan →", the next moment — the first
+not ticked off — with its time and "za 12 min" / "za 1 h 05 min" / "teraz" by this device's clock (every 30 s; a time before 6:00 is
+on the night after the evening's day), the whole evening folded under "Cały wieczór (N)", a ✓ for each moment. The ticks are this
+device's (localStorage `s2p-plan-done-<event>`): nothing is sent. A request for a song of tonight's plan is marked "📋 z planu" in the
+queue (`EventPlanService.tonightSongs`, matched as the hosts' lists, `SongList`); the poll's ETag carries the songs' hash, so a plan
+saved during the party marks the queue as it was (`DjDashboardControllerQueueCacheTest`). Scenario `plan-card-next-and-ticks`.

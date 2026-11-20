@@ -49,7 +49,7 @@ offers the app there). **On a phone**
 (narrower than 768 px) the queue comes first, every waiting request is a card with big buttons — "▶ Zagrane" (filled, two thirds of the row) and "⏭ Pomiń" (outlined, amber under the pointer); "Podejrzyj" a grey outlined button as in the history (a link in the guest's line was tried
 on 2026-10-10 — the owner: the button reads better); the list scrolls with the page. **The card is folded** (the review of 2026-10-10,
 https://claude.ai/artifact/5Znq2bBpZQZB2rzHYkX9v1 — the owner picked "B"; `js/dashboard/cards.js`, `app.css`): the number, the song,
-"⚠ Sprawdź" / "⭐ Życzenie gospodarzy", the votes, "▾" and the row "▶ Zagrane / ⏭ Pomiń" — 106 px (was 204), four in the first screen
+"⚠ Sprawdź" / "⭐ Życzenie gospodarzy" / "📋 z planu" (a song of tonight's party plan, V77), the votes, "▾" and the row "▶ Zagrane / ⏭ Pomiń" — 106 px (was 204), four in the first screen
 (was two), "Zagrane" still one tap. With "⚠" the guest's words stay (they are why); "💸 2" stays once a tip is counted, the first one
 is counted unfolded. A tap on the card (or "▾", `.s2p-card-toggle`, a real button with `aria-expanded`) unfolds the guest's words,
 the AI's whole comment, "Podejrzyj" and 💸 / "−1"; a tap on a button, link or form of the card is that control's alone — the fold never

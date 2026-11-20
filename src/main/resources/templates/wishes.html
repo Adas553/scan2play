@@ -112,7 +112,10 @@
             <a id="wishEventClose" th:href="@{/dj/wishes(party=${partyCode})}" class="btn btn-sm btn-outline-secondary text-nowrap"
                th:text="#{wishes.event.close}">Fold</a>
         </div>
-        <p class="small text-secondary mb-3" th:text="${wishDate}">14 czerwca 2027</p>
+        <p class="small text-secondary mb-2" th:text="${wishDate}">14 czerwca 2027</p>
+        <!--/* "Plan imprezy" (V77): the evening's moments and this event's lists, shared with the hosts — its own page */-->
+        <a class="btn btn-sm btn-outline-light align-self-start mb-3" id="wishPlanBtn"
+           th:href="@{/dj/wishes/{id}/plan(id=${wishEvent.id()},party=${partyCode})}" th:text="#{eventplan.open}">📋 Party plan</a>
 
         <th:block th:unless="${plan.pro('WISHES') or past}">
         <!--/* the guests' link, and "Nowy link" beside the link it makes new (asks first: the old one dies) */-->
