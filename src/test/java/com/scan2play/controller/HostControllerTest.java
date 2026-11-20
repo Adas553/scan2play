@@ -42,7 +42,7 @@ class HostControllerTest {
     void setUp() {
         repository = mock(PartySettingsRepository.class);
         settingsService = mock(PartySettingsCommandService.class);
-        mockMvc = MockMvcBuilders.standaloneSetup(new HostController(repository, settingsService, com.scan2play.service.Plans.off())).build();
+        mockMvc = MockMvcBuilders.standaloneSetup(new HostController(repository, settingsService, com.scan2play.service.Plans.off(), null, null, null)).build();
         when(repository.findByHostToken(anyString())).thenReturn(Optional.empty());
         when(repository.findByHostToken(TOKEN)).thenReturn(Optional.of(PartySettingsEntity.builder().partyCode(PARTY)
                 .djName("DJ Koko").hostBlocked("Akcent").hostToken(TOKEN).hostTokenMadeAt(java.time.Instant.now()).build()));
@@ -114,14 +114,14 @@ class HostControllerTest {
     @Test
     void withoutPro_theHostsLink_isNotFound_andNothingIsSaved() throws Exception {
         MockMvc free = MockMvcBuilders.standaloneSetup(new HostController(repository, settingsService,
-                com.scan2play.service.Plans.enforced())).build();
+                com.scan2play.service.Plans.enforced(), null, null, null)).build();
         free.perform(get("/h/" + TOKEN)).andExpect(status().isNotFound());
         free.perform(post("/h/" + TOKEN).param("blocked", "Akcent")).andExpect(status().isNotFound());
         org.mockito.Mockito.verify(settingsService, org.mockito.Mockito.never()).updateSettings(anyString(), any());
 
         repository.findByHostToken(TOKEN).orElseThrow().setOwnerId("owner");
         MockMvc pro = MockMvcBuilders.standaloneSetup(new HostController(repository, settingsService,
-                com.scan2play.service.Plans.enforced("owner"))).build();
+                com.scan2play.service.Plans.enforced("owner"), null, null, null)).build();
         pro.perform(get("/h/" + TOKEN)).andExpect(status().isOk());
     }
 }

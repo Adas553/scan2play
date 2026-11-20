@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en" th:lang="#{html.lang}">
+<head>
+    <meta charset="UTF-8">
+    <title th:text="#{eventplan.page.title}">Party plan - Scan2Play</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="only light">
+    <meta name="referrer" content="no-referrer">
+    <link href="/css/app.css" th:href="@{/css/app.css}" rel="stylesheet">
+</head>
+<!--/* "Plan imprezy" on paper (V77, DjEventPlanController.print): one A4 for the console — the moments with big times, then the
+     event's two lists. Black on white, no colour the printer must have; the button is not printed. */-->
+<body class="s2p-plan-print">
+<main class="s2p-plan-sheet">
+    <div class="s2p-plan-print-bar">
+        <button type="button" class="s2p-plan-print-btn" data-plan-print th:text="#{eventplan.print.button}">Print</button>
+    </div>
+    <h1 class="s2p-plan-print-title" th:text="${wishEvent.name()}">Wesele Ani i Kuby</h1>
+    <p class="s2p-plan-print-sub"><span th:text="${wishDate}">14 czerwca 2027</span><th:block th:if="${djName != null}"> · <span
+            th:text="${djName}">DJ Koko</span></th:block></p>
+
+    <p th:if="${#lists.isEmpty(eventPlan.moments())}" id="planPrintEmpty" th:text="#{eventplan.print.empty}">The plan has no moments yet.</p>
+    <table th:unless="${#lists.isEmpty(eventPlan.moments())}" class="s2p-plan-print-table" id="planPrintMoments">
+        <thead><tr><th th:text="#{eventplan.time}">Time</th><th th:text="#{eventplan.label}">Moment</th><th th:text="#{eventplan.song}">Song</th></tr></thead>
+        <tbody>
+        <tr th:each="m : ${eventPlan.moments()}">
+            <td class="s2p-plan-print-time" th:text="${m.time() == null} ? '—' : ${m.timeText()}">17:30</td>
+            <td><b th:text="${m.label()}">First dance</b><div th:if="${m.note() != null}" class="s2p-plan-print-note" th:text="${m.note()}">album version</div></td>
+            <td th:text="${m.song() == null} ? '' : ${m.song()}">Artist - Title</td>
+        </tr>
+        </tbody>
+    </table>
+
+    <div class="s2p-plan-print-lists">
+        <section th:if="${eventPlan.blocked() != null and !#strings.isEmpty(eventPlan.blocked())}">
+            <h2 th:text="#{host.blocked.label}">🚫 Don't play</h2>
+            <p class="s2p-plan-print-list" th:text="${eventPlan.blocked()}">Artist A</p>
+        </section>
+        <section th:if="${eventPlan.wanted() != null and !#strings.isEmpty(eventPlan.wanted())}">
+            <h2 th:text="#{host.wanted.label}">⭐ Must play</h2>
+            <p class="s2p-plan-print-list" th:text="${eventPlan.wanted()}">Artist B - Song</p>
+        </section>
+    </div>
+</main>
+<script src="/js/plan-form.js" th:src="@{/js/plan-form.js}"></script>
+</body>
+</html>

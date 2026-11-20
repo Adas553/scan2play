@@ -105,7 +105,7 @@ class HtmlLangDeclarationTest {
     @DisplayName("every page declares its colour scheme, so a browser's own dark mode leaves it as it is")
     void shouldDeclareTheColourScheme_onEveryPage() throws IOException {
         for (String page : pages()) {
-            String expected = page.equals("qr-print") || page.equals("summary") ? "only light" : "dark";
+            String expected = page.equals("qr-print") || page.equals("summary") || page.equals("event-plan-print") ? "only light" : "dark";
             assertThat(source(page)).as(page).contains("<meta name=\"color-scheme\" content=\"" + expected + "\">");
         }
     }

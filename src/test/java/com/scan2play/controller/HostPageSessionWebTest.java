@@ -63,6 +63,10 @@ class HostPageSessionWebTest {
     private PartySettingsCommandService partySettingsCommandService;
     @MockitoBean
     private com.scan2play.service.SiteCounter siteCounter;
+    @MockitoBean
+    private com.scan2play.service.WishService wishService;
+    @MockitoBean
+    private com.scan2play.service.EventPlanService eventPlanService;
 
     @Test
     void aFirstVisit_withLongLists_getsTheWholePage_withTheFormsToken() throws Exception {

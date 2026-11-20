@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en" th:lang="#{html.lang}">
+<head>
+    <meta charset="UTF-8">
+    <title th:text="#{eventplan.hosts.title}">Party plan - Scan2Play</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- a dark page already: a browser's own dark mode (Samsung Internet) must not darken it again — it greyed our logo -->
+    <meta name="color-scheme" content="dark">
+    <!-- a secret link (HostController): no search engine, and no Referer that would carry it to another site -->
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="referrer" content="no-referrer">
+    <link href="/webjars/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/css/app.css" th:href="@{/css/app.css}" rel="stylesheet">
+</head>
+<!--/* "Plan imprezy" for the hosts (V77, /h/e/{token}): the couple or the host write the evening's moments, their songs and notes, and
+     this event's "don't play" / "must play" — the DJ sees the same on the event's plan page. No account: the DJ gave them this link. */-->
+<body class="page-guest">
+<div class="container d-flex flex-column align-items-center">
+    <div class="card p-3 p-sm-4 shadow-lg w-100 text-white mb-4 s2p-mw-800 d-flex flex-column gap-3">
+        <div class="text-center">
+            <h1 class="display-6 fw-bold"><th:block th:replace="~{fragments/components :: logo}"></th:block></h1>
+            <h2 class="h4 fw-bold mt-2 mb-1" th:text="#{eventplan.hosts.heading}">Your party plan for the DJ</h2>
+            <p class="fw-bold mb-1 text-break" id="planEventName" th:text="${wishEvent.name()} + ' · ' + ${wishDate}">Wesele Ani i Kuby · 14 czerwca 2027</p>
+            <p th:if="${djName != null}" id="djName" class="fw-bold mb-1" th:text="#{party.dj(${djName})}">🎧 Gra: DJ Koko</p>
+            <p class="text-secondary mb-0" th:text="#{eventplan.hosts.intro}">Write the evening's moments, songs and notes…</p>
+        </div>
+        <div th:replace="~{fragments/event-plan :: planDone}"></div>
+        <div th:replace="~{fragments/event-plan :: planTemplate}"></div>
+        <div th:replace="~{fragments/event-plan :: planForm}"></div>
+    </div>
+</div>
+<div th:replace="~{fragments/components :: footer}"></div>
+<!--/* adding, moving and removing the moments' rows; the lines each list holds — no inline script (CSP) */-->
+<script src="/js/plan-form.js" th:src="@{/js/plan-form.js}"></script>
+<script src="/js/song-list-count.js" th:src="@{/js/song-list-count.js}"></script>
+</body>
+</html>

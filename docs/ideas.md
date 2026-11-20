@@ -252,3 +252,15 @@ piece of work or when a task names an item. A finished item stays here until its
    Details: `docs/context/05-1j-polls.md`. **Later, only if DJs ask:** the questions in "Podsumowanie wieczoru"; a CSV. **Rejected:**
    the guests' own words as answers (moderation, the AI, the privacy policy); quizzes with points and names (personal data, a bigger
    feature); the AI checking the DJ's question (their own words, as the vibe note); the kiosk (one device, many guests).
+
+17. **"Plan imprezy" — a plan of the evening shared by the DJ and the hosts (the owner, 2026-11-20: "potem 1 trzeba rozpisać", then
+   "Tak, rób A"; the artifact https://claude.ai/artifact/NJz27XaayjKZrXmKHariGU; item 16, "Trendy próśb", is on its own branch) —
+   **variant A on `claude/event-plan`, not released (V77, only adds: no database copy needed).** The DJ gathers the same things
+   before every wedding in Word, a Google form and calls. The owner's five picks taken as recommended: the plan belongs to a wish event
+   (`wish_event`), a hosts' link per event (`/h/e/{token}`; the party's own `/h/` link stays), Pro only, the templates wesele /
+   osiemnastka / urodziny / impreza firmowa, A then B. One more pick of ours: the event has its own two lists, put over the party's by
+   "Użyj list na imprezie" — two weddings planned at once must not overwrite each other. Details: `docs/context/05-1i-wishes.md`.
+   **Next: B** — a card "Plan wieczoru" above the queue on the event's day (the next moment counted down by the DJ's browser, ticking
+   off, "📋 z planu" in the queue). **Later, only if DJs ask:** C a push 10 minutes before a moment; D the DJ's own templates; E the
+   plan in the hosts' evening summary. **Rejected:** a chat or comments, contracts and payments, a form builder first, the AI checking
+   the plan.
