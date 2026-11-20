@@ -117,6 +117,13 @@
             const line = fold.querySelector('summary');
             t.check('its line at least 44 px high, with the guest\'s answer', line.getBoundingClientRect().height >= 44
                 && line.textContent.indexOf('Twoja: Nie') >= 0);
+            const state = document.getElementById('pollFoldState');
+            const probe = document.createElement('span');   // the theme's grey where the state is (the DJ's pages light theirs)
+            probe.style.color = 'var(--s2p-text-muted)';
+            line.appendChild(probe);
+            t.step('the answer beside the question in the theme\'s grey, not as bright as the question',
+                getComputedStyle(state).color, getComputedStyle(probe).color);
+            probe.remove();
             line.click();
             t.check('a tap unfolds it', fold.open);
             const bars = Array.from(document.querySelectorAll('#guestPoll .s2p-poll-bar'));

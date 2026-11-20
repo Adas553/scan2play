@@ -15,18 +15,38 @@
         page: 'settings',
         viewport: '390,844',
         run: async function (t) {
-            t.step('every card folded', folds().map(function (fold) { return [fold.id, fold.open]; }),
-                [['partyHoursCard', false], ['guestThemeCard', false], ['hostListsCard', false], ['kioskCard', false], ['wishesCard', false], ['pollsCard', false], ['linksCard', false],
-                    ['logoCard', false], ['limitsCard', false], ['libraryCard', false], ['morningSummaryCard', false], ['deviceCard', false],
-                    ['partyCodeCard', false]]);
+            t.step('four groups, each under its heading, with its cards and rows in order',
+                Array.from(document.querySelectorAll('#settingsCards > section')).map(function (group) {
+                    return [text(group.querySelector('h2')), Array.from(group.querySelectorAll('details.s2p-fold, a.s2p-fold-link')).map(function (card) {
+                        return card.id;
+                    })];
+                }),
+                [['Impreza', ['partyHoursCard', 'limitsCard', 'hostListsCard', 'kioskCard']],
+                    ['Dla gości', ['guestThemeCard', 'wishesRow', 'pollsRow']],
+                    ['Ty jako DJ', ['linksCard', 'logoCard', 'libraryCard', 'morningSummaryCard']],
+                    ['Dostęp', ['staffRow', 'deviceCard', 'partyCodeCard']]]);
+            t.step('every card folded', folds().filter(function (fold) { return fold.open; }).length, 0);
             t.step('each line\'s state, as the panel\'s rows', [stateOf('partyHoursCard'), stateOf('guestThemeCard'), stateOf('hostListsCard'),
                 stateOf('linksCard'), stateOf('logoCard'), stateOf('limitsCard'), stateOf('libraryCard'), stateOf('morningSummaryCard'),
                 stateOf('partyCodeCard')],
-                ['Nie ustawiono', 'Klasyczny', '🚫 0 · ⭐ 1 · link', 'Instagram · kontakt · napiwki', 'Brak', '2 na gościa · 3 min', 'Nie wgrano', 'Włączone',
+                ['Nie ustawiono', 'Klasyczny', '🚫 0 · ⭐ 1 · link', 'Ustawione: 3', 'Nie wgrano', '2 na gościa · 3 min', 'Nie wgrano', 'Włączone',
                     'HARN1']);
-            t.step('"Obsługa" a line like them, leading to its page', [text(document.querySelector('#staffRow .s2p-fold-name')),
-                document.getElementById('staffRow').getAttribute('href')], ['Obsługa', '/dj/staff?party=HARN1']);
-            const lines = folds().map(function (fold) { return fold.querySelector('summary'); }).concat([document.getElementById('staffRow')]);
+            t.step('what is not set greyed, what is set not', ['partyHoursCard', 'logoCard', 'libraryCard', 'linksCard', 'morningSummaryCard'].map(function (id) {
+                return document.querySelector('#' + id + ' > summary .s2p-fold-state').classList.contains('s2p-fold-state-empty');
+            }), [true, true, true, false, false]);
+            t.step('"Obsługa", "Życzenia", "Pytanie" lines like them, leading to their pages', ['staffRow', 'wishesRow', 'pollsRow'].map(function (id) {
+                const row = document.getElementById(id);
+                return [text(row.querySelector('.s2p-fold-name')), row.getAttribute('href')];
+            }), [['Obsługa', '/dj/staff?party=HARN1'], ['Życzenia przed imprezą', '/dj/wishes?party=HARN1'], ['Pytanie do gości', '/dj/polls?party=HARN1']]);
+            const rows = ['staffRow', 'wishesRow', 'pollsRow'].map(function (id) { return document.getElementById(id); });
+            const lines = folds().map(function (fold) { return fold.querySelector('summary'); }).concat(rows);
+            t.step('the page\'s first heading its h1 — the "party closed" banner above it is no heading (dj-nav)',
+                Array.from(document.querySelectorAll('h1, h2, h3, h4, h5, h6')).filter(function (heading) {
+                    return !heading.closest('.modal');   // a closed dialog's title (the feedback form) is the dialog's, not the page's
+                })[0].tagName, 'H1');
+            t.step('every line\'s name a heading under its group\'s, the rows too (a screen reader jumping by headings meets them all)',
+                lines.filter(function (line) { return line.querySelector('.s2p-fold-name').tagName !== 'H3'; })
+                    .map(function (line) { return line.parentElement.id || line.id; }), []);
             t.step('each line a finger\'s height, the state beside its heading, inside the card', lines.filter(function (line) {
                 const box = line.getBoundingClientRect();
                 const state = line.querySelector('.s2p-fold-state');
@@ -52,6 +72,50 @@
         }
     });
 
+    /** The colour a token gives where an element is (the guests' themes and the DJ's pages set their own): a probe beside it. */
+    function colourOf(token, near) {
+        const probe = document.createElement('span');
+        probe.style.color = 'var(' + token + ')';
+        near.appendChild(probe);
+        const colour = getComputedStyle(probe).color;
+        probe.remove();
+        return colour;
+    }
+
+    /** A state's colour named by the token it matches: light (set), grey (nothing set), the warning's yellow. */
+    function toneOf(state) {
+        const colour = getComputedStyle(state).color;
+        return ['--s2p-light', '--s2p-text-muted', '--s2p-warning'].find(function (token) {
+            return colourOf(token, state.parentElement) === colour;
+        }) || colour;
+    }
+
+    S2P.scenario({
+        name: 'settings-fold-state-tones',
+        title: 'the page "Ustawienia imprezy": a folded line\'s state light when something is set, grey when nothing is, yellow near a server limit',
+        page: 'settings',
+        viewport: '390,844',
+        run: async function (t) {
+            const state = function (id) { return document.querySelector('#' + id + ' .s2p-fold-state'); };
+            t.step('set: light; nothing set: grey (a card and a row)', [toneOf(state('linksCard')), toneOf(state('logoCard')),
+                toneOf(state('staffRow'))], ['--s2p-light', '--s2p-text-muted', '--s2p-light']);
+            state('limitsCard').classList.add('s2p-row-warn');   // as the server renders it from 80 % of a limit ("Impreza 250/300")
+            t.step('a server limit near: the warning\'s yellow', toneOf(state('limitsCard')), '--s2p-warning');
+        }
+    });
+
+    S2P.scenario({
+        name: 'staff-fold-state-tones',
+        title: 'the page "Obsługa", by the same rule: "Brak linku" grey, every place taken in the warning\'s yellow',
+        page: 'staff-invite-problem',
+        viewport: '390,844',
+        run: async function (t) {
+            t.step('"Miejsca zajęte: 10 z 10" yellow, "Brak linku" grey',
+                [toneOf(document.querySelector('#staffInviteCard > summary .s2p-fold-state')),
+                    toneOf(document.querySelector('#staffLinkCard > summary .s2p-fold-state'))], ['--s2p-warning', '--s2p-text-muted']);
+        }
+    });
+
     /** The words of an element split over two lines (a word whose range has two boxes). */
     function splitWords(element) {
         const node = element.firstChild;
@@ -71,25 +135,74 @@
     }
 
     /**
-     * A folded card's state on a phone: "Nieustawione" beside "Profile, kontakt i napiwki" whole — the heading wraps, never a word of
-     * the state ("Nieustawion / e" otherwise). Every state set to the longest one-word state, one to three words.
+     * A folded card's state on a phone: a long one-word state ("Nieustawione", longer than any the page says) beside "Profile, kontakt
+     * i napiwki" whole — the heading wraps, never a word of the state ("Nieustawion / e" otherwise). Every state, the rows' "›" too, set
+     * to it; one of them to three words.
      */
     async function stateWordsWhole(t) {
-        const states = Array.from(document.querySelectorAll('details.s2p-fold > summary .s2p-fold-state'));
+        const states = Array.from(document.querySelectorAll('details.s2p-fold > summary .s2p-fold-state, a.s2p-fold-link .s2p-fold-state'));
         states.forEach(function (state) {
             state.textContent = 'Nieustawione';
         });
         document.querySelector('#guestThemeCard .s2p-fold-state').textContent = 'Instagram · kontakt · napiwki';
         t.step('no word of a state split over two lines', states.filter(function (state) { return splitWords(state).length > 0; })
-            .map(function (state) { return state.closest('details').id + ': ' + splitWords(state).join(' '); }), []);
+            .map(function (state) { return state.closest('details, a').id + ': ' + splitWords(state).join(' '); }), []);
         t.step('each state inside its line, right of its heading', states.filter(function (state) {
             const line = state.parentElement.getBoundingClientRect();
             const box = state.getBoundingClientRect();
             const name = state.parentElement.querySelector('.s2p-fold-name').getBoundingClientRect();
             return box.right > line.right || box.left < name.right;
-        }).map(function (state) { return state.closest('details').id; }), []);
+        }).map(function (state) { return state.closest('details, a').id; }), []);
         t.check('nothing wider than the screen', document.documentElement.scrollWidth <= document.documentElement.clientWidth);
     }
+
+    S2P.scenario({
+        name: 'settings-staff-groups',
+        title: 'a co-organiser\'s "Ustawienia imprezy": the groups they have cards in — the last one "Urządzenie", not "Dostęp" over this device alone',
+        page: 'settings-staff',
+        viewport: '390,844',
+        run: async function (t) {
+            t.step('the groups and their cards', Array.from(document.querySelectorAll('#settingsCards > section')).map(function (group) {
+                return [text(group.querySelector('h2')), Array.from(group.querySelectorAll('details.s2p-fold, a.s2p-fold-link')).map(function (card) {
+                    return card.id;
+                })];
+            }), [['Impreza', ['partyHoursCard', 'limitsCard', 'hostListsCard', 'kioskCard']], ['Dla gości', ['guestThemeCard', 'wishesRow', 'pollsRow']],
+                ['Urządzenie', ['deviceCard']]]);
+        }
+    });
+
+    S2P.scenario({
+        name: 'settings-hosts-state-one-line-320',
+        title: 'the hosts\' list folded on a 320 px phone: "🚫 0 · ⭐ 1 · link" in one line (the heading wraps instead), never "link" alone below',
+        page: 'settings',
+        viewport: '320,640',
+        run: async function (t) {
+            const state = document.querySelector('#hostListsCard > summary .s2p-fold-state');
+            const line = state.parentElement.getBoundingClientRect();
+            const name = state.parentElement.querySelector('.s2p-fold-name').getBoundingClientRect();
+            const box = state.getBoundingClientRect();
+            t.step('one line, inside the card, right of the heading', [text(state), box.height <= parseFloat(getComputedStyle(state).fontSize) * 2,
+                box.right <= line.right && box.left >= name.right], ['🚫 0 · ⭐ 1 · link', true, true]);
+            t.check('nothing wider than the screen', document.documentElement.scrollWidth <= document.documentElement.clientWidth);
+        }
+    });
+
+    S2P.scenario({
+        name: 'settings-fold-state-count-one-line',
+        title: 'a folded line\'s count on a 360 px phone: "Ustawione: 3" in one line beside "Profile, kontakt i napiwki", never "Ustawione:" over "3"',
+        page: 'settings',
+        viewport: '360,800',
+        run: async function (t) {
+            const counts = Array.from(document.querySelectorAll('#settingsCards .s2p-fold-state')).filter(function (state) {
+                return shows(state) && /:\s*\d/.test(state.textContent);
+            });
+            t.check('the page has counts to measure ("Ustawione: 3")', counts.length > 0);
+            t.step('each count in one line', counts.filter(function (state) {
+                // a flex item (one box): two lines are twice a line's height
+                return state.getBoundingClientRect().height > parseFloat(getComputedStyle(state).fontSize) * 2;
+            }).map(function (state) { return text(state); }), []);
+        }
+    });
 
     S2P.scenario({
         name: 'settings-fold-state-whole-words-360',
@@ -136,14 +249,14 @@
         run: async function (t) {
             const src = document.querySelector('script[src*="folds"]').src;
             t.check('the page remembers its scroll (scroll-restore.js)', !!document.querySelector('script[src*="scroll-restore"]'));
-            document.querySelector('#wishesCard > summary').click();
-            window.dispatchEvent(new Event('pagehide'));   // the DJ follows "Wydarzenia i życzenia" (all an iPhone's Safari says)
-            document.getElementById('wishesCard').open = false;   // the page as it loads again: every card folded
+            document.querySelector('#linksCard > summary').click();
+            window.dispatchEvent(new Event('pagehide'));   // the DJ follows the row "Życzenia przed imprezą" (all an iPhone's Safari says)
+            document.getElementById('linksCard').open = false;   // the page as it loads again: every card folded
             const again = document.createElement('script');   // folds.js once more, as on a page load
             again.src = src;
             await new Promise(function (resolve) { again.onload = resolve; document.body.appendChild(again); });
             t.step('the card unfolded when the page was left is unfolded again; the others folded',
-                folds().filter(function (fold) { return fold.open; }).map(function (fold) { return fold.id; }), ['wishesCard']);
+                folds().filter(function (fold) { return fold.open; }).map(function (fold) { return fold.id; }), ['linksCard']);
             sessionStorage.clear();
         }
     });
@@ -154,10 +267,11 @@
         page: 'settings',
         viewport: '1280,900',
         run: async function (t) {
-            const cards = folds().concat([document.getElementById('staffRow')]);
+            const rows = Array.from(document.querySelectorAll('#settingsCards a.s2p-fold-link'));
+            const cards = folds().concat(rows);
             const widths = cards.map(function (card) { return Math.round(card.getBoundingClientRect().width); });
-            t.step('every card of one width, "Obsługa" too', widths.every(function (w) { return w === widths[0]; }), true);
-            const lines = folds().map(function (fold) { return fold.querySelector('summary'); }).concat([document.getElementById('staffRow')]);
+            t.step('every card of one width, the rows too', widths.every(function (w) { return w === widths[0]; }), true);
+            const lines = folds().map(function (fold) { return fold.querySelector('summary'); }).concat(rows);
             t.step('each state right-aligned, near the line\'s end', lines.filter(function (line) {
                 const state = line.querySelector('.s2p-fold-state');
                 return state && shows(state) && line.getBoundingClientRect().right - state.getBoundingClientRect().right > 60;

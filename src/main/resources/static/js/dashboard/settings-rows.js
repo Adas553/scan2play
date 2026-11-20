@@ -20,6 +20,7 @@ async function showDeviceState() {
         return;   // the browser would not tell: say nothing rather than something wrong
     }
     state.textContent = on ? state.dataset.on : state.dataset.off;
+    state.classList.toggle('s2p-fold-state-empty', !on);   // off greyed, as every card's "nothing set"
 }
 
 showDeviceState();

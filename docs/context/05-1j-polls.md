@@ -61,7 +61,7 @@ answer with its share, the votes — in the screen's languages (the songs are th
 the longest (120 and four of 40) fit 1280 × 720 (`tv-poll-longest`).
 
 **The DJ's page** `/dj/polls` (`DjPollsController`, `polls.html`, `js/polls.js`; POLLS; reached from the dashboard's QR card
-"🗳 Pytanie do gości" and the settings' card): the form (the question, four answer fields — "Tak" / "Nie" as placeholders —,
+"🗳 Pytanie do gości" and the settings' row): the form (the question, four answer fields — "Tak" / "Nie" as placeholders —,
 "Zadaj teraz" / "Zapisz na później"; Pro), the party's questions the newest first — each with one line of state ("Wyniki: widoczne
 dla gości i na TV" / "ukryte …" · "TV: pytanie" / "TV: lista piosenek"). The one asked: its results fetched again every 3 s while the
 page is shown (`GET /dj/polls/{id}/results`, the fragment `polls :: pollResults`; the login ended: no more asking; the question ended

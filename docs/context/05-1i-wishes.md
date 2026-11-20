@@ -29,7 +29,7 @@ reads them (the hosts see what the DJ moves to "⭐"). Limits: `WishController.P
 an empty line goes back unsent. A form left open past the session comes back to the page with "Strona była otwarta za długo…"
 (`GuestFormExpiredHandler`). Closed, past or full: no field, a farewell. The log has the event's id, never the song.
 
-**The DJ's page** (`DjWishesController`, `wishes.html`, `/dj/wishes?party=&event=`; the card "Życzenia przed imprezą" on "Ustawienia
+**The DJ's page** (`DjWishesController`, `wishes.html`, `/dj/wishes?party=&event=`; the row "Życzenia przed imprezą" on "Ustawienia
 imprezy" leads to it, its state the events collecting now; without Pro the offer, and an event made before can still be deleted):
 "Nowe wydarzenie" (name, date, "Utwórz link dla gości"; "Otwarte: 2 z 5"; at 20 kept no form, "usuń któreś"), "Twoje wydarzenia" ("Zobacz życzenia" goes to the event it opens, `#wishEvent` — drawn under the whole list, off a phone's screen; the opened one's button "Zwiń życzenia", as "Zwiń" in its heading — the page without it; the ones ahead first, the nearest first,
 then the past ones still kept; each its date, "życzeń: N" and "zbiera" / "zakończone" / "po imprezie"), and the event opened: its link
