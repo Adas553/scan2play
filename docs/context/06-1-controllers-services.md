@@ -83,5 +83,6 @@
 | `EmailSender` / `BrevoEmailSender` / `Mailer` | the automatic e-mails (V64, Section 7.4): one e-mail through Brevo, its result (`SENT`, `KEY_REFUSED`, `FAILED`, `OFF`) / the e-mails' language, their pages (`templates/email/*_pl|en.html`) and text part, the send that never throws, `email_status`, the e-mails' own thread |
 | `WelcomeEmailService` | the welcome e-mail, once an account: asked for by the organiser's panel, sent after the commit off the request's thread, the claim given back on a failure, the nightly retry (Section 5.1) |
 | `AdminReportService` / `LogTally` | the owner's daily report by e-mail when the owner's schedule says (V66, Section 5.1c), once a day by `email_status.admin_report_day` (V65); `LogTally` counts the log's ERROR and WARN lines by kind (an appender on the root logger, in memory) |
+| `SongTrendsService` | "Trendy próśb": the songs of every party's last 30 days counted by parties, with the thresholds (3 parties a song, 10 a list) — for now in the owner's report only (Section 5.1c) |
 | `MorningSummaryEmailService` | the morning e-mail of a busy evening (Pro, ≥ 5 guests' requests, the switch on), at 10:00 (and 12:00 for the failed), once an evening (Section 5.1) |
 

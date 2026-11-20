@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--/* The owner's daily report as an e-mail (AdminReportService.View): four tiles beside the week's average, the week's visits as bars,
      yesterday's funnel, the new DJs and the evening's parties by their code — no organiser's address, name or evening's title (the
-     privacy policy) —, the health. Inline styles and tables only (mail programs), one column up to 640 px, no images, no script. */-->
+     privacy policy) —, the songs of 30 days by parties (only songs on 3+ parties), the health. Inline styles and tables only (mail programs), one column up to 640 px, no images, no script. */-->
 <html xmlns:th="http://www.thymeleaf.org" lang="pl">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Raport Scan2Play</title></head>
 <body style="margin:0;padding:0;background:#f3f4f6;color:#1a1a1a;font-family:-apple-system,'Segoe UI',Roboto,Arial,sans-serif;font-size:15px;line-height:1.45;">
@@ -88,6 +88,21 @@
         <td style="padding:6px 0;text-align:right;" th:text="${dj.guestRequests()} + ' próśb'">12 próśb</td>
     </tr>
 </table>
+
+<!--/* "Trendy próśb": songs only, by parties of 3+ — nothing of one party */-->
+<th:block th:with="tr=${v.trends()}">
+<h2 style="font-size:16px;margin:18px 0 8px;" th:text="'Trendy — 30 dni · imprez ' + ${tr.parties()} + ' · piosenek na 3+ imprezach ' + ${tr.songs()}">Trendy — 30 dni</h2>
+<p th:if="${tr.belowMinimum()}" style="margin:0 0 6px;color:#6b7280;font-size:13px;">Poniżej 10 imprez — DJ-e jeszcze by tego nie zobaczyli.</p>
+<p th:if="${#lists.isEmpty(tr.top())}" style="margin:0;color:#6b7280;">Żadnej piosenki na 3+ imprezach.</p>
+<table th:unless="${#lists.isEmpty(tr.top())}" role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;font-size:14px;">
+    <tr th:each="trend, row : ${tr.top()}" style="border-bottom:1px solid #f0f0f0;">
+        <td style="padding:5px 8px 5px 0;color:#6b7280;width:22px;vertical-align:top;" th:text="${row.count}">1</td>
+        <td style="padding:5px 0;" th:text="${trend.song()}">Wykonawca - Tytuł</td>
+        <td style="padding:5px 0 5px 8px;text-align:right;font-weight:bold;white-space:nowrap;vertical-align:top;" th:text="${trend.parties()} + ' imp.'">12 imp.</td>
+        <td style="padding:5px 0 5px 8px;text-align:right;white-space:nowrap;vertical-align:top;color:#555555;" th:text="${T(com.scan2play.service.AdminReportService).arrow(trend)}">↑</td>
+    </tr>
+</table>
+</th:block>
 
 <h2 style="font-size:16px;margin:18px 0 8px;">Zdrowie</h2>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;font-size:14px;">
