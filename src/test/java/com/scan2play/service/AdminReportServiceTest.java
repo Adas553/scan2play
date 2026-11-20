@@ -19,7 +19,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-/** The owner's daily report's text: the traffic beside the week, the new DJs, the evening's parties, the health. */
+/** The owner's daily report's text: the traffic beside the week, the new DJs, the evening's parties, the trends, the health. */
 class AdminReportServiceTest {
 
     private static final LocalDate YESTERDAY = LocalDate.parse("2026-11-07");
@@ -33,6 +33,11 @@ class AdminReportServiceTest {
         counts.put(Event.START, start);
         return new SiteCounter.Day(LocalDate.parse(date), counts);
     }
+
+    private static final SongTrendsService.Result NO_TRENDS = new SongTrendsService.Result(0, 0, true, false, List.of());
+    private static final SongTrendsService.Result TRENDS = new SongTrendsService.Result(12, 2, false, false, List.of(
+            new SongTrendsService.Trend("Wilki - Baśka", 7, 5, 2, "up"),
+            new SongTrendsService.Trend("Daria Zawiałow - Kaonashi", 3, 3, 0, "new")));
 
     private static Health healthy() {
         return new Health(false, true, new Mailer.Status(Instant.parse("2026-11-08T08:00:00Z"), null, null),
@@ -57,17 +62,19 @@ class AdminReportServiceTest {
 
     @Test
     void theWholeReport_saysEachPart_andNothingWhenThereIsNothing() {
-        String empty = AdminReportService.render(YESTERDAY, List.of(), List.of(), List.of(), false, healthy(), true);
+        String empty = AdminReportService.render(YESTERDAY, List.of(), List.of(), List.of(), false, NO_TRENDS, healthy(), true);
 
         assertThat(empty).startsWith("Scan2Play — raport za sobota 7.11.2026")
                 .contains("NOWI DJ-E — ostatnie 7 dni (0)\n(nikt nowy)", "IMPREZY WCZORAJ — wieczór 7.11, 6:00–6:00 (0)\n(żadnej)",
+                        "TRENDY — 30 dni · imprez 0 · piosenek na 3+ imprezach 0\n(poniżej 10 imprez — DJ-e jeszcze by tego nie zobaczyli)\n"
+                                + "(żadnej piosenki na 3+ imprezach)\n",
                         "AI (Gemini): odpowiada", "E-maile: klucz ustawiony\n", "Log od 07.11.2026 09:10:00: ERROR 0 · WARN 0")
                 .doesNotContain("OSTATNI BŁĄD", "Razem");
 
         String full = AdminReportService.render(YESTERDAY, List.of(),
                 List.of(new NewOrganiser(Instant.parse("2026-11-06T13:02:00Z"), "AB12", "jan@example.com", "Jan K.", "PRO", 12)),
                 List.of(new PartyLine("AB12", "jan@example.com", "PRO", "Wesele Ani", 48, 31, 5, 3, 4, 2, 6),
-                        new PartyLine("CD34", null, "FREE", null, 2, 0, 0, 0, 0, 0, 0)), true,
+                        new PartyLine("CD34", null, "FREE", null, 2, 0, 0, 0, 0, 0, 0)), true, TRENDS,
                 new Health(true, true, new Mailer.Status(Instant.parse("2026-11-05T08:00:00Z"), Instant.parse("2026-11-06T08:00:00Z"),
                         "the key was refused"), new LogTally.Tally(Instant.parse("2026-11-07T08:10:00Z"), 3, 1,
                         List.of(new LogTally.Line("ERROR AiHealthMonitor: AI check: 3 of 5", 3)))), true);
@@ -79,7 +86,11 @@ class AdminReportServiceTest {
                 .contains("CD34  FREE  (bez adresu)\n  prośby 2 · zagrane 0 · AI odrzuciło 0 · przed AI 0\n")
                 .contains("Razem: prośby 50 · zagrane 31 (pokazane pierwsze 50)")
                 .contains("AI (Gemini): NIE ODPOWIADA", "OSTATNI BŁĄD 06.11.2026 09:00:00: the key was refused")
-                .contains("ERROR 3 · WARN 1\n    3× ERROR AiHealthMonitor: AI check: 3 of 5");
+                .contains("ERROR 3 · WARN 1\n    3× ERROR AiHealthMonitor: AI check: 3 of 5")
+                .contains("TRENDY — 30 dni · imprez 12 · piosenek na 3+ imprezach 2\n"
+                        + " 1. Wilki - Baśka — 7 imp. · 14 dni 5 / 2 przed · ↑\n"
+                        + " 2. Daria Zawiałow - Kaonashi — 3 imp. · 14 dni 3 / 0 przed · nowość\n\nZDROWIE")
+                .doesNotContain("poniżej 10 imprez");
 
         // the e-mail: the parties by their code, no address, name or evening's title (the privacy policy gives Brevo those only to
         // write to that organiser)
@@ -105,7 +116,7 @@ class AdminReportServiceTest {
         LogTally tally = new LogTally();
         tally.count(new ch.qos.logback.classic.spi.LoggingEvent("x", new ch.qos.logback.classic.LoggerContext().getLogger("x.Y"),
                 ch.qos.logback.classic.Level.ERROR, "boom", null, null));
-        AdminReportService service = new AdminReportService(counter, null, null, null, null, mailer, null, tally, jdbc, "a@b.pl",
+        AdminReportService service = new AdminReportService(counter, null, null, null, null, mailer, null, tally, null, jdbc, "a@b.pl",
                 java.time.Clock.systemUTC());
 
         assertThat(service.sendOnce(YESTERDAY.plusDays(1))).isFalse();
@@ -162,7 +173,7 @@ class AdminReportServiceTest {
         List<SiteCounter.Day> days = List.of(day("2026-11-07", 40, 4), day("2026-11-06", 20, 2), day("2026-11-05", 30, 3));
         AdminReportService.View view = AdminReportService.view(YESTERDAY, days,
                 List.of(new NewOrganiser(Instant.parse("2026-11-06T13:02:00Z"), "AB12", "jan@example.com", "Jan K.", "PRO", 12)),
-                List.of(new PartyLine("AB12", "jan@example.com", "PRO", "Wesele Ani", 48, 31, 5, 3, 4, 2, 6)), false,
+                List.of(new PartyLine("AB12", "jan@example.com", "PRO", "Wesele Ani", 48, 31, 5, 3, 4, 2, 6)), false, TRENDS,
                 new Health(false, true, new Mailer.Status(null, Instant.parse("2026-11-07T08:00:00Z"), "the key was refused"),
                         new LogTally.Tally(Instant.parse("2026-11-07T08:10:00Z"), 1, 0, List.of(new LogTally.Line("ERROR X: boom", 1)))),
                 "https://www.scan2play.com.pl/dj/stats/report");
@@ -182,7 +193,8 @@ class AdminReportServiceTest {
         assertThat(view.visits().getLast()).isEqualTo(new AdminReportService.Bar("sob. 7.11", 40, 100));
         assertThat(view.funnel().get(1)).isEqualTo(new AdminReportService.Step("„Zacznij”", 4, "10 % wejść"));
         assertThat(html).contains("sobota 7.11.2026", "▲ +", ">AB12<", ">48<", "width:50%;", "width:100%;", "ERROR 1 · WARN 0",
-                "ostatni błąd 07.11.2026 09:00:00: the key was refused", "1× ERROR X: boom", "href=\"https://www.scan2play.com.pl/dj/stats/report\"")
+                "ostatni błąd 07.11.2026 09:00:00: the key was refused", "1× ERROR X: boom", "href=\"https://www.scan2play.com.pl/dj/stats/report\"",
+                "Trendy — 30 dni · imprez 12 · piosenek na 3+ imprezach 2", ">Wilki - Baśka<", ">7 imp.<", ">nowość<")
                 .doesNotContain("jan@example.com", "Jan K.", "Wesele Ani");
     }
 
@@ -190,7 +202,8 @@ class AdminReportServiceTest {
     void withoutAnAddressOrAKey_nothingIsSent() {
         Mailer mailer = mock(Mailer.class);
         when(mailer.isOn()).thenReturn(true);
-        AdminReportService noAddress = new AdminReportService(null, null, null, null, null, mailer, null, new LogTally(), null, " ", null);
+        AdminReportService noAddress = new AdminReportService(null, null, null, null, null, mailer, null, new LogTally(), null, null, " ",
+                null);
 
         assertThat(noAddress.canSend()).isFalse();
         assertThat(noAddress.sendNow()).isFalse();
@@ -198,7 +211,7 @@ class AdminReportServiceTest {
         verify(mailer, never()).send(any());
 
         when(mailer.isOn()).thenReturn(false);
-        assertThat(new AdminReportService(null, null, null, null, null, mailer, null, new LogTally(), null, "a@b.pl", null).canSend())
+        assertThat(new AdminReportService(null, null, null, null, null, mailer, null, new LogTally(), null, null, "a@b.pl", null).canSend())
                 .isFalse();
     }
 }

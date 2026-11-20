@@ -252,3 +252,28 @@ piece of work or when a task names an item. A finished item stays here until its
    Details: `docs/context/05-1j-polls.md`. **Later, only if DJs ask:** the questions in "Podsumowanie wieczoru"; a CSV. **Rejected:**
    the guests' own words as answers (moderation, the AI, the privacy policy); quizzes with points and names (personal data, a bigger
    feature); the AI checking the DJ's question (their own words, as the vibe note); the kiosk (one device, many guests).
+
+16. **"Trendy próśb" — what guests ask for at every party (the owner, 2026-11-20: "zacznijmy od 3"; the artifact
+   https://claude.ai/artifact/RuFmijFHyhEftWPBEtJAWk; then "rób 0") — **variant 0 on `claude/trendy-report`, not released (no
+   migration): "Trendy" in the owner's daily report (`SongTrendsService`, Section 5.1c); A–D wait for its numbers.** A reason for a DJ
+   to open the panel in a week with no party, from data only Scan2Play has. The rules: parties counted, not votes; only requests the
+   AI let through (`checked`), not the DJ's, the demo's or test parties'; a song on 3+ parties, a list only with 10+ parties in 30
+   days; "rising" = the last 14 days against the 14 before; computed nightly after the purge, kept in memory. **0** (recommended
+   first): a "Trendy" section in the owner's daily report — does the data suffice? **A:** a card "Na topie" in the panel (top 10
+   Free, the whole list and "masz / brakuje Ci" from the library Pro — item 13's "Brakuje Ci" lives here); **B:** a Monday e-mail
+   (a switch, consent, the privacy policy); **C:** a public `/trendy` (marketing, threshold 5); **D (later):** per occasion — needs the
+   DJ to mark the evening's occasion. A and C need a line in the privacy policy PL / EN. Open: 0 or A first, the thresholds, the
+   Free / Pro split, C at all.
+
+17. **"Plan imprezy" — a plan of the evening shared by the DJ and the hosts (the owner, 2026-11-20: "potem 1 trzeba rozpisać"; the
+   artifact https://claude.ai/artifact/NJz27XaayjKZrXmKHariGU) — analysis only, nothing built; waits for the owner's picks.** The DJ
+   gathers the same things before every wedding in Word, a Google form and calls: the evening's moments with times (the couple's
+   entrance, the first dance, the cake, the oczepiny), a song and a note for each, "nie grać" and "⭐". **A** (recommended first, Pro,
+   a migration that only adds, the privacy policy PL / EN): the plan belongs to a wish event (`wish_event`; "Życzenia" becomes
+   "Wydarzenia"), at most 30 moments from a template (wesele, osiemnastka, urodziny, firmowa, empty), the hosts fill it on a link of
+   the event (128 bits, as `/h/`; the party's own `/h/` link stays) beside the two lists, the DJ in the panel, last save wins,
+   "Drukuj plan" on one A4; deleted with the event. **B** (right after): a card "Plan wieczoru" above the queue on the event's day —
+   the next moment counted down by the DJ's browser, ticking off, "📋 z planu" in the queue. **Later, only if DJs ask:** C a push 10
+   minutes before a moment; D the DJ's own templates; E the plan in the hosts' evening summary. **Rejected:** a chat or comments, contracts
+   and payments, a form builder first, the AI checking the plan. Open: the event as the plan's home, a hosts' link per event, Pro only,
+   the templates, A then B.

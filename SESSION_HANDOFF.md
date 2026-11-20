@@ -56,6 +56,11 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
   będzie najlepiej"): "Urządzenie" over this device for the staff, "Kiosk — Włączony", the rows' names `h3`, the hosts' state one line
   on 320 px. Waits for the owner: commit into #290 / #291, a look on a phone, the merge. P11 (the closed-party banner no
   heading before `h1`) and P12 fixed too: the two unit tests red locally (not charset — CRLF, the JVM's Polish locale) pass on Windows.
+- **2026-11-20 — `claude/trendy-report` (from `main` after #290), pushed with PRs to `main` and `dev`, no migration:** "Trendy próśb", variant 0
+  (`docs/ideas.md` item 16, the analysis https://claude.ai/artifact/RuFmijFHyhEftWPBEtJAWk): a "Trendy" section in the owner's daily
+  report and on `/dj/stats/report` — the top 20 songs of 30 days by parties (`SongTrendsService`, Section 5.1c). Waits for the owner:
+  the review and the merge; then 2–4 weeks of the report's numbers decide A (the DJs' card). "Plan imprezy" (`docs/ideas.md` item
+  17) is apart, on `claude/event-plan`.
 - **Waits for the owner (from #269):** after the first commit the deploy window holds back (Fri–Sun 18:00–6:00): does Railway
   deploy it on the workflow's re-run? UptimeRobot is set up (the owner, 2026-11-17; `docs/monitoring.md`).
 - **Waits for the owner (the wishes, #263):** the three older Polish texts with "DJ" and a masculine verb (`guest.vote.gone`,
