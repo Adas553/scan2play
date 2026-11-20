@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<body>
+<!--/*
+    A question's form: its words, two to four answers (none typed is "Tak" / "Nie") and when the guests see the results. Filled from a
+    question ("filled"); "editId" set: it saves the changes of that one (saved for later), else it makes a new one — "Zadaj teraz" or
+    "Zapisz na później". "prefix" makes its fields' ids its own (one form a card); "folded": inside a card's "Edytuj" / "Popraw jako
+    nowe", with "Anuluj" (polls.js folds it back, the words as they were).
+*/-->
+<form th:fragment="pollForm(filled, editId, prefix, formId, folded)" method="POST" class="m-0" th:id="${formId}"
+      th:action="${editId != null} ? @{/dj/polls/{id}/edit(id=${editId})} : @{/dj/polls/create}">
+    <input type="hidden" name="partyCode" th:value="${partyCode}">
+    <label th:for="${prefix + 'QuestionInput'}" class="form-label small text-secondary mb-1" th:text="#{polls.new.question}">The question (the guests see it)</label>
+    <input type="text" th:id="${prefix + 'QuestionInput'}" name="question" required th:attr="maxlength=${pollQuestionMax}" autocomplete="off"
+           class="form-control bg-black text-light border-secondary" th:placeholder="#{polls.new.question.placeholder}"
+           th:value="${filled != null ? filled.question() : null}">
+    <p class="form-label small text-secondary mt-3 mb-1" th:id="${prefix + 'AnswersLabel'}" th:text="#{polls.new.answers(${pollMaxAnswers})}">Answers (2–4)</p>
+    <div class="row g-2" role="group" th:attr="aria-labelledby=${prefix + 'AnswersLabel'}">
+        <div class="col-12 col-sm-6" th:each="i : ${#numbers.sequence(1, pollMaxAnswers)}">
+            <input type="text" name="answer" th:id="${prefix + 'Answer' + i}" th:attr="maxlength=${pollAnswerMax},aria-label=#{polls.new.answer(${i})}"
+                   autocomplete="off" class="form-control bg-black text-light border-secondary"
+                   th:value="${filled != null and i <= filled.answers().size() ? filled.answers()[i - 1] : null}"
+                   th:placeholder="${i == 1} ? #{polls.yes} : (${i == 2} ? #{polls.no} : #{polls.new.answer.optional})">
+        </div>
+    </div>
+    <p class="small text-secondary mt-2 mb-0" th:id="${prefix + 'AnswersHelp'}" th:text="#{polls.new.answers.help}">Leave them empty for Yes / No.</p>
+    <!--/* the guests' results (V75): after their vote, or kept for later — a game told at the end, shown when the DJ says so */-->
+    <label th:for="${prefix + 'HideResults'}" class="form-label small text-secondary mt-3 mb-1" th:text="#{polls.new.results}">Results for the guests</label>
+    <select th:id="${prefix + 'HideResults'}" name="hideResults" class="form-select bg-black text-light border-secondary"
+            th:with="hidden=${filled != null and filled.resultsHidden()}">
+        <option value="false" th:selected="${!hidden}" th:text="#{polls.new.results.after_vote}">Right after their vote</option>
+        <option value="true" th:selected="${hidden}" th:text="#{polls.new.results.later}">Only when I show them (a game)</option>
+    </select>
+    <div class="s2p-btn-row mt-3">
+        <th:block th:if="${editId == null}">
+            <button type="submit" name="ask" value="true" th:id="${prefix + 'AskNowBtn'}" class="btn btn-sm btn-action" th:text="#{polls.new.ask}">Ask now</button>
+            <button type="submit" name="ask" value="false" th:id="${prefix + 'SaveBtn'}" class="btn btn-sm btn-outline-light" th:text="#{polls.new.save}">Save for later</button>
+        </th:block>
+        <button th:if="${editId != null}" type="submit" th:id="${prefix + 'SaveChangesBtn'}" class="btn btn-sm btn-action"
+                th:text="#{polls.edit.save}">Save the changes</button>
+        <button th:if="${folded}" type="reset" class="btn btn-sm btn-outline-secondary" data-poll-change-close
+                th:text="#{polls.edit.cancel}">Cancel</button>
+    </div>
+</form>
+</body>
+</html>

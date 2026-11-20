@@ -1,8 +1,24 @@
 // The DJ's page of "Pytanie do gości" (polls.html, DjPollsController): the results of the question asked now fetched again every few
 // seconds while the page is shown — the guests' answers come in as the DJ watches. Put in place only when they changed; a failed fetch
 // keeps them as they were. The login ended (the answer a redirect): no more asking. The question ended meanwhile (someone of the
-// staff on another phone, or by itself): the page again, as it is now. A file of its own for the Content-Security-Policy.
+// staff on another phone, or by itself): the page again, as it is now. And "Anuluj" of a card's folded form. A file of its own for the
+// Content-Security-Policy.
 (function () {
+    // "Anuluj" of a card's "Edytuj" / "Popraw jako nowe" (a reset button: without the script the words go back at least): the form
+    // folds back, the words as they were, the focus on its button — nothing else moves.
+    document.addEventListener('click', function (e) {
+        const close = e.target.closest('[data-poll-change-close]');
+        if (!close) return;
+        const fold = close.closest('details');
+        if (!fold) return;
+        // after the reset has put the words back (the click's default comes after this listener)
+        setTimeout(function () {
+            fold.open = false;
+            const summary = fold.querySelector('summary');
+            if (summary) summary.focus({ preventScroll: true });
+        }, 0);
+    });
+
     const EVERY_MS = 3000;
     const live = document.querySelector('[data-poll-live]');
     if (!live) return;

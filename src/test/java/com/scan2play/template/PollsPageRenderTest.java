@@ -221,6 +221,80 @@ class PollsPageRenderTest {
         verify(polls, never()).create(eq(PARTY), anyString(), eq(List.of("Tak")), anyBoolean(), anyBoolean());
     }
 
+    /**
+     * The words changed, in the question's own card (no page load, nothing on the screen moves): "Edytuj" on one saved for later — a
+     * folded form filled with its words that saves the changes; "Popraw jako nowe" on one asked now or before — a new question's
+     * form with its words, the old one keeps its votes. Each form's fields have ids of their own.
+     */
+    @Test
+    void aSavedQuestion_isEditedInItsCard_andAnAskedOne_isCorrectedAsANewOne() throws IOException {
+        String page = render(Plans.off(), Map.of());
+        String saved = card(page, 2);
+        assertThat(saved).contains("<details class=\"s2p-poll-change\"", ">Edytuj</summary>", "action=\"/dj/polls/2/edit\"",
+                "id=\"poll2EditQuestionInput\"", "value=\"Kto pierwszy na parkiet?\"", "value=\"Ania\"", "value=\"Kuba\"",
+                ">Zapisz zmiany<", "type=\"reset\"", "data-poll-change-close", ">Anuluj<")
+                .doesNotContain("Popraw jako nowe", "name=\"ask\"", "<details class=\"s2p-poll-change\" open");
+        String asked = card(page, 3);
+        assertThat(asked).contains(">Popraw jako nowe</summary>", "Nowe pytanie z treścią poprzedniego", "action=\"/dj/polls/create\"",
+                "id=\"poll3CopyQuestionInput\"", "value=\"Disco polo — tak czy nie?\"", "value=\"Tak\"", ">Zadaj teraz<",
+                ">Zapisz na później<", ">Anuluj<").doesNotContain("/dj/polls/3/edit", ">Edytuj<");
+        assertThat(card(page, 1)).as("ended: its results kept for later, as before").contains(">Popraw jako nowe</summary>",
+                "value=\"Tak jak jest\"").containsPattern("<option value=\"true\" selected");
+        assertThat(page).as("the page's own form stays new").contains("id=\"pollNewForm\"", "id=\"pollQuestionInput\"")
+                .doesNotContain("?edit=", "?copy=", "autofocus");
+        assertThat(page).containsOnlyOnce("id=\"pollQuestionInput\"").containsOnlyOnce("id=\"poll2EditQuestionInput\"");
+        DashboardPageRenderTest.assertNothingInline(page);
+
+        // refused, the card's form is open again (the page audit's look at an open form, at every width)
+        String reopened = render(Plans.off(), Map.of("pollDone", "invalid", "pollEditOpen", 2L));
+        assertThat(card(reopened, 2)).contains("<details class=\"s2p-poll-change\" open");
+        write("polls-edit.html", reopened);
+        // without Pro: nothing to change
+        assertThat(render(Plans.enforced(), Map.of())).doesNotContain("s2p-poll-change\"");
+    }
+
+    /** One question's card of the page, by its id. */
+    private static String card(String page, long id) {
+        String from = page.substring(page.indexOf("data-poll-id=\"" + id + "\""));
+        return from.substring(0, from.indexOf("</section>"));
+    }
+
+    @Test
+    void savingTheChanges_editsTheQuestion_orSaysItWasAsked() {
+        DjPollsController controller = controller(Plans.off());
+        when(polls.edit(eq(PARTY), eq(2L), anyString(), anyList(), anyBoolean())).thenReturn(PollService.Edited.EDITED);
+        RedirectAttributesModelMap flash = new RedirectAttributesModelMap();
+        assertThat(controller.edit(2L, PARTY, " Kto pierwszy? ", List.of("Ania", "", "Kuba", ""), true, user("owner"),
+                new MockHttpSession(), flash, PL)).isEqualTo("redirect:/dj/polls?party=POLL1");
+        verify(polls).edit(PARTY, 2L, "Kto pierwszy?", List.of("Ania", "Kuba"), true);
+        assertThat(flash.getFlashAttributes().get("pollDone")).isEqualTo("edited");
+
+        when(polls.edit(eq(PARTY), eq(3L), anyString(), anyList(), anyBoolean())).thenReturn(PollService.Edited.ASKED_BEFORE);
+        RedirectAttributesModelMap asked = new RedirectAttributesModelMap();
+        controller.edit(3L, PARTY, "Disco polo?", List.of(), false, user("owner"), new MockHttpSession(), asked, PL);
+        verify(polls).edit(PARTY, 3L, "Disco polo?", List.of("Tak", "Nie"), false);
+        assertThat(asked.getFlashAttributes().get("pollDone")).isEqualTo("not_editable");
+
+        when(polls.poll(PARTY, 2L)).thenReturn(Optional.of(saved));
+        RedirectAttributesModelMap invalid = new RedirectAttributesModelMap();
+        assertThat(controller.edit(2L, PARTY, "  ", List.of("Ania"), false, user("owner"), new MockHttpSession(), invalid, PL))
+                .as("back where the DJ was").isEqualTo("redirect:/dj/polls?party=POLL1");
+        assertThat(invalid.getFlashAttributes().get("pollDone")).isEqualTo("invalid");
+        assertThat(invalid.getFlashAttributes().get("pollEditOpen")).as("its form open again").isEqualTo(2L);
+        assertThat(asked.getFlashAttributes().get("pollEditOpen")).isEqualTo(3L);
+
+        when(polls.edit(eq(PARTY), eq(99L), anyString(), anyList(), anyBoolean())).thenReturn(PollService.Edited.NOT_FOUND);
+        assertThatThrownBy(() -> controller.edit(99L, PARTY, "Disco polo?", List.of(), false, user("owner"), new MockHttpSession(),
+                new RedirectAttributesModelMap(), PL)).isInstanceOf(org.springframework.web.server.ResponseStatusException.class);
+    }
+
+    @Test
+    void theToast_saysTheQuestionCannotBeChangedOnceAsked() throws IOException {
+        String html = render(Plans.off(), Map.of("pollDone", "not_editable"));
+        assertThat(html).contains("s2p-done-toast-warning", "Tego pytania nie da się już zmienić, bo zostało zadane");
+        assertThat(render(Plans.off(), Map.of("pollDone", "edited"))).contains(">Pytanie zmienione.<");
+    }
+
     @Test
     void withoutPro_nothingIsMadeOrAsked() {
         DjPollsController controller = controller(Plans.enforced());
@@ -228,6 +302,9 @@ class PollsPageRenderTest {
                 new RedirectAttributesModelMap(), PL)).isInstanceOf(com.scan2play.service.PlanRequiredException.class);
         assertThatThrownBy(() -> controller.ask(2L, PARTY, user("owner"), new MockHttpSession(), new RedirectAttributesModelMap()))
                 .isInstanceOf(com.scan2play.service.PlanRequiredException.class);
+        assertThatThrownBy(() -> controller.edit(2L, PARTY, "Disco polo?", List.of(), false, user("owner"), new MockHttpSession(),
+                new RedirectAttributesModelMap(), PL)).isInstanceOf(com.scan2play.service.PlanRequiredException.class);
+        verify(polls, never()).edit(anyString(), org.mockito.ArgumentMatchers.anyLong(), anyString(), anyList(), anyBoolean());
         verify(polls, never()).ask(anyString(), org.mockito.ArgumentMatchers.anyLong());
     }
 }

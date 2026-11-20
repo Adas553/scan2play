@@ -147,7 +147,8 @@ class PlanFeatureEndpointsTest {
                 Arguments.of(PlanFeature.WISHES, true, get("/dj/qr-print").param("party", PUB).param("wish", "1")),
                 // "Pytanie do gości" (V74): a new question, asking one
                 Arguments.of(PlanFeature.POLLS, true, post("/dj/polls/create").param("partyCode", PUB).param("question", "Disco polo?")),
-                Arguments.of(PlanFeature.POLLS, true, post("/dj/polls/1/ask").param("partyCode", PUB)));
+                Arguments.of(PlanFeature.POLLS, true, post("/dj/polls/1/ask").param("partyCode", PUB)),
+                Arguments.of(PlanFeature.POLLS, true, post("/dj/polls/1/edit").param("partyCode", PUB).param("question", "Disco polo?")));
     }
 
     @ParameterizedTest(name = "{0}: {2}")
