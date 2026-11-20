@@ -15,18 +15,31 @@
         page: 'settings',
         viewport: '390,844',
         run: async function (t) {
-            t.step('every card folded', folds().map(function (fold) { return [fold.id, fold.open]; }),
-                [['partyHoursCard', false], ['guestThemeCard', false], ['hostListsCard', false], ['kioskCard', false], ['wishesCard', false], ['pollsCard', false], ['linksCard', false],
-                    ['logoCard', false], ['limitsCard', false], ['libraryCard', false], ['morningSummaryCard', false], ['deviceCard', false],
-                    ['partyCodeCard', false]]);
+            t.step('four groups, each under its heading, with its cards and rows in order',
+                Array.from(document.querySelectorAll('#settingsCards > section')).map(function (group) {
+                    return [text(group.querySelector('h2')), Array.from(group.querySelectorAll('details.s2p-fold, a.s2p-fold-link')).map(function (card) {
+                        return card.id;
+                    })];
+                }),
+                [['Impreza', ['partyHoursCard', 'limitsCard', 'hostListsCard', 'kioskCard']],
+                    ['Dla gości', ['guestThemeCard', 'wishesRow', 'pollsRow']],
+                    ['Ty jako DJ', ['linksCard', 'logoCard', 'libraryCard', 'morningSummaryCard']],
+                    ['Dostęp', ['staffRow', 'deviceCard', 'partyCodeCard']]]);
+            t.step('every card folded', folds().filter(function (fold) { return fold.open; }).length, 0);
             t.step('each line\'s state, as the panel\'s rows', [stateOf('partyHoursCard'), stateOf('guestThemeCard'), stateOf('hostListsCard'),
                 stateOf('linksCard'), stateOf('logoCard'), stateOf('limitsCard'), stateOf('libraryCard'), stateOf('morningSummaryCard'),
                 stateOf('partyCodeCard')],
-                ['Nie ustawiono', 'Klasyczny', '🚫 0 · ⭐ 1 · link', 'Instagram · kontakt · napiwki', 'Brak', '2 na gościa · 3 min', 'Nie wgrano', 'Włączone',
+                ['Nie ustawiono', 'Klasyczny', '🚫 0 · ⭐ 1 · link', 'Ustawione: 3', 'Nie wgrano', '2 na gościa · 3 min', 'Nie wgrano', 'Włączone',
                     'HARN1']);
-            t.step('"Obsługa" a line like them, leading to its page', [text(document.querySelector('#staffRow .s2p-fold-name')),
-                document.getElementById('staffRow').getAttribute('href')], ['Obsługa', '/dj/staff?party=HARN1']);
-            const lines = folds().map(function (fold) { return fold.querySelector('summary'); }).concat([document.getElementById('staffRow')]);
+            t.step('what is not set greyed, what is set not', ['partyHoursCard', 'logoCard', 'libraryCard', 'linksCard', 'morningSummaryCard'].map(function (id) {
+                return document.querySelector('#' + id + ' > summary .s2p-fold-state').classList.contains('s2p-fold-state-empty');
+            }), [true, true, true, false, false]);
+            t.step('"Obsługa", "Życzenia", "Pytanie" lines like them, leading to their pages', ['staffRow', 'wishesRow', 'pollsRow'].map(function (id) {
+                const row = document.getElementById(id);
+                return [text(row.querySelector('.s2p-fold-name')), row.getAttribute('href')];
+            }), [['Obsługa', '/dj/staff?party=HARN1'], ['Życzenia przed imprezą', '/dj/wishes?party=HARN1'], ['Pytanie do gości', '/dj/polls?party=HARN1']]);
+            const rows = ['staffRow', 'wishesRow', 'pollsRow'].map(function (id) { return document.getElementById(id); });
+            const lines = folds().map(function (fold) { return fold.querySelector('summary'); }).concat(rows);
             t.step('each line a finger\'s height, the state beside its heading, inside the card', lines.filter(function (line) {
                 const box = line.getBoundingClientRect();
                 const state = line.querySelector('.s2p-fold-state');
@@ -136,14 +149,14 @@
         run: async function (t) {
             const src = document.querySelector('script[src*="folds"]').src;
             t.check('the page remembers its scroll (scroll-restore.js)', !!document.querySelector('script[src*="scroll-restore"]'));
-            document.querySelector('#wishesCard > summary').click();
-            window.dispatchEvent(new Event('pagehide'));   // the DJ follows "Wydarzenia i życzenia" (all an iPhone's Safari says)
-            document.getElementById('wishesCard').open = false;   // the page as it loads again: every card folded
+            document.querySelector('#linksCard > summary').click();
+            window.dispatchEvent(new Event('pagehide'));   // the DJ follows the row "Życzenia przed imprezą" (all an iPhone's Safari says)
+            document.getElementById('linksCard').open = false;   // the page as it loads again: every card folded
             const again = document.createElement('script');   // folds.js once more, as on a page load
             again.src = src;
             await new Promise(function (resolve) { again.onload = resolve; document.body.appendChild(again); });
             t.step('the card unfolded when the page was left is unfolded again; the others folded',
-                folds().filter(function (fold) { return fold.open; }).map(function (fold) { return fold.id; }), ['wishesCard']);
+                folds().filter(function (fold) { return fold.open; }).map(function (fold) { return fold.id; }), ['linksCard']);
             sessionStorage.clear();
         }
     });
@@ -154,10 +167,11 @@
         page: 'settings',
         viewport: '1280,900',
         run: async function (t) {
-            const cards = folds().concat([document.getElementById('staffRow')]);
+            const rows = Array.from(document.querySelectorAll('#settingsCards a.s2p-fold-link'));
+            const cards = folds().concat(rows);
             const widths = cards.map(function (card) { return Math.round(card.getBoundingClientRect().width); });
-            t.step('every card of one width, "Obsługa" too', widths.every(function (w) { return w === widths[0]; }), true);
-            const lines = folds().map(function (fold) { return fold.querySelector('summary'); }).concat([document.getElementById('staffRow')]);
+            t.step('every card of one width, the rows too', widths.every(function (w) { return w === widths[0]; }), true);
+            const lines = folds().map(function (fold) { return fold.querySelector('summary'); }).concat(rows);
             t.step('each state right-aligned, near the line\'s end', lines.filter(function (line) {
                 const state = line.querySelector('.s2p-fold-state');
                 return state && shows(state) && line.getBoundingClientRect().right - state.getBoundingClientRect().right > 60;

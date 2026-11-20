@@ -261,11 +261,18 @@ class SettingsPageRenderTest {
                 .contains("<details class=\"card bg-dark border-secondary s2p-fold\" id=\"hostListsCard\" data-saves-in-place>",
                         "<details class=\"card bg-dark border-secondary s2p-fold\" id=\"libraryCard\" data-saves-in-place>",
                         "<details class=\"card bg-dark border-secondary s2p-fold\" id=\"deviceCard\">",
-                        "class=\"s2p-fold-state\">🚫 0 · ⭐ 1 · link<", "class=\"s2p-fold-state\">Instagram · kontakt · napiwki<",
-                        "class=\"s2p-fold-state\">Nie wgrano<", "<script src=\"/js/folds.js\">")
+                        "class=\"s2p-fold-state\">🚫 0 · ⭐ 1 · link<", "class=\"s2p-fold-state\">Ustawione: 3<",
+                        "class=\"s2p-fold-state s2p-fold-state-empty\">Nie wgrano<", "<script src=\"/js/folds.js\">")
                 .doesNotContain("id=\"settingsJump\"", "s2p-fold\" id=\"hostListsCard\" open");
-        assertThat(html).as("\"Obsługa\" a row like a folded card, with its state, leading to its page")
-                .contains("id=\"staffRow\"", "href=\"/dj/staff?party=HARN1\"", ">Obsługa<");
+        assertThat(html).as("the cards in four groups, each under its heading")
+                .contains("id=\"settingsGroupParty\">Impreza</h2>", "id=\"settingsGroupGuests\">Dla gości</h2>",
+                        "id=\"settingsGroupDj\">Ty jako DJ</h2>", "id=\"settingsGroupAccess\">Dostęp</h2>");
+        assertThat(html.indexOf("id=\"partyHoursCard\"")).as("\"Limity gości\" right under \"Godziny imprezy\"")
+                .isLessThan(html.indexOf("id=\"limitsCard\"")).isLessThan(html.indexOf("id=\"hostListsCard\""));
+        assertThat(html).as("\"Obsługa\", \"Życzenia\" and \"Pytanie\" rows like a folded card, with their state, leading to their pages")
+                .contains("id=\"staffRow\"", "href=\"/dj/staff?party=HARN1\"", ">Obsługa<",
+                        "href=\"/dj/wishes?party=HARN1\"", "id=\"wishesRow\"", "href=\"/dj/polls?party=HARN1\"", "id=\"pollsRow\"")
+                .doesNotContain("id=\"wishesCard\"", "id=\"pollsCard\"");
         assertThat(html).as("the hosts' lists (V29): both in one form, the hosts' link to copy, a new one asks first")
                 .contains("id=\"hostListsCard\"", "action=\"/dj/dashboard/host-lists\"", "id=\"hostBlockedInput\"", "name=\"blocked\"",
                         ">Hej sokoły</textarea>", ">Lista gospodarzy<", "Jeden utwór lub wykonawca w linii.",
@@ -389,7 +396,7 @@ class SettingsPageRenderTest {
         String none = render(owner(), new GuestRequestLimiter(30, 10, 300, ""), PL);
         assertThat(none).contains("id=\"logoCard\"", "id=\"logoForm\"", "action=\"/dj/logo\"", ">Nie masz jeszcze logo.<",
                         "accept=\"image/png,image/jpeg,image/webp\"", ">PNG, JPEG lub WebP · do 2 MB<", "data-max-bytes=\"2097152\"",
-                        "data-max-side=\"512\"", "id=\"logoPreview\" hidden", "id=\"logoUpload\" disabled", ">Brak<")
+                        "data-max-side=\"512\"", "id=\"logoPreview\" hidden", "id=\"logoUpload\" disabled", "class=\"s2p-fold-state s2p-fold-state-empty\" id=\"logoState\">Nie wgrano<")
                 .doesNotContain("id=\"logoDeleteForm\"", "id=\"logoCurrent\"");
 
         PartySettingsEntity withLogo = party().toBuilder().logoVersion("0123456789abcdef".repeat(4)).build();
@@ -487,8 +494,8 @@ class SettingsPageRenderTest {
         scary.setGuestTheme(com.scan2play.model.GuestTheme.SCARY);
         String html = render(new PartyStaffService.Access(scary, true, StaffPermission.all()), new GuestRequestLimiter(30, 10, 300, ""), PL);
         assertThat(html).contains("<link href=\"/css/guest-themes.css\" rel=\"stylesheet\">");
-        String card = html.substring(html.indexOf("id=\"guestThemeCard\""), html.indexOf("id=\"hostListsCard\""));
-        assertThat(html.indexOf("id=\"guestThemeCard\"")).as("after the hours").isGreaterThan(html.indexOf("id=\"partyHoursCard\""));
+        String card = html.substring(html.indexOf("id=\"guestThemeCard\""), html.indexOf("id=\"wishesRow\""));
+        assertThat(html.indexOf("id=\"guestThemeCard\"")).as("the first of the group \"Dla gości\"").isGreaterThan(html.indexOf("id=\"settingsGroupGuests\"")).isLessThan(html.indexOf("id=\"wishesRow\""));
         assertThat(card).contains("data-saves-in-place", ">Motyw dla gości<", "id=\"guestThemeState\">Straszny<",
                 ">Goście widzą go na stronie prośby, wyniku, w kiosku i na ekranie TV.<", "action=\"/dj/dashboard/guest-theme\"",
                 "data-in-place", "<noscript><button type=\"submit\"", "href=\"/p/" + PARTY + "\"", "target=\"_blank\" rel=\"noopener\"",
@@ -669,7 +676,7 @@ class SettingsPageRenderTest {
     }
 
     /**
-     * The venue's kiosk (V56): a card folded to "Włączony" / "Wyłączony"; with a link — to copy, to open on the tablet, made again
+     * The venue's kiosk (V56): a card folded to "Włączone" / "Wyłączone"; with a link — to copy, to open on the tablet, made again
      * (asking first) or taken away, page loads; without — "Utwórz link kiosku". Whoever has KIOSK; not the queue's staff.
      * {@code settings-kiosk.html} for the browser tests.
      */
@@ -679,14 +686,14 @@ class SettingsPageRenderTest {
         withKiosk.setKioskToken("Kiosk_123-xyzKiosk_123-x");
         String html = render(new PartyStaffService.Access(withKiosk, true, StaffPermission.all()), new GuestRequestLimiter(30, 10, 300, ""), PL);
         String card = html.substring(html.indexOf("id=\"kioskCard\""), html.indexOf("id=\"linksCard\""));
-        assertThat(card).contains(">Kiosk dla gości<", "id=\"kioskState\">Włączony<",
+        assertThat(card).contains(">Kiosk dla gości<", "class=\"s2p-fold-state\" id=\"kioskState\">Włączone<",
                 "value=\"http://localhost:8080/k/Kiosk_123-xyzKiosk_123-x\" id=\"kioskLinkInput\"", "data-copy-target=\"kioskLinkInput\"",
                 "id=\"kioskOpen\"", "href=\"http://localhost:8080/k/Kiosk_123-xyzKiosk_123-x\" target=\"_blank\"",
                 "action=\"/dj/dashboard/kiosk-link\"", "data-confirm=\"Utworzyć nowy link? Tablet ze starym linkiem przestanie działać.\"",
                 ">Nowy link<", "id=\"kioskLinkOffBtn\"", "Dostęp nadzorowany");
         write("settings-kiosk.html", html);
 
-        assertThat(render(owner(), new GuestRequestLimiter(30, 10, 300, ""), PL)).contains("id=\"kioskState\">Wyłączony<", ">Utwórz link kiosku<")
+        assertThat(render(owner(), new GuestRequestLimiter(30, 10, 300, ""), PL)).contains("class=\"s2p-fold-state s2p-fold-state-empty\" id=\"kioskState\">Wyłączone<", ">Utwórz link kiosku<")
                 .doesNotContain("id=\"kioskLinkInput\"", "id=\"kioskLinkOffBtn\"");
         assertThat(render(staff(StaffRole.QUEUE.permissions()), new GuestRequestLimiter(30, 10, 300, ""), PL))
                 .as("the queue's staff: not theirs").doesNotContain("id=\"kioskCard\"");
@@ -725,7 +732,7 @@ class SettingsPageRenderTest {
         context.setVariable("_csrf", new DefaultCsrfToken("X-CSRF-TOKEN", "_csrf", "harness-csrf-token"));
         String html = engine.process("settings", Set.of("kioskCard"), context);
         assertThat(html.trim()).startsWith("<details").endsWith("</details>");
-        assertThat(html).contains("id=\"kioskCard\" data-saves-in-place open=\"open\"", "id=\"kioskState\">Włączony<",
+        assertThat(html).contains("id=\"kioskCard\" data-saves-in-place open=\"open\"", "class=\"s2p-fold-state\" id=\"kioskState\">Włączone<",
                 "value=\"http://localhost:8080/k/" + row.getKioskToken() + "\"", "id=\"kioskLinkNewBtn\"", ">Nowy link<")
                 .doesNotContain("??");
         write("settings-kiosk-answer.html", html);
@@ -738,7 +745,7 @@ class SettingsPageRenderTest {
         offContext.setVariables(off.asMap());
         offContext.setVariable("_csrf", new DefaultCsrfToken("X-CSRF-TOKEN", "_csrf", "harness-csrf-token"));
         String offHtml = engine.process("settings", Set.of("kioskCard"), offContext);
-        assertThat(offHtml).contains("id=\"kioskState\">Wyłączony<", "id=\"kioskLinkNewBtn\"").doesNotContain("id=\"kioskLinkOffBtn\"");
+        assertThat(offHtml).contains("class=\"s2p-fold-state s2p-fold-state-empty\" id=\"kioskState\">Wyłączone<", "id=\"kioskLinkNewBtn\"").doesNotContain("id=\"kioskLinkOffBtn\"");
         write("settings-kiosk-answer-off.html", offHtml);
     }
 

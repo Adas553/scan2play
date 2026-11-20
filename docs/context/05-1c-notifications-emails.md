@@ -50,7 +50,7 @@ is committed, on the e-mails' own thread (`Mailer.later`, one thread, a queue of
 never fails it. "Once" is a claim (`UPDATE … WHERE welcome_sent_at IS NULL`): of two logins at once, or a login and the job, one sends; a
 failed send gives the claim back, and the nightly job (4:35) sends the welcomes of the accounts of the last 7 days that failed. The
 accounts of before V64 count as welcomed. **The morning summary** — Pro (`PlanFeature.SUMMARY`), the organiser's switch "Poranne
-podsumowanie" on (`morning_summary`, its card in "Ustawienia imprezy" before "Obsługa", the organiser's alone, answered in place — browser scenario
+podsumowanie" on (`morning_summary`, its card in "Ustawienia imprezy" the last of the group "Ty jako DJ", the organiser's alone, answered in place — browser scenario
 `morning-summary-switch`), an address, and an evening of **at least 5 guests' requests** (the DJ's own additions not counted, the kept
 ones of `evening_song` counted): at **10:00 Polish time** the next day (`MorningSummaryEmailService`, the run at 12:00 sends what failed
 at 10), once an evening (`evening_summary.morning_sent_at`, one upsert claim). The evening's title (or "Podsumowanie wieczoru") and day,

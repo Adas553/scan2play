@@ -41,6 +41,14 @@ What every page shares, so a new screen looks like the others:
 - **Cards** of the settings: `.s2p-card-title` and one line of `.s2p-card-help`, then the fields, then one "Zapisz". The help line
   says once who sees what ("Goście widzą klimat, opis i to, kto gra.") — the labels are short ("Opis klimatu", "Kto gra"), never "(widzą
   goście)" after each. Nothing explains what the DJ does not set (the server's limits: one line, what they are unfolded).
+- **"Ustawienia imprezy"** (2026-11-20): the cards in four groups under a small grey heading (`.s2p-settings-group-title`) —
+  **Impreza** (Godziny, Limity gości, Lista gospodarzy, Kiosk), **Dla gości** (Motyw, Życzenia, Pytanie), **Ty jako DJ** (Profile,
+  Logo, Biblioteka, Poranne podsumowanie), **Dostęp** (Obsługa, To urządzenie, Kod imprezy — last, rare and it kills the posters); a
+  group shows only when a card of it does. A card with nothing to set that leads to a page of its own ("Obsługa", "Życzenia", "Pytanie")
+  is a row with "›" (`.s2p-fold-link`), not a card to unfold first. **The folded line's state**: a capital first letter, no
+  abbreviation; nothing set yet is "Nie ustawiono" (a file: "Nie wgrano"; a switch: "Wyłączone"; a page's feature: "Nieaktywne"; the
+  staff: "Tylko Ty") and greyed (`.s2p-fold-state-empty`), what is set light; a count rather than a list of names ("Ustawione: 3").
+  Browser scenario `settings-folded`.
 - **What goes where** (the panel's clean-up, 2026-10-10): the panel holds what the DJ uses during a party (the queue, the vibe, "Kto gra",
   the QR code); what is set before it is on the page of the tab "Ustawienia" ("Ustawienia imprezy", "Obsługa") — never a card more on the
   panel, nor a second way to the same page (the rows of "Więcej", removed 2026-10-28). **Every page of the DJ's** (the panel, the
