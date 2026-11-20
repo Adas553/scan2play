@@ -214,6 +214,29 @@ public class PollService {
         return poll(partyCode, id);
     }
 
+    /** What became of "Zapisz zmiany" on a question. */
+    public enum Edited { EDITED, ASKED_BEFORE, NOT_FOUND }
+
+    /**
+     * "Edytuj" — "Zapisz zmiany": the words, the answers and whether the guests' results wait for the DJ, of a question saved for
+     * later only. One asked (now or before) is never changed: a vote is the answer's place (0 … 3), so changed answers would make the
+     * votes say what nobody chose, and a guest's card drawn before the change would send its tap to another answer — the DJ asks it
+     * corrected as a new one ("Popraw jako nowe"). The {@code opened_at IS NULL} of the statement holds against a "Zadaj" at once: the
+     * row's lock makes one wait, and the other's condition is read again after it.
+     *
+     * @param question a question {@link #tidyQuestion} kept
+     * @param answers  answers {@link #tidyAnswers} kept
+     */
+    public Edited edit(String partyCode, long id, String question, List<String> answers, boolean hideResults) {
+        int changed = jdbc.update("UPDATE party_poll SET question = ?, answers = ?, results_hidden = ? WHERE party_code = ? AND id = ?"
+                + " AND opened_at IS NULL", question, answers.toArray(String[]::new), hideResults, partyCode, id);
+        if (changed == 1) {
+            log.info("Party [{}]: question {} edited", partyCode, id);
+            return Edited.EDITED;
+        }
+        return poll(partyCode, id).isPresent() ? Edited.ASKED_BEFORE : Edited.NOT_FOUND;
+    }
+
     /**
      * "Zadaj teraz": the question is asked — the one asked before ends. One asked again after it ended keeps its votes and takes
      * more, for another {@link #ASKED_FOR} from now. Under the party row's lock: two "Zadaj" at once leave one asked, never two (the

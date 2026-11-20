@@ -47,7 +47,10 @@ public class DjPollsController {
     private final PlanService planService;
     private final MessageSource messageSource;
 
-    /** The page: the form, and the party's questions with their results, the newest first. */
+    /**
+     * The page: the form, and the party's questions with their results, the newest first — each with its own folded form to change
+     * its words ("Edytuj" on one saved for later, "Popraw jako nowe" on one asked), in the card: nothing moves on the screen.
+     */
     @GetMapping
     public String page(@RequestParam(required = false) String party, Model model, OAuth2AuthenticationToken authentication,
                        HttpSession session) {
@@ -97,10 +100,7 @@ public class DjPollsController {
                          HttpSession session, RedirectAttributes redirectAttributes, Locale locale) {
         planService.require(sessionHelper.require(partyCode, StaffPermission.POLLS, authentication, session), PlanFeature.POLLS);
         String kept = PollService.tidyQuestion(question);
-        boolean noneTyped = answers == null || answers.stream().allMatch(one -> one == null || one.isBlank());
-        List<String> keptAnswers = PollService.tidyAnswers(noneTyped
-                ? Stream.of("polls.yes", "polls.no").map(key -> messageSource.getMessage(key, null, locale)).toList()
-                : answers);
+        List<String> keptAnswers = keptAnswers(answers, locale);
         if (kept == null || keptAnswers == null) {
             done(redirectAttributes, "invalid");
             return back(partyCode);
@@ -112,6 +112,44 @@ public class DjPollsController {
             done(redirectAttributes, "too_many");
             return back(partyCode);
         });
+    }
+
+    /**
+     * "Edytuj" — "Zapisz zmiany": a question saved for later changed, as a new one is made (none typed is "Tak" / "Nie"). One asked
+     * meanwhile is not changed ({@link PollService#edit}): the page says to correct it as a new one. Refused, the card's form is
+     * open again (its "Popraw jako nowe" when it was asked meanwhile). Pro, as making one.
+     */
+    @PostMapping("/{id}/edit")
+    public String edit(@PathVariable long id, @RequestParam String partyCode, @RequestParam(required = false) String question,
+                       @RequestParam(name = "answer", required = false) List<String> answers,
+                       @RequestParam(defaultValue = "false") boolean hideResults, OAuth2AuthenticationToken authentication,
+                       HttpSession session, RedirectAttributes redirectAttributes, Locale locale) {
+        planService.require(sessionHelper.require(partyCode, StaffPermission.POLLS, authentication, session), PlanFeature.POLLS);
+        String kept = PollService.tidyQuestion(question);
+        List<String> keptAnswers = keptAnswers(answers, locale);
+        if (kept == null || keptAnswers == null) {
+            found(pollService.poll(partyCode, id).isPresent());
+            done(redirectAttributes, "invalid");
+            redirectAttributes.addFlashAttribute(POLL_EDIT_OPEN, id);
+            return back(partyCode);
+        }
+        switch (pollService.edit(partyCode, id, kept, keptAnswers, hideResults)) {
+            case EDITED -> done(redirectAttributes, "edited");
+            case ASKED_BEFORE -> {
+                done(redirectAttributes, "not_editable");
+                redirectAttributes.addFlashAttribute(POLL_EDIT_OPEN, id);
+            }
+            case NOT_FOUND -> throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        return back(partyCode);
+    }
+
+    /** The answers as kept ({@link PollService#tidyAnswers}); none typed: "Tak" / "Nie" in the DJ's language. Null: too few. */
+    private List<String> keptAnswers(List<String> answers, Locale locale) {
+        boolean noneTyped = answers == null || answers.stream().allMatch(one -> one == null || one.isBlank());
+        return PollService.tidyAnswers(noneTyped
+                ? Stream.of("polls.yes", "polls.no").map(key -> messageSource.getMessage(key, null, locale)).toList()
+                : answers);
     }
 
     /** "Zadaj teraz" / "Zadaj ponownie": the question asked — the one asked before ends. Pro. */

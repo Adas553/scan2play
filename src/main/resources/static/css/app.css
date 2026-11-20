@@ -1818,5 +1818,15 @@ a.s2p-schedule-text:focus-visible { color: var(--s2p-white); text-decoration: un
 .s2p-poll-fold { border: 0; }
 .s2p-poll-mine .s2p-poll-answer { font-weight: 700; }
 .s2p-poll-mine-mark { color: var(--s2p-green); font-size: 0.85rem; white-space: nowrap; }
+/* the DJ's page, a question's last line: "Edytuj" / "Popraw jako nowe" (a <details>: the form opens in the card, nothing above it
+   moves) and "Usuń" at the line's end; open, the form takes the card's width and "Usuń" goes under it */
+.s2p-poll-foot { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 0.5rem; margin-top: 0.75rem; }
+.s2p-poll-foot > .s2p-poll-delete-form { margin: 0 0 0 auto; }
+.s2p-poll-foot > .s2p-poll-change[open] { flex: 1 1 100%; }
+.s2p-poll-change > summary { list-style: none; }
+.s2p-poll-change > summary::-webkit-details-marker { display: none; }
+.s2p-poll-change > summary::after { content: "▾"; margin-left: 0.4em; color: var(--s2p-text-muted); }
+.s2p-poll-change[open] > summary::after { content: "▴"; }
+.s2p-poll-change-body { margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid var(--s2p-border); }
 /* the DJ's page: the question asked now stands out from the saved and ended ones */
 .s2p-poll-asked { border-color: var(--s2p-action) !important; }

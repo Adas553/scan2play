@@ -41,6 +41,8 @@ final class PollControllers {
         when(polls.setResultsHidden(org.mockito.ArgumentMatchers.eq(partyCode), org.mockito.ArgumentMatchers.eq(POLL), anyBoolean()))
                 .thenReturn(true);
         when(polls.delete(partyCode, POLL)).thenReturn(true);
+        when(polls.edit(org.mockito.ArgumentMatchers.eq(partyCode), org.mockito.ArgumentMatchers.eq(POLL), anyString(), anyList(),
+                anyBoolean())).thenReturn(PollService.Edited.EDITED);
         return polls;
     }
 }

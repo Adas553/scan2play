@@ -205,6 +205,65 @@
         }
     });
 
+    // "Edytuj" / "Popraw jako nowe": the form opens in the question's own card — no page load, nothing on the screen moves above it;
+    // "Anuluj" folds it back, the typed words as they were.
+    S2P.scenario({
+        name: 'polls-edit-in-place',
+        title: 'the DJ\'s page: "Edytuj" opens the form in the card, the screen does not jump; "Anuluj" folds it back',
+        page: 'polls',
+        viewport: '390,844',
+        run: async function (t) {
+            const card = document.querySelector('.s2p-poll-card[data-poll-id="2"]');
+            card.scrollIntoView({ block: 'center', behavior: 'instant' });
+            await t.sleep(100);
+            const before = [window.scrollY, Math.round(card.getBoundingClientRect().top)];
+            const edit = Array.from(card.querySelectorAll('summary, a, button')).find(function (el) {
+                return el.textContent.trim() === 'Edytuj';
+            });
+            const marker = {};
+            window.__pollsPage = marker;
+            edit.click();
+            await t.sleep(400);
+            t.check('the same page (not loaded again)', window.__pollsPage === marker);
+            t.step('nothing moved: the scroll and the card where they were',
+                [window.scrollY, Math.round(card.getBoundingClientRect().top)], before);
+            const form = card.querySelector('form[action="/dj/polls/2/edit"]');
+            t.check('the form in the card, filled with its words', !!form && form.querySelector('[name="question"]').value
+                === 'Kto pierwszy na parkiet?' && form.getBoundingClientRect().height > 0);
+            const question = form.querySelector('[name="question"]');
+            question.value = 'Coś innego?';
+            Array.from(form.querySelectorAll('button')).find(function (b) { return b.textContent.trim() === 'Anuluj'; }).click();
+            await t.sleep(100);
+            t.check('"Anuluj" folds it back', !form.closest('details').open);
+            t.check('the focus on "Edytuj"', document.activeElement === form.closest('details').querySelector('summary'));
+            t.step('the words as they were', question.value, 'Kto pierwszy na parkiet?');
+            t.check('nothing sideways', fits());
+        }
+    });
+
+    S2P.scenario({
+        name: 'polls-copy-in-place',
+        title: 'the DJ\'s page: "Popraw jako nowe" on the question asked opens a new question\'s form with its words, in the card',
+        page: 'polls',
+        viewport: '390,844',
+        run: async function (t) {
+            const card = document.querySelector('.s2p-poll-card[data-poll-id="3"]');
+            card.scrollIntoView({ block: 'center', behavior: 'instant' });
+            await t.sleep(100);
+            const before = window.scrollY;
+            Array.from(card.querySelectorAll('summary, a, button')).find(function (el) {
+                return el.textContent.trim() === 'Popraw jako nowe';
+            }).click();
+            await t.sleep(400);
+            t.step('nothing moved', window.scrollY, before);
+            const form = card.querySelector('form[action="/dj/polls/create"]');
+            t.check('a new question\'s form with its words', !!form && form.querySelector('[name="question"]').value
+                === 'Disco polo — tak czy nie?' && form.getBoundingClientRect().height > 0);
+            t.check('the page\'s own new question form left as it was',
+                document.getElementById('pollQuestionInput').value === '');
+        }
+    });
+
     const pollsPhone = async function (t) {
         t.check('nothing sideways', fits());
         const buttons = Array.from(document.querySelectorAll('.s2p-poll-card button, #pollNewForm button'));
