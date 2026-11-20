@@ -11,6 +11,7 @@ import com.scan2play.service.DemoParty;
 import com.scan2play.service.DjLibraryParser;
 import com.scan2play.service.DjLibraryService;
 import com.scan2play.service.DjService;
+import com.scan2play.service.EventPlanService;
 import com.scan2play.service.FreeAiLimit;
 import com.scan2play.service.GuestRequestLimiter;
 import com.scan2play.service.LogoImage;
@@ -101,6 +102,8 @@ public class DjDashboardController {
     private final WishService wishService;
     /** "Pytanie do gości" (V74): the settings card's state. */
     private final PollService pollService;
+    /** "Plan imprezy" (V77): tonight's plan above the queue, and "📋 z planu" on a request for one of its songs. */
+    private final EventPlanService eventPlanService;
 
     /**
      * On every answer of the queue poll, 304 too: the warnings above the queue that hold now, comma-separated —
@@ -216,6 +219,10 @@ public class DjDashboardController {
         model.addAttribute(LIBRARY_ON, planService.allows(settings, PlanFeature.LIBRARY) && djService.libraryOf(partyCode).isPresent());
         model.addAttribute(WANTED_SONGS, SongList.of(planService.asPlanned(settings).getHostWanted()));
         model.addAttribute(BLOCKED_SONGS, SongList.of(planService.asPlanned(settings).getHostBlocked()));
+        // "Plan imprezy" (V77, Pro): tonight's event's plan above the queue, its songs marked in it
+        boolean plans = planService.allows(settings, PlanFeature.WISHES);
+        model.addAttribute(PLAN_TONIGHT, plans ? eventPlanService.tonight(partyCode, Instant.now()).orElse(null) : null);
+        model.addAttribute(PLAN_SONGS, plans ? SongList.of(eventPlanService.tonightSongs(partyCode, Instant.now())) : null);
 
         return "dashboard";
     }
@@ -629,6 +636,9 @@ public class DjDashboardController {
         String wanted = (planned.getHostWanted() == null ? "" : "-w" + Integer.toHexString(planned.getHostWanted().hashCode()))
                 + (planned.getHostBlocked() == null ? "" : "-b" + Integer.toHexString(planned.getHostBlocked().hashCode()))
                 + (plan.allows("TIPS") ? "" : "-f") + library;
+        // tonight's plan's songs (V77): a request becomes "📋 z planu" when the plan names it, with the queue as it was
+        String planSongs = plan.allows("WISHES") ? eventPlanService.tonightSongs(partyCode, Instant.now()) : null;
+        wanted += planSongs == null ? "" : "-p" + Integer.toHexString(planSongs.hashCode());
         String etag = "\"q-" + fingerprint + wanted + "\"";
 
         String ifNoneMatch = request.getHeader("If-None-Match");
@@ -648,6 +658,7 @@ public class DjDashboardController {
         model.addAttribute(LIBRARY_MARKS, libraryMarks(settings, waiting));
         model.addAttribute(WANTED_SONGS, SongList.of(planned.getHostWanted()));
         model.addAttribute(BLOCKED_SONGS, SongList.of(planned.getHostBlocked()));
+        model.addAttribute(PLAN_SONGS, planSongs == null ? null : SongList.of(planSongs));
         model.addAttribute(PARTY_CODE, partyCode);
         model.addAttribute(ACCESS, access);   // the rows' buttons by the person's permissions (V32)
         model.addAttribute(PLAN, plan);       // and by the organiser's plan (V35): no 💸 without Pro

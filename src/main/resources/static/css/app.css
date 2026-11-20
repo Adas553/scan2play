@@ -1864,6 +1864,19 @@ a.s2p-schedule-text:focus-visible { color: var(--s2p-white); text-decoration: un
     .s2p-plan-row-top input[name="label"] { flex-basis: calc(100% - 6.85rem); }
     .s2p-plan-tools { margin-left: auto; }
 }
+/* "Plan wieczoru" above the queue (dashboard.html, plan-card.js): the next moment on one line, the whole plan folded under it; a
+   moment ticked off greyed and struck through, its ✓ filled */
+.s2p-plan-card { background: var(--s2p-bg-card); border: 1px solid var(--s2p-border); border-left: 3px solid var(--s2p-action); border-radius: 0.5rem; padding: 0.6rem 0.9rem; }
+.s2p-plan-card-title { font-size: 1rem; font-weight: 600; color: var(--s2p-white); margin: 0; }
+.s2p-plan-next { font-size: 1.05rem; color: var(--s2p-white); overflow-wrap: anywhere; }
+.s2p-plan-next-when { color: var(--s2p-action); font-weight: 700; font-variant-numeric: tabular-nums; margin-right: 0.35rem; }
+.s2p-plan-all > summary { color: var(--s2p-text-muted); cursor: pointer; min-height: 44px; display: flex; align-items: center; }
+.s2p-plan-moment { display: flex; align-items: flex-start; gap: 0.5rem; }
+.s2p-plan-moment-time { flex: 0 0 3rem; color: var(--s2p-text-muted); font-variant-numeric: tabular-nums; padding-top: 0.15rem; }
+.s2p-plan-tick { min-width: 44px; min-height: 44px; flex: 0 0 auto; }
+.s2p-plan-tick[aria-pressed="true"] { background: var(--s2p-action); border-color: var(--s2p-action); color: var(--s2p-bg); }
+.s2p-plan-moment-done { color: var(--s2p-text-muted); }
+.s2p-plan-moment-done b { text-decoration: line-through; }
 /* The plan on paper (event-plan-print.html): black on white, one A4, the times big; the button not printed */
 .s2p-plan-print { background: var(--s2p-print-paper); color: var(--s2p-print-ink); }
 .s2p-plan-print::before { display: none; }

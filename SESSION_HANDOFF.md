@@ -56,11 +56,12 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
   będzie najlepiej"): "Urządzenie" over this device for the staff, "Kiosk — Włączony", the rows' names `h3`, the hosts' state one line
   on 320 px. Waits for the owner: commit into #290 / #291, a look on a phone, the merge. P11 (the closed-party banner no
   heading before `h1`) and P12 fixed too: the two unit tests red locally (not charset — CRLF, the JVM's Polish locale) pass on Windows.
-- **2026-11-20 — `claude/event-plan` (from `main` after #290, in the worktree `.claude/worktrees/event-plan`), uncommitted,
-  migration V77 (only adds):** "Plan imprezy", variant A (`docs/ideas.md` item 17): an event's plan of moments and its own two lists,
-  the hosts' link `/h/e/{token}` without a CSRF token, "Użyj list na imprezie", the print (`docs/context/05-1i-wishes.md`). Waits for
-  the owner: the diff, a look on a phone (the DJ's page, the hosts' page, the print), the commit and PRs to `main` and `dev`. Then B.
-  "Trendy próśb" (variant 0) is apart, on `claude/trendy-report` in the main checkout.
+- **2026-11-20 — `claude/event-plan` (from `main` after #290, in the worktree `.claude/worktrees/event-plan`), committed, not
+  pushed, migration V77 (only adds):** "Plan imprezy", variants A and B (`docs/ideas.md` item 17): an event's plan of moments and its
+  own two lists, the hosts' link `/h/e/{token}` without a CSRF token, "Użyj list na imprezie", the print; on the event's evening
+  "Plan wieczoru" above the queue and "📋 z planu" in it (`docs/context/05-1i-wishes.md`). Waits for the owner: a look on a phone (the
+  DJ's page, the hosts' page, the print, the panel on the evening), the push and PRs to `main` and `dev`. "Trendy próśb" (variant 0)
+  is apart, on `claude/trendy-report` in the main checkout.
 - **Waits for the owner (from #269):** after the first commit the deploy window holds back (Fri–Sun 18:00–6:00): does Railway
   deploy it on the workflow's re-run? UptimeRobot is set up (the owner, 2026-11-17; `docs/monitoring.md`).
 - **Waits for the owner (the wishes, #263):** the three older Polish texts with "DJ" and a masculine verb (`guest.vote.gone`,

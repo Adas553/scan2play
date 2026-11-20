@@ -336,6 +336,10 @@ public final class ViewAttributes {
     public static final String PLAN_DONE = "planDone";
     public static final String PLAN_DONE_ARG = "planDoneArg";
     public static final String PLAN_MAX = "planMax";
+    /** The panel: tonight's plan above the queue ({@code EventPlanService.Tonight}), null for none or without Pro. */
+    public static final String PLAN_TONIGHT = "planTonight";
+    /** The queue: tonight's plan's songs ({@code SongList}) — a request for one is marked "📋 z planu"; null for none. */
+    public static final String PLAN_SONGS = "planSongs";
 
     // --- "Pytanie do gości" (V74) ---
     /** The question the guests' page or the TV shows (asked now, or ended a moment ago), or null; its results; the guest's answer. */

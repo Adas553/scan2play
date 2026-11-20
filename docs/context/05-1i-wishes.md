@@ -79,3 +79,12 @@ other, and the party's lists are what the AI and the queue use tonight —; "Uż
 the party's (asks first). "🖨 Drukuj plan" (`/dj/wishes/{id}/plan/print`, `event-plan-print.html`): one A4, black on white, the times
 big. Without Pro the DJ's page shows the plan read only (a disabled fieldset) and the hosts' link is a 404. Nothing of the plan goes
 to the guests, the TV or the AI; it is deleted with the event (7 days after its date) — the privacy policy says so.
+
+**"Plan wieczoru" in the panel** (variant B, Pro): on the evening of an event with moments (`EventPlanService.tonight`: the event dated
+`EveningSummaryService.eveningOf(now)` — until 6:00 the night is the day before's —, the first made if two share the day) a card above
+the queue (`dashboard.html` `#planCard`, `js/dashboard/plan-card.js`): the event's name, "Cały plan →", the next moment — the first
+not ticked off — with its time and "za 12 min" / "za 1 h 05 min" / "teraz" by this device's clock (every 30 s; a time before 6:00 is
+on the night after the evening's day), the whole evening folded under "Cały wieczór (N)", a ✓ for each moment. The ticks are this
+device's (localStorage `s2p-plan-done-<event>`): nothing is sent. A request for a song of tonight's plan is marked "📋 z planu" in the
+queue (`EventPlanService.tonightSongs`, matched as the hosts' lists, `SongList`); the poll's ETag carries the songs' hash, so a plan
+saved during the party marks the queue as it was (`DjDashboardControllerQueueCacheTest`). Scenario `plan-card-next-and-ticks`.

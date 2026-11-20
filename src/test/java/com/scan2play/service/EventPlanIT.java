@@ -122,6 +122,33 @@ class EventPlanIT extends PostgresIntegrationTest {
     }
 
     @Test
+    void tonight_isTheEventOfTheEvening_withMoments_untilSixInTheMorning() {
+        WishService.Event event = event();   // dated 30 days ahead
+        WishService.Event empty = wishes.create(event.partyCode(), "Bez planu", event.date(), GuestTheme.CLASSIC).orElseThrow();
+        java.time.Instant evening = event.date().atTime(22, 0).atZone(com.scan2play.util.Times.DISPLAY_ZONE).toInstant();
+        assertThat(plans.tonight(event.partyCode(), evening)).as("no moments yet: no plan tonight").isEmpty();
+        assertThat(plans.tonightSongs(event.partyCode(), evening)).isNull();
+
+        plans.save(event.id(), List.of(new Moment("Tort", LocalTime.of(23, 0), "Ktoś - Coś", null), moment("Oczepiny"),
+                new Moment("Ostatni taniec", null, "Zespół - Na Koniec", null)), null, null, EventPlanService.BY_DJ);
+        plans.save(empty.id(), List.of(), null, "Akcent", EventPlanService.BY_DJ);
+
+        EventPlanService.Tonight tonight = plans.tonight(event.partyCode(), evening).orElseThrow();
+        assertThat(tonight.eventId()).as("the event with moments, not the other of the day").isEqualTo(event.id());
+        assertThat(tonight.name()).isEqualTo("Wesele Ani i Kuby");
+        assertThat(tonight.evening()).isEqualTo(event.date());
+        assertThat(tonight.moments()).extracting(Moment::label).containsExactly("Tort", "Oczepiny", "Ostatni taniec");
+        assertThat(plans.tonightSongs(event.partyCode(), evening)).isEqualTo("Ktoś - Coś\nZespół - Na Koniec");
+
+        java.time.Instant twoAtNight = evening.plusSeconds(4 * 3600);
+        assertThat(plans.tonight(event.partyCode(), twoAtNight)).as("2:00 is still the evening before").isPresent();
+        java.time.Instant morning = evening.plusSeconds(9 * 3600);
+        assertThat(plans.tonight(event.partyCode(), morning)).as("7:00 is the next day's").isEmpty();
+        assertThat(plans.tonightSongs(event.partyCode(), morning)).isNull();
+        assertThat(plans.tonight("ZZZZZ", evening)).as("another party's").isEmpty();
+    }
+
+    @Test
     void thePlan_goesWithItsEvent() {
         WishService.Event event = event();
         plans.save(event.id(), List.of(moment("A")), null, null, EventPlanService.BY_DJ);

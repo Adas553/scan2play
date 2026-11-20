@@ -255,6 +255,37 @@
         </div>
     </section>
 
+    <!--/* "Plan imprezy" on the night (V77, variant B, Pro): tonight's event's plan above the queue — the next moment with its time
+         counted down by this device's clock, the whole plan folded under it, each moment ticked off with ✓. plan-card.js works it;
+         the ticks are this device's (localStorage), nothing is sent. Without the script: the plan as it is, under "Cały plan". */-->
+    <section th:if="${planTonight != null}" id="planCard" class="s2p-plan-card mb-3" aria-labelledby="planCardTitle"
+             th:attr="data-plan-event=${planTonight.eventId()},data-plan-evening=${planTonight.evening()},data-text-in=#{eventplan.card.in},data-text-in-hours=#{eventplan.card.in_hours},data-text-now=#{eventplan.card.now},data-text-done=#{eventplan.card.all_done}">
+        <div class="d-flex flex-wrap align-items-baseline justify-content-between gap-2">
+            <h2 id="planCardTitle" class="s2p-plan-card-title"><span th:text="#{eventplan.card.title}">📋 Tonight’s plan</span> <span
+                    class="text-secondary fw-normal text-break" th:text="'· ' + ${planTonight.name()}">· Wesele Ani i Kuby</span></h2>
+            <a th:href="@{/dj/wishes/{id}/plan(id=${planTonight.eventId()},party=${partyCode})}" id="planCardOpen"
+               class="btn btn-sm btn-link px-0" th:text="#{eventplan.card.open}">The whole plan →</a>
+        </div>
+        <p id="planNext" class="s2p-plan-next mb-2" hidden aria-live="polite">
+            <span class="s2p-plan-next-when" data-plan-next-when>za 12 min</span>
+            <b data-plan-next-label>Tort</b><span class="text-secondary" data-plan-next-song></span>
+        </p>
+        <details id="planAll" class="s2p-plan-all">
+            <summary th:text="#{eventplan.card.all(${#lists.size(planTonight.moments())})}">The whole evening (6)</summary>
+            <ol class="list-unstyled m-0 mt-2 d-flex flex-column gap-1" id="planMomentsTonight">
+                <li th:each="m, stat : ${planTonight.moments()}" class="s2p-plan-moment" data-plan-moment
+                    th:attr="data-index=${stat.index},data-time=${m.timeText()},data-label=${m.label()},data-song=${m.song()}">
+                    <button type="button" class="btn btn-sm btn-outline-secondary s2p-plan-tick" data-plan-tick hidden aria-pressed="false"
+                            th:attr="aria-label=#{eventplan.card.tick(${m.label()})}">✓</button>
+                    <span class="s2p-plan-moment-time" th:text="${m.time() == null} ? '—' : ${m.timeText()}">23:00</span>
+                    <span class="s2p-min-w-0"><b class="text-break" th:text="${m.label()}">Tort</b><span th:if="${m.song() != null}"
+                            class="text-break" th:text="' · ' + ${m.song()}"> · Artist - Title</span><span th:if="${m.note() != null}"
+                            class="d-block small text-secondary text-break" th:text="${m.note()}">DJ wybiera</span></span>
+                </li>
+            </ol>
+        </details>
+    </section>
+
     <!--/* The active queue: a heading with the number of songs and a search box, and a list of fixed height with its own
          scrollbar (.list-scroll) and a header that stays in view — with many songs the DJ no longer scrolls the whole
          page. list-tools.js (applyListFilters) does the searching; the polled <tbody> below is replaced every 3 s, so
@@ -415,6 +446,10 @@
                             <span th:if="${wantedSongs != null and wantedSongs.matches(req.songName)}"
                                   class="badge text-bg-info align-self-start s2p-host-wanted"
                                   th:title="#{dashboard.host.wanted.title}" th:text="#{dashboard.host.wanted}">⭐ The hosts want it</span>
+                            <!--/* a song of tonight's party plan (V77): the hosts put it in a moment of the evening */-->
+                            <span th:if="${planSongs != null and planSongs.matches(req.songName)}"
+                                  class="badge text-bg-dark border border-info text-info align-self-start s2p-plan-song"
+                                  th:title="#{eventplan.queue.mark.title}" th:text="#{eventplan.queue.mark}">📋 In the plan</span>
                             <!--/* the DJ's library (V41, V42, Pro): "✓" the same title with an artist in common, "?" the title alone, "✗"
                                  no song of the title — none without a library ("Ukryj „Nie masz”" hides the "✗" ones, list-tools.js); beside
                                  "✓" and "?" the tempo and the key of the DJ's track, as the file says them (V57: rekordbox; none for an M3U) */-->

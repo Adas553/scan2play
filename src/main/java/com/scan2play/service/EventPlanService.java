@@ -9,9 +9,11 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.sql.Date;
 import java.sql.Time;
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
@@ -151,6 +153,39 @@ public class EventPlanService {
         write(eventId, labels.stream().map(label -> new Moment(tidy(label, LABEL_MAX), null, null, null))
                 .filter(moment -> moment.label() != null).toList(), plan.blocked(), plan.wanted(), by);
         return true;
+    }
+
+    // ---------------------------------------------------------------- on the night (variant B)
+
+    /** The plan the panel shows tonight: its event, the evening's date and the moments. */
+    public record Tonight(long eventId, String name, LocalDate evening, List<Moment> moments) {
+    }
+
+    /**
+     * The plan of the party's event whose date is this evening ({@link EveningSummaryService#eveningOf}: until 6:00 the night still
+     * belongs to the day before), when it has moments; the first made, if two events share the day.
+     */
+    public Optional<Tonight> tonight(String partyCode, Instant now) {
+        LocalDate evening = EveningSummaryService.eveningOf(now);
+        return jdbc.query("SELECT id, name FROM wish_event WHERE party_code = ? AND event_date = ?"
+                        + " AND EXISTS (SELECT 1 FROM event_plan_item WHERE event_id = wish_event.id) ORDER BY id LIMIT 1",
+                (row, n) -> new Tonight(row.getLong(1), row.getString(2), evening, List.of()), partyCode, Date.valueOf(evening))
+                .stream().findFirst()
+                .map(event -> new Tonight(event.eventId(), event.name(), evening, plan(event.eventId()).moments()));
+    }
+
+    /**
+     * The songs of tonight's plan as one text, a song a line (null for none) — the queue marks a request for one "📋 z planu" and
+     * its ETag carries the text's hash. One small query (the event by {@code idx_wish_event_party_date}, at most
+     * {@value #MAX_MOMENTS} rows): the panel asks every 3 s.
+     */
+    public String tonightSongs(String partyCode, Instant now) {
+        List<String> songs = jdbc.queryForList("SELECT i.song FROM wish_event e JOIN event_plan_item i ON i.event_id = e.id"
+                + " WHERE e.party_code = ? AND e.event_date = ? AND i.song IS NOT NULL"
+                + " AND e.id = (SELECT min(f.id) FROM wish_event f WHERE f.party_code = e.party_code AND f.event_date = e.event_date"
+                + " AND EXISTS (SELECT 1 FROM event_plan_item g WHERE g.event_id = f.id))"
+                + " ORDER BY i.position LIMIT ?", String.class, partyCode, Date.valueOf(EveningSummaryService.eveningOf(now)), MAX_MOMENTS);
+        return songs.isEmpty() ? null : String.join("\n", songs);
     }
 
     // ---------------------------------------------------------------- the hosts' link of an event
