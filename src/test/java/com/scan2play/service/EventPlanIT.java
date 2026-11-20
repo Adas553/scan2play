@@ -21,8 +21,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * "Plan imprezy" (V77) on a real PostgreSQL: a save replaces the moments whole and keeps their order, two saves at once leave one of
- * the two plans (never a mix), the hosts' link writes only while it is the event's — a new one makes the old dead —, a template only
- * starts an empty plan, and the plan goes with its event.
+ * the two plans (never a mix), a save made from an older version of the plan writes nothing, the hosts' link writes only while it is
+ * the event's — a new one makes the old dead — and only so often, a template only starts an empty plan, tonight's plan is the day's
+ * event started last, and the plan goes with its event.
  */
 class EventPlanIT extends PostgresIntegrationTest {
 
@@ -94,12 +95,12 @@ class EventPlanIT extends PostgresIntegrationTest {
         assertThat(plans.newHostLink(event.partyCode(), event.id())).isTrue();
         String old = plans.hostToken(event.partyCode(), event.id()).orElseThrow();
         assertThat(plans.byHostToken(old)).contains(new EventPlanService.HostEvent(event.id(), event.partyCode()));
-        assertThat(plans.saveByHosts(old, List.of(moment("Pierwszy taniec")), null, "Akcent")).isTrue();
+        assertThat(plans.saveByHosts(old, List.of(moment("Pierwszy taniec")), null, "Akcent", null)).isEqualTo(EventPlanService.Saved.SAVED);
         assertThat(plans.plan(event.id()).savedBy()).isEqualTo("hosts");
 
         assertThat(plans.newHostLink(event.partyCode(), event.id())).isTrue();
         assertThat(plans.byHostToken(old)).isEmpty();
-        assertThat(plans.saveByHosts(old, List.of(moment("nadpisane")), null, null)).isFalse();
+        assertThat(plans.saveByHosts(old, List.of(moment("nadpisane")), null, null, null)).isEqualTo(EventPlanService.Saved.GONE);
         assertThat(plans.plan(event.id()).moments()).containsExactly(moment("Pierwszy taniec"));
 
         assertThat(plans.removeHostLink(event.partyCode(), event.id())).isTrue();
@@ -157,5 +158,76 @@ class EventPlanIT extends PostgresIntegrationTest {
 
         assertThat(jdbc.queryForObject("SELECT count(*) FROM event_plan_item WHERE event_id = ?", Integer.class, event.id())).isZero();
         assertThat(plans.plan(event.id()).moments()).isEmpty();
+    }
+
+    @Test
+    void aSaveFromAnOlderVersion_writesNothing_andOneFromTheCurrentOneDoes() {
+        WishService.Event event = event();
+        String never = plans.plan(event.id()).version();
+        assertThat(never).isEmpty();
+
+        assertThat(plans.save(event.id(), List.of(moment("DJ")), null, null, EventPlanService.BY_DJ, never))
+                .isEqualTo(EventPlanService.Saved.SAVED);
+        String first = plans.plan(event.id()).version();
+        assertThat(first).isNotEmpty();
+        // the hosts' page was opened before the DJ's save
+        plans.newHostLink(event.partyCode(), event.id());
+        String token = plans.hostToken(event.partyCode(), event.id()).orElseThrow();
+        assertThat(plans.saveByHosts(token, List.of(moment("Para")), null, null, never)).isEqualTo(EventPlanService.Saved.CHANGED);
+        assertThat(plans.save(event.id(), List.of(moment("DJ, stara strona")), null, null, EventPlanService.BY_DJ, never))
+                .isEqualTo(EventPlanService.Saved.CHANGED);
+        assertThat(plans.plan(event.id()).moments()).extracting(Moment::label).as("nothing overwritten").containsExactly("DJ");
+
+        assertThat(plans.saveByHosts(token, List.of(moment("Para")), null, null, first)).isEqualTo(EventPlanService.Saved.SAVED);
+        assertThat(plans.plan(event.id()).moments()).extracting(Moment::label).containsExactly("Para");
+        assertThat(plans.plan(event.id()).version()).isNotEqualTo(first);
+    }
+
+    @Test
+    void theHostsLink_savesOnlySoOften() {
+        WishService.Event event = event();
+        plans.newHostLink(event.partyCode(), event.id());
+        String token = plans.hostToken(event.partyCode(), event.id()).orElseThrow();
+        for (int i = 0; i < EventPlanService.HOST_SAVES_PER_WINDOW; i++) {
+            assertThat(plans.saveByHosts(token, List.of(moment("Zapis " + i)), null, null, null)).isEqualTo(EventPlanService.Saved.SAVED);
+        }
+
+        assertThat(plans.saveByHosts(token, List.of(moment("Za dużo")), null, null, null)).isEqualTo(EventPlanService.Saved.TOO_MANY);
+        assertThat(plans.plan(event.id()).moments()).extracting(Moment::label).containsExactly("Zapis " + (EventPlanService.HOST_SAVES_PER_WINDOW - 1));
+        assertThat(plans.save(event.id(), List.of(moment("DJ")), null, null, EventPlanService.BY_DJ, null))
+                .as("the DJ's page is not limited").isEqualTo(EventPlanService.Saved.SAVED);
+    }
+
+    @Test
+    void twoPlansOnOneDay_tonightsIsTheOneUnderWay_andTheListShowsWhichHaveAPlan() {
+        WishService.Event christening = event();
+        WishService.Event wedding = wishes.create(christening.partyCode(), "Wesele", christening.date(), GuestTheme.CLASSIC).orElseThrow();
+        WishService.Event none = wishes.create(christening.partyCode(), "Bez planu", christening.date(), GuestTheme.CLASSIC).orElseThrow();
+        plans.save(christening.id(), List.of(new Moment("Obiad", LocalTime.of(14, 0), "Ktoś - Chrzciny", null)), null, null, EventPlanService.BY_DJ);
+        plans.save(wedding.id(), List.of(new Moment("Wejście pary", LocalTime.of(19, 0), "Zespół - Wesele", null), moment("Tort")),
+                "Disco polo", null, EventPlanService.BY_DJ);
+        java.time.ZonedDateTime day = christening.date().atStartOfDay(com.scan2play.util.Times.DISPLAY_ZONE);
+
+        assertThat(plans.tonight(christening.partyCode(), day.withHour(15).toInstant()).orElseThrow().eventId()).isEqualTo(christening.id());
+        assertThat(plans.tonightSongs(christening.partyCode(), day.withHour(15).plusMinutes(1).toInstant())).isEqualTo("Ktoś - Chrzciny");
+        EventPlanService.Tonight evening = plans.tonight(christening.partyCode(), day.withHour(18).withMinute(30).toInstant()).orElseThrow();
+        assertThat(evening.eventId()).isEqualTo(wedding.id());
+        assertThat(evening.blocked()).isEqualTo("Disco polo");
+        assertThat(plans.tonightSongs(christening.partyCode(), day.withHour(18).withMinute(31).toInstant())).isEqualTo("Zespół - Wesele");
+
+        assertThat(plans.momentCounts(christening.partyCode())).containsOnly(java.util.Map.entry(christening.id(), 1),
+                java.util.Map.entry(wedding.id(), 2)).doesNotContainKey(none.id());
+    }
+
+    @Test
+    void aSave_isSeenTonightAtOnce_notAfterTheKeptHalfMinute() {
+        WishService.Event event = event();
+        java.time.Instant evening = event.date().atTime(20, 0).atZone(com.scan2play.util.Times.DISPLAY_ZONE).toInstant();
+        plans.save(event.id(), List.of(new Moment("Tort", null, "Ktoś - Coś", null)), null, null, EventPlanService.BY_DJ);
+        assertThat(plans.tonightSongs(event.partyCode(), evening)).isEqualTo("Ktoś - Coś");
+
+        plans.save(event.id(), List.of(new Moment("Tort", null, "Ktoś - Inne", null)), null, null, EventPlanService.BY_DJ);
+
+        assertThat(plans.tonightSongs(event.partyCode(), evening.plusSeconds(1))).isEqualTo("Ktoś - Inne");
     }
 }

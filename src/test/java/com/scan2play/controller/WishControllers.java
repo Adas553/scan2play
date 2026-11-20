@@ -57,6 +57,7 @@ final class WishControllers {
         when(eventPlans.newHostLink(anyString(), anyLong())).thenReturn(true);
         when(eventPlans.removeHostLink(anyString(), anyLong())).thenReturn(true);
         when(eventPlans.startFrom(anyLong(), any(), anyString())).thenReturn(true);
+        when(eventPlans.save(anyLong(), any(), any(), any(), any(), any())).thenReturn(com.scan2play.service.EventPlanService.Saved.SAVED);
         DjEventPlanController controller = new DjEventPlanController(wishes, eventPlans, helper, plans, settings, messages);
         ReflectionTestUtils.setField(controller, "rawBaseUrl", "http://localhost:8080");
         return controller;
@@ -65,7 +66,7 @@ final class WishControllers {
     static DjWishesController djWishes(WishService wishes, DjSessionHelper helper, PlanService plans,
                                        PartySettingsCommandService settings, MessageSource messages) {
         DjWishesController controller = new DjWishesController(wishes, helper, plans, mock(DjService.class), mock(DjLibraryService.class),
-                settings, messages);
+                settings, messages, mock(com.scan2play.service.EventPlanService.class));
         ReflectionTestUtils.setField(controller, "rawBaseUrl", "http://localhost:8080");
         return controller;
     }

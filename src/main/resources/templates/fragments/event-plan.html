@@ -14,7 +14,7 @@
 <!--/* What the last form did (plan.done.*): a refusal or a cut in yellow, the rest in green. */-->
 <div th:fragment="planDone" th:if="${planDone != null}" id="planDone" role="status"
      class="alert py-2 mb-0 text-center fw-bold"
-     th:classappend="${planDone == 'saved_cut' or planDone == 'template_not'} ? 'alert-warning' : 'alert-success'"
+     th:classappend="${planDone == 'saved_cut' or planDone == 'template_not' or planDone == 'changed' or planDone == 'too_many'} ? 'alert-warning' : 'alert-success'"
      th:text="${#messages.msgWithParams('eventplan.done.' + planDone, planDoneArg)}">✓ Plan saved</div>
 
 <!--/* While the plan has no moments: start from a template's names (the times and songs left to the people). */-->
@@ -24,30 +24,38 @@
     <label for="planTemplate" class="form-label fw-bold mb-1" th:text="#{eventplan.template.title}">Start from a template</label>
     <p class="small text-secondary mb-2" th:text="#{eventplan.template.help}">It writes the moments' names; you fill in the times and songs.</p>
     <div class="d-flex flex-wrap gap-2">
-        <select id="planTemplate" name="template" class="form-select form-select-sm bg-black text-light border-secondary s2p-plan-template">
+        <select id="planTemplate" name="template" class="form-select form-select-sm s2p-plan-template"
+                th:classappend="${partyCode != null} ? 'bg-black text-light border-secondary'">
             <option th:each="key : ${planTemplates}" th:value="${key}" th:text="#{${'eventplan.template.name.' + key}}">Wedding</option>
         </select>
         <button type="submit" id="planTemplateBtn" class="btn btn-sm btn-outline-light text-nowrap" th:text="#{eventplan.template.use}">Use the template</button>
     </div>
 </form>
 
+<!--/* The fields' look: dark on the DJ's pages, as their other forms (bg-black text-light border-secondary); the light ones of the
+     guests' pages on the hosts' page (no party code there). */-->
+
 <!--/* The plan's form: the moments in their order (their own rows, then spare empty ones — an empty row is not saved), then the
      event's two lists. plan-form.js adds a row, moves one up or down, removes one; without it the spare rows add and an emptied row
      removes. Read only (no Pro): the same fields, disabled, no button. The fields' maxlength is EventPlanService's LABEL_MAX, SONG_MAX and
-     NOTE_MAX (a static class is not reachable from th:attr). */-->
-<form th:fragment="planForm" th:attr="action=@{${planAction}},data-plan-max=${planMax}" method="POST" class="m-0 d-flex flex-column gap-3"
-      id="planForm">
+     NOTE_MAX (a static class is not reachable from th:attr). "version" is the plan's as the page was made: a plan saved by someone
+     else since is not overwritten (EventPlanService.Saved.CHANGED) — the page then shows this form's content again. */-->
+<form th:fragment="planForm" th:attr="action=@{${planAction}},data-plan-max=${planMax},data-plan-draft=${planDraft != null}" method="POST" class="m-0 d-flex flex-column gap-3"
+      id="planForm" th:with="field=${partyCode != null} ? 'bg-black text-light border-secondary' : ''">
     <th:block th:if="${partyCode != null}" th:insert="~{fragments/event-plan :: djFields}"></th:block>
+    <input type="hidden" name="version" th:value="${planVersion}">
     <fieldset th:disabled="${!planEditable}" class="d-flex flex-column gap-3 m-0 p-0 border-0">
     <div>
         <h3 class="h6 fw-bold mb-1" th:text="#{eventplan.moments.title}">The evening's moments</h3>
         <p class="small text-secondary mb-2" th:text="#{eventplan.moments.help}">In order, as they will go…</p>
+        <!--/* what each field of a moment is: a placeholder goes once something is typed */-->
+        <p class="small text-secondary mb-2" id="planLegend" th:text="#{eventplan.moments.legend}">Each moment: the time, its name, the song for it, notes for the DJ.</p>
         <ol class="list-unstyled m-0 d-flex flex-column gap-2" id="planMoments" data-plan-moments>
             <li th:each="m, stat : ${planRows}" class="s2p-plan-row" data-plan-row>
                 <div class="s2p-plan-row-top">
-                    <input type="time" name="time" class="form-control form-control-sm s2p-plan-time" th:value="${m.timeText()}"
+                    <input type="time" name="time" class="form-control form-control-sm s2p-plan-time" th:classappend="${field}" th:value="${m.timeText()}"
                            th:attr="aria-label=#{eventplan.time}" th:id="${'planTime' + stat.index}">
-                    <input type="text" name="label" class="form-control form-control-sm" th:value="${m.label()}" autocomplete="off"
+                    <input type="text" name="label" class="form-control form-control-sm" th:classappend="${field}" th:value="${m.label()}" autocomplete="off"
                            maxlength="60" th:attr="aria-label=#{eventplan.label}"
                            th:placeholder="#{eventplan.label.placeholder}" th:id="${'planLabel' + stat.index}">
                     <span class="s2p-plan-tools" data-plan-tools hidden>
@@ -56,10 +64,10 @@
                         <button type="button" class="btn btn-sm btn-outline-danger" data-plan-remove th:attr="aria-label=#{eventplan.remove}" th:title="#{eventplan.remove}">✕</button>
                     </span>
                 </div>
-                <input type="text" name="song" class="form-control form-control-sm" th:value="${m.song()}" autocomplete="off"
+                <input type="text" name="song" class="form-control form-control-sm" th:classappend="${field}" th:value="${m.song()}" autocomplete="off"
                        maxlength="150" th:attr="aria-label=#{eventplan.song}"
                        th:placeholder="#{eventplan.song.placeholder}" th:id="${'planSong' + stat.index}">
-                <input type="text" name="note" class="form-control form-control-sm" th:value="${m.note()}" autocomplete="off"
+                <input type="text" name="note" class="form-control form-control-sm" th:classappend="${field}" th:value="${m.note()}" autocomplete="off"
                        maxlength="300" th:attr="aria-label=#{eventplan.note}"
                        th:placeholder="#{eventplan.note.placeholder}" th:id="${'planNote' + stat.index}">
             </li>
@@ -70,13 +78,13 @@
         <h3 class="h6 fw-bold mb-1" th:text="#{eventplan.lists.title}">This event's lists</h3>
         <p class="small text-secondary mb-2" th:text="#{eventplan.lists.help(${songListMax})}">One song or artist a line…</p>
         <label for="planBlocked" class="form-label fw-bold mb-1" th:text="#{host.blocked.label}">🚫 Don't play</label>
-        <textarea id="planBlocked" name="blocked" rows="4" maxlength="16000" class="form-control mb-1"
-                  th:text="${eventPlan.blocked()}" th:placeholder="#{host.blocked.placeholder}"></textarea>
+        <textarea id="planBlocked" name="blocked" rows="4" maxlength="16000" class="form-control mb-1" th:classappend="${field}"
+                  th:text="${planBlockedText}" th:placeholder="#{host.blocked.placeholder}"></textarea>
         <div class="s2p-list-count mb-3" data-list-for="planBlocked" aria-live="polite"
              th:attr="data-list-max=${songListMax},data-text-count=#{list.count},data-text-over=#{list.over}"><span data-list-count></span> <span class="s2p-list-warning" data-list-over hidden></span></div>
         <label for="planWanted" class="form-label fw-bold mb-1" th:text="#{host.wanted.label}">⭐ Must play</label>
-        <textarea id="planWanted" name="wanted" rows="4" maxlength="16000" class="form-control mb-1"
-                  th:text="${eventPlan.wanted()}" th:placeholder="#{host.wanted.placeholder}"></textarea>
+        <textarea id="planWanted" name="wanted" rows="4" maxlength="16000" class="form-control mb-1" th:classappend="${field}"
+                  th:text="${planWantedText}" th:placeholder="#{host.wanted.placeholder}"></textarea>
         <div class="s2p-list-count" data-list-for="planWanted" aria-live="polite"
              th:attr="data-list-max=${songListMax},data-text-count=#{list.count},data-text-over=#{list.over}"><span data-list-count></span> <span class="s2p-list-warning" data-list-over hidden></span></div>
     </div>

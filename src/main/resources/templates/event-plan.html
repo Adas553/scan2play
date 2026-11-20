@@ -40,7 +40,7 @@
     <!--/* the hosts' link of this event */-->
     <section th:if="${planEditable}" class="card bg-dark border-secondary p-3" id="planHostCard">
         <h2 class="s2p-card-title" th:text="#{eventplan.host.title}">Link for the hosts</h2>
-        <p class="s2p-card-help mb-2" th:text="#{eventplan.host.help}">The hosts fill in the plan themselves, without an account…</p>
+        <p class="s2p-card-help mb-2" th:text="#{eventplan.host.help(${T(com.scan2play.service.WishService).KEPT_DAYS_AFTER})}">The hosts fill in the plan themselves, without an account…</p>
         <form th:if="${planHostLink == null}" th:action="@{/dj/wishes/{id}/plan/host-link(id=${wishEvent.id()})}" method="POST" class="m-0">
             <input type="hidden" name="partyCode" th:value="${partyCode}">
             <button type="submit" id="planHostMake" class="btn btn-sm btn-outline-light" th:text="#{eventplan.host.make}">🔗 Create the link</button>
@@ -70,7 +70,7 @@
     </section>
 
     <!--/* the plan itself */-->
-    <section class="card bg-dark border-secondary p-3 text-light d-flex flex-column gap-3" id="planCard">
+    <section class="card bg-dark border-secondary p-3 text-light d-flex flex-column gap-3" id="planFormCard">
         <div th:replace="~{fragments/event-plan :: planTemplate}"></div>
         <div th:replace="~{fragments/event-plan :: planForm}"></div>
     </section>

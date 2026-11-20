@@ -28,6 +28,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.util.List;
 import java.util.Locale;
 
 import static com.scan2play.controller.ViewAttributes.*;
@@ -89,9 +90,10 @@ public class DjEventPlanController {
         planService.require(sessionHelper.require(partyCode, StaffPermission.WISHES, authentication, session), PlanFeature.WISHES);
         eventOf(partyCode, id);
         EventPlanService.Moments moments = EventPlanForm.moments(request, messageSource, locale);
-        eventPlanService.save(id, moments.kept(), blocked, wanted, EventPlanService.BY_DJ);
-        done(redirectAttributes, moments.dropped() > 0 || overLimit(blocked, wanted) ? "saved_cut" : "saved",
-                String.valueOf(EventPlanService.MAX_MOMENTS), String.valueOf(SongList.MAX_LINES));
+        EventPlanService.Saved saved = eventPlanService.save(id, moments.kept(), blocked, wanted, EventPlanService.BY_DJ,
+                request.getParameter("version"));
+        EventPlanForm.saved(redirectAttributes, saved, moments, blocked, wanted,
+                saved == EventPlanService.Saved.CHANGED ? eventPlanService.plan(id) : null, messageSource, locale);
         return back(partyCode, id);
     }
 
@@ -102,7 +104,7 @@ public class DjEventPlanController {
                            RedirectAttributes redirectAttributes) {
         planService.require(sessionHelper.require(partyCode, StaffPermission.WISHES, authentication, session), PlanFeature.WISHES);
         eventOf(partyCode, id);
-        java.util.List<String> labels = EventPlanForm.template(template, messageSource, locale);
+        List<String> labels = EventPlanForm.template(template, messageSource, locale);
         done(redirectAttributes, !labels.isEmpty() && eventPlanService.startFrom(id, labels, EventPlanService.BY_DJ)
                 ? "template" : "template_not");
         return back(partyCode, id);
@@ -128,11 +130,11 @@ public class DjEventPlanController {
 
     /**
      * "Użyj na imprezie": the event's "don't play" and "must play" replace the party's — the lists the AI and the queue use tonight.
-     * The permission HOST_LISTS too: it is the party's lists that change.
+     * The permission HOST_LISTS too: it is the party's lists that change. From the panel's card ({@code back=panel}) back to the panel.
      */
     @PostMapping("/use-lists")
-    public String useLists(@PathVariable long id, @RequestParam String partyCode, OAuth2AuthenticationToken authentication,
-                           HttpSession session, RedirectAttributes redirectAttributes) {
+    public String useLists(@PathVariable long id, @RequestParam String partyCode, @RequestParam(required = false) String back,
+                           OAuth2AuthenticationToken authentication, HttpSession session, RedirectAttributes redirectAttributes) {
         PartySettingsEntity party = sessionHelper.require(partyCode, StaffPermission.WISHES, authentication, session);
         sessionHelper.require(partyCode, StaffPermission.HOST_LISTS, authentication, session);
         planService.require(party, PlanFeature.WISHES);
@@ -144,6 +146,9 @@ public class DjEventPlanController {
             s.setHostWanted(SongList.tidy(plan.wanted()));
         });
         log.info("Party [{}]: the lists of wishes event {} put over the party's", partyCode, id);
+        if ("panel".equals(back)) {
+            return "redirect:/dj/dashboard?party=" + partyCode;
+        }
         done(redirectAttributes, "lists_used");
         return back(partyCode, id);
     }
@@ -169,21 +174,14 @@ public class DjEventPlanController {
         return Texts.withoutTrailingSlash(rawBaseUrl) + "/h/e/" + token;
     }
 
-    /** Whether a list was longer than the party's lists keep: the first ones were saved. */
-    static boolean overLimit(String blocked, String wanted) {
-        return SongList.entries(blocked) > SongList.MAX_LINES || SongList.entries(wanted) > SongList.MAX_LINES;
-    }
-
     private static void found(boolean changed) {
         if (!changed) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
     }
 
-    /** What the page says after a form: {@code plan.done.<key>}, with its arguments. */
     private static void done(RedirectAttributes redirectAttributes, String key, String... args) {
-        redirectAttributes.addFlashAttribute(PLAN_DONE, key);
-        redirectAttributes.addFlashAttribute(PLAN_DONE_ARG, args);
+        EventPlanForm.done(redirectAttributes, key, args);
     }
 
     private static String back(String partyCode, long id) {

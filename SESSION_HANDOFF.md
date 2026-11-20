@@ -67,6 +67,10 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
   "Plan wieczoru" above the queue and "📋 z planu" in it (`docs/context/05-1i-wishes.md`). Waits for the owner: a look on a phone (the
   DJ's page, the hosts' page, the print, the panel on the evening), the review and the merge. "Trendy próśb" (variant 0)
   is merged into this branch too, so its PR to `dev` has no conflict.
+- **2026-11-21 — `claude/affectionate-clarke-pb1e2w` (from `dev` = `9840a8d`), pushed, no PR, no migration:** the review of both
+  (`docs/history/review-2026-11-21-event-plan-trends.md`) and its fixes P1–P17 (left: see "Poprawki" there). Waits for the owner: the
+  read, a look on a phone (the hosts' page, the panel's card), then PRs to `dev` / into the branches' PRs to `main`; on Railway
+  `TRENDS_EXCLUDE_PARTIES` = the owner's test parties' codes (optional).
 - **Waits for the owner (from #269):** after the first commit the deploy window holds back (Fri–Sun 18:00–6:00): does Railway
   deploy it on the workflow's re-run? UptimeRobot is set up (the owner, 2026-11-17; `docs/monitoring.md`).
 - **Waits for the owner (the wishes, #263):** the three older Polish texts with "DJ" and a masculine verb (`guest.vote.gone`,

@@ -219,10 +219,13 @@ public class DjDashboardController {
         model.addAttribute(LIBRARY_ON, planService.allows(settings, PlanFeature.LIBRARY) && djService.libraryOf(partyCode).isPresent());
         model.addAttribute(WANTED_SONGS, SongList.of(planService.asPlanned(settings).getHostWanted()));
         model.addAttribute(BLOCKED_SONGS, SongList.of(planService.asPlanned(settings).getHostBlocked()));
-        // "Plan imprezy" (V77, Pro): tonight's event's plan above the queue, its songs marked in it
-        boolean plans = planService.allows(settings, PlanFeature.WISHES);
-        model.addAttribute(PLAN_TONIGHT, plans ? eventPlanService.tonight(partyCode, Instant.now()).orElse(null) : null);
+        // "Plan imprezy" (V77, Pro): tonight's event's plan above the queue, its songs marked in it — for whoever may see the events
+        // (WISHES): the plan's notes hold names, and the privacy policy says who sees them
+        boolean plans = planService.allows(settings, PlanFeature.WISHES) && access.may(StaffPermission.WISHES);
+        EventPlanService.Tonight tonight = plans ? eventPlanService.tonight(partyCode, Instant.now()).orElse(null) : null;
+        model.addAttribute(PLAN_TONIGHT, tonight);
         model.addAttribute(PLAN_SONGS, plans ? SongList.of(eventPlanService.tonightSongs(partyCode, Instant.now())) : null);
+        model.addAttribute(PLAN_LISTS_OFF, tonight != null && listsOff(tonight, settings, access));
 
         return "dashboard";
     }
@@ -598,6 +601,21 @@ public class DjDashboardController {
     }
 
     /**
+     * Whether tonight's event has lists the party does not use yet — the hosts wrote "don't play" on their link and nobody pressed
+     * "Użyj list na imprezie": the card says so to whoever may change the party's lists (HOST_LISTS, with the plan that has them).
+     */
+    private boolean listsOff(EventPlanService.Tonight tonight, PartySettingsEntity settings, PartyStaffService.Access access) {
+        if (tonight.blocked() == null && tonight.wanted() == null) {
+            return false;
+        }
+        if (!access.may(StaffPermission.HOST_LISTS) || !planService.allows(settings, PlanFeature.HOST_LISTS)) {
+            return false;
+        }
+        return !Objects.equals(tonight.blocked(), SongList.tidy(settings.getHostBlocked()))
+                || !Objects.equals(tonight.wanted(), SongList.tidy(settings.getHostWanted()));
+    }
+
+    /**
      * AJAX polling endpoint that returns a partial HTML fragment of the song request table.
      * <p>
      * Supports ETag-based conditional responses: if the queue hasn't changed since the
@@ -637,7 +655,8 @@ public class DjDashboardController {
                 + (planned.getHostBlocked() == null ? "" : "-b" + Integer.toHexString(planned.getHostBlocked().hashCode()))
                 + (plan.allows("TIPS") ? "" : "-f") + library;
         // tonight's plan's songs (V77): a request becomes "📋 z planu" when the plan names it, with the queue as it was
-        String planSongs = plan.allows("WISHES") ? eventPlanService.tonightSongs(partyCode, Instant.now()) : null;
+        String planSongs = plan.allows("WISHES") && access.may(StaffPermission.WISHES)
+                ? eventPlanService.tonightSongs(partyCode, Instant.now()) : null;
         wanted += planSongs == null ? "" : "-p" + Integer.toHexString(planSongs.hashCode());
         String etag = "\"q-" + fingerprint + wanted + "\"";
 

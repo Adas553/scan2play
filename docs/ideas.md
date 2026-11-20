@@ -256,9 +256,10 @@ piece of work or when a task names an item. A finished item stays here until its
 16. **"Trendy próśb" — what guests ask for at every party (the owner, 2026-11-20: "zacznijmy od 3"; the artifact
    https://claude.ai/artifact/RuFmijFHyhEftWPBEtJAWk; then "rób 0") — **variant 0 on `claude/trendy-report`, not released (no
    migration): "Trendy" in the owner's daily report (`SongTrendsService`, Section 5.1c); A–D wait for its numbers.** A reason for a DJ
-   to open the panel in a week with no party, from data only Scan2Play has. The rules: parties counted, not votes; only requests the
-   AI let through (`checked`), not the DJ's, the demo's or test parties'; a song on 3+ parties, a list only with 10+ parties in 30
-   days; "rising" = the last 14 days against the 14 before; computed nightly after the purge, kept in memory. **0** (recommended
+   to open the panel in a week with no party, from data only Scan2Play has. The rules: parties counted, not votes — a party is a
+   DJ's, so it is DJs (the report says "DJ-ów"); only requests the AI let through (`checked`), not the DJ's, the demo's or the
+   owner's test parties' (`TRENDS_EXCLUDE_PARTIES`); a song of 3+ DJs, a list only with 10+ DJs in 28 days; "rising" = the last 14
+   days against the 14 before (review 2026-11-21 P14); computed nightly after the purge, kept in memory. **0** (recommended
    first): a "Trendy" section in the owner's daily report — does the data suffice? **A:** a card "Na topie" in the panel (top 10
    Free, the whole list and "masz / brakuje Ci" from the library Pro — item 13's "Brakuje Ci" lives here); **B:** a Monday e-mail
    (a switch, consent, the privacy policy); **C:** a public `/trendy` (marketing, threshold 5); **D (later):** per occasion — needs the
@@ -273,6 +274,8 @@ piece of work or when a task names an item. A finished item stays here until its
    osiemnastka / urodziny / impreza firmowa, A then B. One more pick of ours: the event has its own two lists, put over the party's by
    "Użyj list na imprezie" — two weddings planned at once must not overwrite each other. Details: `docs/context/05-1i-wishes.md`.
    **B, done too:** a card "Plan wieczoru" above the queue on the event's evening (the next moment counted down by the DJ's device,
-   ticked off on it, "📋 z planu" in the queue). **Later, only if DJs ask:** C a push 10 minutes before a moment; D the DJ's own templates; E the
+   ticked off on it, "📋 z planu" in the queue). Its review (`docs/history/review-2026-11-21-event-plan-trends.md`) and the fixes:
+   a save over a plan changed meanwhile refused with the typed content kept, a limit on the hosts' link, the card only with WISHES,
+   "Użyj ich" on the card, ticks by name, the countdown in Polish time, two plans a day, the settings' row "Życzenia i plan imprezy". **Later, only if DJs ask:** C a push 10 minutes before a moment; D the DJ's own templates; E the
    plan in the hosts' evening summary. **Rejected:** a chat or comments, contracts and payments, a form builder first, the AI checking
    the plan.

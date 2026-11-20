@@ -68,7 +68,7 @@ class AdminReportIT extends PostgresIntegrationTest {
     private AdminReportService service(Instant now) {
         Mailer mailer = new Mailer(sender, templates, jdbc, "https://www.scan2play.com.pl", Runnable::run);
         return new AdminReportService(siteCounter, parties, evenings, summaries, plans, mailer, new AiHealthMonitor(), new LogTally(),
-                new SongTrendsService(jdbc), jdbc, "owner@example.com", Clock.fixed(now, ZoneOffset.UTC));
+                new SongTrendsService(jdbc, ""), jdbc, "owner@example.com", Clock.fixed(now, ZoneOffset.UTC));
     }
 
     private String organiser(String address) {

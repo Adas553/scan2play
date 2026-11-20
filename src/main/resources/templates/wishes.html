@@ -90,6 +90,8 @@
                     <span class="small text-secondary">
                         <span th:text="${#temporals.format(e.date(), 'dd.MM.yyyy')}">14.06.2027</span> ·
                         <span th:text="#{wishes.count(${e.wishCount()})}">84 wishes</span> ·
+                        <th:block th:if="${planCounts != null and planCounts[e.id()] != null}"><span class="text-light"
+                                th:text="#{wishes.plan.count(${planCounts[e.id()]})}">📋 plan (6)</span> ·</th:block>
                         <span th:text="${e.date().isBefore(today)} ? #{wishes.state.after} : (${e.closed()} ? #{wishes.state.closed} : #{wishes.state.open})">collecting</span>
                     </span>
                 </span>

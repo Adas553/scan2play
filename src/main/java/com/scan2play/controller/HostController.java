@@ -112,15 +112,11 @@ public class HostController {
     public String saveEventPlan(@PathVariable String token, @RequestParam(required = false) String blocked,
                                 @RequestParam(required = false) String wanted, HttpServletRequest request, Locale locale,
                                 RedirectAttributes redirectAttributes) {
-        hostEventOf(token);
+        EventPlanService.HostEvent hostEvent = hostEventOf(token);
         EventPlanService.Moments moments = EventPlanForm.moments(request, messageSource, locale);
-        if (!eventPlanService.saveByHosts(token, moments.kept(), blocked, wanted)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-        }
-        redirectAttributes.addFlashAttribute(PLAN_DONE, moments.dropped() > 0 || DjEventPlanController.overLimit(blocked, wanted)
-                ? "saved_cut" : "saved");
-        redirectAttributes.addFlashAttribute(PLAN_DONE_ARG, new String[] {String.valueOf(EventPlanService.MAX_MOMENTS),
-                String.valueOf(SongList.MAX_LINES)});
+        EventPlanService.Saved saved = eventPlanService.saveByHosts(token, moments.kept(), blocked, wanted, request.getParameter("version"));
+        EventPlanForm.saved(redirectAttributes, saved, moments, blocked, wanted,
+                saved == EventPlanService.Saved.CHANGED ? eventPlanService.plan(hostEvent.id()) : null, messageSource, locale);
         return "redirect:/h/e/" + token;
     }
 

@@ -255,17 +255,27 @@
         </div>
     </section>
 
-    <!--/* "Plan imprezy" on the night (V77, variant B, Pro): tonight's event's plan above the queue — the next moment with its time
-         counted down by this device's clock, the whole plan folded under it, each moment ticked off with ✓. plan-card.js works it;
-         the ticks are this device's (localStorage), nothing is sent. Without the script: the plan as it is, under "Cały plan". */-->
+    <!--/* "Plan imprezy" on the night (V77, variant B, Pro, whoever may see the events — WISHES): tonight's event's plan above the
+         queue — the next moment counted down to its time (data-at: the moment in Polish time, by the server, so a device in another
+         zone counts right), the whole plan folded under it, each moment ticked off with ✓ (by its name and time, data-key: a plan
+         changed meanwhile keeps the ticks on their moments). plan-card.js works it; the ticks are this device's (localStorage),
+         nothing is sent. Without the script: the plan as it is, under "Cały plan". The event's lists not the party's yet: "Użyj"
+         (whoever may change the party's lists). */-->
     <section th:if="${planTonight != null}" id="planCard" class="s2p-plan-card mb-3" aria-labelledby="planCardTitle"
-             th:attr="data-plan-event=${planTonight.eventId()},data-plan-evening=${planTonight.evening()},data-text-in=#{eventplan.card.in},data-text-in-hours=#{eventplan.card.in_hours},data-text-now=#{eventplan.card.now},data-text-done=#{eventplan.card.all_done}">
+             th:attr="data-plan-event=${planTonight.eventId()},data-text-in=#{eventplan.card.in},data-text-in-hours=#{eventplan.card.in_hours},data-text-now=#{eventplan.card.now},data-text-done=#{eventplan.card.all_done}">
         <div class="d-flex flex-wrap align-items-baseline justify-content-between gap-2">
             <h2 id="planCardTitle" class="s2p-plan-card-title"><span th:text="#{eventplan.card.title}">📋 Tonight’s plan</span> <span
                     class="text-secondary fw-normal text-break" th:text="'· ' + ${planTonight.name()}">· Wesele Ani i Kuby</span></h2>
             <a th:href="@{/dj/wishes/{id}/plan(id=${planTonight.eventId()},party=${partyCode})}" id="planCardOpen"
                class="btn btn-sm btn-link px-0" th:text="#{eventplan.card.open}">The whole plan →</a>
         </div>
+        <form th:if="${planListsOff}" th:action="@{/dj/wishes/{id}/plan/use-lists(id=${planTonight.eventId()})}" method="POST"
+              id="planListsOff" class="s2p-plan-lists-off" th:attr="data-confirm=#{eventplan.use.confirm}">
+            <input type="hidden" name="partyCode" th:value="${partyCode}">
+            <input type="hidden" name="back" value="panel">
+            <span th:text="#{eventplan.card.lists_off}">The plan's lists are not the party's yet</span>
+            <button type="submit" id="planListsUse" class="btn btn-sm btn-outline-warning text-nowrap" th:text="#{eventplan.card.lists_use}">Use them</button>
+        </form>
         <p id="planNext" class="s2p-plan-next mb-2" hidden aria-live="polite">
             <span class="s2p-plan-next-when" data-plan-next-when>za 12 min</span>
             <b data-plan-next-label>Tort</b><span class="text-secondary" data-plan-next-song></span>
@@ -274,7 +284,7 @@
             <summary th:text="#{eventplan.card.all(${#lists.size(planTonight.moments())})}">The whole evening (6)</summary>
             <ol class="list-unstyled m-0 mt-2 d-flex flex-column gap-1" id="planMomentsTonight">
                 <li th:each="m, stat : ${planTonight.moments()}" class="s2p-plan-moment" data-plan-moment
-                    th:attr="data-index=${stat.index},data-time=${m.timeText()},data-label=${m.label()},data-song=${m.song()}">
+                    th:attr="data-key=${planTonight.key(m)},data-at=${planTonight.at(m)},data-time=${m.timeText()},data-label=${m.label()},data-song=${m.song()}">
                     <button type="button" class="btn btn-sm btn-outline-secondary s2p-plan-tick" data-plan-tick hidden aria-pressed="false"
                             th:attr="aria-label=#{eventplan.card.tick(${m.label()})}">✓</button>
                     <span class="s2p-plan-moment-time" th:text="${m.time() == null} ? '—' : ${m.timeText()}">23:00</span>

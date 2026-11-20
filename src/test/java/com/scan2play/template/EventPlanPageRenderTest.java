@@ -103,6 +103,7 @@ class EventPlanPageRenderTest {
         party = PartySettingsEntity.builder().partyCode(PARTY).ownerId("owner").active(true).djName("DJ Koko").hostBlocked("Stare")
                 .hostWanted("Stare").build();
         when(wishes.event(PARTY, 7L)).thenReturn(Optional.of(event));
+        when(plans.save(any(Long.class), any(), any(), any(), any(), any())).thenReturn(EventPlanService.Saved.SAVED);
         when(plans.plan(7L)).thenReturn(plan);
         when(plans.hostToken(PARTY, 7L)).thenReturn(Optional.of("Host_tok3n-AbCdEfGhIjKl"));
         // the update runs on the party, as the service does under the row's lock
@@ -191,7 +192,7 @@ class EventPlanPageRenderTest {
         assertThatThrownBy(() -> controller(Plans.enforced(), StaffPermission.all()).save(7L, PARTY, null, null,
                 new MockHttpServletRequest(), PL, user(), new MockHttpSession(), new RedirectAttributesModelMap()))
                 .isInstanceOf(PlanRequiredException.class);
-        verify(plans, never()).save(any(Long.class), any(), any(), any(), any());
+        verify(plans, never()).save(any(Long.class), any(), any(), any(), any(), any());
     }
 
     @Test
@@ -221,7 +222,7 @@ class EventPlanPageRenderTest {
 
         assertThat(back).isEqualTo("redirect:/dj/wishes/7/plan?party=PLAN1");
         verify(plans).save(7L, List.of(new Moment("Tort", LocalTime.of(23, 0), null, null),
-                new Moment("Wejście pary, potem toast", null, null, null)), "Akcent", null, EventPlanService.BY_DJ);
+                new Moment("Wejście pary, potem toast", null, null, null)), "Akcent", null, EventPlanService.BY_DJ, null);
         assertThat(flash.getFlashAttributes().get(ViewAttributes.PLAN_DONE)).isEqualTo("saved");
     }
 
@@ -229,7 +230,7 @@ class EventPlanPageRenderTest {
     void usingTheLists_putsTheEventsListsOverTheParties() {
         RedirectAttributesModelMap flash = new RedirectAttributesModelMap();
 
-        controller(Plans.off(), StaffPermission.all()).useLists(7L, PARTY, user(), new MockHttpSession(), flash);
+        controller(Plans.off(), StaffPermission.all()).useLists(7L, PARTY, null, user(), new MockHttpSession(), flash);
 
         assertThat(party.getHostBlocked()).isEqualTo("Akcent\nDisco polo");
         assertThat(party.getHostWanted()).isEqualTo("Wilki - Baśka");
@@ -248,5 +249,27 @@ class EventPlanPageRenderTest {
                 ">Przykładowy Wykonawca - Tytuł Wejścia<", ">—<", ">Oczepiny<", "Akcent\nDisco polo", ">Drukuj<", "/js/plan-form.js");
         DashboardPageRenderTest.assertNothingInline(html);
         write("event-plan-print.html", html);
+    }
+
+    /** Another party's event (its id in the address, the DJ's own party code): a 404 everywhere, nothing read or written. */
+    @Test
+    void anotherPartysEvent_isNotFound_andNothingIsWritten() {
+        when(wishes.event(PARTY, 99L)).thenReturn(Optional.empty());
+        DjEventPlanController controller = controller(Plans.off(), StaffPermission.all());
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.addParameter("label", "Tort");
+
+        assertThatThrownBy(() -> controller.save(99L, PARTY, null, null, request, PL, user(), new MockHttpSession(),
+                new RedirectAttributesModelMap())).isInstanceOf(org.springframework.web.server.ResponseStatusException.class);
+        assertThatThrownBy(() -> controller.useLists(99L, PARTY, null, user(), new MockHttpSession(), new RedirectAttributesModelMap()))
+                .isInstanceOf(org.springframework.web.server.ResponseStatusException.class);
+        assertThatThrownBy(() -> controller.template(99L, PARTY, "wedding", PL, user(), new MockHttpSession(),
+                new RedirectAttributesModelMap())).isInstanceOf(org.springframework.web.server.ResponseStatusException.class);
+        assertThatThrownBy(() -> controller.print(99L, PARTY, new org.springframework.ui.ConcurrentModel(), user(),
+                new MockHttpSession(), PL)).isInstanceOf(org.springframework.web.server.ResponseStatusException.class);
+        verify(plans, never()).save(any(Long.class), any(), any(), any(), any(), any());
+        verify(plans, never()).startFrom(any(Long.class), any(), any());
+        verify(plans, never()).plan(99L);
+        assertThat(party.getHostBlocked()).isEqualTo("Stare");
     }
 }
