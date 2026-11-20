@@ -20,11 +20,13 @@ it, side by side — `settings-beside-queue-wide`, `settings-above-queue-laptop`
 not greyed): a co-organiser sees "Impreza" by their permissions; the rest of the staff the QR code.
 **The page "Ustawienia imprezy"** (`GET /dj/settings?party=`, `settings.html`, `DjDashboardController.settingsPage`; anyone with
 access to the party — a 403 for another): the heading and the tabs of the panel ("Ustawienia" lit, the panel's width; the cards 800 px),
-then the cards of 6.7, **each folded to one line**
+then the cards of 6.7 in four groups (`06-7-look.md`: Impreza / Dla gości / Ty jako DJ / Dostęp, a group only when a card of it
+shows), **each folded to one line**
 (2026-10-25; `details.s2p-fold`): its heading and on the right its state ("🚫 0 · ⭐ 1 · link",
-"Instagram · napiwki", "2 na gościa · 3 min" or a server limit near, "Utworów: 1 234", "Powiadomienia wł."), none beside "PRO" —
+"Ustawione: 3", "2 na gościa · 3 min" or a server limit near in yellow, "Utworów: 1 234", "Powiadomienia włączone"; nothing set greyed), none beside "PRO" —
 and "▾"; a tap unfolds it, and unfolded its state goes (the fields say it). The folded page is one screen of a phone and the list of
-what can be set (no row of jumps above it); "Obsługa" is a line of the same look with "›", leading to its page (`#staffRow`). The card
+what can be set (no row of jumps above it); "Obsługa", "Życzenia przed imprezą" and "Pytanie do gości" are lines of the same look
+with "›", leading to their pages (`#staffRow`, `#wishesRow`, `#pollsRow` — each page checks the permission itself). The card
 the address names unfolds by itself (`js/folds.js`: `#libraryCard`, "Nowy link" → `#hostListsCard`, "Zainstaluj" under an empty queue → `#deviceCard`, an element
 inside a card too), the others stay folded; a form saved in the background leaves its card unfolded, and the library's card brought
 again after an upload keeps it (`library.js`). The cards — **"Lista gospodarzy"** (`HOST_LISTS`; the lists, the hosts' link — "Nowy link" / "Wyłącz" are sent in the background and

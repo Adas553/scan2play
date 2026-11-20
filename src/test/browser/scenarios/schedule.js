@@ -55,7 +55,7 @@
         run: async function (t) {
             const loads = catchLoads();
             const card = document.getElementById('partyHoursCard');
-            t.step('the first card, folded to the next moment', [card === document.querySelector('#settingsCards > details'),
+            t.step('the first card, folded to the next moment', [card === document.querySelector('#settingsCards details.s2p-fold'),
                 !!card && !card.open, card && card.querySelector('#partyHoursState').textContent.trim()],
                 [true, true, 'Otworzy się dziś o 20:00']);
             unfold();

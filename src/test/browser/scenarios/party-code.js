@@ -21,7 +21,7 @@
             const card = document.getElementById('partyCodeCard');
             t.step('folded to its heading and the code', [!!card && !card.open, card && card.querySelector('#partyCodeState').textContent.trim()],
                 [true, 'HARN1']);
-            t.check('the last card of the page', !!card && card === document.querySelector('#settingsCards > details:last-of-type'));
+            t.check('the last card of the page', !!card && card === Array.from(document.querySelectorAll('#settingsCards details.s2p-fold')).pop());
             card.querySelector('summary').click();
             const button = document.getElementById('partyCodeChangeBtn');
             t.step('unfolded: the button, an outline in the colour of what cannot be undone', [shows(button), button.classList.contains('btn-outline-danger')],

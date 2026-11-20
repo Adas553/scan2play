@@ -61,6 +61,8 @@ class SettingsPageRenderTest {
     private static final String PARTY = "HARN1";
     private static final Path OUT = Path.of("target", "browser-harness");
     private static final Locale PL = Locale.forLanguageTag("pl");
+    /** Between a state's parts ("Ustawione: 3", "🚫 0 · ⭐ 1 · link"), so a phone never puts a part on a line of its own. */
+    private static final String NBSP = String.valueOf((char) 0xA0);
 
     private static SpringTemplateEngine engine;
 
@@ -261,11 +263,18 @@ class SettingsPageRenderTest {
                 .contains("<details class=\"card bg-dark border-secondary s2p-fold\" id=\"hostListsCard\" data-saves-in-place>",
                         "<details class=\"card bg-dark border-secondary s2p-fold\" id=\"libraryCard\" data-saves-in-place>",
                         "<details class=\"card bg-dark border-secondary s2p-fold\" id=\"deviceCard\">",
-                        "class=\"s2p-fold-state\">🚫 0 · ⭐ 1 · link<", "class=\"s2p-fold-state\">Instagram · kontakt · napiwki<",
-                        "class=\"s2p-fold-state\">Nie wgrano<", "<script src=\"/js/folds.js\">")
+                        "class=\"s2p-fold-state\">🚫" + NBSP + "0" + NBSP + "·" + NBSP + "⭐" + NBSP + "1" + NBSP + "·" + NBSP + "link<", "class=\"s2p-fold-state\">Ustawione:" + NBSP + "3<",
+                        "class=\"s2p-fold-state s2p-fold-state-empty\">Nie wgrano<", "<script src=\"/js/folds.js\">")
                 .doesNotContain("id=\"settingsJump\"", "s2p-fold\" id=\"hostListsCard\" open");
-        assertThat(html).as("\"Obsługa\" a row like a folded card, with its state, leading to its page")
-                .contains("id=\"staffRow\"", "href=\"/dj/staff?party=HARN1\"", ">Obsługa<");
+        assertThat(html).as("the cards in four groups, each under its heading")
+                .contains("id=\"settingsGroupParty\">Impreza</h2>", "id=\"settingsGroupGuests\">Dla gości</h2>",
+                        "id=\"settingsGroupDj\">Ty jako DJ</h2>", "id=\"settingsGroupAccess\">Dostęp</h2>");
+        assertThat(html.indexOf("id=\"partyHoursCard\"")).as("\"Limity gości\" right under \"Godziny imprezy\"")
+                .isLessThan(html.indexOf("id=\"limitsCard\"")).isLessThan(html.indexOf("id=\"hostListsCard\""));
+        assertThat(html).as("\"Obsługa\", \"Życzenia\" and \"Pytanie\" rows like a folded card, with their state, leading to their pages")
+                .contains("id=\"staffRow\"", "href=\"/dj/staff?party=HARN1\"", ">Obsługa<",
+                        "href=\"/dj/wishes?party=HARN1\"", "id=\"wishesRow\"", "href=\"/dj/polls?party=HARN1\"", "id=\"pollsRow\"")
+                .doesNotContain("id=\"wishesCard\"", "id=\"pollsCard\"");
         assertThat(html).as("the hosts' lists (V29): both in one form, the hosts' link to copy, a new one asks first")
                 .contains("id=\"hostListsCard\"", "action=\"/dj/dashboard/host-lists\"", "id=\"hostBlockedInput\"", "name=\"blocked\"",
                         ">Hej sokoły</textarea>", ">Lista gospodarzy<", "Jeden utwór lub wykonawca w linii.",
@@ -389,7 +398,7 @@ class SettingsPageRenderTest {
         String none = render(owner(), new GuestRequestLimiter(30, 10, 300, ""), PL);
         assertThat(none).contains("id=\"logoCard\"", "id=\"logoForm\"", "action=\"/dj/logo\"", ">Nie masz jeszcze logo.<",
                         "accept=\"image/png,image/jpeg,image/webp\"", ">PNG, JPEG lub WebP · do 2 MB<", "data-max-bytes=\"2097152\"",
-                        "data-max-side=\"512\"", "id=\"logoPreview\" hidden", "id=\"logoUpload\" disabled", ">Brak<")
+                        "data-max-side=\"512\"", "id=\"logoPreview\" hidden", "id=\"logoUpload\" disabled", "class=\"s2p-fold-state s2p-fold-state-empty\" id=\"logoState\">Nie wgrano<")
                 .doesNotContain("id=\"logoDeleteForm\"", "id=\"logoCurrent\"");
 
         PartySettingsEntity withLogo = party().toBuilder().logoVersion("0123456789abcdef".repeat(4)).build();
@@ -436,6 +445,10 @@ class SettingsPageRenderTest {
         assertThat(html).contains("id=\"hostListsCard\"", "id=\"limitsCard\"", "id=\"deviceCard\"", "id=\"pushToggle\"", "s2p-fold-state")
                 .doesNotContain("id=\"linksCard\"", "action=\"/dj/dashboard/tip-link\"", "action=\"/dj/dashboard/dj-links\"",
                         "href=\"/dj/staff", "id=\"staffRow\"", "id=\"joinStaffForm\"", "id=\"libraryCard\"", "id=\"morningSummaryCard\"");
+        assertThat(html).as("this device alone in the last group: its heading says so, not \"Dostęp\"")
+                .contains("id=\"settingsGroupAccess\">Urządzenie</h2>").doesNotContain(">Dostęp</h2>");
+        assertThat(render(owner(), new GuestRequestLimiter(30, 10, 300, ""), PL)).contains("id=\"settingsGroupAccess\">Dostęp</h2>",
+                "<h3 class=\"s2p-card-title s2p-fold-name\">Obsługa</h3>");
         write("settings-staff.html", html);
     }
 
@@ -475,7 +488,53 @@ class SettingsPageRenderTest {
     }
 
     /**
-     * "Motyw dla gości" (V59): the second card, for whoever may change the vibe (VIBE) — the organiser, a co-organiser —, folded to
+     * A group's condition repeats its cards' (a card rendered alone by its controller has no group around it): a person of the staff
+     * with one permission sees that permission's card in its group — never hidden with the group, never a heading over nothing.
+     * The organiser sees all four groups; the plans enforced change none of it (the staff never see an offer).
+     */
+    @Test
+    void eachPermissionAlone_showsItsCard_inAGroupThatIsNeverEmpty() {
+        Map<StaffPermission, List<String>> cards = Map.of(StaffPermission.OPEN_CLOSE, List.of("partyHoursCard"),
+                StaffPermission.LIMITS, List.of("limitsCard"), StaffPermission.HOST_LISTS, List.of("hostListsCard"),
+                StaffPermission.KIOSK, List.of("kioskCard"), StaffPermission.VIBE, List.of("guestThemeCard"),
+                StaffPermission.WISHES, List.of("wishesRow"), StaffPermission.POLLS, List.of("pollsRow"));
+        for (StaffPermission permission : StaffPermission.values()) {
+            List<String> expected = new java.util.ArrayList<>(cards.getOrDefault(permission, List.of()));
+            expected.add("deviceCard");
+            Map<String, List<String>> groups = groupsOf(render(staff(Set.of(permission)), new GuestRequestLimiter(30, 10, 300, ""), PL));
+            assertThat(groups.values().stream().flatMap(List::stream).toList()).as(permission + " alone").isEqualTo(expected);
+            assertThat(groups).as(permission + " alone: no heading over nothing").allSatisfy((group, ids) -> assertThat(ids).isNotEmpty());
+        }
+        assertThat(groupsOf(render(owner(), new GuestRequestLimiter(30, 10, 300, ""), PL))).as("the organiser").containsExactly(
+                Map.entry("settingsGroupParty", List.of("partyHoursCard", "limitsCard", "hostListsCard", "kioskCard")),
+                Map.entry("settingsGroupGuests", List.of("guestThemeCard", "wishesRow", "pollsRow")),
+                Map.entry("settingsGroupDj", List.of("linksCard", "logoCard", "libraryCard", "morningSummaryCard")),
+                Map.entry("settingsGroupAccess", List.of("staffRow", "deviceCard", "partyCodeCard")));
+        assertThat(groupsOf(render(staff(StaffPermission.all()), new GuestRequestLimiter(30, 10, 300, ""), PL,
+                com.scan2play.service.Plans.enforced())).keySet()).as("every permission, no Pro: the free cards alone, each in its group")
+                .containsExactly("settingsGroupParty", "settingsGroupGuests", "settingsGroupAccess");
+    }
+
+    /** The page's groups in order, each with the ids of its cards and rows. */
+    private static Map<String, List<String>> groupsOf(String html) {
+        Map<String, List<String>> groups = new java.util.LinkedHashMap<>();
+        java.util.regex.Matcher section = java.util.regex.Pattern.compile("<section [^>]*aria-labelledby=\"(\\w+)\"[^>]*>(.*?)</section>",
+                java.util.regex.Pattern.DOTALL).matcher(html);
+        while (section.find()) {
+            List<String> ids = new java.util.ArrayList<>();
+            java.util.regex.Matcher card = java.util.regex.Pattern.compile("<(?:details|a) [^>]*class=\"card [^\"]*\\bs2p-fold(?:-link)?\\b[^>]*>")
+                    .matcher(section.group(2));
+            while (card.find()) {
+                java.util.regex.Matcher id = java.util.regex.Pattern.compile("\\bid=\"(\\w+)\"").matcher(card.group());
+                ids.add(id.find() ? id.group(1) : "?");
+            }
+            groups.put(section.group(1), ids);
+        }
+        return groups;
+    }
+
+    /**
+     * "Motyw dla gości" (V59): the first card of the group "Dla gości", for whoever may change the vibe (VIBE) — the organiser, a co-organiser —, folded to
      * the theme's name; unfolded, a radio per theme on a thumbnail drawn by the theme's own tokens (the page loads guest-themes.css),
      * the party's checked; "Zapisz" only without the script; "Podejrzyj stronę gościa" opens the party page in a new tab. The staff
      * without VIBE never see it. {@code settings.html} carries it for the browser tests; {@code settings-guest-theme.html} a party with
@@ -487,8 +546,8 @@ class SettingsPageRenderTest {
         scary.setGuestTheme(com.scan2play.model.GuestTheme.SCARY);
         String html = render(new PartyStaffService.Access(scary, true, StaffPermission.all()), new GuestRequestLimiter(30, 10, 300, ""), PL);
         assertThat(html).contains("<link href=\"/css/guest-themes.css\" rel=\"stylesheet\">");
-        String card = html.substring(html.indexOf("id=\"guestThemeCard\""), html.indexOf("id=\"hostListsCard\""));
-        assertThat(html.indexOf("id=\"guestThemeCard\"")).as("after the hours").isGreaterThan(html.indexOf("id=\"partyHoursCard\""));
+        String card = html.substring(html.indexOf("id=\"guestThemeCard\""), html.indexOf("id=\"wishesRow\""));
+        assertThat(html.indexOf("id=\"guestThemeCard\"")).as("the first of the group \"Dla gości\"").isGreaterThan(html.indexOf("id=\"settingsGroupGuests\"")).isLessThan(html.indexOf("id=\"wishesRow\""));
         assertThat(card).contains("data-saves-in-place", ">Motyw dla gości<", "id=\"guestThemeState\">Straszny<",
                 ">Goście widzą go na stronie prośby, wyniku, w kiosku i na ekranie TV.<", "action=\"/dj/dashboard/guest-theme\"",
                 "data-in-place", "<noscript><button type=\"submit\"", "href=\"/p/" + PARTY + "\"", "target=\"_blank\" rel=\"noopener\"",
@@ -679,14 +738,14 @@ class SettingsPageRenderTest {
         withKiosk.setKioskToken("Kiosk_123-xyzKiosk_123-x");
         String html = render(new PartyStaffService.Access(withKiosk, true, StaffPermission.all()), new GuestRequestLimiter(30, 10, 300, ""), PL);
         String card = html.substring(html.indexOf("id=\"kioskCard\""), html.indexOf("id=\"linksCard\""));
-        assertThat(card).contains(">Kiosk dla gości<", "id=\"kioskState\">Włączony<",
+        assertThat(card).contains(">Kiosk dla gości<", "class=\"s2p-fold-state\" id=\"kioskState\">Włączony<",
                 "value=\"http://localhost:8080/k/Kiosk_123-xyzKiosk_123-x\" id=\"kioskLinkInput\"", "data-copy-target=\"kioskLinkInput\"",
                 "id=\"kioskOpen\"", "href=\"http://localhost:8080/k/Kiosk_123-xyzKiosk_123-x\" target=\"_blank\"",
                 "action=\"/dj/dashboard/kiosk-link\"", "data-confirm=\"Utworzyć nowy link? Tablet ze starym linkiem przestanie działać.\"",
                 ">Nowy link<", "id=\"kioskLinkOffBtn\"", "Dostęp nadzorowany");
         write("settings-kiosk.html", html);
 
-        assertThat(render(owner(), new GuestRequestLimiter(30, 10, 300, ""), PL)).contains("id=\"kioskState\">Wyłączony<", ">Utwórz link kiosku<")
+        assertThat(render(owner(), new GuestRequestLimiter(30, 10, 300, ""), PL)).contains("class=\"s2p-fold-state s2p-fold-state-empty\" id=\"kioskState\">Wyłączony<", ">Utwórz link kiosku<")
                 .doesNotContain("id=\"kioskLinkInput\"", "id=\"kioskLinkOffBtn\"");
         assertThat(render(staff(StaffRole.QUEUE.permissions()), new GuestRequestLimiter(30, 10, 300, ""), PL))
                 .as("the queue's staff: not theirs").doesNotContain("id=\"kioskCard\"");
@@ -725,7 +784,7 @@ class SettingsPageRenderTest {
         context.setVariable("_csrf", new DefaultCsrfToken("X-CSRF-TOKEN", "_csrf", "harness-csrf-token"));
         String html = engine.process("settings", Set.of("kioskCard"), context);
         assertThat(html.trim()).startsWith("<details").endsWith("</details>");
-        assertThat(html).contains("id=\"kioskCard\" data-saves-in-place open=\"open\"", "id=\"kioskState\">Włączony<",
+        assertThat(html).contains("id=\"kioskCard\" data-saves-in-place open=\"open\"", "class=\"s2p-fold-state\" id=\"kioskState\">Włączony<",
                 "value=\"http://localhost:8080/k/" + row.getKioskToken() + "\"", "id=\"kioskLinkNewBtn\"", ">Nowy link<")
                 .doesNotContain("??");
         write("settings-kiosk-answer.html", html);
@@ -738,7 +797,7 @@ class SettingsPageRenderTest {
         offContext.setVariables(off.asMap());
         offContext.setVariable("_csrf", new DefaultCsrfToken("X-CSRF-TOKEN", "_csrf", "harness-csrf-token"));
         String offHtml = engine.process("settings", Set.of("kioskCard"), offContext);
-        assertThat(offHtml).contains("id=\"kioskState\">Wyłączony<", "id=\"kioskLinkNewBtn\"").doesNotContain("id=\"kioskLinkOffBtn\"");
+        assertThat(offHtml).contains("class=\"s2p-fold-state s2p-fold-state-empty\" id=\"kioskState\">Wyłączony<", "id=\"kioskLinkNewBtn\"").doesNotContain("id=\"kioskLinkOffBtn\"");
         write("settings-kiosk-answer-off.html", offHtml);
     }
 

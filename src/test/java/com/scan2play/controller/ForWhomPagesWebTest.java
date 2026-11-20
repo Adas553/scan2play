@@ -101,7 +101,8 @@ class ForWhomPagesWebTest {
             writeForTheBrowserTests("for-whom-" + path.substring(1) + "-pl.html", html);
         }
         // the pubs' first step (the owner, 2026-10-24: "Raz" read oddly as a heading)
-        assertThat(section(page("/puby", null), "forWhomSteps")).contains("<h3>Na start\n").doesNotContain("<h3>Raz");
+        // (a pattern, not "\n": a Windows checkout has the template with CRLF)
+        assertThat(section(page("/puby", null), "forWhomSteps")).containsPattern("<h3>Na start\\s*</h3>").doesNotContain("<h3>Raz");
     }
 
     @Test

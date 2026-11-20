@@ -46,667 +46,673 @@
     <!--/* the party's code for the scripts (forms.js sends it with every form, V32) */-->
     <input type="hidden" id="partyCode" th:value="${partyCode}">
 
-    <!--/* The folded cards are the page's list of what can be set: no row of jumps above them. "PRO" beside a heading, said once — no
-         state beside it (as the panel's row) */-->
-    <div class="d-flex flex-column gap-3" id="settingsCards">
+    <!--/* The cards in four groups, each under a small heading: the party's own rules, what the guests see and do, the DJ's own
+         (the organiser's alone), and who gets in (the staff, this device, the code). A group shows only when a card of it does (a
+         helper with one permission sees one group, not four headings). Within a group the most used first; "Kod imprezy" last of
+         all — rare, and it makes the posters dead. "PRO" beside a heading, said once — no state beside it (as the panel's row). */-->
+    <div class="d-flex flex-column gap-4" id="settingsCards">
 
-        <!--/* "Godziny imprezy" (V55): when the party opens and closes by itself — a day and a time each, Polish time, either empty —
-             for whoever may open and close it (OPEN_CLOSE), any plan. First: what a DJ sets before an evening. Sent in the background
-             (cards-in-place.js): the server answers with this card alone (the fragment), unfolded, the plan as saved — "✓" on "Zapisz" for a
-             moment, as every card — or why not under it (the fields as typed), and it takes this one's place — the page does not move. Without the script, a page load back here. The
-             quick choices fill the fields from the server's today and tomorrow (schedule.js); "✕" beside a planned moment is a form of
-             its own below the card's form, so Enter in a field saves rather than cancels. */-->
-        <details th:fragment="partyHoursCard" th:if="${access.may('OPEN_CLOSE')}" class="card bg-dark border-secondary s2p-fold s2p-hours" id="partyHoursCard" data-saves-in-place
-                 th:attr="open=${scheduleSaved != null or scheduleError != null} ? 'open' : null"
-                 th:with="typed=${scheduleTyped != null ? scheduleTyped : {schedule.openDate, schedule.openTime, schedule.closeDate, schedule.closeTime}}">
-            <summary class="s2p-fold-summary">
-                <h2 class="s2p-card-title s2p-fold-name" th:text="#{settings.hours.title}">Party hours</h2>
-                <span class="s2p-fold-state" id="partyHoursState"
-                      th:text="${!schedule.any()} ? #{settings.hours.none} : (${schedule.openFirst} ? ${schedule.openText} : ${schedule.closeText})">Not set</span>
-            </summary>
-            <div class="s2p-fold-body">
-            <p class="s2p-card-help mb-1" th:text="#{settings.hours.help}">The party opens and closes by itself…</p>
-            <!--/* follows "Zakończ / Wznów" pressed on this page (common.js showPartyActive) */-->
-            <p class="small text-light mb-3" id="partyHoursNow"
-               th:attr="data-open=#{settings.hours.now.open},data-closed=#{settings.hours.now.closed}"
-               th:text="${isActive} ? #{settings.hours.now.open} : #{settings.hours.now.closed}">The party is open now.</p>
-            <form th:action="@{/dj/dashboard/schedule}" method="POST" class="m-0" id="partyHoursForm" data-in-place
-                  th:attr="data-today=${schedule.today},data-tomorrow=${schedule.tomorrow}">
-                <input type="hidden" name="partyCode" th:value="${partyCode}">
-                <!--/* "Otwórz o" on top, "Zamknij o" under it, whichever comes first (the folded line says the next) */-->
-                <th:block th:each="kind : ${ {'open', 'close'} }"
-                          th:with="isOpen=${kind == 'open'}, text=${isOpen ? schedule.openText : schedule.closeText}">
-                <fieldset class="mb-3" th:id="${kind} + 'Hours'">
-                    <legend class="small fw-semibold text-light mb-1" th:text="${isOpen} ? #{settings.hours.open} : #{settings.hours.close}">Open at</legend>
-                    <div th:if="${text != null}" class="s2p-hours-planned" th:id="${kind} + 'Planned'">
-                        <span th:text="'⏰ ' + ${text}">⏰ Opens on Saturday at 20:00</span>
-                        <button type="submit" class="btn btn-link s2p-hours-cancel" th:form="${kind} + 'HoursCancel'"
-                                th:attr="aria-label=${isOpen} ? #{schedule.cancel.open} : #{schedule.cancel.close}"
-                                th:title="${isOpen} ? #{schedule.cancel.open} : #{schedule.cancel.close}">✕</button>
-                    </div>
-                    <div class="s2p-hours-fields">
-                        <div class="s2p-hours-day">
-                            <label th:for="${kind} + 'Date'" class="form-label small text-secondary-bright mb-1" th:text="#{settings.hours.date}">Day</label>
-                            <input type="date" class="form-control form-control-sm bg-black text-light border-secondary" th:id="${kind} + 'Date'"
-                                   th:name="${kind} + 'Date'" th:value="${typed[isOpen ? 0 : 2]}" th:min="${schedule.today}">
-                        </div>
-                        <div class="s2p-hours-time">
-                            <label th:for="${kind} + 'Time'" class="form-label small text-secondary-bright mb-1" th:text="#{settings.hours.time}">Time</label>
-                            <input type="time" class="form-control form-control-sm bg-black text-light border-secondary" th:id="${kind} + 'Time'"
-                                   th:name="${kind} + 'Time'" th:value="${typed[isOpen ? 1 : 3]}" step="60">
-                        </div>
-                    </div>
-                    <div class="s2p-btn-row mt-2" th:with="first=${isOpen ? '20:00' : '23:00'}, second=${isOpen ? '20:00' : '3:00'}">
-                        <button type="button" class="btn btn-sm btn-outline-secondary s2p-hours-quick" th:attr="data-hours-fill=${kind}"
-                                data-day="today" th:data-time="${first}" th:text="#{settings.hours.today(${first})}">today 20:00</button>
-                        <button type="button" class="btn btn-sm btn-outline-secondary s2p-hours-quick" th:attr="data-hours-fill=${kind}"
-                                data-day="tomorrow" th:data-time="${second.length() < 5 ? '0' + second : second}" th:text="#{settings.hours.tomorrow(${second})}">tomorrow 20:00</button>
-                    </div>
-                </fieldset>
-                </th:block>
-                <!--/* as every card: "✓" / "✗" on the button for a moment (schedule.js), why not in the red line under it */-->
-                <button type="submit" class="btn btn-sm btn-outline-light" id="partyHoursSave" th:text="#{settings.hours.save}">Save</button>
-                <div th:if="${scheduleError != null}" class="small text-danger mt-1" role="alert" id="partyHoursError" tabindex="-1" data-card-error
-                     th:text="#{${scheduleError}}">That time has passed.</div>
-            </form>
-            <form th:each="kind : ${ {'open', 'close'} }" th:id="${kind} + 'HoursCancel'" th:action="@{/dj/dashboard/schedule}"
-                  method="POST" class="d-none" data-in-place>
-                <input type="hidden" name="partyCode" th:value="${partyCode}">
-                <input type="hidden" name="cancel" th:value="${kind}">
-            </form>
-            </div>
-        </details>
-
-        <!--/* "Motyw dla gości" (V59): the look of the guests' pages — the party page, the result, the "party ended" page, the kiosk, the
-             TV — for whoever may change the party's vibe (VIBE), any plan. Each theme a small phone drawn by its own tokens
-             (guest-themes.css: data-guest-theme on the thumbnail), its name under it. Saved as soon as one is picked: the radio sends the
-             form (forms.js data-auto-submit) and the server answers with this card (cards-in-place.js), "✓ Zapisane" in it; without the
-             script the "Zapisz" of <noscript>. "Podejrzyj stronę gościa" opens the party page in a new tab. */-->
-        <details th:fragment="guestThemeCard" th:if="${access.may('VIBE')}" class="card bg-dark border-secondary s2p-fold"
-                 id="guestThemeCard" data-saves-in-place th:attr="open=${guestThemeSaved != null} ? 'open' : null">
-            <summary class="s2p-fold-summary">
-                <h2 class="s2p-card-title s2p-fold-name" th:text="#{settings.guest_theme.title}">Guest theme</h2>
-                <span class="s2p-fold-state" id="guestThemeState" th:text="#{${guestTheme.messageKey()}}">Classic</span>
-            </summary>
-            <div class="s2p-fold-body">
-            <p class="s2p-card-help mb-3" th:text="#{settings.guest_theme.help}">Your guests see it on the party page, the result, the kiosk and the TV.</p>
-            <form th:action="@{/dj/dashboard/guest-theme}" method="POST" class="m-0" id="guestThemeForm" data-in-place>
-                <input type="hidden" name="partyCode" th:value="${partyCode}">
-                <fieldset class="s2p-theme-grid">
-                    <legend class="visually-hidden" th:text="#{settings.guest_theme.title}">Guest theme</legend>
-                    <label th:each="t : ${guestThemes}" class="s2p-theme-pick" th:with="key=${t.name().toLowerCase()}">
-                        <input type="radio" name="theme" class="visually-hidden" th:id="'guestTheme-' + ${key}" th:value="${t.name()}"
-                               th:checked="${t == guestTheme}" data-auto-submit>
-                        <span class="s2p-theme-thumb" aria-hidden="true" th:attr="data-guest-theme=${t.name()}"><span
-                                class="s2p-theme-thumb-card"><span class="s2p-theme-thumb-line"></span><span
-                                class="s2p-theme-thumb-line s2p-theme-thumb-line-short"></span><span class="s2p-theme-thumb-button"></span></span></span>
-                        <span class="s2p-theme-name" th:text="#{${t.messageKey()}}">Classic</span>
-                    </label>
-                </fieldset>
-                <div class="s2p-theme-foot mt-3">
-                    <noscript><button type="submit" class="btn btn-sm btn-outline-light" th:text="#{settings.guest_theme.save}">Save</button></noscript>
-                    <span th:if="${guestThemeSaved != null}" class="small text-light" role="status" id="guestThemeSaved"
-                          th:text="#{settings.guest_theme.saved}">✓ Saved</span>
-                    <a class="btn btn-sm btn-outline-light ms-auto" id="guestThemePreview" th:href="@{/p/{c}(c=${partyCode})}"
-                       target="_blank" rel="noopener" th:text="#{settings.guest_theme.preview}">See the guest page</a>
-                </div>
-            </form>
-            </div>
-        </details>
-
-        <!--/* The hosts' lists (V29): songs not to play (a request for one never reaches the DJ) and songs to play (accepted whatever
-             the AI says, ⭐ in the queue), one per line. The hosts fill them too, by the link made here (/h/{token}, HostController) —
-             "Nowy link" makes the old one dead: a party code is for every event, a link for one. */-->
-        <!--/* Without the Pro plan (V35, the organiser only): the card says so in place of its form — and that the lists wait, when
-             there are some. The staff of a party without Pro do not see the card. */-->
-        <details th:if="${access.may('HOST_LISTS') and (plan.allows('HOST_LISTS') or plan.pro('HOST_LISTS'))}"
-                 class="card bg-dark border-secondary s2p-fold" id="hostListsCard" data-saves-in-place>
-            <summary class="s2p-fold-summary">
-                <h2 class="s2p-card-title s2p-fold-name"><span th:text="#{dashboard.host.title}">The hosts' list</span><th:block th:if="${plan.pro('HOST_LISTS')}"><span th:replace="~{fragments/components :: proMark}"></span></th:block></h2>
-                <span class="s2p-fold-state" th:unless="${plan.pro('HOST_LISTS')}"
-                      th:text="${hostBlockedCount == 0 and hostWantedCount == 0 and hostLink == null} ? #{settings.row.hosts.unused}
-                               : #{settings.row.hosts(${hostBlockedCount}, ${hostWantedCount})} + (${hostLink != null} ? ' · ' + #{settings.row.hosts.link} : '')">Not used</span>
-            </summary>
-            <div class="s2p-fold-body">
-            <p class="s2p-card-help" th:text="#{dashboard.host.help}">One song or artist per line.</p>
-            <th:block th:if="${plan.pro('HOST_LISTS')}"><div
-                 th:replace="~{fragments/components :: proOffer(${hostBlockedCount + hostWantedCount > 0} ? #{plan.hosts.kept(${hostBlockedCount}, ${hostWantedCount})} : #{plan.hosts.offer})}"></div></th:block>
-            <th:block th:unless="${plan.pro('HOST_LISTS')}">
-            <form th:action="@{/dj/dashboard/host-lists}" method="POST" class="m-0" id="hostListsForm">
-                <input type="hidden" name="partyCode" th:value="${partyCode}">
-                <div class="row g-2">
-                    <div class="col-md-6">
-                        <label for="hostBlockedInput" class="form-label text-light small mb-1" th:text="#{host.blocked.label}">🚫 Don't play</label>
-                        <textarea id="hostBlockedInput" name="blocked" rows="3" maxlength="16000"
-                                  class="form-control form-control-sm bg-black text-light border-secondary"
-                                  th:text="${hostBlocked}" th:placeholder="#{host.blocked.placeholder}"></textarea>
-                        <div class="s2p-list-count" data-list-for="hostBlockedInput" aria-live="polite"
-                             th:attr="data-list-max=${songListMax},data-text-count=#{list.count},data-text-over=#{list.over}"><span data-list-count></span> <span class="s2p-list-warning" data-list-over hidden></span></div>
-                    </div>
-                    <div class="col-md-6">
-                        <label for="hostWantedInput" class="form-label text-light small mb-1" th:text="#{host.wanted.label}">⭐ Must play</label>
-                        <textarea id="hostWantedInput" name="wanted" rows="3" maxlength="16000"
-                                  class="form-control form-control-sm bg-black text-light border-secondary"
-                                  th:text="${hostWanted}" th:placeholder="#{host.wanted.placeholder}"></textarea>
-                        <div class="s2p-list-count" data-list-for="hostWantedInput" aria-live="polite"
-                             th:attr="data-list-max=${songListMax},data-text-count=#{list.count},data-text-over=#{list.over}"><span data-list-count></span> <span class="s2p-list-warning" data-list-over hidden></span></div>
-                    </div>
-                </div>
-                <button type="submit" class="btn btn-sm btn-outline-light mt-3" th:text="#{dashboard.vibe.note.save}">Save</button>
-            </form>
-            <div class="mt-3 pt-3 border-top border-secondary" id="hostLinkBox">
-                <span class="d-block text-light small mb-1" th:text="#{dashboard.host.link.label}">Link for the hosts</span>
-                <div th:if="${hostLink != null}" class="input-group input-group-sm mb-2 s2p-host-link">
-                    <input type="text" class="form-control bg-dark text-light border-secondary" th:value="${hostLink}" id="hostLinkInput" readonly
-                           th:attr="aria-label=#{dashboard.host.link.label}">
-                    <button class="btn btn-outline-secondary" type="button" data-copy-target="hostLinkInput" th:text="#{dashboard.qr.copy}"
-                            th:attr="data-copied=#{dashboard.qr.copied}">Copy</button>
-                </div>
-                <!--/* the link's two buttons in a row of their own: on a phone each half of it */-->
-                <div class="s2p-btn-row">
-                    <!--/* sent in the background (cards-in-place.js): the settings page the server answers with gives this box anew — the
-                         new link at once, the lists as typed, the page not moved; without the script a full reload. The field is "link",
-                         not "action": an input named "action" hides the form's own form.action from the scripts */-->
-                    <form th:action="@{/dj/dashboard/host-link}" method="POST" class="m-0" data-in-place="hostLinkBox"
-                          th:attr="data-confirm=${hostLink != null} ? #{dashboard.host.link.renew.confirm} : null">
+        <section class="s2p-settings-group" aria-labelledby="settingsGroupParty" th:if="${access.may('OPEN_CLOSE') or (access.may('LIMITS') and (plan.allows('GUEST_LIMITS') or plan.pro('GUEST_LIMITS'))) or (access.may('HOST_LISTS') and (plan.allows('HOST_LISTS') or plan.pro('HOST_LISTS'))) or (access.may('KIOSK') and (plan.allows('KIOSK') or plan.pro('KIOSK')))}">
+            <h2 class="s2p-settings-group-title" id="settingsGroupParty" th:text="#{settings.group.party}">The party</h2>
+            <div class="d-flex flex-column gap-2">
+                <!--/* "Godziny imprezy" (V55): when the party opens and closes by itself — a day and a time each, Polish time, either empty —
+                     for whoever may open and close it (OPEN_CLOSE), any plan. First: what a DJ sets before an evening. Sent in the background
+                     (cards-in-place.js): the server answers with this card alone (the fragment), unfolded, the plan as saved — "✓" on "Zapisz" for a
+                     moment, as every card — or why not under it (the fields as typed), and it takes this one's place — the page does not move. Without the script, a page load back here. The
+                     quick choices fill the fields from the server's today and tomorrow (schedule.js); "✕" beside a planned moment is a form of
+                     its own below the card's form, so Enter in a field saves rather than cancels. */-->
+                <details th:fragment="partyHoursCard" th:if="${access.may('OPEN_CLOSE')}" class="card bg-dark border-secondary s2p-fold s2p-hours" id="partyHoursCard" data-saves-in-place
+                         th:attr="open=${scheduleSaved != null or scheduleError != null} ? 'open' : null"
+                         th:with="typed=${scheduleTyped != null ? scheduleTyped : {schedule.openDate, schedule.openTime, schedule.closeDate, schedule.closeTime}}">
+                    <summary class="s2p-fold-summary">
+                        <h3 class="s2p-card-title s2p-fold-name" th:text="#{settings.hours.title}">Party hours</h3>
+                        <span class="s2p-fold-state" id="partyHoursState" th:classappend="${!schedule.any()} ? 's2p-fold-state-empty'"
+                              th:text="${!schedule.any()} ? #{settings.hours.none} : (${schedule.openFirst} ? ${schedule.openText} : ${schedule.closeText})">Not set</span>
+                    </summary>
+                    <div class="s2p-fold-body">
+                    <p class="s2p-card-help mb-1" th:text="#{settings.hours.help}">The party opens and closes by itself…</p>
+                    <!--/* follows "Zakończ / Wznów" pressed on this page (common.js showPartyActive) */-->
+                    <p class="small text-light mb-3" id="partyHoursNow"
+                       th:attr="data-open=#{settings.hours.now.open},data-closed=#{settings.hours.now.closed}"
+                       th:text="${isActive} ? #{settings.hours.now.open} : #{settings.hours.now.closed}">The party is open now.</p>
+                    <form th:action="@{/dj/dashboard/schedule}" method="POST" class="m-0" id="partyHoursForm" data-in-place
+                          th:attr="data-today=${schedule.today},data-tomorrow=${schedule.tomorrow}">
                         <input type="hidden" name="partyCode" th:value="${partyCode}">
-                        <input type="hidden" name="link" value="new">
-                        <button type="submit" id="hostLinkNewBtn" class="btn btn-sm btn-outline-light text-nowrap"
-                                th:text="${hostLink != null} ? #{dashboard.host.link.renew} : #{dashboard.host.link.create}">Make a link</button>
+                        <!--/* "Otwórz o" on top, "Zamknij o" under it, whichever comes first (the folded line says the next) */-->
+                        <th:block th:each="kind : ${ {'open', 'close'} }"
+                                  th:with="isOpen=${kind == 'open'}, text=${isOpen ? schedule.openText : schedule.closeText}">
+                        <fieldset class="mb-3" th:id="${kind} + 'Hours'">
+                            <legend class="small fw-semibold text-light mb-1" th:text="${isOpen} ? #{settings.hours.open} : #{settings.hours.close}">Open at</legend>
+                            <div th:if="${text != null}" class="s2p-hours-planned" th:id="${kind} + 'Planned'">
+                                <span th:text="'⏰ ' + ${text}">⏰ Opens on Saturday at 20:00</span>
+                                <button type="submit" class="btn btn-link s2p-hours-cancel" th:form="${kind} + 'HoursCancel'"
+                                        th:attr="aria-label=${isOpen} ? #{schedule.cancel.open} : #{schedule.cancel.close}"
+                                        th:title="${isOpen} ? #{schedule.cancel.open} : #{schedule.cancel.close}">✕</button>
+                            </div>
+                            <div class="s2p-hours-fields">
+                                <div class="s2p-hours-day">
+                                    <label th:for="${kind} + 'Date'" class="form-label small text-secondary-bright mb-1" th:text="#{settings.hours.date}">Day</label>
+                                    <input type="date" class="form-control form-control-sm bg-black text-light border-secondary" th:id="${kind} + 'Date'"
+                                           th:name="${kind} + 'Date'" th:value="${typed[isOpen ? 0 : 2]}" th:min="${schedule.today}">
+                                </div>
+                                <div class="s2p-hours-time">
+                                    <label th:for="${kind} + 'Time'" class="form-label small text-secondary-bright mb-1" th:text="#{settings.hours.time}">Time</label>
+                                    <input type="time" class="form-control form-control-sm bg-black text-light border-secondary" th:id="${kind} + 'Time'"
+                                           th:name="${kind} + 'Time'" th:value="${typed[isOpen ? 1 : 3]}" step="60">
+                                </div>
+                            </div>
+                            <div class="s2p-btn-row mt-2" th:with="first=${isOpen ? '20:00' : '23:00'}, second=${isOpen ? '20:00' : '3:00'}">
+                                <button type="button" class="btn btn-sm btn-outline-secondary s2p-hours-quick" th:attr="data-hours-fill=${kind}"
+                                        data-day="today" th:data-time="${first}" th:text="#{settings.hours.today(${first})}">today 20:00</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary s2p-hours-quick" th:attr="data-hours-fill=${kind}"
+                                        data-day="tomorrow" th:data-time="${second.length() < 5 ? '0' + second : second}" th:text="#{settings.hours.tomorrow(${second})}">tomorrow 20:00</button>
+                            </div>
+                        </fieldset>
+                        </th:block>
+                        <!--/* as every card: "✓" / "✗" on the button for a moment (schedule.js), why not in the red line under it */-->
+                        <button type="submit" class="btn btn-sm btn-outline-light" id="partyHoursSave" th:text="#{settings.hours.save}">Save</button>
+                        <div th:if="${scheduleError != null}" class="small text-danger mt-1" role="alert" id="partyHoursError" tabindex="-1" data-card-error
+                             th:text="#{${scheduleError}}">That time has passed.</div>
                     </form>
-                    <form th:if="${hostLink != null}" th:action="@{/dj/dashboard/host-link}" method="POST" class="m-0" data-in-place="hostLinkBox">
+                    <form th:each="kind : ${ {'open', 'close'} }" th:id="${kind} + 'HoursCancel'" th:action="@{/dj/dashboard/schedule}"
+                          method="POST" class="d-none" data-in-place>
                         <input type="hidden" name="partyCode" th:value="${partyCode}">
-                        <input type="hidden" name="link" value="off">
-                        <button type="submit" id="hostLinkOffBtn" class="btn btn-sm btn-outline-danger text-nowrap" th:text="#{dashboard.host.link.off}">Turn off</button>
+                        <input type="hidden" name="cancel" th:value="${kind}">
                     </form>
-                </div>
-                <p th:if="${hostLinkUntil != null}" class="small text-secondary mt-1 mb-0" id="hostLinkUntil"
-                   th:text="#{link.works_until(${hostLinkUntil})}">Works until 14.11.</p>
-            </div>
-            </th:block>
-            </div>
-        </details>
-
-        <!--/* The venue's kiosk (V56, Pro): a tablet at the bar for the guests without a phone — its secret link (/k/{token},
-             KioskController) made here, made again (the old tablet's link dead: asks first) or taken away, copied or opened. Whoever
-             has the permission KIOSK; without Pro, the organiser sees the offer, the staff not the card. Its forms are sent in the
-             background and the server's card takes this one's place (cards-in-place.js, data-saves-in-place): the page does not move.
-             Without the script, page loads back to this card. */-->
-        <details th:fragment="kioskCard" th:if="${access.may('KIOSK') and (plan.allows('KIOSK') or plan.pro('KIOSK'))}"
-                 class="card bg-dark border-secondary s2p-fold" id="kioskCard" data-saves-in-place
-                 th:attr="open=${cardSaved != null} ? 'open' : null">
-            <summary class="s2p-fold-summary">
-                <h2 class="s2p-card-title s2p-fold-name"><span th:text="#{settings.kiosk.title}">Guest kiosk</span><th:block th:if="${plan.pro('KIOSK')}"><span th:replace="~{fragments/components :: proMark}"></span></th:block></h2>
-                <span class="s2p-fold-state" id="kioskState" th:unless="${plan.pro('KIOSK')}"
-                      th:text="${kioskLink != null} ? #{settings.kiosk.on} : #{settings.kiosk.none}">Off</span>
-            </summary>
-            <div class="s2p-fold-body">
-            <th:block th:if="${plan.pro('KIOSK')}"><div th:replace="~{fragments/components :: proOffer(#{plan.kiosk.offer})}"></div>
-                <!--/* a link made with Pro opens nothing now; taken away here, it does not come back with Pro by itself */-->
-                <th:block th:if="${kioskLink != null}">
-                <p class="small text-secondary mt-2 mb-0" id="kioskOldHelp" th:text="#{settings.kiosk.old_help}">A kiosk link made with Pro opens nothing without it…</p>
-                <form th:action="@{/dj/dashboard/kiosk-link}" method="POST" class="m-0 mt-2" data-in-place>
-                    <input type="hidden" name="partyCode" th:value="${partyCode}">
-                    <input type="hidden" name="link" value="off">
-                    <button type="submit" id="kioskLinkOffBtn" class="btn btn-sm btn-outline-danger text-nowrap" th:text="#{settings.kiosk.off_old}">Remove the old kiosk link</button>
-                </form>
-                </th:block>
-            </th:block>
-            <th:block th:unless="${plan.pro('KIOSK')}">
-            <p class="s2p-card-help" th:text="#{settings.kiosk.help}">A tablet at the bar for guests without a phone…</p>
-            <div th:if="${kioskLink != null}" class="input-group input-group-sm mb-2 s2p-host-link">
-                <input type="text" class="form-control bg-dark text-light border-secondary" th:value="${kioskLink}" id="kioskLinkInput" readonly
-                       th:attr="aria-label=#{settings.kiosk.title}">
-                <button class="btn btn-outline-secondary" type="button" data-copy-target="kioskLinkInput" th:text="#{dashboard.qr.copy}"
-                        th:attr="data-copied=#{dashboard.qr.copied}">Copy</button>
-                <a class="btn btn-outline-secondary" id="kioskOpen" th:href="${kioskLink}" target="_blank" rel="noopener"
-                   th:text="#{settings.kiosk.open}">Open the kiosk</a>
-            </div>
-            <div class="s2p-btn-row">
-                <form th:action="@{/dj/dashboard/kiosk-link}" method="POST" class="m-0" data-in-place
-                      th:attr="data-confirm=${kioskLink != null} ? #{settings.kiosk.renew.confirm} : null">
-                    <input type="hidden" name="partyCode" th:value="${partyCode}">
-                    <input type="hidden" name="link" value="new">
-                    <button type="submit" id="kioskLinkNewBtn" class="btn btn-sm btn-outline-light text-nowrap"
-                            th:text="${kioskLink != null} ? #{settings.kiosk.renew} : #{settings.kiosk.create}">Make the kiosk link</button>
-                </form>
-                <form th:if="${kioskLink != null}" th:action="@{/dj/dashboard/kiosk-link}" method="POST" class="m-0" data-in-place>
-                    <input type="hidden" name="partyCode" th:value="${partyCode}">
-                    <input type="hidden" name="link" value="off">
-                    <button type="submit" id="kioskLinkOffBtn" class="btn btn-sm btn-outline-danger text-nowrap" th:text="#{settings.kiosk.off}">Turn off</button>
-                </form>
-            </div>
-            <p class="small text-secondary mt-2 mb-0" id="kioskTip" th:text="#{settings.kiosk.tip}">Guided Access on an iPad…</p>
-            </th:block>
-            </div>
-        </details>
-
-        <!--/* "Życzenia przed imprezą" (V68): the guests write songs before an event, on its own link — the card leads to the page of
-             the events and their wishes (DjWishesController); its state the events collecting now. Whoever has WISHES; without Pro
-             the organiser sees the offer here and on the page. */-->
-        <details th:if="${access.may('WISHES') and (plan.allows('WISHES') or plan.pro('WISHES'))}"
-                 class="card bg-dark border-secondary s2p-fold" id="wishesCard">
-            <summary class="s2p-fold-summary">
-                <h2 class="s2p-card-title s2p-fold-name"><span th:text="#{wishes.title}">Wishes before the party</span><th:block th:if="${plan.pro('WISHES')}"><span th:replace="~{fragments/components :: proMark}"></span></th:block></h2>
-                <span class="s2p-fold-state" id="wishesState" th:unless="${plan.pro('WISHES')}"
-                      th:text="${wishOpen > 0} ? #{settings.wishes.open(${wishOpen})} : #{settings.wishes.none}">None</span>
-            </summary>
-            <div class="s2p-fold-body">
-                <th:block th:if="${plan.pro('WISHES')}"><div th:replace="~{fragments/components :: proOffer(#{plan.wishes.offer})}"></div></th:block>
-                <th:block th:unless="${plan.pro('WISHES')}">
-                <p class="s2p-card-help" th:text="#{settings.wishes.help}">Send the guests a link with the invitation…</p>
-                <a th:href="@{/dj/wishes(party=${partyCode})}" id="wishesOpen" class="btn btn-sm btn-outline-light"
-                   th:text="#{settings.wishes.go}">Events and wishes</a>
-                </th:block>
-            </div>
-        </details>
-
-        <!--/* "Pytanie do gości" (V74): the DJ's own question to the room, answered on the guests' page — the card leads to the page of
-             the questions and their results (DjPollsController); its state the question asked now. Whoever has POLLS; without Pro
-             the organiser sees the offer here and on the page. */-->
-        <details th:if="${access.may('POLLS') and (plan.allows('POLLS') or plan.pro('POLLS'))}"
-                 class="card bg-dark border-secondary s2p-fold" id="pollsCard">
-            <summary class="s2p-fold-summary">
-                <h2 class="s2p-card-title s2p-fold-name"><span th:text="#{polls.title}">Question for the guests</span><th:block th:if="${plan.pro('POLLS')}"><span th:replace="~{fragments/components :: proMark}"></span></th:block></h2>
-                <span class="s2p-fold-state" id="pollsState" th:unless="${plan.pro('POLLS')}"
-                      th:text="${pollAsked != null} ? #{settings.polls.asked} : #{settings.polls.none}">None</span>
-            </summary>
-            <div class="s2p-fold-body">
-                <th:block th:if="${plan.pro('POLLS')}"><div th:replace="~{fragments/components :: proOffer(#{plan.polls.offer})}"></div></th:block>
-                <th:block th:unless="${plan.pro('POLLS')}">
-                <p class="s2p-card-help" th:text="#{settings.polls.help}">Ask the room a question of your own…</p>
-                <a th:href="@{/dj/polls(party=${partyCode})}" id="pollsOpen" class="btn btn-sm btn-outline-light"
-                   th:text="#{settings.polls.go}">Questions and results</a>
-                </th:block>
-            </div>
-        </details>
-
-        <!--/* The DJ's profiles (V24) and tip link (V27) — the owner's alone (money): the guests see them under "Kto gra" and on the QR
-             print. "@name" or a link copied from the app; the server keeps an https address on that site (SocialLinks, TipLinks) —
-             400 when it is not one, and the form says why. One "Zapisz" for the profiles, one for the tip link (two endpoints). */-->
-        <details th:if="${isOwner}" class="card bg-dark border-secondary s2p-fold" id="linksCard"
-                 th:with="sites=${ {instagramUrl != null ? 'Instagram' : null, facebookUrl != null ? 'Facebook' : null, tiktokUrl != null ? 'TikTok' : null, bookingEmail != null or bookingPhone != null ? #messages.msg('settings.row.links.contact') : null, tipUrl != null ? #messages.msg('settings.row.links.tips') : null} }">
-            <summary class="s2p-fold-summary">
-                <h2 class="s2p-card-title s2p-fold-name"><span th:text="#{dashboard.links.title}">Profiles and tips</span><th:block th:if="${plan.pro('PROFILES')}"><span th:replace="~{fragments/components :: proMark}"></span></th:block></h2>
-                <span class="s2p-fold-state" th:unless="${plan.pro('PROFILES')}" th:with="named=${#strings.listJoin(sites.?[#this != null], ' · ')}"
-                      th:text="${#strings.isEmpty(named)} ? #{settings.row.links.none} : ${named}">Instagram · tips</span>
-            </summary>
-            <div class="s2p-fold-body">
-            <p class="s2p-card-help" th:text="#{dashboard.dj.links.label}">Guests see them on their page and the print.</p>
-            <th:block th:if="${plan.pro('PROFILES')}"><div
-                 th:replace="~{fragments/components :: proOffer(${instagramUrl != null or facebookUrl != null or tiktokUrl != null or bookingEmail != null or bookingPhone != null or tipUrl != null} ? #{plan.links.kept} : #{plan.links.offer})}"></div></th:block>
-            <th:block th:unless="${plan.pro('PROFILES')}">
-            <form th:action="@{/dj/dashboard/dj-links}" method="POST" class="m-0" id="djLinksForm">
-                <input type="hidden" name="partyCode" th:value="${partyCode}">
-                <div class="d-flex flex-column gap-2">
-                    <input type="text" id="instagramInput" name="instagram" maxlength="200" autocomplete="off"
-                           class="form-control form-control-sm bg-black text-light border-secondary" aria-label="Instagram"
-                           th:value="${instagramUrl}" th:placeholder="#{dashboard.dj.links.instagram}">
-                    <input type="text" id="facebookInput" name="facebook" maxlength="200" autocomplete="off"
-                           class="form-control form-control-sm bg-black text-light border-secondary" aria-label="Facebook"
-                           th:value="${facebookUrl}" th:placeholder="#{dashboard.dj.links.facebook}">
-                    <input type="text" id="tiktokInput" name="tiktok" maxlength="200" autocomplete="off"
-                           class="form-control form-control-sm bg-black text-light border-secondary" aria-label="TikTok"
-                           th:value="${tiktokUrl}" th:placeholder="#{dashboard.dj.links.tiktok}">
-                </div>
-                <button type="submit" class="btn btn-sm btn-outline-light mt-3" th:text="#{dashboard.vibe.note.save}">Save</button>
-                <div class="small text-danger mt-1" data-form-error hidden th:text="#{dashboard.dj.links.invalid}">Not a profile</div>
-            </form>
-            <!--/* The contact for bookings (V67): the guests see it under "Zarezerwuj tego DJ-a" — a request that reached the DJ, the page
-                 "party ended" — and write or call the DJ straight. On a public page: the help says to give a business one. */-->
-            <form th:action="@{/dj/dashboard/booking-contact}" method="POST" class="m-0 mt-3 pt-3 border-top border-secondary" id="bookingContactForm" novalidate>
-                <input type="hidden" name="partyCode" th:value="${partyCode}">
-                <p class="form-label d-block text-light small mb-1" th:text="#{dashboard.booking.label}">Contact for bookings</p>
-                <div class="d-flex flex-column gap-2">
-                    <input type="text" inputmode="email" id="bookingEmailInput" name="bookingEmail" maxlength="254" autocomplete="off"
-                           class="form-control form-control-sm bg-black text-light border-secondary" th:aria-label="#{dashboard.booking.email}"
-                           th:value="${bookingEmail}" th:placeholder="#{dashboard.booking.email}">
-                    <input type="tel" id="bookingPhoneInput" name="bookingPhone" maxlength="20" autocomplete="off"
-                           class="form-control form-control-sm bg-black text-light border-secondary" th:aria-label="#{dashboard.booking.phone}"
-                           th:value="${bookingPhone}" th:placeholder="#{dashboard.booking.phone}">
-                </div>
-                <div class="small text-secondary mt-1" th:text="#{dashboard.booking.help}">Guests see it under "Book this DJ".</div>
-                <button type="submit" class="btn btn-sm btn-outline-light mt-3" th:text="#{dashboard.vibe.note.save}">Save</button>
-                <div class="small text-danger mt-1" data-form-error hidden th:text="#{dashboard.booking.invalid}">Not an address</div>
-            </form>
-            <form th:action="@{/dj/dashboard/tip-link}" method="POST" class="m-0 mt-3 pt-3 border-top border-secondary" id="tipLinkForm">
-                <input type="hidden" name="partyCode" th:value="${partyCode}">
-                <label for="tipInput" class="form-label d-block text-light small mb-1" th:text="#{dashboard.tip.label}">Tip link</label>
-                <input type="text" id="tipInput" name="tip" maxlength="200" autocomplete="off"
-                       class="form-control form-control-sm bg-black text-light border-secondary"
-                       th:value="${tipUrl}" th:placeholder="#{dashboard.tip.placeholder}">
-                <div class="small text-secondary mt-1" th:text="#{dashboard.tip.help}">The money goes straight to you.</div>
-                <!--/* "Zapisz" under the field, as the profiles' above: one card, one way */-->
-                <button type="submit" class="btn btn-sm btn-outline-light mt-3" th:text="#{dashboard.vibe.note.save}">Save</button>
-                <div class="small text-danger mt-1" data-form-error hidden th:text="#{dashboard.tip.invalid}">Not a tip link</div>
-            </form>
-            </th:block>
-            </div>
-        </details>
-
-        <!--/* The DJ's logo (V45, Pro): any image the browser can read, drawn by logo.js at most 512 px a side and sent as a PNG (the
-             request's body, as the library: PartyLogoController); the server makes its own PNG of it. Shown on the guest pages, the
-             TV, the print and the summary. The organiser's alone; without Pro the offer, and a logo saved before can be deleted. */-->
-        <details th:if="${isOwner}" class="card bg-dark border-secondary s2p-fold" id="logoCard">
-            <summary class="s2p-fold-summary">
-                <h2 class="s2p-card-title s2p-fold-name"><span th:text="#{settings.logo.title}">Your logo</span><th:block th:if="${plan.pro('LOGO')}"><span th:replace="~{fragments/components :: proMark}"></span></th:block></h2>
-                <span class="s2p-fold-state" th:unless="${plan.pro('LOGO')}" id="logoState"
-                      th:text="${djLogo != null} ? #{settings.row.logo} : #{settings.row.logo.none}">Uploaded</span>
-            </summary>
-            <div class="s2p-fold-body">
-            <th:block th:if="${plan.pro('LOGO')}">
-            <div th:replace="~{fragments/components :: proOffer(${djLogo != null} ? #{plan.logo.kept} : #{plan.logo.offer})}"></div>
-            <form th:if="${djLogo != null}" th:action="@{/dj/logo/delete}" method="POST" class="m-0 mt-3" id="logoDeleteForm"
-                  th:attr="data-confirm=#{settings.logo.delete.confirm}">
-                <input type="hidden" name="partyCode" th:value="${partyCode}">
-                <button type="submit" class="btn btn-sm btn-outline-danger" th:text="#{settings.logo.delete}">Delete the logo</button>
-            </form>
-            </th:block>
-            <th:block th:unless="${plan.pro('LOGO')}">
-            <p class="small text-secondary mb-2" th:text="#{settings.logo.help}">Your guests see your logo on the party page…</p>
-            <div class="s2p-library-state mb-3" th:classappend="${djLogo == null} ? 's2p-library-state-none'">
-                <span th:if="${djLogo == null}" th:text="#{settings.logo.none}">No logo yet.</span>
-                <img th:if="${djLogo != null}" th:src="@{${djLogo}}" class="s2p-logo-tile s2p-logo-current" id="logoCurrent"
-                     th:alt="#{logo.dj.alt}" alt="The DJ's logo">
-                <form th:if="${djLogo != null}" th:action="@{/dj/logo/delete}" method="POST" class="m-0" id="logoDeleteForm"
-                      th:attr="data-confirm=#{settings.logo.delete.confirm}">
-                    <input type="hidden" name="partyCode" th:value="${partyCode}">
-                    <button type="submit" class="btn btn-sm btn-link text-danger s2p-library-delete" th:text="#{settings.library.delete.short}">Delete</button>
-                </form>
-            </div>
-            <!--/* data-max-bytes / data-too-large: a larger file is refused here, before it is read */-->
-            <form th:action="@{/dj/logo}" method="POST" class="m-0" id="logoForm"
-                  th:attr="data-sending=#{settings.logo.sending},data-refused=#{settings.logo.error.other},data-unreadable=#{settings.logo.error.UNREADABLE},
-                           data-not-image=#{settings.logo.error.NOT_AN_IMAGE},
-                           data-max-bytes=${logoMaxBytes},data-max-side=${logoMaxSide},
-                           data-too-large=#{settings.logo.error.TOO_LARGE(${logoMaxMb})}">
-                <input type="hidden" name="partyCode" th:value="${partyCode}">
-                <input type="file" id="logoFile" name="file" accept="image/png,image/jpeg,image/webp" required class="s2p-file-input">
-                <label for="logoFile" class="s2p-file-drop" id="logoDrop">
-                    <span class="s2p-file-drop-title" data-file-name th:attr="data-empty=#{settings.logo.choose}"
-                          th:text="#{settings.logo.choose}">Choose an image</span>
-                    <span class="s2p-file-drop-hint" th:text="#{settings.logo.choose.hint(${logoMaxMb})}">PNG, JPEG or WebP · up to 2 MB</span>
-                </label>
-                <!--/* what will be sent, as the guests will see it: drawn by logo.js on the tile the pages put under a logo */-->
-                <div class="mt-3" id="logoPreview" hidden>
-                    <p class="small text-light mb-1" th:text="#{settings.logo.preview}">Preview</p>
-                    <canvas class="s2p-logo-tile s2p-logo-current" id="logoCanvas"></canvas>
-                </div>
-                <button type="submit" class="btn btn-sm btn-action mt-3 s2p-library-upload" id="logoUpload" disabled th:text="#{settings.logo.upload}">Upload</button>
-                <p class="small mt-2 mb-0" id="logoAnswer" role="status" hidden></p>
-            </form>
-            </th:block>
-            </div>
-        </details>
-
-        <!--/* The guests' limits, and the use of the server's own in one line with their windows (the design review: three lines
-             explained limits the DJ does not set; the owner: the line must say "30 na 10 min", "300 na 24 h") — what a network is,
-             unfolded. The badges: grey, yellow from 80 %, red at the limit. */-->
-        <!--/* its state: the limits that hold (the plan's too) — or, from 80 % of a server limit, how much of it is used */-->
-        <details th:if="${access.may('LIMITS') and (plan.allows('GUEST_LIMITS') or plan.pro('GUEST_LIMITS'))}"
-                 class="card bg-dark border-secondary s2p-fold" id="limitsCard"
-                 th:with="partyNear=${serverLimitPerParty > 0 and partyRequestsUsed * 5 >= serverLimitPerParty * 4},
-                          networkNear=${serverLimitPerNetwork > 0 and busiestNetworkRequestsUsed * 5 >= serverLimitPerNetwork * 4}">
-            <summary class="s2p-fold-summary">
-                <h2 class="s2p-card-title s2p-fold-name"><span th:text="#{dashboard.limits.title}">Guest limits</span><th:block th:if="${plan.pro('GUEST_LIMITS')}"><span th:replace="~{fragments/components :: proMark}"></span></th:block></h2>
-                <span class="s2p-fold-state" th:classappend="${partyNear or networkNear} ? 's2p-row-warn'"
-                      th:text="${partyNear} ? #{settings.row.limits.party(${partyRequestsUsed}, ${serverLimitPerParty})}
-                               : (${networkNear} ? #{settings.row.limits.network(${busiestNetworkRequestsUsed}, ${serverLimitPerNetwork})}
-                               : #{settings.row.limits(${requestLimit}, ${cooldownMinutes})})">2 per guest · 3 min break</span>
-            </summary>
-            <div class="s2p-fold-body">
-            <!--/* without Pro (V35) every party has a new party's limits: said in place of the form */-->
-            <th:block th:if="${plan.pro('GUEST_LIMITS')}"><div
-                 th:replace="~{fragments/components :: proOffer(#{plan.limits.free(${requestLimit}, ${cooldownMinutes}, ${duplicateCheckWindow})})}"></div></th:block>
-            <form th:unless="${plan.pro('GUEST_LIMITS')}" th:action="@{/dj/dashboard/limits}" method="POST" class="m-0">
-                <input type="hidden" name="partyCode" th:value="${partyCode}">
-                <div class="row g-3 align-items-end">
-                    <div class="col-4">
-                        <label for="requestLimit" class="form-label small text-light mb-1" th:text="#{dashboard.ratelimit.limit}">Requests per guest</label>
-                        <input type="number" id="requestLimit" name="requestLimit" class="form-control form-control-sm bg-black text-light border-secondary" min="1" max="100" step="1" th:value="${requestLimit}" required>
                     </div>
-                    <div class="col-4">
-                        <label for="cooldownMinutes" class="form-label small text-light mb-1" th:text="#{dashboard.ratelimit.cooldown}">Then a break (min)</label>
-                        <input type="number" id="cooldownMinutes" name="cooldownMinutes" class="form-control form-control-sm bg-black text-light border-secondary" min="1" max="1440" step="1" th:value="${cooldownMinutes}" required>
-                    </div>
-                    <div class="col-4">
-                        <label for="duplicateCheckWindow" class="form-label small text-light mb-1" th:text="#{dashboard.limits.duplicates}">No repeats of the last</label>
-                        <input type="number" id="duplicateCheckWindow" name="duplicateCheckWindow" class="form-control form-control-sm bg-black text-light border-secondary" min="0" max="50" step="1" th:value="${duplicateCheckWindow}" required>
-                    </div>
-                </div>
-                <button type="submit" class="btn btn-sm btn-outline-light mt-3" th:text="#{dashboard.ratelimit.save}">Save</button>
-            </form>
-            <details class="mt-3 small s2p-server-limits" id="serverLimitsInfo" th:if="${serverLimitPerNetwork > 0 or serverLimitPerParty > 0}">
-                <summary class="text-secondary">
-                    <span th:text="#{dashboard.limits.server.title}">Server limits:</span>
-                    <span th:if="${serverLimitPerNetwork > 0}" class="text-nowrap">
-                        <span th:text="#{dashboard.limits.server.network}">network</span>
-                        <span class="badge" data-limit-use="network" th:attr="data-limit=${serverLimitPerNetwork}"
-                              th:classappend="${busiestNetworkRequestsUsed >= serverLimitPerNetwork} ? 'text-bg-danger' : (${busiestNetworkRequestsUsed * 5 >= serverLimitPerNetwork * 4} ? 'text-bg-warning' : 'text-bg-secondary')"
-                              th:text="${busiestNetworkRequestsUsed + '/' + serverLimitPerNetwork}">0/30</span>
-                        <span th:text="#{dashboard.limits.server.network.window(${serverLimitWindowMinutes})}">per 10 min</span>
-                    </span>
-                    <span th:if="${serverLimitPerParty > 0}" class="text-nowrap">
-                        <span th:text="#{dashboard.limits.server.party}">party</span>
-                        <span class="badge" data-limit-use="party" th:attr="data-limit=${serverLimitPerParty}"
-                              th:classappend="${partyRequestsUsed >= serverLimitPerParty} ? 'text-bg-danger' : (${partyRequestsUsed * 5 >= serverLimitPerParty * 4} ? 'text-bg-warning' : 'text-bg-secondary')"
-                              th:text="${partyRequestsUsed + '/' + serverLimitPerParty}">0/300</span>
-                        <span th:text="#{dashboard.limits.server.party.window}">per 24 h</span>
-                    </span>
-                    <!--/* the Free plan's AI checks of the evening (FreeAiLimit) — past them the requests come unchecked */-->
-                    <span th:if="${freeAi != null and freeAi.limit() > 0}" class="text-nowrap">
-                        <span th:text="#{dashboard.limits.server.ai}">AI checks</span>
-                        <span class="badge" data-limit-use="ai" th:attr="data-limit=${freeAi.limit()}"
-                              th:classappend="${freeAi.reached()} ? 'text-bg-danger' : (${freeAi.asked() * 5 >= freeAi.limit() * 4} ? 'text-bg-warning' : 'text-bg-secondary')"
-                              th:text="${freeAi.checked() + '/' + freeAi.limit()}">0/150</span>
-                        <span th:text="#{dashboard.limits.server.ai.window}">an evening</span>
-                    </span>
-                </summary>
-                <p class="text-secondary mt-2 mb-0" th:text="#{dashboard.limits.server.help}">One network is e.g. the venue's Wi-Fi…</p>
-            </details>
-            </div>
-        </details>
+                </details>
 
-        <!--/* The DJ's library (V41, Pro): a rekordbox collection or an M3U playlist, sent as it is by library.js (the request's body, not a
-             form's upload: DjLibraryController); the queue then marks each request "✓", "?" or "✗". The organiser's alone. Without Pro
-             the card says so in place of the form, and a library uploaded before waits — it can still be deleted. */-->
-        <details th:if="${isOwner}" class="card bg-dark border-secondary s2p-fold" id="libraryCard" data-saves-in-place>
-            <summary class="s2p-fold-summary">
-                <h2 class="s2p-card-title s2p-fold-name"><span th:text="#{settings.library.title}">Your library</span><th:block th:if="${plan.pro('LIBRARY')}"><span th:replace="~{fragments/components :: proMark}"></span></th:block></h2>
-                <span class="s2p-fold-state" th:unless="${plan.pro('LIBRARY')}"
-                      th:text="${libraryTracks != null} ? #{settings.row.library(${libraryTracks})} : #{settings.row.library.none}">Songs: 1,234</span>
-            </summary>
-            <div class="s2p-fold-body">
-            <!--/* Without Pro: the offer, and a library uploaded before can still be deleted (the organiser's own data) */-->
-            <th:block th:if="${plan.pro('LIBRARY')}">
-            <div th:replace="~{fragments/components :: proOffer(${libraryTracks != null} ? #{plan.library.kept} : #{plan.library.offer})}"></div>
-            <form th:if="${libraryTracks != null}" th:action="@{/dj/library/delete}" method="POST" class="m-0 mt-3" id="libraryDeleteForm"
-                  th:attr="data-confirm=#{settings.library.delete.confirm}">
-                <input type="hidden" name="partyCode" th:value="${partyCode}">
-                <button type="submit" class="btn btn-sm btn-outline-danger" th:text="#{settings.library.delete}">Delete library</button>
-            </form>
-            </th:block>
-            <!--/* One line of what it does; how to make the file folded under it. What the party has now in a box, its "Usuń" small at its
-                 end — a deletion is no action to compete with "Wgraj" (it asks first: data-confirm, dj-nav.js). Then the file: our own
-                 field — the browser's file input is hidden (its button never fills a 44 px field on a phone), the label is the tap
-                 target, a file can be dropped on it too (library.js) —, and "Wgraj", the card's one action, enabled by a file chosen. */-->
-            <th:block th:unless="${plan.pro('LIBRARY')}">
-            <p class="small text-secondary mb-2" th:text="#{settings.library.help}">Each request in the queue then shows whether you have the song.</p>
-            <details class="small mb-3 s2p-library-how">
-                <summary class="text-secondary" th:text="#{settings.library.how}">How to make the file?</summary>
-                <p class="text-secondary mt-1 mb-0" th:text="#{settings.library.how.text}">rekordbox: File → Export Collection in xml format…</p>
-            </details>
-            <div class="s2p-library-state mb-3" th:classappend="${libraryTracks == null} ? 's2p-library-state-none'">
-                <span id="libraryState"
-                      th:text="${libraryTracks == null} ? #{settings.library.none} : (${libraryPlaylist != null}
-                               ? #{settings.library.state.playlist(${libraryTracks}, ${libraryUploaded}, ${libraryPlaylist})}
-                               : #{settings.library.state(${libraryTracks}, ${libraryUploaded})})">No library uploaded yet.</span>
-                <form th:if="${libraryTracks != null}" th:action="@{/dj/library/delete}" method="POST" class="m-0" id="libraryDeleteForm"
-                      th:attr="data-confirm=#{settings.library.delete.confirm}">
-                    <input type="hidden" name="partyCode" th:value="${partyCode}">
-                    <button type="submit" class="btn btn-sm btn-link text-danger s2p-library-delete" th:text="#{settings.library.delete.short}">Delete</button>
-                </form>
-            </div>
-            <!--/* a rekordbox library uploaded before V57 has its keys alone: uploaded again, the queue shows the tempo and the key too */-->
-            <p th:if="${libraryOld == true}" class="small text-secondary mb-3 s2p-library-old" th:text="#{settings.library.old}">Upload your
-                collection again: the queue will show your tracks' tempo and key.</p>
-            <!--/* "Podpowiedzi gości" (V58): the guests' suggestions the DJ has first, "✓ DJ ma" — saved as soon as picked, its part of
-                 the card answered in place (cards-in-place.js: the upload beside it untouched), "✓ Zapisane" after it; without the
-                 script its "Zapisz". With a library only. Nothing is refused by it: said under it, so the DJ need not fear losing
-                 requests. */-->
-            <div th:if="${libraryTracks != null}" id="libraryHintsBox" class="mb-3">
-            <form th:action="@{/dj/library/hints}" method="POST" class="m-0" id="libraryHintsForm" data-in-place="libraryHintsBox">
-                <input type="hidden" name="partyCode" th:value="${partyCode}">
-                <label for="libraryHintsSelect" class="form-label small text-light mb-1" th:text="#{settings.library.hints.label}">Guests' suggestions</label>
-                <select id="libraryHintsSelect" name="on" data-auto-submit aria-describedby="libraryHintsHelp"
-                        class="form-select form-select-sm bg-black text-light border-secondary">
-                    <option value="true" th:selected="${libraryHints != false}" th:text="#{settings.library.hints.on}">Your songs first, “✓ DJ has it”</option>
-                    <option value="false" th:selected="${libraryHints == false}" th:text="#{settings.library.hints.off}">Not marked</option>
-                </select>
-                <div id="libraryHintsHelp" class="form-text text-secondary" th:text="#{settings.library.hints.help}">Guests can still ask for any song.</div>
-                <div class="mt-2" th:if="${libraryHintsSaved != null}">
-                    <span class="small text-light" role="status" id="libraryHintsSaved" th:text="#{settings.library.hints.saved}">✓ Saved</span>
-                </div>
-                <noscript><button type="submit" class="btn btn-sm btn-outline-light mt-2" th:text="#{settings.library.hints.save}">Save</button></noscript>
-            </form>
-            </div>
-            <!--/* data-max-bytes / data-too-large: a larger file is refused here, before the browser reads or sends it */-->
-            <form th:action="@{/dj/library}" method="POST" class="m-0" id="libraryForm"
-                  th:attr="data-sending=#{settings.library.sending},data-refused=#{settings.library.error.other},
-                           data-max-bytes=${libraryMaxBytes},data-too-large=#{settings.library.error.TOO_LARGE(0, ${libraryMaxMb})}">
-                <input type="hidden" name="partyCode" th:value="${partyCode}">
-                <input type="file" id="libraryFile" name="file" accept=".xml,.m3u,.m3u8" required class="s2p-file-input">
-                <label for="libraryFile" class="s2p-file-drop" id="libraryDrop">
-                    <span class="s2p-file-drop-title" data-file-name th:attr="data-empty=#{settings.library.choose}"
-                          th:text="#{settings.library.choose}">Choose a file</span>
-                    <span class="s2p-file-drop-hint" th:text="#{settings.library.choose.hint(${libraryMaxMb})}">XML, M3U or M3U8 · up to 64 MB</span>
-                </label>
-                <!--/* a rekordbox collection's playlists (V42), read from the chosen file by library.js — the whole collection or one */-->
-                <div class="mt-3" id="libraryPlaylistField" hidden>
-                    <label for="libraryPlaylist" class="form-label small text-light mb-1" th:text="#{settings.library.playlist}">What to upload</label>
-                    <select id="libraryPlaylist" class="form-select form-select-sm bg-black text-light border-secondary">
-                        <option value="" th:text="#{settings.library.playlist.all}">The whole collection</option>
-                    </select>
-                </div>
-                <button type="submit" class="btn btn-sm btn-action mt-3 s2p-library-upload" id="libraryUpload" disabled th:text="#{settings.library.upload}">Upload</button>
-                <p class="small mt-2 mb-0" id="libraryAnswer" role="status" hidden></p>
-            </form>
-            </th:block>
-            </div>
-        </details>
-
-        <!--/* "Poranne podsumowanie" (V64): the morning e-mail of a busy evening (MorningSummaryEmailService) — the organiser's alone (the
-             e-mail goes to their address), Pro's alone (without Pro the card offers it, as every Pro card; the switch is kept). Sent as soon as it is
-             switched (forms.js data-auto-submit) and answered with this card (cards-in-place.js), "✓ Zapisane" in it; without the
-             script the "Zapisz" of <noscript>. The morning e-mail's own "Nie wysyłaj mi tego" switches it off too. */-->
-        <details th:fragment="morningSummaryCard" th:if="${isOwner}" class="card bg-dark border-secondary s2p-fold"
-                 id="morningSummaryCard" data-saves-in-place th:attr="open=${morningSummarySaved != null} ? 'open' : null">
-            <summary class="s2p-fold-summary">
-                <h2 class="s2p-card-title s2p-fold-name"><span th:text="#{settings.morning.title}">Morning summary</span><th:block th:if="${plan.pro('SUMMARY')}"><span th:replace="~{fragments/components :: proMark}"></span></th:block></h2>
-                <span class="s2p-fold-state" id="morningSummaryState" th:unless="${plan.pro('SUMMARY')}"
-                      th:text="${morningSummary} ? #{settings.morning.on} : #{settings.morning.off}">On</span>
-            </summary>
-            <div class="s2p-fold-body">
-            <th:block th:if="${plan.pro('SUMMARY')}"><div th:replace="~{fragments/components :: proOffer(#{settings.morning.pro})}"></div></th:block>
-            <th:block th:unless="${plan.pro('SUMMARY')}">
-            <p class="s2p-card-help mb-3" th:text="#{settings.morning.help}">The morning after an evening with at least 5 guests' requests: its numbers and the top 3, by e-mail.</p>
-            <form th:action="@{/dj/dashboard/morning-summary}" method="POST" class="m-0" id="morningSummaryForm" data-in-place>
-                <input type="hidden" name="partyCode" th:value="${partyCode}">
-                <div class="form-check form-switch m-0 s2p-switch-row">
-                    <input class="form-check-input" type="checkbox" role="switch" id="morningSummaryToggle" name="on" value="true"
-                           th:checked="${morningSummary}" data-auto-submit>
-                    <label class="form-check-label text-light" for="morningSummaryToggle" th:text="#{settings.morning.label}">E-mail me the evening's summary</label>
-                </div>
-                <div class="mt-3" th:if="${morningSummarySaved != null}">
-                    <span class="small text-light" role="status" id="morningSummarySaved" th:text="#{settings.morning.saved}">✓ Saved</span>
-                </div>
-                <noscript><button type="submit" class="btn btn-sm btn-outline-light mt-3" th:text="#{settings.morning.save}">Save</button></noscript>
-            </form>
-            </th:block>
-            </div>
-        </details>
-
-        <!--/* "Obsługa" is a page of its own (the organiser's): a row like a folded card, with its state, leading there */-->
-        <a th:if="${isOwner}" th:href="@{/dj/staff(party=${partyCode})}" href="/dj/staff" id="staffRow"
-           class="card bg-dark border-secondary s2p-fold-link">
-            <span class="s2p-card-title s2p-fold-name" th:text="#{dashboard.staff.title}">Staff</span>
-            <span class="s2p-fold-state"
-                  th:text="${#lists.isEmpty(staff)} ? #{settings.row.staff.none} : #{settings.row.staff(${#lists.size(staff)})}">People: 1</span>
-        </a>
-
-        <!--/* This device: the notifications and the app (each shown by its script only where it helps), and an invitation to another
-             party pasted here — on the person's own panel only (the owner, 2026-10-10: on another's party she has joined already). */-->
-        <details class="card bg-dark border-secondary s2p-fold" id="deviceCard">
-            <summary class="s2p-fold-summary">
-                <h2 class="s2p-card-title s2p-fold-name" th:text="#{dashboard.device.title}">This device</h2>
-                <!--/* this browser's notifications, on or off: written by settings-rows.js (as the panel's row) */-->
-                <span class="s2p-fold-state" data-device-state th:if="${pushPublicKey != null}"
-                      th:attr="data-on=#{settings.row.device.on},data-off=#{settings.row.device.off}"></span>
-            </summary>
-            <div class="s2p-fold-body">
-            <div class="d-flex flex-column gap-3">
-                <!--/* Notifications of new requests on this device (Web Push, js/dashboard/push.js) — only when the server has the keys;
-                     shown by the script, with the note of the state it finds (an iPhone outside the Home Screen app, blocked, …) */-->
-                <div id="pushSettings" hidden
-                     th:if="${pushPublicKey != null}" th:attr="data-public-key=${pushPublicKey}">
-                    <div class="form-check form-switch m-0 s2p-switch-row">
-                        <input class="form-check-input" type="checkbox" role="switch" id="pushToggle" disabled>
-                        <label class="form-check-label text-light" for="pushToggle" th:text="#{dashboard.push.label}">Request notifications</label>
+                <!--/* The guests' limits, and the use of the server's own in one line with their windows ("30 na 10 min", "300 na 24 h": a
+                     DJ does not set them, so one line, not three explaining them) — what a network is, unfolded. The badges: grey, yellow
+                     from 80 %, red at the limit. Its state: the limits that hold (the plan's too) — or, from 80 % of a server limit, how much
+                     of it is used, in yellow (.s2p-row-warn). */-->
+                <details th:if="${access.may('LIMITS') and (plan.allows('GUEST_LIMITS') or plan.pro('GUEST_LIMITS'))}"
+                         class="card bg-dark border-secondary s2p-fold" id="limitsCard"
+                         th:with="partyNear=${serverLimitPerParty > 0 and partyRequestsUsed * 5 >= serverLimitPerParty * 4},
+                                  networkNear=${serverLimitPerNetwork > 0 and busiestNetworkRequestsUsed * 5 >= serverLimitPerNetwork * 4}">
+                    <summary class="s2p-fold-summary">
+                        <h3 class="s2p-card-title s2p-fold-name"><span th:text="#{dashboard.limits.title}">Guest limits</span><th:block th:if="${plan.pro('GUEST_LIMITS')}"><span th:replace="~{fragments/components :: proMark}"></span></th:block></h3>
+                        <span class="s2p-fold-state" th:classappend="${partyNear or networkNear} ? 's2p-row-warn'"
+                              th:text="${partyNear} ? #{settings.row.limits.party(${partyRequestsUsed}, ${serverLimitPerParty})}
+                                       : (${networkNear} ? #{settings.row.limits.network(${busiestNetworkRequestsUsed}, ${serverLimitPerNetwork})}
+                                       : #{settings.row.limits(${requestLimit}, ${cooldownMinutes})})">2 per guest · 3 min break</span>
+                    </summary>
+                    <div class="s2p-fold-body">
+                    <!--/* without Pro (V35) every party has a new party's limits: said in place of the form */-->
+                    <th:block th:if="${plan.pro('GUEST_LIMITS')}"><div
+                         th:replace="~{fragments/components :: proOffer(#{plan.limits.free(${requestLimit}, ${cooldownMinutes}, ${duplicateCheckWindow})})}"></div></th:block>
+                    <form th:unless="${plan.pro('GUEST_LIMITS')}" th:action="@{/dj/dashboard/limits}" method="POST" class="m-0">
+                        <input type="hidden" name="partyCode" th:value="${partyCode}">
+                        <div class="row g-3 align-items-end">
+                            <div class="col-4">
+                                <label for="requestLimit" class="form-label small text-light mb-1" th:text="#{dashboard.ratelimit.limit}">Requests per guest</label>
+                                <input type="number" id="requestLimit" name="requestLimit" class="form-control form-control-sm bg-black text-light border-secondary" min="1" max="100" step="1" th:value="${requestLimit}" required>
+                            </div>
+                            <div class="col-4">
+                                <label for="cooldownMinutes" class="form-label small text-light mb-1" th:text="#{dashboard.ratelimit.cooldown}">Then a break (min)</label>
+                                <input type="number" id="cooldownMinutes" name="cooldownMinutes" class="form-control form-control-sm bg-black text-light border-secondary" min="1" max="1440" step="1" th:value="${cooldownMinutes}" required>
+                            </div>
+                            <div class="col-4">
+                                <label for="duplicateCheckWindow" class="form-label small text-light mb-1" th:text="#{dashboard.limits.duplicates}">No repeats of the last</label>
+                                <input type="number" id="duplicateCheckWindow" name="duplicateCheckWindow" class="form-control form-control-sm bg-black text-light border-secondary" min="0" max="50" step="1" th:value="${duplicateCheckWindow}" required>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-sm btn-outline-light mt-3" th:text="#{dashboard.ratelimit.save}">Save</button>
+                    </form>
+                    <details class="mt-3 small s2p-server-limits" id="serverLimitsInfo" th:if="${serverLimitPerNetwork > 0 or serverLimitPerParty > 0}">
+                        <summary class="text-secondary">
+                            <span th:text="#{dashboard.limits.server.title}">Server limits:</span>
+                            <span th:if="${serverLimitPerNetwork > 0}" class="text-nowrap">
+                                <span th:text="#{dashboard.limits.server.network}">network</span>
+                                <span class="badge" data-limit-use="network" th:attr="data-limit=${serverLimitPerNetwork}"
+                                      th:classappend="${busiestNetworkRequestsUsed >= serverLimitPerNetwork} ? 'text-bg-danger' : (${busiestNetworkRequestsUsed * 5 >= serverLimitPerNetwork * 4} ? 'text-bg-warning' : 'text-bg-secondary')"
+                                      th:text="${busiestNetworkRequestsUsed + '/' + serverLimitPerNetwork}">0/30</span>
+                                <span th:text="#{dashboard.limits.server.network.window(${serverLimitWindowMinutes})}">per 10 min</span>
+                            </span>
+                            <span th:if="${serverLimitPerParty > 0}" class="text-nowrap">
+                                <span th:text="#{dashboard.limits.server.party}">party</span>
+                                <span class="badge" data-limit-use="party" th:attr="data-limit=${serverLimitPerParty}"
+                                      th:classappend="${partyRequestsUsed >= serverLimitPerParty} ? 'text-bg-danger' : (${partyRequestsUsed * 5 >= serverLimitPerParty * 4} ? 'text-bg-warning' : 'text-bg-secondary')"
+                                      th:text="${partyRequestsUsed + '/' + serverLimitPerParty}">0/300</span>
+                                <span th:text="#{dashboard.limits.server.party.window}">per 24 h</span>
+                            </span>
+                            <!--/* the Free plan's AI checks of the evening (FreeAiLimit) — past them the requests come unchecked */-->
+                            <span th:if="${freeAi != null and freeAi.limit() > 0}" class="text-nowrap">
+                                <span th:text="#{dashboard.limits.server.ai}">AI checks</span>
+                                <span class="badge" data-limit-use="ai" th:attr="data-limit=${freeAi.limit()}"
+                                      th:classappend="${freeAi.reached()} ? 'text-bg-danger' : (${freeAi.asked() * 5 >= freeAi.limit() * 4} ? 'text-bg-warning' : 'text-bg-secondary')"
+                                      th:text="${freeAi.checked() + '/' + freeAi.limit()}">0/150</span>
+                                <span th:text="#{dashboard.limits.server.ai.window}">an evening</span>
+                            </span>
+                        </summary>
+                        <p class="text-secondary mt-2 mb-0" th:text="#{dashboard.limits.server.help}">One network is e.g. the venue's Wi-Fi…</p>
+                    </details>
                     </div>
-                    <div class="text-warning small mt-1 d-none" data-push-state="ios" th:text="#{dashboard.push.ios}">On an iPhone: add it to the Home Screen first.</div>
-                    <div class="text-warning small mt-1 d-none" data-push-state="denied" th:text="#{dashboard.push.denied}">Notifications are blocked for this site.</div>
-                    <div class="text-warning small mt-1 d-none" data-push-state="unsupported" th:text="#{dashboard.push.unsupported}">This browser cannot show notifications.</div>
-                    <div class="text-danger small mt-1 d-none" data-push-state="error" th:text="#{dashboard.push.error}">Could not switch notifications on.</div>
-                </div>
-                <!--/* "Zainstaluj aplikację" (js/dashboard/install.js): shown by the script only where it helps — a browser that offers to
-                     install the app (Chrome, Edge), or an iPhone's Safari (the steps); never in the installed app itself */-->
-                <div id="installApp" hidden>
-                    <div class="d-flex flex-wrap align-items-center gap-2">
-                        <button type="button" class="btn btn-sm btn-outline-light" id="installAppBtn" th:text="#{dashboard.install.button}">Install the app</button>
-                        <span class="text-secondary small" th:text="#{dashboard.install.help}">Its own icon, no browser bar.</span>
+                </details>
+
+                <!--/* The hosts' lists (V29): songs not to play (a request for one never reaches the DJ) and songs to play (accepted whatever
+                     the AI says, ⭐ in the queue), one per line. The hosts fill them too, by the link made here (/h/{token}, HostController) —
+                     "Nowy link" makes the old one dead: a party code is for every event, a link for one. */-->
+                <!--/* Without the Pro plan (V35, the organiser only): the card says so in place of its form — and that the lists wait, when
+                     there are some. The staff of a party without Pro do not see the card. */-->
+                <details th:if="${access.may('HOST_LISTS') and (plan.allows('HOST_LISTS') or plan.pro('HOST_LISTS'))}"
+                         class="card bg-dark border-secondary s2p-fold" id="hostListsCard" data-saves-in-place>
+                    <summary class="s2p-fold-summary">
+                        <h3 class="s2p-card-title s2p-fold-name"><span th:text="#{dashboard.host.title}">The hosts' list</span><th:block th:if="${plan.pro('HOST_LISTS')}"><span th:replace="~{fragments/components :: proMark}"></span></th:block></h3>
+                        <span class="s2p-fold-state" th:unless="${plan.pro('HOST_LISTS')}"
+                              th:classappend="${hostBlockedCount == 0 and hostWantedCount == 0 and hostLink == null} ? 's2p-fold-state-empty'"
+                              th:text="${hostBlockedCount == 0 and hostWantedCount == 0 and hostLink == null} ? #{settings.row.hosts.unused}
+                                       : #{settings.row.hosts(${hostBlockedCount}, ${hostWantedCount})} + (${hostLink != null} ? #{settings.row.hosts.link} : '')">Not used</span>
+                        <!--/* the messages join their parts with non-breaking spaces: on a 320 px phone the heading wraps, never "link" alone below */-->
+                    </summary>
+                    <div class="s2p-fold-body">
+                    <p class="s2p-card-help" th:text="#{dashboard.host.help}">One song or artist per line.</p>
+                    <th:block th:if="${plan.pro('HOST_LISTS')}"><div
+                         th:replace="~{fragments/components :: proOffer(${hostBlockedCount + hostWantedCount > 0} ? #{plan.hosts.kept(${hostBlockedCount}, ${hostWantedCount})} : #{plan.hosts.offer})}"></div></th:block>
+                    <th:block th:unless="${plan.pro('HOST_LISTS')}">
+                    <form th:action="@{/dj/dashboard/host-lists}" method="POST" class="m-0" id="hostListsForm">
+                        <input type="hidden" name="partyCode" th:value="${partyCode}">
+                        <div class="row g-2">
+                            <div class="col-md-6">
+                                <label for="hostBlockedInput" class="form-label text-light small mb-1" th:text="#{host.blocked.label}">🚫 Don't play</label>
+                                <textarea id="hostBlockedInput" name="blocked" rows="3" maxlength="16000"
+                                          class="form-control form-control-sm bg-black text-light border-secondary"
+                                          th:text="${hostBlocked}" th:placeholder="#{host.blocked.placeholder}"></textarea>
+                                <div class="s2p-list-count" data-list-for="hostBlockedInput" aria-live="polite"
+                                     th:attr="data-list-max=${songListMax},data-text-count=#{list.count},data-text-over=#{list.over}"><span data-list-count></span> <span class="s2p-list-warning" data-list-over hidden></span></div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="hostWantedInput" class="form-label text-light small mb-1" th:text="#{host.wanted.label}">⭐ Must play</label>
+                                <textarea id="hostWantedInput" name="wanted" rows="3" maxlength="16000"
+                                          class="form-control form-control-sm bg-black text-light border-secondary"
+                                          th:text="${hostWanted}" th:placeholder="#{host.wanted.placeholder}"></textarea>
+                                <div class="s2p-list-count" data-list-for="hostWantedInput" aria-live="polite"
+                                     th:attr="data-list-max=${songListMax},data-text-count=#{list.count},data-text-over=#{list.over}"><span data-list-count></span> <span class="s2p-list-warning" data-list-over hidden></span></div>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-sm btn-outline-light mt-3" th:text="#{dashboard.vibe.note.save}">Save</button>
+                    </form>
+                    <div class="mt-3 pt-3 border-top border-secondary" id="hostLinkBox">
+                        <span class="d-block text-light small mb-1" th:text="#{dashboard.host.link.label}">Link for the hosts</span>
+                        <div th:if="${hostLink != null}" class="input-group input-group-sm mb-2 s2p-host-link">
+                            <input type="text" class="form-control bg-dark text-light border-secondary" th:value="${hostLink}" id="hostLinkInput" readonly
+                                   th:attr="aria-label=#{dashboard.host.link.label}">
+                            <button class="btn btn-outline-secondary" type="button" data-copy-target="hostLinkInput" th:text="#{dashboard.qr.copy}"
+                                    th:attr="data-copied=#{dashboard.qr.copied}">Copy</button>
+                        </div>
+                        <!--/* the link's two buttons in a row of their own: on a phone each half of it */-->
+                        <div class="s2p-btn-row">
+                            <!--/* sent in the background (cards-in-place.js): the settings page the server answers with gives this box anew — the
+                                 new link at once, the lists as typed, the page not moved; without the script a full reload. The field is "link",
+                                 not "action": an input named "action" hides the form's own form.action from the scripts */-->
+                            <form th:action="@{/dj/dashboard/host-link}" method="POST" class="m-0" data-in-place="hostLinkBox"
+                                  th:attr="data-confirm=${hostLink != null} ? #{dashboard.host.link.renew.confirm} : null">
+                                <input type="hidden" name="partyCode" th:value="${partyCode}">
+                                <input type="hidden" name="link" value="new">
+                                <button type="submit" id="hostLinkNewBtn" class="btn btn-sm btn-outline-light text-nowrap"
+                                        th:text="${hostLink != null} ? #{dashboard.host.link.renew} : #{dashboard.host.link.create}">Make a link</button>
+                            </form>
+                            <form th:if="${hostLink != null}" th:action="@{/dj/dashboard/host-link}" method="POST" class="m-0" data-in-place="hostLinkBox">
+                                <input type="hidden" name="partyCode" th:value="${partyCode}">
+                                <input type="hidden" name="link" value="off">
+                                <button type="submit" id="hostLinkOffBtn" class="btn btn-sm btn-outline-danger text-nowrap" th:text="#{dashboard.host.link.off}">Turn off</button>
+                            </form>
+                        </div>
+                        <p th:if="${hostLinkUntil != null}" class="small text-secondary mt-1 mb-0" id="hostLinkUntil"
+                           th:text="#{link.works_until(${hostLinkUntil})}">Works until 14.11.</p>
                     </div>
-                    <div class="text-warning small mt-2 d-none" data-install-note="ios" th:text="#{dashboard.install.ios}">On an iPhone: Share → Add to Home Screen.</div>
-                    <div class="text-warning small mt-2 d-none" data-install-note="menu" th:text="#{dashboard.install.menu}">Install from the browser's menu.</div>
-                </div>
-                <!--/* An invitation to another party's staff pasted here (V30): the app on the Home Screen opens a link from an e-mail in
-                     the browser, which has a login of its own (an iPhone always). POST /dj/join leads to /join/{token}, which asks — a
-                     page load (forms.js leaves /dj/join alone). */-->
-                <form th:if="${isOwner}" th:action="@{/dj/join}" method="POST" class="m-0 pt-3 border-top border-secondary" id="joinStaffForm">
-                    <label for="joinLinkInput" class="form-label text-light small mb-1" th:text="#{dashboard.join.label}">Staff invitation? Paste the link</label>
-                    <div class="d-flex gap-2">
-                        <input type="text" id="joinLinkInput" name="link" maxlength="300" autocomplete="off" required
+                    </th:block>
+                    </div>
+                </details>
+
+                <!--/* The venue's kiosk (V56, Pro): a tablet at the bar for the guests without a phone — its secret link (/k/{token},
+                     KioskController) made here, made again (the old tablet's link dead: asks first) or taken away, copied or opened. Whoever
+                     has the permission KIOSK; without Pro, the organiser sees the offer, the staff not the card. Its forms are sent in the
+                     background and the server's card takes this one's place (cards-in-place.js, data-saves-in-place): the page does not move.
+                     Without the script, page loads back to this card. */-->
+                <details th:fragment="kioskCard" th:if="${access.may('KIOSK') and (plan.allows('KIOSK') or plan.pro('KIOSK'))}"
+                         class="card bg-dark border-secondary s2p-fold" id="kioskCard" data-saves-in-place
+                         th:attr="open=${cardSaved != null} ? 'open' : null">
+                    <summary class="s2p-fold-summary">
+                        <h3 class="s2p-card-title s2p-fold-name"><span th:text="#{settings.kiosk.title}">Guest kiosk</span><th:block th:if="${plan.pro('KIOSK')}"><span th:replace="~{fragments/components :: proMark}"></span></th:block></h3>
+                        <span class="s2p-fold-state" id="kioskState" th:unless="${plan.pro('KIOSK')}" th:classappend="${kioskLink == null} ? 's2p-fold-state-empty'"
+                              th:text="${kioskLink != null} ? #{settings.kiosk.on} : #{settings.kiosk.none}">Off</span>
+                    </summary>
+                    <div class="s2p-fold-body">
+                    <th:block th:if="${plan.pro('KIOSK')}"><div th:replace="~{fragments/components :: proOffer(#{plan.kiosk.offer})}"></div>
+                        <!--/* a link made with Pro opens nothing now; taken away here, it does not come back with Pro by itself */-->
+                        <th:block th:if="${kioskLink != null}">
+                        <p class="small text-secondary mt-2 mb-0" id="kioskOldHelp" th:text="#{settings.kiosk.old_help}">A kiosk link made with Pro opens nothing without it…</p>
+                        <form th:action="@{/dj/dashboard/kiosk-link}" method="POST" class="m-0 mt-2" data-in-place>
+                            <input type="hidden" name="partyCode" th:value="${partyCode}">
+                            <input type="hidden" name="link" value="off">
+                            <button type="submit" id="kioskLinkOffBtn" class="btn btn-sm btn-outline-danger text-nowrap" th:text="#{settings.kiosk.off_old}">Remove the old kiosk link</button>
+                        </form>
+                        </th:block>
+                    </th:block>
+                    <th:block th:unless="${plan.pro('KIOSK')}">
+                    <p class="s2p-card-help" th:text="#{settings.kiosk.help}">A tablet at the bar for guests without a phone…</p>
+                    <div th:if="${kioskLink != null}" class="input-group input-group-sm mb-2 s2p-host-link">
+                        <input type="text" class="form-control bg-dark text-light border-secondary" th:value="${kioskLink}" id="kioskLinkInput" readonly
+                               th:attr="aria-label=#{settings.kiosk.title}">
+                        <button class="btn btn-outline-secondary" type="button" data-copy-target="kioskLinkInput" th:text="#{dashboard.qr.copy}"
+                                th:attr="data-copied=#{dashboard.qr.copied}">Copy</button>
+                        <a class="btn btn-outline-secondary" id="kioskOpen" th:href="${kioskLink}" target="_blank" rel="noopener"
+                           th:text="#{settings.kiosk.open}">Open the kiosk</a>
+                    </div>
+                    <div class="s2p-btn-row">
+                        <form th:action="@{/dj/dashboard/kiosk-link}" method="POST" class="m-0" data-in-place
+                              th:attr="data-confirm=${kioskLink != null} ? #{settings.kiosk.renew.confirm} : null">
+                            <input type="hidden" name="partyCode" th:value="${partyCode}">
+                            <input type="hidden" name="link" value="new">
+                            <button type="submit" id="kioskLinkNewBtn" class="btn btn-sm btn-outline-light text-nowrap"
+                                    th:text="${kioskLink != null} ? #{settings.kiosk.renew} : #{settings.kiosk.create}">Make the kiosk link</button>
+                        </form>
+                        <form th:if="${kioskLink != null}" th:action="@{/dj/dashboard/kiosk-link}" method="POST" class="m-0" data-in-place>
+                            <input type="hidden" name="partyCode" th:value="${partyCode}">
+                            <input type="hidden" name="link" value="off">
+                            <button type="submit" id="kioskLinkOffBtn" class="btn btn-sm btn-outline-danger text-nowrap" th:text="#{settings.kiosk.off}">Turn off</button>
+                        </form>
+                    </div>
+                    <p class="small text-secondary mt-2 mb-0" id="kioskTip" th:text="#{settings.kiosk.tip}">Guided Access on an iPad…</p>
+                    </th:block>
+                    </div>
+                </details>
+            </div>
+        </section>
+
+        <section class="s2p-settings-group" aria-labelledby="settingsGroupGuests" th:if="${access.may('VIBE') or (access.may('WISHES') and (plan.allows('WISHES') or plan.pro('WISHES'))) or (access.may('POLLS') and (plan.allows('POLLS') or plan.pro('POLLS')))}">
+            <h2 class="s2p-settings-group-title" id="settingsGroupGuests" th:text="#{settings.group.guests}">For the guests</h2>
+            <div class="d-flex flex-column gap-2">
+                <!--/* "Motyw dla gości" (V59): the look of the guests' pages — the party page, the result, the "party ended" page, the kiosk, the
+                     TV — for whoever may change the party's vibe (VIBE), any plan. Each theme a small phone drawn by its own tokens
+                     (guest-themes.css: data-guest-theme on the thumbnail), its name under it. Saved as soon as one is picked: the radio sends the
+                     form (forms.js data-auto-submit) and the server answers with this card (cards-in-place.js), "✓ Zapisane" in it; without the
+                     script the "Zapisz" of <noscript>. "Podejrzyj stronę gościa" opens the party page in a new tab. */-->
+                <details th:fragment="guestThemeCard" th:if="${access.may('VIBE')}" class="card bg-dark border-secondary s2p-fold"
+                         id="guestThemeCard" data-saves-in-place th:attr="open=${guestThemeSaved != null} ? 'open' : null">
+                    <summary class="s2p-fold-summary">
+                        <h3 class="s2p-card-title s2p-fold-name" th:text="#{settings.guest_theme.title}">Guest theme</h3>
+                        <span class="s2p-fold-state" id="guestThemeState" th:text="#{${guestTheme.messageKey()}}">Classic</span>
+                    </summary>
+                    <div class="s2p-fold-body">
+                    <p class="s2p-card-help mb-3" th:text="#{settings.guest_theme.help}">Your guests see it on the party page, the result, the kiosk and the TV.</p>
+                    <form th:action="@{/dj/dashboard/guest-theme}" method="POST" class="m-0" id="guestThemeForm" data-in-place>
+                        <input type="hidden" name="partyCode" th:value="${partyCode}">
+                        <fieldset class="s2p-theme-grid">
+                            <legend class="visually-hidden" th:text="#{settings.guest_theme.title}">Guest theme</legend>
+                            <label th:each="t : ${guestThemes}" class="s2p-theme-pick" th:with="key=${t.name().toLowerCase()}">
+                                <input type="radio" name="theme" class="visually-hidden" th:id="'guestTheme-' + ${key}" th:value="${t.name()}"
+                                       th:checked="${t == guestTheme}" data-auto-submit>
+                                <span class="s2p-theme-thumb" aria-hidden="true" th:attr="data-guest-theme=${t.name()}"><span
+                                        class="s2p-theme-thumb-card"><span class="s2p-theme-thumb-line"></span><span
+                                        class="s2p-theme-thumb-line s2p-theme-thumb-line-short"></span><span class="s2p-theme-thumb-button"></span></span></span>
+                                <span class="s2p-theme-name" th:text="#{${t.messageKey()}}">Classic</span>
+                            </label>
+                        </fieldset>
+                        <div class="s2p-theme-foot mt-3">
+                            <noscript><button type="submit" class="btn btn-sm btn-outline-light" th:text="#{settings.guest_theme.save}">Save</button></noscript>
+                            <span th:if="${guestThemeSaved != null}" class="small text-light" role="status" id="guestThemeSaved"
+                                  th:text="#{settings.guest_theme.saved}">✓ Saved</span>
+                            <a class="btn btn-sm btn-outline-light ms-auto" id="guestThemePreview" th:href="@{/p/{c}(c=${partyCode})}"
+                               target="_blank" rel="noopener" th:text="#{settings.guest_theme.preview}">See the guest page</a>
+                        </div>
+                    </form>
+                    </div>
+                </details>
+
+                <!--/* "Życzenia przed imprezą" (V68): the guests write songs before an event, on its own link — a row leading to the page of
+                     the events and their wishes (DjWishesController), as "Obsługa": nothing to set here, so no card to unfold first. Its
+                     state the events collecting now. Whoever has WISHES; without Pro "PRO" beside it and the page says what Pro adds. */-->
+                <a th:if="${access.may('WISHES') and (plan.allows('WISHES') or plan.pro('WISHES'))}" th:href="@{/dj/wishes(party=${partyCode})}"
+                   href="/dj/wishes" id="wishesRow" class="card bg-dark border-secondary s2p-fold-link">
+                    <h3 class="s2p-card-title s2p-fold-name"><span th:text="#{wishes.title}">Wishes before the party</span><th:block th:if="${plan.pro('WISHES')}"><span th:replace="~{fragments/components :: proMark}"></span></th:block></h3>
+                    <span class="s2p-fold-state" id="wishesState" th:unless="${plan.pro('WISHES')}" th:classappend="${wishOpen == 0} ? 's2p-fold-state-empty'"
+                          th:text="${wishOpen > 0} ? #{settings.wishes.open(${wishOpen})} : #{settings.wishes.none}">Inactive</span>
+                </a>
+
+                <!--/* "Pytanie do gości" (V74): the DJ's own question to the room, answered on the guests' page — a row leading to the page of
+                     the questions and their results (DjPollsController), as "Życzenia". Its state the question asked now. Whoever has POLLS;
+                     without Pro "PRO" beside it and the page says what Pro adds. */-->
+                <a th:if="${access.may('POLLS') and (plan.allows('POLLS') or plan.pro('POLLS'))}" th:href="@{/dj/polls(party=${partyCode})}"
+                   href="/dj/polls" id="pollsRow" class="card bg-dark border-secondary s2p-fold-link">
+                    <h3 class="s2p-card-title s2p-fold-name"><span th:text="#{polls.title}">Question for the guests</span><th:block th:if="${plan.pro('POLLS')}"><span th:replace="~{fragments/components :: proMark}"></span></th:block></h3>
+                    <span class="s2p-fold-state" id="pollsState" th:unless="${plan.pro('POLLS')}" th:classappend="${pollAsked == null} ? 's2p-fold-state-empty'"
+                          th:text="${pollAsked != null} ? #{settings.polls.asked} : #{settings.polls.none}">Inactive</span>
+                </a>
+            </div>
+        </section>
+
+        <section class="s2p-settings-group" aria-labelledby="settingsGroupDj" th:if="${isOwner}">
+            <h2 class="s2p-settings-group-title" id="settingsGroupDj" th:text="#{settings.group.dj}">You as the DJ</h2>
+            <div class="d-flex flex-column gap-2">
+                <!--/* The DJ's profiles (V24) and tip link (V27) — the owner's alone (money): the guests see them under "Kto gra" and on the QR
+                     print. "@name" or a link copied from the app; the server keeps an https address on that site (SocialLinks, TipLinks) —
+                     400 when it is not one, and the form says why. One "Zapisz" for the profiles, one for the tip link (two endpoints). */-->
+                <details th:if="${isOwner}" class="card bg-dark border-secondary s2p-fold" id="linksCard"
+                         th:with="set=${ {instagramUrl, facebookUrl, tiktokUrl, bookingEmail != null or bookingPhone != null ? 'contact' : null, tipUrl}.?[#this != null].size() }">
+                    <summary class="s2p-fold-summary">
+                        <h3 class="s2p-card-title s2p-fold-name"><span th:text="#{dashboard.links.title}">Profiles and tips</span><th:block th:if="${plan.pro('PROFILES')}"><span th:replace="~{fragments/components :: proMark}"></span></th:block></h3>
+                        <!--/* how many of the five are set, not their names: four names beside the heading took half the line and wrapped it on a phone */-->
+                        <span class="s2p-fold-state" th:unless="${plan.pro('PROFILES')}" th:classappend="${set == 0} ? 's2p-fold-state-empty'"
+                              th:text="${set == 0} ? #{settings.row.links.none} : #{settings.row.links(${set})}">Set: 2</span>
+                    </summary>
+                    <div class="s2p-fold-body">
+                    <p class="s2p-card-help" th:text="#{dashboard.dj.links.label}">Guests see them on their page and the print.</p>
+                    <th:block th:if="${plan.pro('PROFILES')}"><div
+                         th:replace="~{fragments/components :: proOffer(${instagramUrl != null or facebookUrl != null or tiktokUrl != null or bookingEmail != null or bookingPhone != null or tipUrl != null} ? #{plan.links.kept} : #{plan.links.offer})}"></div></th:block>
+                    <th:block th:unless="${plan.pro('PROFILES')}">
+                    <form th:action="@{/dj/dashboard/dj-links}" method="POST" class="m-0" id="djLinksForm">
+                        <input type="hidden" name="partyCode" th:value="${partyCode}">
+                        <div class="d-flex flex-column gap-2">
+                            <input type="text" id="instagramInput" name="instagram" maxlength="200" autocomplete="off"
+                                   class="form-control form-control-sm bg-black text-light border-secondary" aria-label="Instagram"
+                                   th:value="${instagramUrl}" th:placeholder="#{dashboard.dj.links.instagram}">
+                            <input type="text" id="facebookInput" name="facebook" maxlength="200" autocomplete="off"
+                                   class="form-control form-control-sm bg-black text-light border-secondary" aria-label="Facebook"
+                                   th:value="${facebookUrl}" th:placeholder="#{dashboard.dj.links.facebook}">
+                            <input type="text" id="tiktokInput" name="tiktok" maxlength="200" autocomplete="off"
+                                   class="form-control form-control-sm bg-black text-light border-secondary" aria-label="TikTok"
+                                   th:value="${tiktokUrl}" th:placeholder="#{dashboard.dj.links.tiktok}">
+                        </div>
+                        <button type="submit" class="btn btn-sm btn-outline-light mt-3" th:text="#{dashboard.vibe.note.save}">Save</button>
+                        <div class="small text-danger mt-1" data-form-error hidden th:text="#{dashboard.dj.links.invalid}">Not a profile</div>
+                    </form>
+                    <!--/* The contact for bookings (V67): the guests see it under "Zarezerwuj tego DJ-a" — a request that reached the DJ, the page
+                         "party ended" — and write or call the DJ straight. On a public page: the help says to give a business one. */-->
+                    <form th:action="@{/dj/dashboard/booking-contact}" method="POST" class="m-0 mt-3 pt-3 border-top border-secondary" id="bookingContactForm" novalidate>
+                        <input type="hidden" name="partyCode" th:value="${partyCode}">
+                        <p class="form-label d-block text-light small mb-1" th:text="#{dashboard.booking.label}">Contact for bookings</p>
+                        <div class="d-flex flex-column gap-2">
+                            <input type="text" inputmode="email" id="bookingEmailInput" name="bookingEmail" maxlength="254" autocomplete="off"
+                                   class="form-control form-control-sm bg-black text-light border-secondary" th:aria-label="#{dashboard.booking.email}"
+                                   th:value="${bookingEmail}" th:placeholder="#{dashboard.booking.email}">
+                            <input type="tel" id="bookingPhoneInput" name="bookingPhone" maxlength="20" autocomplete="off"
+                                   class="form-control form-control-sm bg-black text-light border-secondary" th:aria-label="#{dashboard.booking.phone}"
+                                   th:value="${bookingPhone}" th:placeholder="#{dashboard.booking.phone}">
+                        </div>
+                        <div class="small text-secondary mt-1" th:text="#{dashboard.booking.help}">Guests see it under "Book this DJ".</div>
+                        <button type="submit" class="btn btn-sm btn-outline-light mt-3" th:text="#{dashboard.vibe.note.save}">Save</button>
+                        <div class="small text-danger mt-1" data-form-error hidden th:text="#{dashboard.booking.invalid}">Not an address</div>
+                    </form>
+                    <form th:action="@{/dj/dashboard/tip-link}" method="POST" class="m-0 mt-3 pt-3 border-top border-secondary" id="tipLinkForm">
+                        <input type="hidden" name="partyCode" th:value="${partyCode}">
+                        <label for="tipInput" class="form-label d-block text-light small mb-1" th:text="#{dashboard.tip.label}">Tip link</label>
+                        <input type="text" id="tipInput" name="tip" maxlength="200" autocomplete="off"
                                class="form-control form-control-sm bg-black text-light border-secondary"
-                               th:placeholder="#{dashboard.join.placeholder}" placeholder="https://www.scan2play.com.pl/join/…">
-                        <button type="submit" class="btn btn-sm btn-outline-light text-nowrap" th:text="#{dashboard.join.button}">Join</button>
+                               th:value="${tipUrl}" th:placeholder="#{dashboard.tip.placeholder}">
+                        <div class="small text-secondary mt-1" th:text="#{dashboard.tip.help}">The money goes straight to you.</div>
+                        <!--/* "Zapisz" under the field, as the profiles' above: one card, one way */-->
+                        <button type="submit" class="btn btn-sm btn-outline-light mt-3" th:text="#{dashboard.vibe.note.save}">Save</button>
+                        <div class="small text-danger mt-1" data-form-error hidden th:text="#{dashboard.tip.invalid}">Not a tip link</div>
+                    </form>
+                    </th:block>
                     </div>
-                </form>
-            </div>
-            </div>
-        </details>
+                </details>
 
-        <!--/* "Zmień kod imprezy" (V49): against a guest who keeps the code and spams every party — the organiser's alone, last (rare,
-             and it makes the posters dead). Asks first (data-confirm, dj-nav.js); a page load (forms.js leaves it alone), which comes
-             back here with this card unfolded, the new code and the way to print it again. */-->
-        <details th:if="${isOwner}" class="card bg-dark border-secondary s2p-fold" id="partyCodeCard" th:attr="open=${codeChanged != null} ? 'open' : null">
-            <summary class="s2p-fold-summary">
-                <h2 class="s2p-card-title s2p-fold-name" th:text="#{settings.code.title}">Party code</h2>
-                <span class="s2p-fold-state font-monospace" id="partyCodeState" th:text="${partyCode}">ABC12</span>
-            </summary>
-            <div class="s2p-fold-body">
-            <div th:if="${codeChanged != null}" class="alert alert-info py-2 mb-3" role="status" id="partyCodeChanged">
-                <span th:text="#{settings.code.changed(${codeChanged})}">The new party code: NEW01.</span>
-                <a th:href="@{/dj/qr-print(party=${codeChanged})}" target="_blank" rel="noopener" class="alert-link text-nowrap"
-                   th:text="#{settings.code.print}">Print the poster and cards</a>
+                <!--/* The DJ's logo (V45, Pro): any image the browser can read, drawn by logo.js at most 512 px a side and sent as a PNG (the
+                     request's body, as the library: PartyLogoController); the server makes its own PNG of it. Shown on the guest pages, the
+                     TV, the print and the summary. The organiser's alone; without Pro the offer, and a logo saved before can be deleted. */-->
+                <details th:if="${isOwner}" class="card bg-dark border-secondary s2p-fold" id="logoCard">
+                    <summary class="s2p-fold-summary">
+                        <h3 class="s2p-card-title s2p-fold-name"><span th:text="#{settings.logo.title}">Your logo</span><th:block th:if="${plan.pro('LOGO')}"><span th:replace="~{fragments/components :: proMark}"></span></th:block></h3>
+                        <span class="s2p-fold-state" th:unless="${plan.pro('LOGO')}" id="logoState" th:classappend="${djLogo == null} ? 's2p-fold-state-empty'"
+                              th:text="${djLogo != null} ? #{settings.row.logo} : #{settings.row.logo.none}">Uploaded</span>
+                    </summary>
+                    <div class="s2p-fold-body">
+                    <th:block th:if="${plan.pro('LOGO')}">
+                    <div th:replace="~{fragments/components :: proOffer(${djLogo != null} ? #{plan.logo.kept} : #{plan.logo.offer})}"></div>
+                    <form th:if="${djLogo != null}" th:action="@{/dj/logo/delete}" method="POST" class="m-0 mt-3" id="logoDeleteForm"
+                          th:attr="data-confirm=#{settings.logo.delete.confirm}">
+                        <input type="hidden" name="partyCode" th:value="${partyCode}">
+                        <button type="submit" class="btn btn-sm btn-outline-danger" th:text="#{settings.logo.delete}">Delete the logo</button>
+                    </form>
+                    </th:block>
+                    <th:block th:unless="${plan.pro('LOGO')}">
+                    <p class="small text-secondary mb-2" th:text="#{settings.logo.help}">Your guests see your logo on the party page…</p>
+                    <div class="s2p-library-state mb-3" th:classappend="${djLogo == null} ? 's2p-library-state-none'">
+                        <span th:if="${djLogo == null}" th:text="#{settings.logo.none}">No logo yet.</span>
+                        <img th:if="${djLogo != null}" th:src="@{${djLogo}}" class="s2p-logo-tile s2p-logo-current" id="logoCurrent"
+                             th:alt="#{logo.dj.alt}" alt="The DJ's logo">
+                        <form th:if="${djLogo != null}" th:action="@{/dj/logo/delete}" method="POST" class="m-0" id="logoDeleteForm"
+                              th:attr="data-confirm=#{settings.logo.delete.confirm}">
+                            <input type="hidden" name="partyCode" th:value="${partyCode}">
+                            <button type="submit" class="btn btn-sm btn-link text-danger s2p-library-delete" th:text="#{settings.library.delete.short}">Delete</button>
+                        </form>
+                    </div>
+                    <!--/* data-max-bytes / data-too-large: a larger file is refused here, before it is read */-->
+                    <form th:action="@{/dj/logo}" method="POST" class="m-0" id="logoForm"
+                          th:attr="data-sending=#{settings.logo.sending},data-refused=#{settings.logo.error.other},data-unreadable=#{settings.logo.error.UNREADABLE},
+                                   data-not-image=#{settings.logo.error.NOT_AN_IMAGE},
+                                   data-max-bytes=${logoMaxBytes},data-max-side=${logoMaxSide},
+                                   data-too-large=#{settings.logo.error.TOO_LARGE(${logoMaxMb})}">
+                        <input type="hidden" name="partyCode" th:value="${partyCode}">
+                        <input type="file" id="logoFile" name="file" accept="image/png,image/jpeg,image/webp" required class="s2p-file-input">
+                        <label for="logoFile" class="s2p-file-drop" id="logoDrop">
+                            <span class="s2p-file-drop-title" data-file-name th:attr="data-empty=#{settings.logo.choose}"
+                                  th:text="#{settings.logo.choose}">Choose an image</span>
+                            <span class="s2p-file-drop-hint" th:text="#{settings.logo.choose.hint(${logoMaxMb})}">PNG, JPEG or WebP · up to 2 MB</span>
+                        </label>
+                        <!--/* what will be sent, as the guests will see it: drawn by logo.js on the tile the pages put under a logo */-->
+                        <div class="mt-3" id="logoPreview" hidden>
+                            <p class="small text-light mb-1" th:text="#{settings.logo.preview}">Preview</p>
+                            <canvas class="s2p-logo-tile s2p-logo-current" id="logoCanvas"></canvas>
+                        </div>
+                        <button type="submit" class="btn btn-sm btn-action mt-3 s2p-library-upload" id="logoUpload" disabled th:text="#{settings.logo.upload}">Upload</button>
+                        <p class="small mt-2 mb-0" id="logoAnswer" role="status" hidden></p>
+                    </form>
+                    </th:block>
+                    </div>
+                </details>
+
+                <!--/* The DJ's library (V41, Pro): a rekordbox collection or an M3U playlist, sent as it is by library.js (the request's body, not a
+                     form's upload: DjLibraryController); the queue then marks each request "✓", "?" or "✗". The organiser's alone. Without Pro
+                     the card says so in place of the form, and a library uploaded before waits — it can still be deleted. */-->
+                <details th:if="${isOwner}" class="card bg-dark border-secondary s2p-fold" id="libraryCard" data-saves-in-place>
+                    <summary class="s2p-fold-summary">
+                        <h3 class="s2p-card-title s2p-fold-name"><span th:text="#{settings.library.title}">Your library</span><th:block th:if="${plan.pro('LIBRARY')}"><span th:replace="~{fragments/components :: proMark}"></span></th:block></h3>
+                        <span class="s2p-fold-state" th:unless="${plan.pro('LIBRARY')}" th:classappend="${libraryTracks == null} ? 's2p-fold-state-empty'"
+                              th:text="${libraryTracks != null} ? #{settings.row.library(${libraryTracks})} : #{settings.row.library.none}">Songs: 1,234</span>
+                    </summary>
+                    <div class="s2p-fold-body">
+                    <!--/* Without Pro: the offer, and a library uploaded before can still be deleted (the organiser's own data) */-->
+                    <th:block th:if="${plan.pro('LIBRARY')}">
+                    <div th:replace="~{fragments/components :: proOffer(${libraryTracks != null} ? #{plan.library.kept} : #{plan.library.offer})}"></div>
+                    <form th:if="${libraryTracks != null}" th:action="@{/dj/library/delete}" method="POST" class="m-0 mt-3" id="libraryDeleteForm"
+                          th:attr="data-confirm=#{settings.library.delete.confirm}">
+                        <input type="hidden" name="partyCode" th:value="${partyCode}">
+                        <button type="submit" class="btn btn-sm btn-outline-danger" th:text="#{settings.library.delete}">Delete library</button>
+                    </form>
+                    </th:block>
+                    <!--/* One line of what it does; how to make the file folded under it. What the party has now in a box, its "Usuń" small at its
+                         end — a deletion is no action to compete with "Wgraj" (it asks first: data-confirm, dj-nav.js). Then the file: our own
+                         field — the browser's file input is hidden (its button never fills a 44 px field on a phone), the label is the tap
+                         target, a file can be dropped on it too (library.js) —, and "Wgraj", the card's one action, enabled by a file chosen. */-->
+                    <th:block th:unless="${plan.pro('LIBRARY')}">
+                    <p class="small text-secondary mb-2" th:text="#{settings.library.help}">Each request in the queue then shows whether you have the song.</p>
+                    <details class="small mb-3 s2p-library-how">
+                        <summary class="text-secondary" th:text="#{settings.library.how}">How to make the file?</summary>
+                        <p class="text-secondary mt-1 mb-0" th:text="#{settings.library.how.text}">rekordbox: File → Export Collection in xml format…</p>
+                    </details>
+                    <div class="s2p-library-state mb-3" th:classappend="${libraryTracks == null} ? 's2p-library-state-none'">
+                        <span id="libraryState"
+                              th:text="${libraryTracks == null} ? #{settings.library.none} : (${libraryPlaylist != null}
+                                       ? #{settings.library.state.playlist(${libraryTracks}, ${libraryUploaded}, ${libraryPlaylist})}
+                                       : #{settings.library.state(${libraryTracks}, ${libraryUploaded})})">No library uploaded yet.</span>
+                        <form th:if="${libraryTracks != null}" th:action="@{/dj/library/delete}" method="POST" class="m-0" id="libraryDeleteForm"
+                              th:attr="data-confirm=#{settings.library.delete.confirm}">
+                            <input type="hidden" name="partyCode" th:value="${partyCode}">
+                            <button type="submit" class="btn btn-sm btn-link text-danger s2p-library-delete" th:text="#{settings.library.delete.short}">Delete</button>
+                        </form>
+                    </div>
+                    <!--/* a rekordbox library uploaded before V57 has its keys alone: uploaded again, the queue shows the tempo and the key too */-->
+                    <p th:if="${libraryOld == true}" class="small text-secondary mb-3 s2p-library-old" th:text="#{settings.library.old}">Upload your
+                        collection again: the queue will show your tracks' tempo and key.</p>
+                    <!--/* "Podpowiedzi gości" (V58): the guests' suggestions the DJ has first, "✓ DJ ma" — saved as soon as picked, its part of
+                         the card answered in place (cards-in-place.js: the upload beside it untouched), "✓ Zapisane" after it; without the
+                         script its "Zapisz". With a library only. Nothing is refused by it: said under it, so the DJ need not fear losing
+                         requests. */-->
+                    <div th:if="${libraryTracks != null}" id="libraryHintsBox" class="mb-3">
+                    <form th:action="@{/dj/library/hints}" method="POST" class="m-0" id="libraryHintsForm" data-in-place="libraryHintsBox">
+                        <input type="hidden" name="partyCode" th:value="${partyCode}">
+                        <label for="libraryHintsSelect" class="form-label small text-light mb-1" th:text="#{settings.library.hints.label}">Guests' suggestions</label>
+                        <select id="libraryHintsSelect" name="on" data-auto-submit aria-describedby="libraryHintsHelp"
+                                class="form-select form-select-sm bg-black text-light border-secondary">
+                            <option value="true" th:selected="${libraryHints != false}" th:text="#{settings.library.hints.on}">Your songs first, “✓ DJ has it”</option>
+                            <option value="false" th:selected="${libraryHints == false}" th:text="#{settings.library.hints.off}">Not marked</option>
+                        </select>
+                        <div id="libraryHintsHelp" class="form-text text-secondary" th:text="#{settings.library.hints.help}">Guests can still ask for any song.</div>
+                        <div class="mt-2" th:if="${libraryHintsSaved != null}">
+                            <span class="small text-light" role="status" id="libraryHintsSaved" th:text="#{settings.library.hints.saved}">✓ Saved</span>
+                        </div>
+                        <noscript><button type="submit" class="btn btn-sm btn-outline-light mt-2" th:text="#{settings.library.hints.save}">Save</button></noscript>
+                    </form>
+                    </div>
+                    <!--/* data-max-bytes / data-too-large: a larger file is refused here, before the browser reads or sends it */-->
+                    <form th:action="@{/dj/library}" method="POST" class="m-0" id="libraryForm"
+                          th:attr="data-sending=#{settings.library.sending},data-refused=#{settings.library.error.other},
+                                   data-max-bytes=${libraryMaxBytes},data-too-large=#{settings.library.error.TOO_LARGE(0, ${libraryMaxMb})}">
+                        <input type="hidden" name="partyCode" th:value="${partyCode}">
+                        <input type="file" id="libraryFile" name="file" accept=".xml,.m3u,.m3u8" required class="s2p-file-input">
+                        <label for="libraryFile" class="s2p-file-drop" id="libraryDrop">
+                            <span class="s2p-file-drop-title" data-file-name th:attr="data-empty=#{settings.library.choose}"
+                                  th:text="#{settings.library.choose}">Choose a file</span>
+                            <span class="s2p-file-drop-hint" th:text="#{settings.library.choose.hint(${libraryMaxMb})}">XML, M3U or M3U8 · up to 64 MB</span>
+                        </label>
+                        <!--/* a rekordbox collection's playlists (V42), read from the chosen file by library.js — the whole collection or one */-->
+                        <div class="mt-3" id="libraryPlaylistField" hidden>
+                            <label for="libraryPlaylist" class="form-label small text-light mb-1" th:text="#{settings.library.playlist}">What to upload</label>
+                            <select id="libraryPlaylist" class="form-select form-select-sm bg-black text-light border-secondary">
+                                <option value="" th:text="#{settings.library.playlist.all}">The whole collection</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-sm btn-action mt-3 s2p-library-upload" id="libraryUpload" disabled th:text="#{settings.library.upload}">Upload</button>
+                        <p class="small mt-2 mb-0" id="libraryAnswer" role="status" hidden></p>
+                    </form>
+                    </th:block>
+                    </div>
+                </details>
+
+                <!--/* "Poranne podsumowanie" (V64): the morning e-mail of a busy evening (MorningSummaryEmailService) — the organiser's alone (the
+                     e-mail goes to their address), Pro's alone (without Pro the card offers it, as every Pro card; the switch is kept). Sent as soon as it is
+                     switched (forms.js data-auto-submit) and answered with this card (cards-in-place.js), "✓ Zapisane" in it; without the
+                     script the "Zapisz" of <noscript>. The morning e-mail's own "Nie wysyłaj mi tego" switches it off too. */-->
+                <details th:fragment="morningSummaryCard" th:if="${isOwner}" class="card bg-dark border-secondary s2p-fold"
+                         id="morningSummaryCard" data-saves-in-place th:attr="open=${morningSummarySaved != null} ? 'open' : null">
+                    <summary class="s2p-fold-summary">
+                        <h3 class="s2p-card-title s2p-fold-name"><span th:text="#{settings.morning.title}">Morning summary</span><th:block th:if="${plan.pro('SUMMARY')}"><span th:replace="~{fragments/components :: proMark}"></span></th:block></h3>
+                        <span class="s2p-fold-state" id="morningSummaryState" th:unless="${plan.pro('SUMMARY')}" th:classappend="${!morningSummary} ? 's2p-fold-state-empty'"
+                              th:text="${morningSummary} ? #{settings.morning.on} : #{settings.morning.off}">On</span>
+                    </summary>
+                    <div class="s2p-fold-body">
+                    <th:block th:if="${plan.pro('SUMMARY')}"><div th:replace="~{fragments/components :: proOffer(#{settings.morning.pro})}"></div></th:block>
+                    <th:block th:unless="${plan.pro('SUMMARY')}">
+                    <p class="s2p-card-help mb-3" th:text="#{settings.morning.help}">The morning after an evening with at least 5 guests' requests: its numbers and the top 3, by e-mail.</p>
+                    <form th:action="@{/dj/dashboard/morning-summary}" method="POST" class="m-0" id="morningSummaryForm" data-in-place>
+                        <input type="hidden" name="partyCode" th:value="${partyCode}">
+                        <div class="form-check form-switch m-0 s2p-switch-row">
+                            <input class="form-check-input" type="checkbox" role="switch" id="morningSummaryToggle" name="on" value="true"
+                                   th:checked="${morningSummary}" data-auto-submit>
+                            <label class="form-check-label text-light" for="morningSummaryToggle" th:text="#{settings.morning.label}">E-mail me the evening's summary</label>
+                        </div>
+                        <div class="mt-3" th:if="${morningSummarySaved != null}">
+                            <span class="small text-light" role="status" id="morningSummarySaved" th:text="#{settings.morning.saved}">✓ Saved</span>
+                        </div>
+                        <noscript><button type="submit" class="btn btn-sm btn-outline-light mt-3" th:text="#{settings.morning.save}">Save</button></noscript>
+                    </form>
+                    </th:block>
+                    </div>
+                </details>
             </div>
-            <p class="s2p-card-help" th:text="#{settings.code.help}">After the change you get a new QR code…</p>
-            <form th:action="@{/dj/dashboard/party-code}" method="POST" class="m-0" id="partyCodeForm"
-                  th:attr="data-confirm=#{settings.code.change.confirm}">
-                <input type="hidden" name="partyCode" th:value="${partyCode}">
-                <button type="submit" id="partyCodeChangeBtn" class="btn btn-sm btn-outline-danger"
-                        th:text="#{settings.code.change}">Change the party code</button>
-            </form>
+        </section>
+
+        <section class="s2p-settings-group" aria-labelledby="settingsGroupAccess">
+            <!--/* "Dostęp" is the organiser's (the staff, the code); the staff see this device alone here, so the heading says that */-->
+            <h2 class="s2p-settings-group-title" id="settingsGroupAccess" th:text="${isOwner} ? #{settings.group.access} : #{settings.group.device}">Access</h2>
+            <div class="d-flex flex-column gap-2">
+                <!--/* "Obsługa" is a page of its own (the organiser's): a row like a folded card, with its state, leading there */-->
+                <a th:if="${isOwner}" th:href="@{/dj/staff(party=${partyCode})}" href="/dj/staff" id="staffRow"
+                   class="card bg-dark border-secondary s2p-fold-link">
+                    <h3 class="s2p-card-title s2p-fold-name" th:text="#{dashboard.staff.title}">Staff</h3>
+                    <span class="s2p-fold-state" th:classappend="${#lists.isEmpty(staff)} ? 's2p-fold-state-empty'"
+                          th:text="${#lists.isEmpty(staff)} ? #{settings.row.staff.none} : #{settings.row.staff(${#lists.size(staff)})}">People: 1</span>
+                </a>
+
+                <!--/* This device: the notifications and the app (each shown by its script only where it helps), and an invitation to another
+                     party pasted here — on the person's own panel only (on another's party they have joined already). */-->
+                <details class="card bg-dark border-secondary s2p-fold" id="deviceCard">
+                    <summary class="s2p-fold-summary">
+                        <h3 class="s2p-card-title s2p-fold-name" th:text="#{dashboard.device.title}">This device</h3>
+                        <!--/* this browser's notifications, on or off: written by settings-rows.js (as the panel's row) */-->
+                        <span class="s2p-fold-state" data-device-state th:if="${pushPublicKey != null}"
+                              th:attr="data-on=#{settings.row.device.on},data-off=#{settings.row.device.off}"></span>
+                    </summary>
+                    <div class="s2p-fold-body">
+                    <div class="d-flex flex-column gap-3">
+                        <!--/* Notifications of new requests on this device (Web Push, js/dashboard/push.js) — only when the server has the keys;
+                             shown by the script, with the note of the state it finds (an iPhone outside the Home Screen app, blocked, …) */-->
+                        <div id="pushSettings" hidden
+                             th:if="${pushPublicKey != null}" th:attr="data-public-key=${pushPublicKey}">
+                            <div class="form-check form-switch m-0 s2p-switch-row">
+                                <input class="form-check-input" type="checkbox" role="switch" id="pushToggle" disabled>
+                                <label class="form-check-label text-light" for="pushToggle" th:text="#{dashboard.push.label}">Request notifications</label>
+                            </div>
+                            <div class="text-warning small mt-1 d-none" data-push-state="ios" th:text="#{dashboard.push.ios}">On an iPhone: add it to the Home Screen first.</div>
+                            <div class="text-warning small mt-1 d-none" data-push-state="denied" th:text="#{dashboard.push.denied}">Notifications are blocked for this site.</div>
+                            <div class="text-warning small mt-1 d-none" data-push-state="unsupported" th:text="#{dashboard.push.unsupported}">This browser cannot show notifications.</div>
+                            <div class="text-danger small mt-1 d-none" data-push-state="error" th:text="#{dashboard.push.error}">Could not switch notifications on.</div>
+                        </div>
+                        <!--/* "Zainstaluj aplikację" (js/dashboard/install.js): shown by the script only where it helps — a browser that offers to
+                             install the app (Chrome, Edge), or an iPhone's Safari (the steps); never in the installed app itself */-->
+                        <div id="installApp" hidden>
+                            <div class="d-flex flex-wrap align-items-center gap-2">
+                                <button type="button" class="btn btn-sm btn-outline-light" id="installAppBtn" th:text="#{dashboard.install.button}">Install the app</button>
+                                <span class="text-secondary small" th:text="#{dashboard.install.help}">Its own icon, no browser bar.</span>
+                            </div>
+                            <div class="text-warning small mt-2 d-none" data-install-note="ios" th:text="#{dashboard.install.ios}">On an iPhone: Share → Add to Home Screen.</div>
+                            <div class="text-warning small mt-2 d-none" data-install-note="menu" th:text="#{dashboard.install.menu}">Install from the browser's menu.</div>
+                        </div>
+                        <!--/* An invitation to another party's staff pasted here (V30): the app on the Home Screen opens a link from an e-mail in
+                             the browser, which has a login of its own (an iPhone always). POST /dj/join leads to /join/{token}, which asks — a
+                             page load (forms.js leaves /dj/join alone). */-->
+                        <form th:if="${isOwner}" th:action="@{/dj/join}" method="POST" class="m-0 pt-3 border-top border-secondary" id="joinStaffForm">
+                            <label for="joinLinkInput" class="form-label text-light small mb-1" th:text="#{dashboard.join.label}">Staff invitation? Paste the link</label>
+                            <div class="d-flex gap-2">
+                                <input type="text" id="joinLinkInput" name="link" maxlength="300" autocomplete="off" required
+                                       class="form-control form-control-sm bg-black text-light border-secondary"
+                                       th:placeholder="#{dashboard.join.placeholder}" placeholder="https://www.scan2play.com.pl/join/…">
+                                <button type="submit" class="btn btn-sm btn-outline-light text-nowrap" th:text="#{dashboard.join.button}">Join</button>
+                            </div>
+                        </form>
+                    </div>
+                    </div>
+                </details>
+
+                <!--/* "Zmień kod imprezy" (V49): against a guest who keeps the code and spams every party — the organiser's alone, last (rare,
+                     and it makes the posters dead). Asks first (data-confirm, dj-nav.js); a page load (forms.js leaves it alone), which comes
+                     back here with this card unfolded, the new code and the way to print it again. */-->
+                <details th:if="${isOwner}" class="card bg-dark border-secondary s2p-fold" id="partyCodeCard" th:attr="open=${codeChanged != null} ? 'open' : null">
+                    <summary class="s2p-fold-summary">
+                        <h3 class="s2p-card-title s2p-fold-name" th:text="#{settings.code.title}">Party code</h3>
+                        <span class="s2p-fold-state font-monospace" id="partyCodeState" th:text="${partyCode}">ABC12</span>
+                    </summary>
+                    <div class="s2p-fold-body">
+                    <div th:if="${codeChanged != null}" class="alert alert-info py-2 mb-3" role="status" id="partyCodeChanged">
+                        <span th:text="#{settings.code.changed(${codeChanged})}">The new party code: NEW01.</span>
+                        <a th:href="@{/dj/qr-print(party=${codeChanged})}" target="_blank" rel="noopener" class="alert-link text-nowrap"
+                           th:text="#{settings.code.print}">Print the poster and cards</a>
+                    </div>
+                    <p class="s2p-card-help" th:text="#{settings.code.help}">After the change you get a new QR code…</p>
+                    <form th:action="@{/dj/dashboard/party-code}" method="POST" class="m-0" id="partyCodeForm"
+                          th:attr="data-confirm=#{settings.code.change.confirm}">
+                        <input type="hidden" name="partyCode" th:value="${partyCode}">
+                        <button type="submit" id="partyCodeChangeBtn" class="btn btn-sm btn-outline-danger"
+                                th:text="#{settings.code.change}">Change the party code</button>
+                    </form>
+                    </div>
+                </details>
             </div>
-        </details>
+        </section>
     </div>
     </div>
 </div>

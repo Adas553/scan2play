@@ -29,7 +29,7 @@ hours — later, a migration of its own that writes the next moment into the sam
 
 **"Motyw dla gości"** (V59, `party_settings.guest_theme`, `GuestTheme`; the owner, 2026-11-04, variant A′ of the analysis
 https://claude.ai/artifact/T8uNK1tcQm4nynE53DK1uU): the look of the guests' pages — the party page, the result, the "party ended" page,
-the kiosk and the TV screen; the panel, the hosts' page and the print keep theirs. The second card of "Ustawienia imprezy", for whoever
+the kiosk and the TV screen; the panel, the hosts' page and the print keep theirs. The first card of the group "Dla gości" of "Ustawienia imprezy", for whoever
 may change the vibe (VIBE — the organiser, a co-organiser), any plan. Five themes, every one dark (a dark hall; the templates keep
 Bootstrap's dark classes, so the light theme of "Later F" is not needed): **Klasyczny** (as before, the default), **Świąteczny** (navy,
 ice blue, snowflakes and baubles, the serif), **Straszny** (Halloween: almost black, a violet mist from above and a dark red one from below,

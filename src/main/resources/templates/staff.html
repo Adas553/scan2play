@@ -148,7 +148,7 @@
     <details class="card bg-dark border-secondary mb-4 s2p-fold" id="staffLinkCard">
         <summary class="s2p-fold-summary">
             <h2 class="s2p-card-title s2p-fold-name" th:text="#{staff.link.other_way}">Or send a link</h2>
-            <span class="s2p-fold-state" th:with="roleName=#{__${'staff.role.' + staffLinkRole}__}"
+            <span class="s2p-fold-state" th:with="roleName=#{__${'staff.role.' + staffLinkRole}__}" th:classappend="${staffLink == null} ? 's2p-fold-state-empty'"
                   th:text="${staffLink != null} ? #{staff.link.state(${roleName}, ${staffLinkUntil})} : #{staff.link.state.none}">Queue · works until 14.11.</span>
         </summary>
         <div class="s2p-fold-body">
