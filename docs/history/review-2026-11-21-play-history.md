@@ -211,6 +211,8 @@ rosnąca do 1 min. Zostawione: działa, a zmiana dotyka testu `aFailedCall_keeps
 
 ## Pytania do właściciela (decyzje, których nie zmieniam)
 
+Odpowiedzi i ich wykonanie: sekcja „Odpowiedzi właściciela” na końcu pliku.
+
 1. **Free/Pro:** program i karta działają w każdym planie (`DjDeviceController` sprawdza tylko `QUEUE`). `docs/ideas.md` p. 19
    zaleca Pro (jak kiosk), wpisano „any plan (as E)”. Zostaje tak?
 2. **Kto może łączyć i odłączać:** obsługa z prawem `QUEUE` może zrobić kod, połączyć swój komputer i odłączyć komputer właściciela;
@@ -287,3 +289,45 @@ która przyjdzie. Scenariusz `deck-computers-code-before-list` (lista opóźnion
   i dodatkowo prawdziwe zapytanie chunked przez Tomcat (`curl -H "Transfer-Encoding: chunked"`): małe z tokenem 200, 200 KB 413.
 - Dopisane do P13: zapytania z nieznanym tokenem nie mają limitu (jedno wyszukanie w indeksie na zapytanie, po P1/P17 najwyżej 128 KB
   ciała) — przed floodem chroni Cloudflare.
+
+## Odpowiedzi właściciela i co z nich zrobione (2026-11-21)
+
+Odpowiedzi na pytania 1–6 z sekcji „Pytania do właściciela”: „1. PRO”, „3. Zrób tak, by było wygodnie dla DJ-a”, pozostałe „jak
+uważasz”.
+
+1. **Pro — zrobione.** Nowa funkcja planu `PlanFeature.DECK` obejmuje całe „Zagrane samo”: kartę w przeglądarce
+   (`/dj/dashboard/plays`) i program (`/dj/devices`, kod). Bez Pro panel nie pokazuje „🎧 Z programu DJ-a” wcale — zasada panelu:
+   żadnej oferty Pro w kolejce (`aFreeOrganiser_seesProInTheCommentStyles_neverInTheQueue`); funkcję nazywa `/pro` (lista i
+   porównanie, PL/EN). Sparowany program imprezy bez Pro dostaje `403 {"error": "plan"}`: token zostaje, piosenki są porzucane, okno
+   mówi „„Zagrane samo” działa w planie Pro — ta impreza go teraz nie ma.” (inne 403, np. wyzwanie Cloudflare, dalej „Brak
+   połączenia”). „Odłącz” działa w każdym planie, jak usuwanie logo czy biblioteki. **Uwaga:** plany na produkcji nie są jeszcze
+   egzekwowane (`PLANS_ENFORCE=false`) — do tego czasu funkcja jest dla wszystkich, jak kiosk i pytanie do gości. Testy:
+   `PlanFeatureEndpointsTest` (3 endpointy DECK, „Odłącz” wśród „everyone's”), `DeviceApiControllerTest` (403 plan),
+   `DashboardPageRenderTest` (Free: nic; Pro: przycisk, karta, linki), `ProPageRenderTest` (czerwony bez wpisu DECK),
+   `AgentTest.withoutPro_theSongsAreDropped_andTheTokenStays`, `ServerClientTest` (403 plan / inne 403).
+2. **Obsługa z prawem `QUEUE` — zostaje, jak jest.** Powód: tą osobą bywa drugi DJ grający ze swojego laptopa — to on musi połączyć
+   swój komputer, a „Zagrane samo” robi tylko to, co jego „Zagrane”. Odłączenie cudzego komputera jest odwracalne (nowy kod) i widać
+   je w panelu. Token działa w imieniu imprezy, nie osoby; po usunięciu kogoś z obsługi jego komputer zostaje na liście, a właściciel
+   może go odłączyć jednym kliknięciem.
+3. **Pobieranie — zrobione.** `deck-agent.yml`: „Run workflow” z `main` wgrywa paczki do GitHub Release `zagrane` (repozytorium
+   publiczne — bez konta, te same adresy dla każdej wersji, nie znikają po 30 dniach); z innej gałęzi tylko artefakty, do prób. Karta
+   „Program na komputerze”: „Pobierz program: Windows · Mac (Apple M1 i nowsze) · Mac z procesorem Intel” i rozwijane „Pierwsze
+   uruchomienie” (SmartScreen: „Więcej informacji” › „Uruchom mimo to”; macOS: Ustawienia systemowe › Prywatność i ochrona › „Otwórz
+   mimo to”; jak sprawdzić, który Mac). Wersja paczki z `pom.xml` (już nie wpisana na sztywno — P16). **Przed scaleniem do `main`
+   linki prowadzą donikąd, dopóki „Run workflow” z `main` nie zrobi wydania** — zrobić zaraz po scaleniu, przed powiedzeniem DJ-om.
+4. **Mac z Intelem — dodany** (`macos-15-intel` w macierzy, paczka `Scan2Play-Zagrane-macos-intel.zip`). Koszt: jeden przebieg to
+   trzy paczki, dwie na macOS (minuty ×10), tylko przy „Run workflow”. Niesprawdzone tutaj — workflow ruszy dopiero na GitHubie.
+5. **Zapas zegara (P12) — 2 minuty, gdy wysyłający podał swój zegar** (`DeckHistoryService.SLACK_CLOCK_KNOWN`; bez `sentAt` dalej 5).
+   Zostają 2, nie 0: piosenka zaczęta tuż przed prośbą to zwykle gość, który prosi o to, co właśnie startuje. Scenariusz z P12
+   (zagrane 21:00, prośba 21:03, ponowne wysłanie) już nie oznacza. Test `withTheSendersClockKnown_aSongThreeMinutesBeforeTheRequest_marksNothing`,
+   `DeviceApiControllerTest.theSendersClock_givesTheShorterSlack`.
+6. **Limit złych kodów (P13) — 1000 na 10 minut łącznie** (10 na adres bez zmian) i jedno ostrzeżenie w logu, gdy zostanie osiągnięty.
+   Zablokowanie parowania wszystkim wymaga teraz ~100 adresów zamiast 20. Wyższy limit to więcej prób zgadywania, ale zgadnięty kod daje
+   tylko oznaczanie „Zagrane” jednej przypadkowej imprezy, którą DJ widzi na liście komputerów i odłącza — blokada parowania w trakcie
+   imprez boli bardziej. Test `DjDeviceIT.wrongCodesFromTwentyFiveAddresses_doNotStopAGoodOne` (czerwony przy 200).
+
+Sprawdzenia po tych zmianach (w kopii): `check.py unit` 1531/1531, `it` 219/219, `browser` 473/473, `audit -t dashboard,pro`
+19 stron × 3 szerokości bez przewijania w bok i błędów (te same 4 stare małe cele), program `verify` 18/18. Od końca do końca 16/16
+(plany wyłączone, jak na produkcji), a z `scan2play.plans.enforce=true` na koncie Free: brak „🎧 Z programu DJ-a” w panelu,
+`/dj/devices/code` → 403, `/pro` z `data-feature="DECK"`. Workflow (Mac z Intelem, wydanie `zagrane`) — niesprawdzony; ruszy dopiero
+po „Run workflow” na GitHubie.

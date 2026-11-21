@@ -32,8 +32,14 @@ public class DeckHistoryService {
     /** The most songs in one call: the panel sends what it read since its last look, a few at most. */
     public static final int MAX_PLAYS = 20;
 
-    /** The DJ's computer's clock against the server's: a song may have played this much "before" the request it answers. */
+    /**
+     * A song may have started this much "before" the request it answers: the guest asked while it was starting. With the sender's
+     * clock unknown (no {@code sentAt}) the slack covers that clock's error too. Kept short when the clock is known: a song sent
+     * again (the program restarted, the panel reloaded — the last 10 minutes go again) must not mark a request made just after it
+     * played, "zagraj to jeszcze raz".
+     */
     static final Duration CLOCK_SLACK = Duration.ofMinutes(5);
+    static final Duration SLACK_CLOCK_KNOWN = Duration.ofMinutes(2);
 
     /** A song older than this is no news of tonight's set: a history file read again, a day's file of yesterday. */
     static final Duration OLDEST = Duration.ofHours(12);
@@ -56,11 +62,13 @@ public class DeckHistoryService {
 
     /**
      * Marks played each of the party's waiting requests that one of the songs is (see the class); one read of the queue (its 400),
-     * one conditional {@code UPDATE} a request marked.
+     * one conditional {@code UPDATE} a request marked. {@code clockKnown}: the songs' times were moved to the server's clock
+     * ({@code sentAt}), so the shorter slack ({@link #SLACK_CLOCK_KNOWN}).
      *
      * @return the marked requests' song names, in the queue's order — what the panel says it did
      */
-    public List<String> markPlayed(String partyCode, List<Play> plays, Instant now) {
+    public List<String> markPlayed(String partyCode, List<Play> plays, Instant now, boolean clockKnown) {
+        Duration slack = clockKnown ? SLACK_CLOCK_KNOWN : CLOCK_SLACK;
         List<Matchable> songs = new ArrayList<>();
         for (Play play : plays) {
             Instant at = play.at() == null || play.at().isAfter(now) ? now : play.at();
@@ -76,7 +84,7 @@ public class DeckHistoryService {
         for (SongRequestEntity request : songRequestRepository.findTop400ByPartyCodeAndDecisionInOrderByRequestedAtAsc(
                 partyCode, List.of("accepted"))) {
             LibraryKey wanted = LibraryKey.of(request.getSongName());
-            Instant asked = request.getRequestedAt() == null ? Instant.EPOCH : request.getRequestedAt().minus(CLOCK_SLACK);
+            Instant asked = request.getRequestedAt() == null ? Instant.EPOCH : request.getRequestedAt().minus(slack);
             boolean played = songs.stream().anyMatch(song -> !song.at().isBefore(asked)
                     && wanted.matchIn(List.of(song.key()), Set.of()).mark() == LibraryMark.HAVE);
             if (played && djService.markSongAsPlayed(request.getId(), partyCode)) {

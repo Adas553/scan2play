@@ -17,7 +17,8 @@ import java.util.List;
 class ServerClient {
 
     /** What a call came to. */
-    enum Outcome { OK, WRONG_CODE, DISCONNECTED, TOO_MANY, FAILED }
+    /** What a call came to; NO_PLAN: the party's organiser has no Pro (any more) — the token stays, the songs are not taken. */
+    enum Outcome { OK, WRONG_CODE, DISCONNECTED, TOO_MANY, NO_PLAN, FAILED }
 
     record Answer(Outcome outcome, String token, List<String> marked) {
     }
@@ -56,6 +57,9 @@ class ServerClient {
                 case 200 -> new Answer(Outcome.OK, token, Json.strings(response.body(), "marked"));
                 case 401 -> new Answer(Outcome.DISCONNECTED, null, List.of());
                 case 429 -> new Answer(Outcome.TOO_MANY, token, List.of());
+                // the server's own refusal says why; any other 403 (Cloudflare's challenge) is a call that did not get through
+                case 403 -> Json.string(response.body(), "error").filter("plan"::equals).isPresent()
+                        ? new Answer(Outcome.NO_PLAN, token, List.of()) : new Answer(Outcome.FAILED, token, List.of());
                 case 400 -> new Answer(Outcome.OK, token, List.of());   // the same songs would be refused again: dropped
                 default -> new Answer(Outcome.FAILED, token, List.of());
             };

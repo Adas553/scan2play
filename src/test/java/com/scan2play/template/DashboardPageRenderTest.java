@@ -888,6 +888,8 @@ class DashboardPageRenderTest {
                 .contains("Golec uOrkiestra - Hej sokoły", "s2p-btn-played", "s2p-btn-skip")
                 .doesNotContain("s2p-btn-tip", "action=\"/dj/dashboard/tip-count\"", "s2p-host-wanted");
         assertThat(html).as("the account menu: the plan and the pricing page").contains("id=\"pricingMenuLink\"", "Twój plan: Free · Cennik");
+        assertThat(html).as("\"Zagrane samo\" (DECK): nothing of it in the queue, no offer either — /pro names it")
+                .doesNotContain("id=\"deckToggle\"", "id=\"deckReader\"", "releases/download/zagrane");
         write("dashboard-free.html", html);
     }
 
@@ -1061,6 +1063,12 @@ class DashboardPageRenderTest {
                 new PartyStaffService.Access(party, true, StaffPermission.all()), null, com.scan2play.service.Plans.enforced("owner"));
         assertThat(html).contains(">Zabawne<", "s2p-btn-tip", "s2p-host-wanted", "Twój plan: Pro · Cennik")
                 .doesNotContain("s2p-pro", "· Pro<", "<optgroup");
+        assertThat(html).as("\"Zagrane samo\": the button, the card and the program's three downloads with the first start's help")
+                .contains("id=\"deckToggle\"", "id=\"deckReader\"", "Pobierz program:",
+                        "releases/download/zagrane/Scan2Play-Zagrane-windows.zip", "releases/download/zagrane/Scan2Play-Zagrane-macos.zip",
+                        "releases/download/zagrane/Scan2Play-Zagrane-macos-intel.zip", "Mac z procesorem Intel", "„Uruchom mimo to”",
+                        "„Otwórz mimo to”")
+                .doesNotContain("napisz do nas");
     }
 
     /** "Podsumowanie wieczoru" (V35): to an organiser without Pro, the way to /pro with "PRO"; to the staff of such a party, nothing. */

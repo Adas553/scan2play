@@ -102,6 +102,8 @@ final class Agent {
         ServerClient.Answer answer = client.plays(settings.server(), token, batch);
         lastOutcome = answer.outcome();
         switch (answer.outcome()) {
+            // without Pro the songs would be refused again and again: dropped, as the server does not look at them
+            case NO_PLAN -> waiting.subList(0, batch.size()).clear();
             case OK -> {
                 waiting.subList(0, batch.size()).clear();
                 if (!answer.marked().isEmpty()) {

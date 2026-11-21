@@ -77,10 +77,10 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
   (the program, variant A) stage (1) followed: `deck-agent/`, migration V78 `dj_device` (only adds), `/api/device/*`, "Połącz komputer".
   Waits for the owner: "Run workflow" of `deck-agent.yml`, a try on the PC with VirtualDJ against `dev.`, the review, PRs.
 - **2026-11-21 — its review (`docs/history/review-2026-11-21-play-history.md`), on the same branch, no new migration:** "merge after
-  fixes" — P1–P8, P17–P18 fixed (a body limit on `/api/device/*`, `sentAt` corrects a DJ computer's clock, one pairing code a party, the panel's
-  code line by the newest id, the token file owner-only and atomic, the window's messages, a bad XML reference, `aria-label`s).
-  All green, end to end 16/16. Waits for the owner: the review's questions (plan, who may pair, a download page, Intel
-  Macs, the clock's slack), then the merge.
+  fixes" — P1–P8, P17–P18 fixed (a body limit, `sentAt` for a DJ computer's clock, one pairing code a party, the token file
+  owner-only, the window, `aria-label`s).
+  The owner's answers done: Pro (`PlanFeature.DECK`), download links (GitHub release `zagrane`, Intel Macs too), slack 2 min,
+  1000 wrong codes. Waits: the merge, then at once "Run workflow" of `deck-agent.yml` from `main` (the links need it).
 - **Waits for the owner (from #269):** after the first commit the deploy window holds back (Fri–Sun 18:00–6:00): does Railway
   deploy it on the workflow's re-run? UptimeRobot is set up (the owner, 2026-11-17; `docs/monitoring.md`).
 - **Waits for the owner (the wishes, #263):** the three older Polish texts with "DJ" and a masculine verb (`guest.vote.gone`,

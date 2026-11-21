@@ -140,7 +140,8 @@ final class Window {
             checked.setText("Sprawdzone: " + TIME.format(status.checkedAt()));
             marked.setText(status.marked().isEmpty() ? " " : "✓ Zagrane samo: " + String.join(" · ", lastOf(status.marked())));
             problem.setText(status.last() == ServerClient.Outcome.FAILED ? "Brak połączenia z serwerem — kolejna próba za chwilę."
-                    : status.last() == ServerClient.Outcome.TOO_MANY ? "Serwer prosi o chwilę przerwy." : " ");
+                    : status.last() == ServerClient.Outcome.TOO_MANY ? "Serwer prosi o chwilę przerwy."
+                    : status.last() == ServerClient.Outcome.NO_PLAN ? "„Zagrane samo” działa w planie Pro — ta impreza go teraz nie ma." : " ");
             // only when the content changed its size: a pack at every look (3 s) would undo a window the DJ stretched
             if (!before.equals(frame.getContentPane().getPreferredSize())) {
                 frame.pack();

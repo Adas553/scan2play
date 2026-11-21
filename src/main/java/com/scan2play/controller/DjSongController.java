@@ -101,7 +101,7 @@ public class DjSongController {
     /**
      * "Zagrane samo" (docs/ideas.md item 18, variant E): the songs VirtualDJ or Serato played, read from its history by the panel in
      * the DJ's browser, mark the waiting requests they are played ({@link DeckHistoryService}) — for whom may work the queue, as
-     * "Zagrane". At most {@value DeckHistoryService#MAX_PLAYS} songs, each field at most {@value #DECK_FIELD_MAX} characters: else 400.
+     * "Zagrane", with Pro. At most {@value DeckHistoryService#MAX_PLAYS} songs, each field at most {@value #DECK_FIELD_MAX} characters: else 400.
      * Nothing of them is kept.
      *
      * @return the marked requests' song names, {@code {"marked": [...]}}
@@ -111,12 +111,13 @@ public class DjSongController {
     public Map<String, List<String>> deckPlays(@RequestBody DeckPlays body, OAuth2AuthenticationToken authentication,
                                                HttpSession session) {
         Instant now = Instant.now();
-        String ownerPartyCode = sessionHelper.require(body.partyCode(), StaffPermission.QUEUE, authentication, session).getPartyCode();
+        String ownerPartyCode = planService.require(sessionHelper.require(body.partyCode(), StaffPermission.QUEUE, authentication, session),
+                PlanFeature.DECK).getPartyCode();
         List<DeckPlay> plays = body.plays() == null ? List.of() : body.plays();
         if (!validPlays(plays)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
         }
-        return Map.of("marked", deckHistoryService.markPlayed(ownerPartyCode, songsOf(plays, body.sentAt(), now), now));
+        return Map.of("marked", deckHistoryService.markPlayed(ownerPartyCode, songsOf(plays, body.sentAt(), now), now, clockKnown(body.sentAt())));
     }
 
     /** At most {@value DeckHistoryService#MAX_PLAYS} songs, none null, each field at most {@value #DECK_FIELD_MAX} characters. */
@@ -132,11 +133,16 @@ public class DjSongController {
      * song "before the guest asked" ({@link DeckHistoryService}) and mark nothing. Without it, the times are taken as they are.
      */
     static List<DeckHistoryService.Play> songsOf(List<DeckPlay> plays, Long sentAt, Instant now) {
-        long skew = sentAt == null || sentAt < 0 || sentAt > 100_000_000_000L ? 0 : now.getEpochSecond() - sentAt;
+        long skew = clockKnown(sentAt) ? now.getEpochSecond() - sentAt : 0;
         return plays.stream()
                 .map(play -> new DeckHistoryService.Play(play.at() == null || play.at() < 0 || play.at() > 100_000_000_000L
                         ? null : Instant.ofEpochSecond(play.at() + skew), play.artist(), play.title()))
                 .toList();
+    }
+
+    /** Whether the sender said its clock ({@code sentAt} in {@link Instant}'s range): the songs' times are then the server's. */
+    static boolean clockKnown(Long sentAt) {
+        return sentAt != null && sentAt >= 0 && sentAt <= 100_000_000_000L;
     }
 
     private static boolean tooLong(String field) {

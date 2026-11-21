@@ -115,6 +115,21 @@ class AgentTest {
     }
 
     @Test
+    void withoutPro_theSongsAreDropped_andTheTokenStays(@TempDir Path dir) throws Exception {
+        Settings settings = paired(dir);
+        Agent agent = agent(settings);
+        agent.tick();
+        source.played(START.plusSeconds(10), "Sanah", "Szampan");
+        server.outcome = ServerClient.Outcome.NO_PLAN;
+        now.set(START.plusSeconds(13));
+        agent.tick();
+
+        assertTrue(agent.waiting().isEmpty(), "not sent again and again");
+        assertEquals("tok", settings.token());
+        assertEquals(ServerClient.Outcome.NO_PLAN, shown.get().last());
+    }
+
+    @Test
     void aComputerDisconnectedInThePanel_forgetsItsToken(@TempDir Path dir) throws Exception {
         Settings settings = paired(dir);
         Agent agent = agent(settings);

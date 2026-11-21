@@ -114,7 +114,7 @@ healthcheck (a `GET` with the host `healthcheck.railway.app`, from inside) passe
 **The DJ's program** (V78, `DeviceApiController`): `POST /api/device/pair` and `POST /api/device/plays` are public and exempt from CSRF —
 no cookie is read or made; the program's token (256 bits, only its SHA-256 stored, `dj_device`) opens the marking of its party's
 requests played and nothing else; "Odłącz" in the panel kills it. A pairing code is 6 digits for 10 minutes, used once, guessed at
-most 10 times per address and 200 times in all per 10 minutes (`DjDeviceService`). `DeviceApiWebTest`. The program goes through
+most 10 times per address and 1000 times in all per 10 minutes (`DjDeviceService`; reaching it is logged once — it takes about a hundred addresses, and a code guessed opens only one party's marking, which its DJ sees and takes away). `DeviceApiWebTest`. The program goes through
 Cloudflare like a browser: should Cloudflare's bot protection ever challenge it, `/api/device/*` needs a skip rule. Its body is refused when over 128 KB (413): unread when it says so, else read no further — a body without its length (chunked) is taken too, a proxy may forward it so (`DeviceBodyLimitFilter`): Spring would parse a JSON body whole before the token is looked at.
 
 ---

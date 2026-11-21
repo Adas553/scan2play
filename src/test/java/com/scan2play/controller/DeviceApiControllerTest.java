@@ -31,12 +31,19 @@ class DeviceApiControllerTest {
 
     private final DjDeviceService devices = mock(DjDeviceService.class);
     private final DeckHistoryService deckHistory = mock(DeckHistoryService.class);
+    private final com.scan2play.service.PartySettingsQueryService parties = mock(com.scan2play.service.PartySettingsQueryService.class);
     private MockMvc mockMvc;
+
+    private MockMvc mvc(com.scan2play.service.PlanService plans) {
+        return MockMvcBuilders.standaloneSetup(new DeviceApiController(devices, deckHistory, new GuestRequestLimiter(5, 10, 100, ""),
+                parties, plans)).build();
+    }
 
     @BeforeEach
     void setUp() {
-        mockMvc = MockMvcBuilders.standaloneSetup(new DeviceApiController(devices, deckHistory, new GuestRequestLimiter(5, 10, 100, "")))
-                .build();
+        when(parties.getSettings("AB123")).thenReturn(com.scan2play.entity.PartySettingsEntity.builder().partyCode("AB123")
+                .ownerId("dj-ab").active(true).build());
+        mockMvc = mvc(com.scan2play.service.Plans.enforced("dj-ab"));
         when(devices.device(eq("good"), any())).thenReturn(Optional.of(new DjDeviceService.Paired(7, "AB123")));
         when(devices.device(eq("revoked"), any())).thenReturn(Optional.empty());
         when(devices.mayCall(7)).thenReturn(true);
@@ -60,7 +67,7 @@ class DeviceApiControllerTest {
 
     @Test
     void theSongs_markTheTokensParty() throws Exception {
-        when(deckHistory.markPlayed(eq("AB123"), anyList(), any())).thenReturn(List.of("Sanah - Szampan"));
+        when(deckHistory.markPlayed(eq("AB123"), anyList(), any(), org.mockito.ArgumentMatchers.eq(false))).thenReturn(List.of("Sanah - Szampan"));
 
         mockMvc.perform(post("/api/device/plays").header("Authorization", "Bearer good").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"plays\":[{\"at\":1795300000,\"artist\":\"Sanah\",\"title\":\"Szampan\"}]}"))
@@ -83,12 +90,29 @@ class DeviceApiControllerTest {
     }
 
     @Test
+    void theSongsOfAPartyWithoutPro_are403Plan_andNothingIsMarked_theTokenStays() throws Exception {
+        mvc(com.scan2play.service.Plans.enforced()).perform(post("/api/device/plays").header("Authorization", "Bearer good")
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"plays\":[{\"at\":1795300000,\"artist\":\"Sanah\",\"title\":\"Szampan\"}]}"))
+                .andExpect(status().isForbidden()).andExpect(jsonPath("$.error").value("plan"));
+        verify(deckHistory, never()).markPlayed(anyString(), anyList(), any(), org.mockito.ArgumentMatchers.anyBoolean());
+        verify(devices, never()).remove(anyString(), org.mockito.ArgumentMatchers.anyLong());
+    }
+
+    @Test
+    void theSendersClock_givesTheShorterSlack() throws Exception {
+        mockMvc.perform(post("/api/device/plays").header("Authorization", "Bearer good").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"plays\":[{\"at\":1795300000,\"artist\":\"Sanah\",\"title\":\"Szampan\"}],\"sentAt\":1795300010}"))
+                .andExpect(status().isOk());
+        verify(deckHistory).markPlayed(eq("AB123"), anyList(), any(), org.mockito.ArgumentMatchers.eq(true));
+    }
+
+    @Test
     void noToken_oraRevokedOne_is401_andNothingIsMarked() throws Exception {
         mockMvc.perform(post("/api/device/plays").contentType(MediaType.APPLICATION_JSON).content("{\"plays\":[]}"))
                 .andExpect(status().isUnauthorized());
         mockMvc.perform(post("/api/device/plays").header("Authorization", "Bearer revoked").contentType(MediaType.APPLICATION_JSON)
                 .content("{\"plays\":[]}")).andExpect(status().isUnauthorized());
-        verify(deckHistory, never()).markPlayed(anyString(), anyList(), any());
+        verify(deckHistory, never()).markPlayed(anyString(), anyList(), any(), org.mockito.ArgumentMatchers.anyBoolean());
     }
 
     @Test

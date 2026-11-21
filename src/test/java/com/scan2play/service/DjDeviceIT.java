@@ -66,6 +66,19 @@ class DjDeviceIT extends PostgresIntegrationTest {
     }
 
     @Test
+    void wrongCodesFromTwentyFiveAddresses_doNotStopAGoodOne() {
+        String party = party();
+        for (int address = 0; address < 25; address++) {
+            for (int i = 0; i < DjDeviceService.PAIR_TRIES_PER_CLIENT; i++) {
+                devices.pair("000000", "Zgadujący", "it-guess-" + party + "-" + address, NOW);
+            }
+        }
+
+        assertThat(devices.pair(devices.newCode(party), "Laptop DJ-a", "it-dj-" + party, NOW).token())
+                .as("250 wrong codes from 25 addresses: still far from the limit in all").isNotNull();
+    }
+
+    @Test
     void theLastCall_isNotedAtMostOnceAMinute() {
         String party = party();
         String token = pair(party, "PC", NOW);

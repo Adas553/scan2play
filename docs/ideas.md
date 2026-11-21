@@ -325,8 +325,8 @@ piece of work or when a task names an item. A finished item stays here until its
    to fall back to AppData) or the program of item 19. **Variant E, built (the owner, 2026-11-21: "to zróbmy na razie E"; after "Brave?" and "musimy płacić?" — A needs Apple's 99 USD a
    year and a Windows certificate, else the DJ meets Gatekeeper's "Otwórz mimo to" and SmartScreen):** "🎧 Z programu DJ-a" over the
    queue reads VirtualDJ's or Serato 2/3's history folder in Chrome / Edge on a computer (`play-history.js`) and sends each new song to
-   `POST /dj/dashboard/plays`; `DeckHistoryService` marks only a "✓" match played. Taken as recommended, open to change: any plan (no
-   Pro gate yet — `PLANS_ENFORCE=false` anyway), nothing of the set kept (a song off the requests dropped; the privacy policy says so),
+   `POST /dj/dashboard/plays`; `DeckHistoryService` marks only a "✓" match played. Pro (the owner, 2026-11-21, after the review — `PlanFeature.DECK`, with the program; it counts once
+   `PLANS_ENFORCE` is on), nothing of the set kept (a song off the requests dropped; the privacy policy says so),
    no "Chyba leciało, potwierdź" for a title alone yet. Details: `docs/context/05-1d-panel-heading-queue.md`. **Its limits:** Firefox,
    Safari, Brave (only behind a flag) and phones see no button; Serato 4 and rekordbox not read; the tab must stay open (a background
    tab's timers may slow to one a minute — not measured); Serato writes a song when it is loaded on a deck, so "Zagrane" may come
@@ -366,7 +366,8 @@ piece of work or when a task names an item. A finished item stays here until its
    (`--console`) paired by a token, a VirtualDJ file written line by line → the request "Zagrane", the other one and the earlier set
    untouched; 400 / 401 / 403 and no session as they should be. The packages: `.github/workflows/deck-agent.yml` by hand ("Run
    workflow"), unsigned zips for Windows and macOS (~127 MB unpacked on Linux; less without the locale data). Taken as recommended:
-   any plan (as E), nothing of the set kept, Polish only. **To try (the owner):** "Run workflow", the Windows zip on the PC with
+   nothing of the set kept, Polish only; Pro (the owner, 2026-11-21). **To try (the owner):** "Run workflow", the Windows zip on the PC with
    VirtualDJ — "Połącz komputer" in the panel of `dev.`, the server `https://dev.scan2play.com.pl` in the program's window; whether
-   Cloudflare lets a program (not a browser) through to `/api/device/*`. **Still open:** stages (2)–(4); Pro; the signing; a download
-   page instead of "napisz do nas".
+   Cloudflare lets a program (not a browser) through to `/api/device/*`. **Still open:** stages (2)–(4); the signing. **Done after the review (2026-11-21):** the download links in the card (the
+   GitHub release `zagrane`, written by "Run workflow" from `main`; Windows, Mac with Apple's chips, Mac with Intel) and the
+   first start's help; review `docs/history/review-2026-11-21-play-history.md`.

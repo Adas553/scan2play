@@ -47,6 +47,10 @@ class DeviceApiWebTest {
     private DjSessionHelper sessionHelper;
     @MockitoBean
     private SiteCounter siteCounter;
+    @MockitoBean
+    private com.scan2play.service.PartySettingsQueryService parties;
+    @MockitoBean
+    private com.scan2play.service.PlanService plans;
 
     private static void noSession(MvcResult result) {
         assertThat(result.getRequest().getSession(false)).as("a session was made").isNull();
@@ -57,7 +61,8 @@ class DeviceApiWebTest {
         when(devices.pair(anyString(), anyString(), any(), any())).thenReturn(new DjDeviceService.Pairing("tok", null));
         when(devices.device(eq("tok"), any())).thenReturn(Optional.of(new DjDeviceService.Paired(1, "AB123")));
         when(devices.mayCall(1)).thenReturn(true);
-        when(deckHistory.markPlayed(anyString(), anyList(), any())).thenReturn(List.of());
+        when(plans.allows(any(), eq(com.scan2play.model.PlanFeature.DECK))).thenReturn(true);
+        when(deckHistory.markPlayed(anyString(), anyList(), any(), org.mockito.ArgumentMatchers.anyBoolean())).thenReturn(List.of());
 
         noSession(mockMvc.perform(post("/api/device/pair").contentType(MediaType.APPLICATION_JSON)
                 .content("{\"code\":\"123456\",\"name\":\"PC\"}")).andExpect(status().isOk()).andReturn());

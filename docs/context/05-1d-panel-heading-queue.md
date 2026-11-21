@@ -86,7 +86,7 @@ file every 5 s when it changed (which file is the newest, every 30 s): VirtualDJ
 a deck left out). The songs that started more than 10 minutes before the reading began are tonight's earlier set and are not sent; a
 new one is sent once — artist, title, time, never a path — to `POST /dj/dashboard/plays` (JSON, ≤ 20, the CSRF header). The server
 (`DeckHistoryService`) marks played each waiting request of that song by the library's keys (`LibraryKey`, V42): the title and an
-artist in common ("✓"); a title alone, a request without an artist, a song that started more than 5 minutes before the request (the
+artist in common ("✓"); a title alone, a request without an artist, a song that started more than 2 minutes before the request (5 when the sender did not say its clock; the
 computer's clock — moved by the difference between the sender's `sentAt` and the server's time, so a computer whose clock is off still matches) mark nothing; a song with no artist (a file without tags: Serato writes its name as the title) is read as "Artist -
 Title". Each mark is `DjService.markSongAsPlayed` (the conditional `UPDATE`), the answer names the marked songs ("✓ Zagrane samo: …"
 under the card) and the queue is fetched at once. The folder's handle is kept in IndexedDB (`s2p-deck`): after a page load the panel
@@ -94,14 +94,14 @@ reads on when the browser still allows it, else "Wznów czytanie: History"; "Wy�
 says what is sent and that nothing is kept. Browser scenarios `deck-reader-*`, `DeckHistoryServiceTest`; the formats' sources and the
 other programs (rekordbox, Traktor, djay — not read): `docs/ideas.md` item 18 and `tools/spike/dj_history_spike.py`.
 
-**"Program na komputerze" — the same from a program on the DJ's computer** (V78, `docs/ideas.md` item 19): the card of "🎧 Z programu
+**"Program na komputerze" — the same from a program on the DJ's computer** (V78, `docs/ideas.md` item 19; Pro — `PlanFeature.DECK`, with the browser's part: without Pro neither the button nor the card, no offer in the queue, `/pro` names it; "Odłącz" any plan; the card's "Pobierz program": Windows, Mac with Apple's chips, Mac with Intel — the GitHub release `zagrane` of `deck-agent.yml`, no account needed — and "Pierwsze uruchomienie", what SmartScreen and Gatekeeper ask): the card of "🎧 Z programu
 DJ-a" (now shown on any browser 768 px wide or more; its browser part only where a folder can be picked) has "Program na komputerze
 (Windows, Mac)": "Połącz komputer" (`POST /dj/devices/code`, QUEUE) shows a 6-digit code valid 10 minutes ("123 456"), gone from the
 card once the program took it; the party's computers (`GET /dj/devices`: name, "ostatnio 21:43") with "Odłącz" (`POST
 /dj/devices/remove`). The program (`deck-agent/`, below) swaps the code for its own token (`POST /api/device/pair`) and sends the songs
 to `POST /api/device/plays` with `Authorization: Bearer` — the same `DeckHistoryService` as the panel's `/dj/dashboard/plays`.
 `DjDeviceService`: only the token's SHA-256 in `dj_device`; at most 3 computers a party (pairing a 4th forgets the one seen longest ago);
-a code used once, one at a time per party (a new one kills the earlier); 10 tries of a code per address and 200 wrong codes in all per 10 minutes, 30 calls a minute per computer (in memory);
+a code used once, one at a time per party (a new one kills the earlier); 10 tries of a code per address and 1000 wrong codes in all per 10 minutes (reaching it: one WARN in the log), 30 calls a minute per computer (in memory);
 `last_seen_at` written once a minute at most. Browser scenario `deck-computers`; `DjDeviceIT` (PostgreSQL), `DeviceApiControllerTest`,
 `DeviceApiWebTest` (the real security: no login, no CSRF, no session for `/api/device/*`; `/dj/devices` needs the login).
 

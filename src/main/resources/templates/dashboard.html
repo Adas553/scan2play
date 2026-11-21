@@ -340,8 +340,9 @@
                         class="d-sm-none" th:text="#{dashboard.add_song.short}">+ Add</span></button>
                 <!--/* "Zagrane samo" (docs/ideas.md items 18, 19): the program on the DJ's computer (V78), or this browser itself, reads
                      VirtualDJ's or Serato's play history and the queue's songs are marked played (play-history.js). Shown by the script on
-                     a screen 768 px wide or more (a computer); not in the demo. */-->
-                <button th:if="${(access == null or access.may('QUEUE')) and demo != true}" type="button" id="deckToggle" hidden
+                     a screen 768 px wide or more (a computer); not in the demo. With Pro (PlanFeature.DECK): without it nothing here, no
+                     offer in the queue — /pro names it. */-->
+                <button th:if="${(access == null or access.may('QUEUE')) and demo != true and (plan == null or plan.allows('DECK'))}" type="button" id="deckToggle" hidden
                         class="btn btn-sm btn-outline-light text-nowrap" aria-expanded="false" aria-controls="deckReader"
                         th:title="#{dashboard.deck.toggle.title}" th:attr="aria-label=#{dashboard.deck.toggle}"><span class="d-none d-sm-inline"
                         th:text="#{dashboard.deck.toggle}">🎧 From DJ software</span><span class="d-sm-none"
@@ -367,7 +368,7 @@
             <p class="small text-secondary mt-1 mb-0" th:text="#{dashboard.add_song.help}">It goes straight into the queue, without the AI.</p>
         </form>
         <!--/* "Zagrane samo": folded out by #deckToggle. The texts with {…} are filled in by play-history.js. */-->
-        <section th:if="${(access == null or access.may('QUEUE')) and demo != true}" id="deckReader" class="mb-3 s2p-deck-reader" hidden
+        <section th:if="${(access == null or access.may('QUEUE')) and demo != true and (plan == null or plan.allows('DECK'))}" id="deckReader" class="mb-3 s2p-deck-reader" hidden
                  aria-labelledby="deckReaderTitle"
                  th:attr="data-resume=#{dashboard.deck.resume},data-reading=#{dashboard.deck.reading},data-marked=#{dashboard.deck.marked},
                           data-none=#{dashboard.deck.none},data-denied=#{dashboard.deck.denied},data-failed=#{dashboard.deck.failed},
@@ -380,7 +381,20 @@
                  /dj/devices (play-history.js) */-->
             <div id="deviceBlock" class="mb-3">
                 <h4 class="small fw-bold text-light mb-1" th:text="#{dashboard.computer.title}">The program on your computer (Windows, Mac)</h4>
-                <p class="small text-light mb-2" th:text="#{dashboard.computer.help}">The program reads VirtualDJ’s and Serato’s history…</p>
+                <p class="small text-light mb-1" th:text="#{dashboard.computer.help}">The program reads VirtualDJ’s and Serato’s history…</p>
+                <!--/* The packages of .github/workflows/deck-agent.yml, on the GitHub release "zagrane" (the repository is public: no
+                     account needed; the same addresses for every version). The first start's warnings: the program is not signed. */-->
+                <p id="deviceDownload" class="small text-light mb-1"><span th:text="#{dashboard.computer.download}">Download the program:</span>
+                    <a href="https://github.com/Adas553/scan2play/releases/download/zagrane/Scan2Play-Zagrane-windows.zip">Windows</a> ·
+                    <a href="https://github.com/Adas553/scan2play/releases/download/zagrane/Scan2Play-Zagrane-macos.zip"
+                       th:text="#{dashboard.computer.download.mac}">Mac (Apple M1 and later)</a> ·
+                    <a href="https://github.com/Adas553/scan2play/releases/download/zagrane/Scan2Play-Zagrane-macos-intel.zip"
+                       th:text="#{dashboard.computer.download.intel}">Mac with an Intel processor</a></p>
+                <details class="small text-secondary mb-2">
+                    <summary th:text="#{dashboard.computer.first}">The first start</summary>
+                    <p class="mb-1 mt-1" th:text="#{dashboard.computer.first.windows}">Windows: unpack the zip…</p>
+                    <p class="mb-0" th:text="#{dashboard.computer.first.mac}">Mac: unpack the zip…</p>
+                </details>
                 <div class="d-flex flex-wrap align-items-center gap-2">
                     <button type="button" id="deviceConnect" class="btn btn-sm btn-outline-light" th:text="#{dashboard.computer.connect}">Connect a computer</button>
                     <span id="deviceCode" class="small text-warning" aria-live="polite"></span>

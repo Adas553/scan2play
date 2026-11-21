@@ -27,8 +27,10 @@ import java.util.concurrent.atomic.AtomicInteger;
  * "Odłącz" deletes the row. A party has at most {@value #MAX_DEVICES}: pairing one more forgets the one seen longest ago.
  * <p>
  * Limits, all in memory: {@value #PAIR_TRIES_PER_CLIENT} tries of a code per address and {@value #PAIR_FAILURES} wrong codes in all per
- * {@value #CODE_MINUTES} minutes (a code is one of a million and lives {@value #CODE_MINUTES} minutes: guessing one needs far more), and
- * {@value #CALLS_PER_MINUTE} calls a minute per device.
+ * {@value #CODE_MINUTES} minutes (a code is one of a million and lives {@value #CODE_MINUTES} minutes, a party has one at a time:
+ * guessing one needs far more, and a code guessed opens only the marking of one party's queue — which its DJ sees in the list of
+ * computers and takes away). The limit in all is there to stop a guessing run, not a person: reaching it takes a hundred addresses,
+ * and it says so in the log once. A device may call {@value #CALLS_PER_MINUTE} times a minute.
  */
 @Slf4j
 @Service
@@ -37,7 +39,7 @@ public class DjDeviceService {
     public static final int CODE_MINUTES = 10;
     static final int MAX_DEVICES = 3;
     static final int PAIR_TRIES_PER_CLIENT = 10;
-    static final int PAIR_FAILURES = 200;
+    static final int PAIR_FAILURES = 1000;
     static final int CALLS_PER_MINUTE = 30;
     /** The longest device name kept (the column). */
     static final int NAME_MAX = 60;
@@ -99,7 +101,10 @@ public class DjDeviceService {
         String plain = code == null ? "" : code.replaceAll("\\D", "");
         String partyCode = plain.length() == 6 ? codes.asMap().remove(plain) : null;
         if (partyCode == null) {
-            count(pairTries, ALL_FAILURES);
+            if (count(pairTries, ALL_FAILURES) == PAIR_FAILURES) {
+                log.warn("{} wrong pairing codes in {} minutes: pairing is refused to everyone until the window ends", PAIR_FAILURES,
+                        CODE_MINUTES);
+            }
             return new Pairing(null, PairRefusal.WRONG_CODE);
         }
         // the party's row locked: two computers paired at once count each other; gone (deleted, its code changed since): no pairing
