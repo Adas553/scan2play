@@ -71,7 +71,7 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
   (`docs/history/review-2026-11-21-event-plan-trends.md`) and its fixes P1–P17 (left: see "Poprawki" there). Waits for the owner: the
   read, a look on a phone (the hosts' page, the panel's card), then PRs to `dev` / into the branches' PRs to `main`; on Railway
   `TRENDS_EXCLUDE_PARTIES` = the owner's test parties' codes (optional).
-- **2026-11-21 — `claude/loving-maxwell-sl8pkl` (from `main` = `6ba04f6`), pushed, no PR, no migration:** item 18's analysis (the
+- **2026-11-21 — `claude/loving-maxwell-sl8pkl` (from `main` = `6ba04f6`), PRs #297 (`main`) and #298 (`dev`), migration V78 (only adds):** item 18's analysis (the
   artifact https://claude.ai/artifact/Psa7Ve58PHUmVzAFMtJGTA, `tools/spike/dj_history_spike.py`) and its variant E built — "🎧 Z programu
   DJ-a" over the queue, `POST /dj/dashboard/plays`, `DeckHistoryService`. Chrome refused VirtualDJ's AppData (the owner's try), so item 19
   (the program, variant A) stage (1) followed: `deck-agent/`, migration V78 `dj_device` (only adds), `/api/device/*`, "Połącz komputer".
