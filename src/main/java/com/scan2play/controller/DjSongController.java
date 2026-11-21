@@ -2,24 +2,20 @@ package com.scan2play.controller;
 
 import com.scan2play.model.PlanFeature;
 import com.scan2play.model.StaffPermission;
-import com.scan2play.service.DeckHistoryService;
 import com.scan2play.service.DjService;
 import com.scan2play.service.PlanService;
 import com.scan2play.service.SongRequestCommandService;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
@@ -34,7 +30,7 @@ import static com.scan2play.controller.ViewAttributes.REDIRECT_DASHBOARD;
  * Handles:
  * <ul>
  *     <li>Adding a song the DJ was asked for at the booth</li>
- *     <li>Marking songs as played — by the DJ, or by the DJ's program's play history read in the panel</li>
+ *     <li>Marking songs as played by the DJ (the DJ's program on the computer marks them by {@link DeviceApiController})</li>
  *     <li>Skipping a song, clearing the queue</li>
  * </ul>
  * Dashboard views are handled by {@link DjDashboardController}.
@@ -49,7 +45,6 @@ public class DjSongController {
     private final DjSessionHelper sessionHelper;
     private final PlanService planService;
     private final SongRequestCommandService songRequestCommandService;
-    private final DeckHistoryService deckHistoryService;
 
     /**
      * Adds a song to the queue by hand ("Dodaj piosenkę", V44): a guest asked at the booth. For whom may work the queue; no AI,
@@ -82,71 +77,6 @@ public class DjSongController {
         String ownerPartyCode = sessionHelper.require(partyCode, StaffPermission.QUEUE, authentication, session).getPartyCode();
         djService.markSongAsPlayed(id, ownerPartyCode);
         return REDIRECT_DASHBOARD;
-    }
-
-    /**
-     * The songs the panel read from the DJ's program's play history (play-history.js): {@code at} in seconds since 1970, or none;
-     * {@code sentAt} the sender's clock when it sent them (seconds since 1970), see {@link #songsOf}.
-     */
-    public record DeckPlays(String partyCode, List<DeckPlay> plays, Long sentAt) {
-    }
-
-    /** One song as the program's history writes it. */
-    public record DeckPlay(Long at, String artist, String title) {
-    }
-
-    /** The longest artist or title taken: more is no song's name (the keys cut at {@code LibraryKey.MAX} anyway). */
-    static final int DECK_FIELD_MAX = 500;
-
-    /**
-     * "Zagrane samo" (docs/ideas.md item 18, variant E): the songs VirtualDJ or Serato played, read from its history by the panel in
-     * the DJ's browser, mark the waiting requests they are played ({@link DeckHistoryService}) — for whom may work the queue, as
-     * "Zagrane", with Pro. At most {@value DeckHistoryService#MAX_PLAYS} songs, each field at most {@value #DECK_FIELD_MAX} characters: else 400.
-     * Nothing of them is kept.
-     *
-     * @return the marked requests' song names, {@code {"marked": [...]}}
-     */
-    @PostMapping(value = "/dashboard/plays", consumes = MediaType.APPLICATION_JSON_VALUE)
-    @ResponseBody
-    public Map<String, List<String>> deckPlays(@RequestBody DeckPlays body, OAuth2AuthenticationToken authentication,
-                                               HttpSession session) {
-        Instant now = Instant.now();
-        String ownerPartyCode = planService.require(sessionHelper.require(body.partyCode(), StaffPermission.QUEUE, authentication, session),
-                PlanFeature.DECK).getPartyCode();
-        List<DeckPlay> plays = body.plays() == null ? List.of() : body.plays();
-        if (!validPlays(plays)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
-        }
-        return Map.of("marked", deckHistoryService.markPlayed(ownerPartyCode, songsOf(plays, body.sentAt(), now), now, clockKnown(body.sentAt())));
-    }
-
-    /** At most {@value DeckHistoryService#MAX_PLAYS} songs, none null, each field at most {@value #DECK_FIELD_MAX} characters. */
-    static boolean validPlays(List<DeckPlay> plays) {
-        return plays.size() <= DeckHistoryService.MAX_PLAYS && plays.stream().noneMatch(play -> play == null
-                || tooLong(play.artist()) || tooLong(play.title()));
-    }
-
-    /**
-     * The songs as the service takes them; a time out of {@link Instant}'s range is taken as none (now). A song's time is the DJ's
-     * computer's clock, which may be minutes off: when the sender says what its clock showed as it sent ({@code sentAt}), every time
-     * is moved by the difference from the server's {@code now} — a computer whose clock runs 8 minutes slow would otherwise play every
-     * song "before the guest asked" ({@link DeckHistoryService}) and mark nothing. Without it, the times are taken as they are.
-     */
-    static List<DeckHistoryService.Play> songsOf(List<DeckPlay> plays, Long sentAt, Instant now) {
-        long skew = clockKnown(sentAt) ? now.getEpochSecond() - sentAt : 0;
-        return plays.stream()
-                .map(play -> new DeckHistoryService.Play(play.at() == null || play.at() < 0 || play.at() > 100_000_000_000L
-                        ? null : Instant.ofEpochSecond(play.at() + skew), play.artist(), play.title()))
-                .toList();
-    }
-
-    /** Whether the sender said its clock ({@code sentAt} in {@link Instant}'s range): the songs' times are then the server's. */
-    static boolean clockKnown(Long sentAt) {
-        return sentAt != null && sentAt >= 0 && sentAt <= 100_000_000_000L;
-    }
-
-    private static boolean tooLong(String field) {
-        return field != null && field.length() > DECK_FIELD_MAX;
     }
 
     /**

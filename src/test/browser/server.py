@@ -123,8 +123,6 @@ def default_state():
         'pushStatus': 204,             # what POST /dj/push/subscribe answers (400: the server refuses the browser's subscription)
         'djLinksStatus': 302,          # what POST /dj/dashboard/dj-links answers (400: one of the DJ's profiles is not a profile there)
         # What POST /dj/library answers (V41): its status and the server's one sentence (422: not a library, 413: too large)
-        # "Zagrane samo" (play-history.js): the song names POST /dj/dashboard/plays answers it marked played
-        'deckMarked': [],
         # "Program na komputerze" (V78): the party's computers GET /dj/devices answers, [{id, name, createdAt, lastSeenAt}]
         'devices': [],
         'libraryStatus': 200,
@@ -450,9 +448,6 @@ class Handler(BaseHTTPRequestHandler):
             fields['X-Requested-With'] = self.headers.get('X-Requested-With')
         if path in ('/dj/devices/code', '/dj/devices/remove'):   # "Połącz komputer", "Odłącz" (V78), by fetch
             fields['X-CSRF-TOKEN'] = self.headers.get('X-CSRF-TOKEN')
-        if path == '/dj/dashboard/plays':              # "Zagrane samo": JSON sent by fetch, with the CSRF token in its header
-            fields['X-CSRF-TOKEN'] = self.headers.get('X-CSRF-TOKEN')
-            fields['Content-Type'] = self.headers.get('Content-Type')
         if path in ('/dj/dashboard/schedule', '/dj/dashboard/guest-theme', '/dj/dashboard/morning-summary',
                     '/dj/library/hints'):   # by fetch (V55, V59, V64, V58)
             fields['X-Requested-With'] = self.headers.get('X-Requested-With')
@@ -481,8 +476,6 @@ class Handler(BaseHTTPRequestHandler):
             with stand.lock:
                 state['devices'] = [d for d in state['devices'] if str(d['id']) != str(fields.get('id'))]
             return self._send(204)
-        if path == '/dj/dashboard/plays':              # "Zagrane samo": the requests the server marked played
-            return self._json({'marked': state['deckMarked']})
         if path == '/dj/dashboard/tip-count':         # the DJ counts a tip (V28), or takes one back (add=false), as the real server
             with stand.lock:
                 for r in state['queue']:

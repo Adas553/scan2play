@@ -19,6 +19,7 @@ import com.scan2play.service.PushNotificationService;
 import com.scan2play.service.QrCodeService;
 import com.scan2play.service.StaffInvitationService;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -96,8 +97,7 @@ class PlanFeatureEndpointsTest {
         ReflectionTestUtils.setField(dashboard, "rawBaseUrl", "http://localhost:8080");
         dashboard.init();
         return MockMvcBuilders.standaloneSetup(
-                        new DjSongController(mock(DjService.class), helper, plans, mock(com.scan2play.service.SongRequestCommandService.class),
-                                mock(com.scan2play.service.DeckHistoryService.class)),
+                        new DjSongController(mock(DjService.class), helper, plans, mock(com.scan2play.service.SongRequestCommandService.class)),
                         new DjPartySettingsController(settings, mock(AccountDeletionService.class), mock(com.scan2play.service.PartyCodeService.class), helper, plans, com.scan2play.service.PartySchedules.of(settings)),
                         dashboard,
                         new DjSummaryController(oneEvening(), helper, codesAsTexts(), plans, "https://www.scan2play.com.pl/"),
@@ -122,6 +122,16 @@ class PlanFeatureEndpointsTest {
     /** The answer's status: a request let through is answered (below 400), not only "nothing thrown" (the review of 2026-10-14). */
     private static int perform(MockMvc mvc, String who, MockHttpServletRequestBuilder request) throws Exception {
         return mvc.perform(request.principal(user(who)).session(new MockHttpSession())).andReturn().getResponse().getStatus();
+    }
+
+    /**
+     * The panel's own reading of the history folder (variant E, docs/ideas.md item 18) is parked: its endpoint is gone with it, the
+     * program's songs come by /api/device/plays.
+     */
+    @Test
+    void thePanelsOwnFolderReading_hasNoEndpoint() throws Exception {
+        assertThat(perform(mvc(Plans.off()), ORGANISER, post("/dj/dashboard/plays").contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                .content("{\"partyCode\":\"" + PUB + "\",\"plays\":[]}"))).isIn(404, 405);
     }
 
     static Stream<Arguments> proFeatures() {
@@ -166,9 +176,7 @@ class PlanFeatureEndpointsTest {
                 Arguments.of(PlanFeature.POLLS, true, post("/dj/polls/create").param("partyCode", PUB).param("question", "Disco polo?")),
                 Arguments.of(PlanFeature.POLLS, true, post("/dj/polls/1/ask").param("partyCode", PUB)),
                 Arguments.of(PlanFeature.POLLS, true, post("/dj/polls/1/edit").param("partyCode", PUB).param("question", "Disco polo?")),
-                // "Zagrane samo" (items 18, 19, V78): the panel's songs, the program's pairing code and the list of computers
-                Arguments.of(PlanFeature.DECK, true, post("/dj/dashboard/plays").contentType(org.springframework.http.MediaType.APPLICATION_JSON)
-                        .content("{\"partyCode\":\"" + PUB + "\",\"plays\":[]}")),
+                // "Zagrane samo" (item 19, V78): the program's pairing code and the list of computers
                 Arguments.of(PlanFeature.DECK, true, post("/dj/devices/code").param("partyCode", PUB)),
                 Arguments.of(PlanFeature.DECK, true, get("/dj/devices").param("partyCode", PUB)));
     }
