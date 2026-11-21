@@ -76,7 +76,7 @@ class StaffPermissionEndpointsTest {
         when(history.getHistory(any(), org.mockito.ArgumentMatchers.anyInt(), any())).thenReturn(new PlayHistoryService.Page(List.of(), false));
         com.scan2play.service.WishService wishes = WishControllers.wishes(PUB);
         DjDashboardController dashboard = new DjDashboardController(mock(DjService.class), mock(PartySettingsCommandService.class),
-                mock(QrCodeService.class), helper, history, mock(GuestRequestLimiter.class), mock(PushNotificationService.class), staff, mock(com.scan2play.service.StaffInvitationService.class), com.scan2play.service.Plans.off(), new com.scan2play.service.AiHealthMonitor(), com.scan2play.service.PartySchedules.texts(), mock(com.scan2play.service.WelcomeEmailService.class), com.scan2play.service.FreeAiLimit.off(), wishes, org.mockito.Mockito.mock(com.scan2play.service.PollService.class));
+                mock(QrCodeService.class), helper, history, mock(GuestRequestLimiter.class), mock(PushNotificationService.class), staff, mock(com.scan2play.service.StaffInvitationService.class), com.scan2play.service.Plans.off(), new com.scan2play.service.AiHealthMonitor(), com.scan2play.service.PartySchedules.texts(), mock(com.scan2play.service.WelcomeEmailService.class), com.scan2play.service.FreeAiLimit.off(), wishes, org.mockito.Mockito.mock(com.scan2play.service.PollService.class), org.mockito.Mockito.mock(com.scan2play.service.EventPlanService.class));
         ReflectionTestUtils.setField(dashboard, "rawBaseUrl", "http://localhost:8080");
         dashboard.init();
         mockMvc = MockMvcBuilders.standaloneSetup(
@@ -93,6 +93,8 @@ class StaffPermissionEndpointsTest {
                         new PartyLogoController(mock(com.scan2play.service.PartyLogoService.class), query, helper,
                                 com.scan2play.service.Plans.off(), codesAsTexts()),
                         WishControllers.djWishes(wishes, helper, com.scan2play.service.Plans.off(),
+                                mock(PartySettingsCommandService.class), codesAsTexts()),
+                        WishControllers.djPlan(wishes, helper, com.scan2play.service.Plans.off(),
                                 mock(PartySettingsCommandService.class), codesAsTexts()),
                         new DjPollsController(PollControllers.polls(PUB), helper, com.scan2play.service.Plans.off(), codesAsTexts()))
                 .setViewResolvers(new InternalResourceViewResolver("/WEB-INF/views/", ".html")).build();
@@ -150,6 +152,15 @@ class StaffPermissionEndpointsTest {
                 Arguments.of(StaffPermission.WISHES, post("/dj/wishes/1/must-play").param("partyCode", PUB).param("song", "Wilki - Baśka")),
                 Arguments.of(StaffPermission.WISHES, get("/dj/wishes/1/csv").param("party", PUB)),
                 Arguments.of(StaffPermission.WISHES, get("/dj/qr-print").param("party", PUB).param("wish", "1")),
+                // "Plan imprezy" (V77): the event's plan, its save, its template, the hosts' link, the print ("Użyj na imprezie"
+                // needs HOST_LISTS too: usingTheEventsLists_needsTheHostsListsToo)
+                Arguments.of(StaffPermission.WISHES, get("/dj/wishes/1/plan").param("party", PUB)),
+                Arguments.of(StaffPermission.WISHES, post("/dj/wishes/1/plan").param("partyCode", PUB).param("label", "Tort")),
+                Arguments.of(StaffPermission.WISHES, post("/dj/wishes/1/plan/template").param("partyCode", PUB).param("template", "wedding")),
+                Arguments.of(StaffPermission.WISHES, post("/dj/wishes/1/plan/clear").param("partyCode", PUB)),
+                Arguments.of(StaffPermission.WISHES, post("/dj/wishes/1/plan/host-link").param("partyCode", PUB)),
+                Arguments.of(StaffPermission.WISHES, post("/dj/wishes/1/plan/host-link").param("partyCode", PUB).param("on", "false")),
+                Arguments.of(StaffPermission.WISHES, get("/dj/wishes/1/plan/print").param("party", PUB)),
                 // "Pytanie do gości" (V74): the questions, their results, asking, ending, deleting
                 Arguments.of(StaffPermission.POLLS, get("/dj/polls").param("party", PUB)),
                 Arguments.of(StaffPermission.POLLS, get("/dj/polls/1/results").param("party", PUB)),
@@ -173,6 +184,19 @@ class StaffPermissionEndpointsTest {
 
         kasiaMay(EnumSet.of(needed));
         assertThat(perform(request)).as("let through, and answered").isLessThan(400);
+    }
+
+    /** "Użyj na imprezie" (V77): the party's own lists change, so HOST_LISTS is asked beside WISHES. */
+    @org.junit.jupiter.api.Test
+    void usingTheEventsLists_needsTheHostsListsToo() throws Exception {
+        MockHttpServletRequestBuilder use = post("/dj/wishes/1/plan/use-lists").param("partyCode", PUB);
+        kasiaMay(EnumSet.of(StaffPermission.WISHES));
+        assertThatThrownBy(() -> perform(use)).hasRootCauseInstanceOf(AccessDeniedException.class);
+        kasiaMay(EnumSet.of(StaffPermission.HOST_LISTS));
+        assertThatThrownBy(() -> perform(use)).hasRootCauseInstanceOf(AccessDeniedException.class);
+
+        kasiaMay(EnumSet.of(StaffPermission.WISHES, StaffPermission.HOST_LISTS));
+        assertThat(perform(use)).as("let through, and answered").isLessThan(400);
     }
 
     /** "Dodaj piosenkę" (V44): the song goes to the party the page names, the person's; nothing typed is a 400, nothing added. */

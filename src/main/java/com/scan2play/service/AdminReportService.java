@@ -37,7 +37,8 @@ import java.util.Set;
 /**
  * The owner's daily report by e-mail: yesterday's traffic and its funnel beside the week's average ({@link SiteCounter}), the
  * organisers new in the last {@value #NEW_DAYS} days and whether they have had a party yet, every party of yesterday's evening with its
- * numbers, and the health of the AI, the e-mails and the log ({@link LogTally}). Sent to {@code scan2play.admin-email} when the
+ * numbers, the songs of the last 30 days by parties ({@link SongTrendsService}), and the health of the AI, the e-mails and the log
+ * ({@link LogTally}). Sent to {@code scan2play.admin-email} when the
  * owner's {@link Schedule} says (V66; every day at 9:10 by default; a failed send tried again for 3 hours), and by hand from
  * {@code /dj/stats/report}. No address or no Brevo key: nothing.
  * <p>
@@ -75,8 +76,9 @@ public class AdminReportService {
      * addresses and the titles for the page; the e-mail gets {@link #withoutContacts()}, so they are not there to print.
      */
     public record View(String day, List<Tile> tiles, List<Bar> visits, List<Step> funnel, List<NewOrganiser> organisers,
-                       List<PartyLine> parties, boolean moreParties, int totalRequests, int totalPlayed, List<Check> checks,
-                       List<LogTally.Line> logLines, String logSince, String pageUrl) {
+                       List<PartyLine> parties, boolean moreParties, int totalRequests, int totalPlayed,
+                       SongTrendsService.Result trends, List<Check> checks, List<LogTally.Line> logLines, String logSince,
+                       String pageUrl) {
 
         /** The same without the organisers' addresses and names and the evenings' titles: what the e-mail may carry. */
         public View withoutContacts() {
@@ -85,7 +87,7 @@ public class AdminReportService {
                             .toList(),
                     parties.stream().map(p -> new PartyLine(p.partyCode(), null, p.plan(), null, p.guestRequests(), p.played(),
                             p.rejectedByAi(), p.refusedBeforeAi(), p.viaKiosk(), p.tips(), p.addedByDj())).toList(),
-                    moreParties, totalRequests, totalPlayed, checks, logLines, logSince, pageUrl);
+                    moreParties, totalRequests, totalPlayed, trends, checks, logLines, logSince, pageUrl);
         }
     }
 
@@ -126,6 +128,7 @@ public class AdminReportService {
     private final Mailer mailer;
     private final AiHealthMonitor aiHealthMonitor;
     private final LogTally logTally;
+    private final SongTrendsService songTrendsService;
     private final JdbcTemplate jdbc;
     private final String address;
     private final Clock clock;
@@ -134,15 +137,16 @@ public class AdminReportService {
     public AdminReportService(SiteCounter siteCounter, PartySettingsRepository partySettingsRepository,
                               EveningSummaryRepository eveningSummaryRepository, EveningSummaryService eveningSummaryService,
                               PlanService planService, Mailer mailer, AiHealthMonitor aiHealthMonitor, LogTally logTally,
-                              JdbcTemplate jdbc, @Value("${scan2play.admin-email:}") String address) {
+                              SongTrendsService songTrendsService, JdbcTemplate jdbc,
+                              @Value("${scan2play.admin-email:}") String address) {
         this(siteCounter, partySettingsRepository, eveningSummaryRepository, eveningSummaryService, planService, mailer, aiHealthMonitor,
-                logTally, jdbc, address, Clock.systemUTC());
+                logTally, songTrendsService, jdbc, address, Clock.systemUTC());
     }
 
     AdminReportService(SiteCounter siteCounter, PartySettingsRepository partySettingsRepository,
                        EveningSummaryRepository eveningSummaryRepository, EveningSummaryService eveningSummaryService,
-                       PlanService planService, Mailer mailer, AiHealthMonitor aiHealthMonitor, LogTally logTally, JdbcTemplate jdbc,
-                       String address, Clock clock) {
+                       PlanService planService, Mailer mailer, AiHealthMonitor aiHealthMonitor, LogTally logTally,
+                       SongTrendsService songTrendsService, JdbcTemplate jdbc, String address, Clock clock) {
         this.siteCounter = siteCounter;
         this.partySettingsRepository = partySettingsRepository;
         this.eveningSummaryRepository = eveningSummaryRepository;
@@ -151,6 +155,7 @@ public class AdminReportService {
         this.mailer = mailer;
         this.aiHealthMonitor = aiHealthMonitor;
         this.logTally = logTally;
+        this.songTrendsService = songTrendsService;
         this.jdbc = jdbc;
         this.address = address == null ? "" : address.strip();
         this.clock = clock;
@@ -291,15 +296,16 @@ public class AdminReportService {
             partyLine(code, yesterday).ifPresent(parties::add);
         }
         Health health = new Health(aiHealthMonitor.isAiDown(), mailer.isOn(), mailer.status(), tally);
-        String text = render(yesterday, days, organisers, parties, codes.size() > MAX_PARTIES, health, true);
-        String emailText = render(yesterday, days, organisers, parties, codes.size() > MAX_PARTIES, health, false)
+        SongTrendsService.Result trends = songTrendsService.trends(now);
+        String text = render(yesterday, days, organisers, parties, codes.size() > MAX_PARTIES, trends, health, true);
+        String emailText = render(yesterday, days, organisers, parties, codes.size() > MAX_PARTIES, trends, health, false)
                 + "\nAdresy i imiona DJ-ów: " + mailer.siteUrl() + "/dj/stats/report\n";
         long visits = count(days, yesterday, Event.LANDING_PL) + count(days, yesterday, Event.LANDING_EN);
         String subject = "Scan2Play — raport za " + yesterday.format(SHORT_DAY) + ": " + visits + " "
                 + Texts.polishPlural(visits, "wejście", "wejścia", "wejść") + ", " + parties.size() + " "
                 + Texts.polishPlural(parties.size(), "impreza", "imprezy", "imprez")
                 + (tally.errors() > 0 ? ", " + tally.errors() + " ERROR" : "");
-        View view = view(yesterday, days, organisers, parties, codes.size() > MAX_PARTIES, health,
+        View view = view(yesterday, days, organisers, parties, codes.size() > MAX_PARTIES, trends, health,
                 mailer.siteUrl() + "/dj/stats/report");
         return new Report(subject, text, emailText, view);
     }
@@ -309,7 +315,7 @@ public class AdminReportService {
     private static final DateTimeFormatter BAR_DAY = DateTimeFormatter.ofPattern("EEE d.MM", PL);
 
     public static View view(LocalDate yesterday, List<SiteCounter.Day> days, List<NewOrganiser> organisers, List<PartyLine> parties,
-                     boolean moreParties, Health health, String pageUrl) {
+                     boolean moreParties, SongTrendsService.Result trends, Health health, String pageUrl) {
         long visits = visits(days, yesterday);
         double visitsWeek = average(days, yesterday, Event.LANDING_PL) + average(days, yesterday, Event.LANDING_EN);
         List<Tile> tiles = List.of(
@@ -353,7 +359,7 @@ public class AdminReportService {
         int requests = parties.stream().mapToInt(PartyLine::guestRequests).sum();
         int played = parties.stream().mapToInt(PartyLine::played).sum();
         return new View(yesterday.format(DAY), tiles, bars, funnel, organisers, parties, moreParties,
-                requests, played, checks, log.lines(), Times.display(log.since()), pageUrl);
+                requests, played, trends, checks, log.lines(), Times.display(log.since()), pageUrl);
     }
 
     static Tile tile(String label, long value, double average) {
@@ -396,14 +402,50 @@ public class AdminReportService {
     // ---- the text ----
 
     static String render(LocalDate yesterday, List<SiteCounter.Day> days, List<NewOrganiser> organisers, List<PartyLine> parties,
-                         boolean moreParties, Health health, boolean contacts) {
+                         boolean moreParties, SongTrendsService.Result trends, Health health, boolean contacts) {
         StringBuilder text = new StringBuilder();
         text.append("Scan2Play — raport za ").append(yesterday.format(DAY)).append("\n\n");
         renderTraffic(text, yesterday, days);
         renderOrganisers(text, organisers, contacts);
         renderParties(text, yesterday, parties, moreParties, contacts);
+        renderTrends(text, trends);
         renderHealth(text, health);
         return text.toString();
+    }
+
+    /** The trend's arrow as the report writes it: "nowość", "↑", "↓" or "=". */
+    public static String arrow(SongTrendsService.Trend trend) {
+        return switch (trend.direction()) {
+            case "new" -> "nowość";
+            case "up" -> "↑";
+            case "down" -> "↓";
+            default -> "=";
+        };
+    }
+
+    /**
+     * The songs of the last {@value SongTrendsService#DAYS} days by parties — the owner's look at whether the data is enough for the
+     * DJs' card ("Trendy próśb", docs/ideas.md item 16). Shown under the minimum of parties too, marked: the owner is the one judging it.
+     */
+    static void renderTrends(StringBuilder text, SongTrendsService.Result trends) {
+        text.append("TRENDY — ").append(SongTrendsService.DAYS).append(" dni · DJ-ów ").append(trends.parties())
+                .append(" · piosenek u ").append(SongTrendsService.MIN_PARTIES_PER_SONG).append("+ DJ-ów ").append(trends.songs())
+                .append('\n');
+        if (trends.belowMinimum()) {
+            text.append("(poniżej ").append(SongTrendsService.MIN_PARTIES).append(" DJ-ów — DJ-e jeszcze by tego nie zobaczyli)\n");
+        }
+        if (trends.truncated()) {
+            text.append("(lista z najnowszych ").append(SongTrendsService.MAX_ROWS).append(" wierszy)\n");
+        }
+        int place = 1;
+        for (SongTrendsService.Trend trend : trends.top()) {
+            text.append(String.format(PL, "%2d. %s — DJ: %d · 14 dni %d / %d przed · %s\n", place++, trend.song(), trend.parties(),
+                    trend.recent(), trend.earlier(), arrow(trend)));
+        }
+        if (trends.top().isEmpty()) {
+            text.append("(żadnej piosenki u ").append(SongTrendsService.MIN_PARTIES_PER_SONG).append("+ DJ-ów)\n");
+        }
+        text.append('\n');
     }
 
     private static final List<Map.Entry<Event, String>> TRAFFIC = List.of(

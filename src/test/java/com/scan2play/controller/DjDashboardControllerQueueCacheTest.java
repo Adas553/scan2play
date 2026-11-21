@@ -89,17 +89,19 @@ class DjDashboardControllerQueueCacheTest {
     private SongRequestCommandService commands;
 
     private DjDashboardController controller;
+    private com.scan2play.service.EventPlanService eventPlans;
 
     @BeforeEach
     void setUp() {
         reset(songRequestRepository);
         cacheManager.getCache(DjService.QUEUE_CACHE).clear();
+        eventPlans = mock(com.scan2play.service.EventPlanService.class);
         DjSessionHelper sessionHelper = mock(DjSessionHelper.class);
         PartySettingsEntity party = PartySettingsEntity.builder().partyCode(PARTY).active(true).build();
         when(sessionHelper.access(eq(PARTY), any(), any())).thenReturn(new PartyStaffService.Access(party, true, StaffPermission.all()));
         controller = new DjDashboardController(djService, mock(PartySettingsCommandService.class), mock(QrCodeService.class),
                 sessionHelper, mock(PlayHistoryService.class), mock(GuestRequestLimiter.class), mock(PushNotificationService.class),
-                mock(PartyStaffService.class), mock(StaffInvitationService.class), Plans.off(), new com.scan2play.service.AiHealthMonitor(), com.scan2play.service.PartySchedules.texts(), mock(com.scan2play.service.WelcomeEmailService.class), com.scan2play.service.FreeAiLimit.off(), org.mockito.Mockito.mock(com.scan2play.service.WishService.class), org.mockito.Mockito.mock(com.scan2play.service.PollService.class));
+                mock(PartyStaffService.class), mock(StaffInvitationService.class), Plans.off(), new com.scan2play.service.AiHealthMonitor(), com.scan2play.service.PartySchedules.texts(), mock(com.scan2play.service.WelcomeEmailService.class), com.scan2play.service.FreeAiLimit.off(), org.mockito.Mockito.mock(com.scan2play.service.WishService.class), org.mockito.Mockito.mock(com.scan2play.service.PollService.class), eventPlans);
     }
 
     private static SongRequestEntity waiting(long id, String name) {
@@ -145,6 +147,55 @@ class DjDashboardControllerQueueCacheTest {
                 .containsExactly(12L, 13L);
         // the next poll with that ETag: nothing new, and nothing was hidden behind it
         assertThat(poll(changed.etag()).status()).isEqualTo(304);
+    }
+
+    /**
+     * Tonight's party plan (V77): a request for one of its songs is marked "📋 z planu" — the poll's rows get the plan's songs, and a
+     * change of them (the hosts or the DJ saved the plan) changes the ETag, so the queue as it was comes again with its marks.
+     */
+    @Test
+    void tonightsPlansSongs_markTheQueue_andTheirChangeSendsItAgain() {
+        queueIs("1-12-a", waiting(12, "Wilki - Baśka"));
+        Answer before = poll(null);
+        assertThat(poll(before.etag()).status()).isEqualTo(304);
+
+        when(eventPlans.tonightSongs(eq(PARTY), any())).thenReturn("Wilki - Baśka\nZespół - Na Koniec");
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.addHeader("If-None-Match", before.etag());
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        ExtendedModelMap model = new ExtendedModelMap();
+        controller.getDashboardUpdates(PARTY, model, request, response, null, new MockHttpSession());
+
+        assertThat(response.getStatus()).as("the plan changed: the rows again").isEqualTo(200);
+        assertThat(response.getHeader("ETag")).isNotEqualTo(before.etag());
+        com.scan2play.util.SongList songs = (com.scan2play.util.SongList) model.get(ViewAttributes.PLAN_SONGS);
+        assertThat(songs.matches("Wilki - Baśka")).isTrue();
+        assertThat(songs.matches("sanah - Szampan")).isFalse();
+    }
+
+    /**
+     * Every answer of the poll, 304 too, carries tonight's plan's version: "-" without a plan, another text when there is one or it
+     * changes — the panel says "Plan wieczoru się zmienił" (plan-card.js).
+     */
+    @Test
+    void everyAnswer_carriesTonightsPlansVersion() {
+        queueIs("1-12-a", waiting(12, "Wilki - Baśka"));
+        Answer first = poll(null);
+        MockHttpServletResponse none = new MockHttpServletResponse();
+        MockHttpServletRequest again = new MockHttpServletRequest();
+        again.addHeader("If-None-Match", first.etag());
+        controller.getDashboardUpdates(PARTY, new ExtendedModelMap(), again, none, null, new MockHttpSession());
+        assertThat(none.getStatus()).isEqualTo(304);
+        assertThat(none.getHeader(DjDashboardController.PLAN_TONIGHT_HEADER)).isEqualTo("-");
+
+        com.scan2play.service.EventPlanService.Tonight tonight = new com.scan2play.service.EventPlanService.Tonight(7L, "Wesele",
+                java.time.LocalDate.of(2027, 6, 12), List.of(new com.scan2play.service.EventPlanService.Moment("Tort", null, null, null)),
+                null, null);
+        when(eventPlans.tonight(eq(PARTY), any())).thenReturn(java.util.Optional.of(tonight));
+        MockHttpServletResponse planned = new MockHttpServletResponse();
+        controller.getDashboardUpdates(PARTY, new ExtendedModelMap(), again, planned, null, new MockHttpSession());
+        assertThat(planned.getHeader(DjDashboardController.PLAN_TONIGHT_HEADER)).isEqualTo(DjDashboardController.planVersion(tonight))
+                .isNotEqualTo("-");
     }
 
     /** The guests' list (the same cache) shows a new request, or one more vote, with its next read — not up to 3 s later. */

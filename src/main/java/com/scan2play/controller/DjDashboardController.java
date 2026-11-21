@@ -11,6 +11,7 @@ import com.scan2play.service.DemoParty;
 import com.scan2play.service.DjLibraryParser;
 import com.scan2play.service.DjLibraryService;
 import com.scan2play.service.DjService;
+import com.scan2play.service.EventPlanService;
 import com.scan2play.service.FreeAiLimit;
 import com.scan2play.service.GuestRequestLimiter;
 import com.scan2play.service.LogoImage;
@@ -101,6 +102,8 @@ public class DjDashboardController {
     private final WishService wishService;
     /** "Pytanie do gości" (V74): the settings card's state. */
     private final PollService pollService;
+    /** "Plan imprezy" (V77): tonight's plan above the queue, and "📋 z planu" on a request for one of its songs. */
+    private final EventPlanService eventPlanService;
 
     /**
      * On every answer of the queue poll, 304 too: the warnings above the queue that hold now, comma-separated —
@@ -154,6 +157,13 @@ public class DjDashboardController {
      * window whose page was made with other permissions loads itself again (the organiser changed the person's role, V32).
      */
     static final String PANEL_ACCESS_HEADER = "X-Panel-Access";
+
+    /**
+     * On every answer of the queue poll, 304 too, for whoever sees the plan card: tonight's plan's version ({@link #planVersion}) —
+     * the card is drawn with the page, so a plan the hosts or another DJ changed during the evening (or one there is now) makes the
+     * panel say "Plan wieczoru się zmienił — Odśwież" (plan-card.js).
+     */
+    static final String PLAN_TONIGHT_HEADER = "X-Plan-Tonight";
 
     /**
      * The DJ panel: the party {@code party} names, else the default panel ({@link DjSessionHelper#panel}); none at all — a person who
@@ -216,6 +226,14 @@ public class DjDashboardController {
         model.addAttribute(LIBRARY_ON, planService.allows(settings, PlanFeature.LIBRARY) && djService.libraryOf(partyCode).isPresent());
         model.addAttribute(WANTED_SONGS, SongList.of(planService.asPlanned(settings).getHostWanted()));
         model.addAttribute(BLOCKED_SONGS, SongList.of(planService.asPlanned(settings).getHostBlocked()));
+        // "Plan imprezy" (V77, Pro): tonight's event's plan above the queue, its songs marked in it — for whoever may see the events
+        // (WISHES): the plan's notes hold names, and the privacy policy says who sees them
+        boolean plans = planService.allows(settings, PlanFeature.WISHES) && access.may(StaffPermission.WISHES);
+        EventPlanService.Tonight tonight = plans ? eventPlanService.tonight(partyCode, Instant.now()).orElse(null) : null;
+        model.addAttribute(PLAN_TONIGHT, tonight);
+        model.addAttribute(PLAN_SONGS, plans ? SongList.of(eventPlanService.tonightSongs(partyCode, Instant.now())) : null);
+        model.addAttribute(PLAN_LISTS_OFF, tonight != null && listsOff(tonight, settings, access));
+        model.addAttribute(PLAN_TONIGHT_VERSION, plans ? planVersion(tonight) : null);
 
         return "dashboard";
     }
@@ -591,6 +609,29 @@ public class DjDashboardController {
     }
 
     /**
+     * Tonight's plan as one short text that changes with it — its event, moments and lists ("-": none). Kept 30 s with the plan
+     * (EventPlanService.tonight), so asking for it every 3 s costs no query.
+     */
+    public static String planVersion(EventPlanService.Tonight tonight) {
+        return tonight == null ? "-" : Integer.toHexString(tonight.hashCode());
+    }
+
+    /**
+     * Whether tonight's event has lists the party does not use yet — the hosts wrote "don't play" on their link and nobody pressed
+     * "Użyj list na imprezie": the card says so to whoever may change the party's lists (HOST_LISTS, with the plan that has them).
+     */
+    private boolean listsOff(EventPlanService.Tonight tonight, PartySettingsEntity settings, PartyStaffService.Access access) {
+        if (tonight.blocked() == null && tonight.wanted() == null) {
+            return false;
+        }
+        if (!access.may(StaffPermission.HOST_LISTS) || !planService.allows(settings, PlanFeature.HOST_LISTS)) {
+            return false;
+        }
+        return !Objects.equals(tonight.blocked(), SongList.tidy(settings.getHostBlocked()))
+                || !Objects.equals(tonight.wanted(), SongList.tidy(settings.getHostWanted()));
+    }
+
+    /**
      * AJAX polling endpoint that returns a partial HTML fragment of the song request table.
      * <p>
      * Supports ETag-based conditional responses: if the queue hasn't changed since the
@@ -629,6 +670,13 @@ public class DjDashboardController {
         String wanted = (planned.getHostWanted() == null ? "" : "-w" + Integer.toHexString(planned.getHostWanted().hashCode()))
                 + (planned.getHostBlocked() == null ? "" : "-b" + Integer.toHexString(planned.getHostBlocked().hashCode()))
                 + (plan.allows("TIPS") ? "" : "-f") + library;
+        // tonight's plan's songs (V77): a request becomes "📋 z planu" when the plan names it, with the queue as it was
+        boolean plans = plan.allows("WISHES") && access.may(StaffPermission.WISHES);
+        String planSongs = plans ? eventPlanService.tonightSongs(partyCode, Instant.now()) : null;
+        if (plans) {
+            response.setHeader(PLAN_TONIGHT_HEADER, planVersion(eventPlanService.tonight(partyCode, Instant.now()).orElse(null)));
+        }
+        wanted += planSongs == null ? "" : "-p" + Integer.toHexString(planSongs.hashCode());
         String etag = "\"q-" + fingerprint + wanted + "\"";
 
         String ifNoneMatch = request.getHeader("If-None-Match");
@@ -648,6 +696,7 @@ public class DjDashboardController {
         model.addAttribute(LIBRARY_MARKS, libraryMarks(settings, waiting));
         model.addAttribute(WANTED_SONGS, SongList.of(planned.getHostWanted()));
         model.addAttribute(BLOCKED_SONGS, SongList.of(planned.getHostBlocked()));
+        model.addAttribute(PLAN_SONGS, planSongs == null ? null : SongList.of(planSongs));
         model.addAttribute(PARTY_CODE, partyCode);
         model.addAttribute(ACCESS, access);   // the rows' buttons by the person's permissions (V32)
         model.addAttribute(PLAN, plan);       // and by the organiser's plan (V35): no 💸 without Pro

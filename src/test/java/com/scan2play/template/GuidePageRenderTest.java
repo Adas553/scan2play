@@ -107,6 +107,9 @@ class GuidePageRenderTest {
         assertThat(html).as("the party's hours (V55), in the party's section").contains("id=\"guideHours\"", "Godziny imprezy", "Prośby od 20:00");
         assertThat(html.indexOf("id=\"guideHours\"")).isGreaterThan(html.indexOf("id=\"party\"")).isLessThan(html.indexOf("id=\"phone\""));
         assertThat(html).as("the venue's kiosk (V56)").contains("id=\"guideKiosk\"", "Kiosk dla gości", "Następny gość");
+        assertThat(html).as("the party plan (V77), at the end of the first section").contains("id=\"guidePlan\"", ">📋 Plan imprezy<",
+                "Użyj list na imprezie");
+        assertThat(html.indexOf("id=\"guidePlan\"")).isGreaterThan(html.indexOf("id=\"start\"")).isLessThan(html.indexOf("id=\"party\""));
         String kiosk = html.substring(html.indexOf("id=\"guideKiosk\""), html.indexOf("</section>", html.indexOf("id=\"guideKiosk\"")));
         assertThat(kiosk).as("the kiosk: set up on a tablet logged out, kept in the kiosk, its limits, a new link, its marks").contains(
                 "nie jesteś zalogowany", "Dostęp nadzorowany", "przypinanie ekranu", "3 prośby na minutę", "20 👍 na 10 minut",

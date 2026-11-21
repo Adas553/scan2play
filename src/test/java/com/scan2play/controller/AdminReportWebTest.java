@@ -73,7 +73,8 @@ class AdminReportWebTest {
                 .getContentAsString(StandardCharsets.UTF_8);
 
         assertThat(html).contains("id=\"reportView\"", "Raport za sobota 7.11.2026", "<progress max=\"100\" value=\"100\"",
-                "s2p-dot s2p-dot-bad", "id=\"reportParties\"");
+                "s2p-dot s2p-dot-bad", "id=\"reportParties\"", "id=\"reportTrends\"", "id=\"reportTrendsBelow\"",
+                "Trendy — 28 dni · DJ-ów 4 · piosenek u 3+ DJ-ów 1", ">2→1<", "title=\"14 dni: 1 · 14 dni przed: 2\"");
         assertThat(html).contains("id=\"reportText\"", "Wesele Ani i Tomka", "scan2playcontact@gmail.com", "id=\"reportSend\"",
                 "name=\"_csrf\"", "</html>");
         write("stats-report.html", html);
@@ -118,6 +119,9 @@ class AdminReportWebTest {
                 java.util.List.of(new AdminReportService.PartyLine("AB12", "a-very-long-address-of-an-organiser@example-of-a-long-domain.com",
                                 "PRO", "Wesele Ani i Tomka", 48, 31, 5, 3, 4, 2, 6),
                         new AdminReportService.PartyLine("CD34", null, "FREE", null, 2, 0, 0, 0, 0, 0, 0)), false,
+                new com.scan2play.service.SongTrendsService.Result(4, 1, true, false, java.util.List.of(
+                        new com.scan2play.service.SongTrendsService.Trend("Zespół o bardzo długiej nazwie, który nie mieści się w jednej linii"
+                                + " - Piosenka o jeszcze dłuższym tytule", 3, 1, 2, "down"))),
                 new AdminReportService.Health(false, true, new com.scan2play.service.Mailer.Status(null, java.time.Instant.parse("2026-11-07T08:00:00Z"),
                         "the key was refused"), new com.scan2play.service.LogTally.Tally(java.time.Instant.parse("2026-11-07T08:10:00Z"), 1, 2,
                         java.util.List.of(new com.scan2play.service.LogTally.Line("WARN Mailer: E-mail not sent: {} [java.net.SocketTimeoutException]", 2)))),

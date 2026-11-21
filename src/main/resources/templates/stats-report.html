@@ -116,6 +116,24 @@
             </tr>
         </table>
 
+        <!--/* "Trendy próśb" (SongTrendsService): the songs of 28 days by DJs (a party is a DJ's) — whether the data is enough for the
+             DJs' card; beside each the DJs of the last 14 days and of the 14 before (a phone has no hover for a title) */-->
+        <th:block th:with="tr=${v.trends()}">
+        <h3 class="h6 text-light-custom" th:text="'Trendy — 28 dni · DJ-ów ' + ${tr.parties()} + ' · piosenek u 3+ DJ-ów ' + ${tr.songs()}">Trendy — 28 dni</h3>
+        <p th:if="${tr.belowMinimum()}" class="small text-secondary-bright" id="reportTrendsBelow">Poniżej 10 DJ-ów — DJ-e jeszcze by tego nie zobaczyli.</p>
+        <p th:if="${#lists.isEmpty(tr.top())}" class="text-secondary-bright">Żadnej piosenki u 3+ DJ-ów.</p>
+        <table th:unless="${#lists.isEmpty(tr.top())}" class="table table-dark table-sm s2p-report-table mb-3" id="reportTrends">
+            <tr th:each="trend, row : ${tr.top()}">
+                <td class="text-secondary-bright" th:text="${row.count}">1</td>
+                <td th:text="${trend.song()}">Wykonawca - Tytuł</td>
+                <td class="text-end text-nowrap"><span class="small text-secondary-bright">DJ:</span> <b th:text="${trend.parties()}">12</b></td>
+                <td class="text-end small text-nowrap" th:title="'14 dni: ' + ${trend.recent()} + ' · 14 dni przed: ' + ${trend.earlier()}"><span
+                        th:text="${T(com.scan2play.service.AdminReportService).arrow(trend)}">↑</span> <span class="text-secondary-bright"
+                        th:text="${trend.earlier()} + '→' + ${trend.recent()}">2→5</span></td>
+            </tr>
+        </table>
+        </th:block>
+
         <h3 class="h6 text-light-custom">Zdrowie</h3>
         <ul class="list-unstyled mb-2">
             <li th:each="check : ${v.checks()}" class="mb-1">

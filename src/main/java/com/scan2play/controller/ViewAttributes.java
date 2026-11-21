@@ -317,6 +317,42 @@ public final class ViewAttributes {
     /** The QR print of an event's guests' link (an invitation): the event; null for the party's own code. */
     public static final String WISH_PRINT = "wishPrint";
 
+    // --- "Plan imprezy" (V77) ---
+    /** The event's plan ({@code EventPlanService.Plan}): the DJ's page, the hosts' page, the print. */
+    public static final String EVENT_PLAN = "eventPlan";
+    /** The form's rows: the plan's moments and the spare empty ones after them. */
+    public static final String PLAN_ROWS = "planRows";
+    /** The templates offered while the plan has no moments ({@code EventPlanService.TEMPLATES}). */
+    public static final String PLAN_TEMPLATES = "planTemplates";
+    /** The event's hosts' link ({@code /h/e/{token}}); null while the DJ has made none. */
+    public static final String PLAN_HOST_LINK = "planHostLink";
+    /** Where the plan's form posts: the DJ's page or the hosts' link. */
+    public static final String PLAN_ACTION = "planAction";
+    /** Whether the person may change the plan (the DJ with Pro, the hosts on a working link). */
+    public static final String PLAN_EDITABLE = "planEditable";
+    /** Whether this person may copy the event's lists over the party's (the permission HOST_LISTS too). */
+    public static final String PLAN_USE_LISTS = "planUseLists";
+    /** Flash: what the page says after a form ({@code plan.done.*}), and its argument. */
+    public static final String PLAN_DONE = "planDone";
+    public static final String PLAN_DONE_ARG = "planDoneArg";
+    public static final String PLAN_MAX = "planMax";
+    /** The form's lists: the plan's, or a refused save's ({@code EventPlanService.Draft}, a flash attribute). */
+    public static final String PLAN_BLOCKED_TEXT = "planBlockedText";
+    public static final String PLAN_WANTED_TEXT = "planWantedText";
+    public static final String PLAN_DRAFT = "planDraft";
+    /** The plan's version the form sends back ({@code EventPlanService.Plan.version}): a plan saved since is not overwritten. */
+    public static final String PLAN_VERSION = "planVersion";
+    /** The panel: tonight's event's lists are not the party's yet — "Użyj" on the card (whoever may change the party's lists). */
+    public static final String PLAN_LISTS_OFF = "planListsOff";
+    /** The panel: tonight's plan's version as the page was drawn ({@code DjDashboardController.planVersion}); null: no plan card here. */
+    public static final String PLAN_TONIGHT_VERSION = "planTonightVersion";
+    /** The list of events: the moments of each event's plan, by the event's id (none: no plan). */
+    public static final String PLAN_COUNTS = "planCounts";
+    /** The panel: tonight's plan above the queue ({@code EventPlanService.Tonight}), null for none or without Pro. */
+    public static final String PLAN_TONIGHT = "planTonight";
+    /** The queue: tonight's plan's songs ({@code SongList}) — a request for one is marked "📋 z planu"; null for none. */
+    public static final String PLAN_SONGS = "planSongs";
+
     // --- "Pytanie do gości" (V74) ---
     /** The question the guests' page or the TV shows (asked now, or ended a moment ago), or null; its results; the guest's answer. */
     public static final String POLL = "poll";

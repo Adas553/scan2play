@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en" th:lang="#{html.lang}">
+<head>
+    <meta charset="UTF-8">
+    <title th:text="#{eventplan.page.title}">Party plan - Scan2Play</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- a dark page already: a browser's own dark mode (Samsung Internet) must not darken it again — it greyed our logo -->
+    <meta name="color-scheme" content="dark">
+    <!-- the hosts' link is a secret: no Referer that would carry it to another site -->
+    <meta name="referrer" content="no-referrer">
+    <link href="/webjars/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+    <!--/* the menu "Konto" and the window "Pomoc i kontakt" of the heading (dj-nav) */-->
+    <script src="/webjars/bootstrap/js/bootstrap.bundle.min.js" defer></script>
+    <link href="/css/app.css" th:href="@{/css/app.css}" rel="stylesheet">
+    <!--/* the page loads again after each form: where the DJ was, not at an anchor */-->
+    <th:block th:replace="~{fragments/components :: scroll-restore-script}"></th:block>
+</head>
+<!--/* "Plan imprezy" (V77, DjEventPlanController): one wishes' event's plan — its moments and its two lists, written here or by the
+     hosts on the event's own link; the link made and taken away here; "Użyj list na imprezie" puts the event's lists over the party's;
+     a print for the console. Plain forms, a page load each; "Nowy link", "Wyłącz link" and "Użyj" ask first (data-confirm, dj-nav.js). */-->
+<body class="page-dj">
+<div class="container mt-3 mt-md-5 p-3 p-md-4">
+    <div th:replace="~{fragments/components :: dj-nav(activeTab='settings', isActive=${isActive}, partyCode=${partyCode})}"></div>
+
+    <div class="s2p-mw-800 s2p-dj-page-body d-flex flex-column gap-3">
+    <a th:href="@{/dj/wishes(party=${partyCode},event=${wishEvent.id()})}" id="backToWishes" class="s2p-back-link"
+       th:text="#{eventplan.back}">← Wishes</a>
+    <div>
+        <h1 class="h3 text-white mb-1"><span th:text="#{eventplan.title}">Party plan</span><th:block
+                th:if="${plan.pro('WISHES')}"> <span th:replace="~{fragments/components :: proMark}"></span></th:block></h1>
+        <p class="text-white fw-bold mb-0 text-break" id="planEventName" th:text="${wishEvent.name()} + ' · ' + ${wishDate}">Wesele Ani i Kuby · 14 czerwca 2027</p>
+        <p class="s2p-card-help mb-0" th:text="#{eventplan.help}">The evening's moments with times, songs and notes…</p>
+    </div>
+
+    <div th:replace="~{fragments/event-plan :: planDone}"></div>
+
+    <!--/* without Pro: the offer, the plan as it was, nothing changes */-->
+    <th:block th:if="${plan.pro('WISHES')}"><div th:replace="~{fragments/components :: proOffer(#{eventplan.pro.readonly})}"></div></th:block>
+
+    <!--/* the hosts' link of this event */-->
+    <section th:if="${planEditable}" class="card bg-dark border-secondary p-3" id="planHostCard">
+        <h2 class="s2p-card-title" th:text="#{eventplan.host.title}">Link for the hosts</h2>
+        <p class="s2p-card-help mb-2" th:text="#{eventplan.host.help(${T(com.scan2play.service.WishService).KEPT_DAYS_AFTER})}">The hosts fill in the plan themselves, without an account…</p>
+        <form th:if="${planHostLink == null}" th:action="@{/dj/wishes/{id}/plan/host-link(id=${wishEvent.id()})}" method="POST" class="m-0">
+            <input type="hidden" name="partyCode" th:value="${partyCode}">
+            <button type="submit" id="planHostMake" class="btn btn-sm btn-outline-light" th:text="#{eventplan.host.make}">🔗 Create the link</button>
+        </form>
+        <th:block th:if="${planHostLink != null}">
+        <!--/* not s2p-wish-link: its flex basis, meant for a row, made the link 16rem tall in this column */-->
+        <div class="input-group input-group-sm mb-2">
+            <input type="text" class="form-control bg-dark text-light border-secondary" th:value="${planHostLink}" id="planHostLinkInput" readonly
+                   th:attr="aria-label=#{eventplan.host.title}">
+            <button class="btn btn-outline-secondary" type="button" data-copy-target="planHostLinkInput" th:text="#{dashboard.qr.copy}"
+                    th:attr="data-copied=#{dashboard.qr.copied}">Copy</button>
+            <a class="btn btn-outline-secondary" id="planHostOpen" th:href="${planHostLink}" target="_blank" rel="noopener"
+               th:text="#{wishes.link.open}">Open</a>
+        </div>
+        <div class="s2p-btn-row">
+            <form th:action="@{/dj/wishes/{id}/plan/host-link(id=${wishEvent.id()})}" method="POST" class="m-0" th:attr="data-confirm=#{eventplan.host.new.confirm}">
+                <input type="hidden" name="partyCode" th:value="${partyCode}">
+                <button type="submit" id="planHostNew" class="btn btn-sm btn-outline-secondary text-nowrap" th:text="#{eventplan.host.new}">New link</button>
+            </form>
+            <form th:action="@{/dj/wishes/{id}/plan/host-link(id=${wishEvent.id()})}" method="POST" class="m-0" th:attr="data-confirm=#{eventplan.host.off.confirm}">
+                <input type="hidden" name="partyCode" th:value="${partyCode}">
+                <input type="hidden" name="on" value="false">
+                <button type="submit" id="planHostOff" class="btn btn-sm btn-outline-secondary text-nowrap" th:text="#{eventplan.host.off}">Turn the link off</button>
+            </form>
+        </div>
+        </th:block>
+    </section>
+
+    <!--/* the plan itself */-->
+    <section class="card bg-dark border-secondary p-3 text-light d-flex flex-column gap-3" id="planFormCard">
+        <div th:replace="~{fragments/event-plan :: planTemplate}"></div>
+        <div th:replace="~{fragments/event-plan :: planForm}"></div>
+        <!--/* "Wyczyść plan": only a plan with something in it, asks first; the hosts' link stays */-->
+        <form th:if="${planEditable and !eventPlan.isEmpty()}" th:action="@{/dj/wishes/{id}/plan/clear(id=${wishEvent.id()})}" method="POST"
+              class="m-0" th:attr="data-confirm=#{eventplan.clear.confirm}">
+            <input type="hidden" name="partyCode" th:value="${partyCode}">
+            <button type="submit" id="planClear" class="btn btn-sm btn-outline-danger" th:text="#{eventplan.clear}">Clear the plan</button>
+        </form>
+    </section>
+
+    <!--/* on the night: the event's lists as the party's, and the plan on paper */-->
+    <section class="card bg-dark border-secondary p-3" id="planUseCard">
+        <h2 class="s2p-card-title" th:text="#{eventplan.use.title}">On the night</h2>
+        <p class="s2p-card-help mb-2" th:text="#{eventplan.use.help}">The lists work during the party only as the party's lists…</p>
+        <div class="s2p-btn-row">
+            <form th:if="${planUseLists}" th:action="@{/dj/wishes/{id}/plan/use-lists(id=${wishEvent.id()})}" method="POST" class="m-0"
+                  th:attr="data-confirm=#{eventplan.use.confirm}">
+                <input type="hidden" name="partyCode" th:value="${partyCode}">
+                <button type="submit" id="planUseLists" class="btn btn-sm btn-outline-warning" th:text="#{eventplan.use}">Use the lists at the party</button>
+            </form>
+            <a class="btn btn-sm btn-outline-light" id="planPrint" target="_blank" rel="noopener"
+               th:href="@{/dj/wishes/{id}/plan/print(id=${wishEvent.id()},party=${partyCode})}" th:text="#{eventplan.print}">🖨 Print the plan</a>
+        </div>
+        <p class="small text-secondary mt-2 mb-0" th:text="#{eventplan.kept(${T(com.scan2play.service.WishService).KEPT_DAYS_AFTER})}">Deleted with the event, 7 days after the party.</p>
+    </section>
+    </div>
+</div>
+<script src="/js/plan-form.js" th:src="@{/js/plan-form.js}"></script>
+<script src="/js/song-list-count.js" th:src="@{/js/song-list-count.js}"></script>
+<div th:replace="~{fragments/components :: formRefused}"></div>
+<div th:replace="~{fragments/components :: footer}"></div>
+</body>
+</html>

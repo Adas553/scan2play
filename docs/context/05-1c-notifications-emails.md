@@ -37,7 +37,13 @@ before it
 (`SiteCounter`), the organisers new in 7 days with their guests' requests since (`EveningSummaryRepository.guestRequestsSince`), every
 party of yesterday's evening (6:00–6:00: guests' requests, played, refused by the AI and before it, kiosk, tips, the DJ's own), the AI's
 and the e-mails' state and the log's ERROR / WARN since the last report (`LogTally`, in memory: a restart starts from zero; a kind
-is the message's pattern with its numbers as "#", at most 30 kinds). The e-mail names a party by its code — no organiser's address or
+is the message's pattern with its numbers as "#", at most 30 kinds), and **"Trendy"** (`SongTrendsService`, docs/ideas.md item 16,
+variant 0 — whether the data is enough for a card for the DJs): the top 20 songs of the last 28 days counted by parties, not votes —
+a party is a DJ's (one each), so the report says "DJ-ów": five weddings of one DJ count once —, only what the AI let through
+(accepted, played, skipped or cleared later), checked, not the DJ's own, not the demo's nor `scan2play.trends.exclude-parties`'
+(Section 10) —, a song only of 3+ DJs (by its `SongNames.comparable` name, written as most parties wrote it), the last 14 days
+against the 14 before ("nowość", ↑, ↓, =, with the numbers "2→5": the two halves cover the whole period); under 10 DJs marked
+"DJ-e jeszcze by tego nie zobaczyli"; one query of at most 50 000 (party, song) rows, run with the report. Only song names and counts, so the e-mail carries them too (`SongTrendsIT`, `SongTrendsServiceTest`). The e-mail names a party by its code — no organiser's address or
 name, no evening's title (the privacy policy gives Brevo those only to write to that organiser); the page `/dj/stats/report`
 (`AdminReportController`, the owner only) shows them, and its "Wyślij teraz" sends it at once without zeroing the log's counts.
 "Once a day": the claim of `email_status.admin_report_day`; a failed send or build gives back the claim and the log's counts

@@ -228,7 +228,10 @@ public class SecurityConfig {
                         .permissionsPolicyHeader(permissions -> permissions.policy(PERMISSIONS_POLICY)))
                 // A browser sends its CSP report without a CSRF token
                 // A mail program's one-click "Unsubscribe" (RFC 8058, the automatic e-mails' "Nie wysyłaj mi tego", V64) neither
-                .csrf(csrf -> csrf.csrfTokenRepository(CSRF_TOKENS).ignoringRequestMatchers("/csp-report", "/email/stop/*"))
+                // An event's hosts' plan (V77): its link's secret lets it write, no session or cookie does — and a plan is
+                // written slowly: a form kept open past the session must not lose it to a refused token
+                .csrf(csrf -> csrf.csrfTokenRepository(CSRF_TOKENS).ignoringRequestMatchers("/csp-report", "/email/stop/*",
+                        "/h/e/*", "/h/e/*/template"))
                 // a guest's request from a page open longer than its session: back to the party with the typed song, not a 403
                 .exceptionHandling(denied -> denied.accessDeniedHandler(new GuestFormExpiredHandler(messageSource, localeResolver))
                         // no login: a DJ's page → the login page and back; a fetch of the panel → "/"; any other address → 404
@@ -249,6 +252,8 @@ public class SecurityConfig {
                         .requestMatchers("/csp-report").permitAll()
                         // The hosts' lists (V29): a page opened by its secret link, without an account (HostController)
                         .requestMatchers("/h/*").permitAll()
+                        // An event's plan for its hosts (V77): the page, its save and its template, by the event's hosts' link
+                        .requestMatchers("/h/e/*", "/h/e/*/template").permitAll()
                         // The hosts' read-only link of an evening summary (V61): a page opened by its secret link (SharedSummaryController)
                         .requestMatchers(HttpMethod.GET, "/s/*").permitAll()
                         // the venue's kiosk (V56): a tablet without a login, its secret link and what its page sends; "/k" the
