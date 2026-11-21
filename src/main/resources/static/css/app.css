@@ -820,6 +820,14 @@ th[data-sort].sort-desc::after {
 /* "Dodaj piosenkę" (V44): the form as wide as a song needs, not the queue's width on a computer; on a phone the button and the
    search share one line (the search takes what is left), so the queue comes no lower than before */
 .s2p-add-song { max-width: 36rem; }
+/* "Zagrane samo" (play-history.js): the first time's three steps, numbered; a step's buttons wrap under its words on a narrow card */
+.s2p-deck-steps          { padding-left: 1.25rem; }
+.s2p-deck-steps > li     { margin-bottom: 0.6rem; }
+.s2p-deck-steps > li:last-child { margin-bottom: 0; }
+.s2p-deck-steps > li::marker { color: var(--s2p-text-muted); font-weight: 700; }
+.s2p-deck-steps summary  { cursor: pointer; }
+/* a computer paired: its row, the tick green */
+.s2p-deck-device-ok      { color: var(--s2p-green); font-weight: 700; }
 @media (max-width: 575.98px) {
     #queueList .s2p-list-tools { flex: 1 1 100%; flex-wrap: wrap; }
     #queueList .s2p-list-tools .s2p-list-search { flex: 1 1 8rem; max-width: none !important; }

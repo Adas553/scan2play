@@ -94,7 +94,6 @@ GuestQueueService          → DjService
 | POST | `/dj/invitation/decline` | `id`: the invitation goes (V34; only the verified address it names) → the panel with a note |
 | GET | `/dj/dashboard/updates` | the guest queue `<tbody>` (ETag / 304); every answer, 304 too, carries `X-Guest-Limits`, `X-Guest-Limits-Use`, `X-Party-Active`, `X-Panel-Access` (V32); 403 when the access was taken away |
 | POST | `/dj/dashboard/add-song` | `song`: a song the DJ adds to the queue by hand (V44; QUEUE; nothing typed: 400) |
-| POST | `/dj/dashboard/plays` | JSON `{partyCode, plays: [{at, artist, title}], sentAt}`: the songs the DJ's program played, read by the panel ("Zagrane samo"; QUEUE, Pro — `DECK`; ≤ 20, a field ≤ 500, else 400) → `{marked: [song names]}` |
 | GET | `/dj/devices` | `partyCode`: the party's computers paired with it (V78; QUEUE, Pro — `DECK`) → `[{id, name, createdAt, lastSeenAt}]` |
 | POST | `/dj/devices/code`, `/dj/devices/remove` | "Połącz komputer" → `{code, minutes}`; "Odłącz" (`id`) → 204, 404 for a computer not of the party (V78; QUEUE; CSRF; the code with Pro — `DECK`, "Odłącz" any plan) |
 | POST | `/dj/dashboard/play` | `id`: a request marked played |

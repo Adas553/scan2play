@@ -569,3 +569,69 @@ Na wszystkie trzy: „jak uważasz”.
 
 Sprawdzenia po tych zmianach (w kopii): `check.py unit` 1532/1532, `it` 220/220, `browser` 473/473, `audit -t dashboard,pro` 19 stron × 3
 szerokości bez przewijania w bok i błędów (te same 4 stare małe cele), program `verify` 24/24.
+
+## Próby na prawdziwych komputerach (2026-11-21, godziny lokalne)
+
+Właściciel, Windows 11 z VirtualDJ 8.5, produkcja (po scaleniu #297 / #298).
+
+**Działa:**
+- SmartScreen pokazuje „Uruchom mimo to” po „Więcej informacji” — **P29 odpada** (ten Windows nie ma Smart App Control). Tytuł okna
+  to „System Windows ochronił ten komputer” — karta mówiła „…ochronił komputer”; poprawione.
+- Okno czytelne; program sam znalazł `%LOCALAPPDATA%\VirtualDJ\History` („Czyta: VirtualDJ (2026-11-21.m3u)”).
+- Parowanie kodem z panelu.
+- Prośba dodana ręcznie oznacza się sama ok. **47 s** po puszczeniu w VirtualDJ: VirtualDJ dopisuje piosenkę do historii po
+  `historyDelay` (ok. 45 s), program patrzy co 3 s. Druga prośba, niegrana, zostaje w kolejce.
+- Restart programu nie oznacza niczego drugi raz.
+- „Odłącz ten komputer” w programie usuwa komputer z listy w panelu (`/api/device/unpair`).
+- „Odłącz” w panelu o **17:35:40**: po ok. minucie (wywołanie „żyję” raz na minutę) program pyta o nowy kod: „Ten komputer odłączono w
+  panelu — połącz go nowym kodem.”
+- Zły kod: „Ten kod nie działa — weź nowy z panelu (kod jest ważny 10 minut).”
+- `POST /api/device/plays` bez tokenu z produkcji: 401 od aplikacji — Cloudflare nie blokuje programu, reguła „Skip” niepotrzebna
+  (**P11 zamknięte**).
+- Wdrożenie po scaleniu: SUCCESS, Flyway 78, bez WARN. Wydanie `zagrane` ma trzy pliki; „Run workflow” z `main` zadziałał.
+
+**Znalezione i poprawione po próbie** (gałąź `claude/gallant-ritchie-rl80ux`, każde z testem widzianym najpierw na czerwono):
+- **Dwie ikony w zasobniku naraz** — druga kopia programu (wysyłałaby każdą piosenkę dwa razy). `SingleInstance`: blokada
+  `FileChannel.tryLock` na `~/.scan2play/zagrane.lock` przez całe życie programu (system zdejmuje ją, gdy program się kończy, także
+  po awarii); druga kopia mówi „Program już działa — kliknij jego ikonę w zasobniku (obok zegara) i wybierz „Pokaż”.” i kończy się (w
+  konsoli wiersz i kod 1). `SingleInstanceTest`: ta sama JVM i drugi proces.
+- Pusty kod: „Wpisz kod z panelu.” zamiast „Ten kod nie działa” (i bez wywołania serwera). `WindowTest`.
+- Okno pokazywało „✓ Zagrane samo: …” dopiero po pierwszym oznaczeniu i tylko piosenki z ostatniej odpowiedzi (zwykle jedną) —
+  wyglądało, jakby listy nie było (dokumentacja obiecywała „the songs marked”). Teraz trzy ostatnie od uruchomienia, a przed pierwszą
+  szary wiersz „Zagrane samo: jeszcze nic od uruchomienia programu.” `AgentTest.theMarkedSongs_add_upToTheLastThree`.
+- Karta: „około 45 sekund po puszczeniu” (czas VirtualDJ), poprawny tytuł SmartScreen.
+- **Wariant E zaparkowany** (decyzja właściciela: DJ miałby za dużo do wyboru): z panelu zniknęło „W tej przeglądarce (Chrome, Edge)”,
+  jego JS, scenariusze `deck-reader-*` i `POST /dj/dashboard/plays` (służył tylko jemu; wspólne `DeckHistoryService` i sprawdzanie
+  piosenek przeniesione do `DeviceApiController`). Zdanie „wtedy zostaje czytanie w Chrome lub Edge” → „napisz do nas przez „Pomoc i
+  kontakt””. Kod wariantu E: commit `6c25e0a` (scalenie #297 na `main`).
+
+- `/pro` („albo karta panelu w Chrome”) i polityka prywatności („przeglądarka albo program”) mówią już tylko o programie
+  (`ProPageRenderTest`, `SmokeTest.privacy_saysOnlyTheProgramReadsThePlayHistory`, czerwone przed zmianą).
+
+Sprawdzenia (w kopii): `check.py unit` 1530/1530, `browser` 469/469, `audit` 148 stron × 3 szerokości bez przewijania w bok i błędów
+(te same 4 stare małe cele), program `verify` 28/28. `it` nie uruchamiane: bez zmian SQL i migracji.
+
+**Obserwacja bez zmiany:** „Odłącz ten komputer” w programie nie pyta o potwierdzenie. Skutek pomyłki: trzeba wziąć nowy kod z panelu
+(minuta). Zostawione — do decyzji, jeśli DJ-e będą klikać przez pomyłkę.
+
+**Nieprzetestowane (brak sprzętu):** Mac z M1 i z Intelem — „Otwórz mimo to”, podpis ad hoc, klik w Dock (**P20, P27**); konto
+Windows z polską literą w nazwie (**P23**); Dokumenty w OneDrive z historią tam (**P24**; Dokumenty właściciela są w OneDrive, ale
+historia VirtualDJ jest w AppData, więc ta droga nie była użyta); prawdziwa historia Serato (P30).
+
+**610 odpowiedzi 4xx w ciągu 24 h przed wydaniem — wyjaśnione** (Railway, tylko odczyt, agent `railway-reader`): jeden skaner szukający
+haseł z jednego adresu (`93.123.109.x`), 2026-11-21 14:15–14:19:26 UTC, w szczycie ok. 80 zapytań na sekundę; same GET po ścieżkach
+typu `/.env`, `/.aws/credentials`, `/.git/config`, `/config/openai.json`, `/phpinfo.php`, ze zmienianym nagłówkiem przeglądarki.
+Odpowiedzi: 404 (z jednej próbki 501 wierszy: 469) i 400 (32 — dziwne ścieżki, np. `//`); żadna nie trafiła w ścieżki aplikacji ani
+`/api/device/*`, nic nie zostało wydane. Pozostałe ok. 70 × 4xx dnia rozproszone, wielkość zwykłego szumu skanerów. W aplikacji nic do
+zrobienia; zablokowanie adresu w Cloudflare — do decyzji właściciela.
+
+### Karta „Zagrane samo” przebudowana (2026-11-21, po zrzucie właściciela z produkcji)
+
+Właściciel zapytał, czy karta wygląda profesjonalnie i przejrzyście. Odpowiedź: nie — ściana tekstu bez ramki (inaczej niż „Impreza”
+i „Kod QR”), główny przycisk na końcu, prywatność na górze, niebieskie linki zamiast przycisków, ta sama instrukcja także wtedy, gdy
+komputer już jest połączony. Właściciel: „zrób to”. Zrobione: karta w ramce jak „Impreza”, jedno zdanie o programie (z „około 45
+sekund”), trzy ponumerowane kroki (Pobierz: przyciski Windows / Mac (M1 i nowsze) / Mac (Intel); Rozpakuj i uruchom, „Pierwsze
+uruchomienie” zwinięte; Połącz: „Połącz komputer” jako główny przycisk), prywatność na dole. Gdy komputer jest połączony: tylko jego
+wiersz („✓ nazwa · ostatnio 17:43 · Odłącz”), kroki za „Połącz kolejny komputer”, a przycisk „🎧 Z programu DJ-a” zielony już po
+wczytaniu strony (lista pytana raz przy wczytaniu i przy powrocie do karty przeglądarki). Scenariusze `deck-reader-program-only`,
+`deck-connected-on-load`, `deck-computers*` — czerwone przed zmianą.

@@ -165,6 +165,17 @@ class SmokeTest {
                 .andExpect(content().string(containsString("<link rel=\"canonical\" href=\"https://www.scan2play.com.pl/privacy?lang=en\">")));
     }
 
+    /** "Zagrane samo": only the DJ's program reads the play history now — the panel in the browser no longer does (variant E parked). */
+    @Test
+    void privacy_saysOnlyTheProgramReadsThePlayHistory() throws Exception {
+        mockMvc.perform(get("/privacy").param("lang", "pl")).andExpect(status().isOk())
+                .andExpect(content().string(containsString("program czyta na komputerze DJ-a historię grania")))
+                .andExpect(content().string(not(containsString("przeglądarka albo program"))));
+        mockMvc.perform(get("/privacy").param("lang", "en")).andExpect(status().isOk())
+                .andExpect(content().string(containsString("the program reads VirtualDJ’s or Serato’s play history")))
+                .andExpect(content().string(not(containsString("the browser or the program"))));
+    }
+
     /**
      * The privacy policy names every provider the data passes through (review 2026-10-14 W14: it said the data went "only" to
      * Google): the hosting in the USA and Cloudflare, and how long the logs with the guests' texts are kept — in both languages.

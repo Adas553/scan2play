@@ -147,6 +147,13 @@ class ProPageRenderTest {
         write("pro-en.html", html);
     }
 
+    /** "Zagrane samo" is the program on the computer alone: the panel's own reading in Chrome is parked (docs/ideas.md item 18). */
+    @Test
+    void playedByItself_namesTheProgram_notAPanelInChrome() {
+        assertThat(render(PL, dj())).contains("nasz program na Windows i Mac").doesNotContain("Chrome");
+        assertThat(render(Locale.ENGLISH, dj())).contains("our program for Windows and Mac").doesNotContain("Chrome");
+    }
+
     @Test
     @DisplayName("every feature of the Pro plan is named on the page, in both languages: a new PlanFeature without its line is red here")
     void everyPlanFeature_isOnThePage() {

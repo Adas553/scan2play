@@ -15,8 +15,9 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * "Zagrane samo" (docs/ideas.md item 18, variant E): the songs the DJ's own program wrote to its play history — VirtualDJ's or
- * Serato's, read by the panel in the DJ's browser (play-history.js) — mark the party's waiting requests played, as the DJ's
+ * "Zagrane samo" (docs/ideas.md item 19): the songs the DJ's own program wrote to its play history — VirtualDJ's or Serato's, read
+ * by the program on the DJ's computer and sent to {@link com.scan2play.controller.DeviceApiController} — mark the party's waiting
+ * requests played, as the DJ's
  * "Zagrane" does ({@link DjService#markSongAsPlayed}). Nothing of the history is kept: a song that matches no request is dropped.
  * <p>
  * A request is marked only when the song is surely the same: its title and an artist in common, by the keys the DJ's library is
