@@ -79,7 +79,7 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
 - **2026-11-21 — its review (`docs/history/review-2026-11-21-play-history.md`), on the same branch, no new migration:** "merge after
   fixes" — P1–P8, P17–P18 fixed (a body limit on `/api/device/*`, `sentAt` corrects a DJ computer's clock, one pairing code a party, the panel's
   code line by the newest id, the token file owner-only and atomic, the window's messages, a bad XML reference, `aria-label`s).
-  Checks green, end to end 16/16. Waits for the owner: the review's questions (plan, who may pair, a download page, Intel
+  All green, end to end 16/16. Waits for the owner: the review's questions (plan, who may pair, a download page, Intel
   Macs, the clock's slack), then the merge.
 - **Waits for the owner (from #269):** after the first commit the deploy window holds back (Fri–Sun 18:00–6:00): does Railway
   deploy it on the workflow's re-run? UptimeRobot is set up (the owner, 2026-11-17; `docs/monitoring.md`).
