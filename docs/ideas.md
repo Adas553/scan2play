@@ -276,6 +276,101 @@ piece of work or when a task names an item. A finished item stays here until its
    **B, done too:** a card "Plan wieczoru" above the queue on the event's evening (the next moment counted down by the DJ's device,
    ticked off on it, "📋 z planu" in the queue). Its review (`docs/history/review-2026-11-21-event-plan-trends.md`) and the fixes:
    a save over a plan changed meanwhile refused with the typed content kept, a limit on the hosts' link, the card only with WISHES,
-   "Użyj ich" on the card, ticks by name, the countdown in Polish time, two plans a day, the settings' row "Życzenia i plan imprezy". **Later, only if DJs ask:** C a push 10 minutes before a moment; D the DJ's own templates; E the
+   "Użyj ich" on the card, ticks by name, the countdown in Polish time, two plans a day, the settings' row "Życzenia i plan imprezy".
+   **Known limits of B:** one is left — the ticks are kept on the device that made them (the DJ's phone does not see the
+   computer's). The countdown counts in Polish time already (the server's `data-at`), and the queue's poll every 3 s is answered from
+   30 s in memory (#295). **"Życzenia" → "Wydarzenia":** half done — the settings' row says "Życzenia i plan imprezy", the DJ's page,
+   the panel's card and the guests' texts still say "Życzenia"; open whether to rename the rest. **Later, only if DJs ask:** C a push 10 minutes before a moment; D the DJ's own templates; E the
    plan in the hosts' evening summary. **Rejected:** a chat or comments, contracts and payments, a form builder first, the AI checking
    the plan.
+
+18. **A program on the DJ's computer that reads what really plays — variant E built on `claude/loving-maxwell-sl8pkl`, not released (no migration)** (Claude's idea, 2026-11-20, the third of
+   the three "to bind the DJs" with "Trendy próśb" (16) and "Plan imprezy" (17); the owner: 3 first, then 1 — this one
+   not picked yet). A small program in the background reads the play history of VirtualDJ, Serato or rekordbox and sends
+   it to Scan2Play: a request is marked "Zagrane" by itself (no tap during the set), and it unlocks what item 13 parked
+   for want of the set's data — "🎶 Leci Twoja piosenka!" for the guest, "Co to było?" (the night's whole set for the
+   guests), the evening summary with every song played, not only the requested ones. Binds the DJ: it works at every
+   party and takes a chore away. **Risk, to check first:** every program writes its history differently, and not every
+   one in a file that can be read while it plays — try one (the one most of the DJs use) before promising any. **Open:**
+   which program first; a Java tray app or a small native one; how it logs in (a device token made in the panel, as the
+   kiosk's link); what the privacy policy says (the DJ's set is the DJ's data).
+   **The analysis (2026-11-21; the artifact https://claude.ai/artifact/Psa7Ve58PHUmVzAFMtJGTA; no code in the app):** the sources are
+   the open-source readers on GitHub (What's Now Playing, SSLScrobbler, pyrekordbox) — the vendors' sites were out of the session's
+   network, their forums seen only as search snippets. **VirtualDJ** — low risk: `Documents/VirtualDJ/History/<date>.m3u`, plain text,
+   a line `#EXTVDJ:<time>…<lastplaytime>…<artist>…<title>…` appended once a song played `historyDelay` (reported 45 s), read while it
+   plays; no official "now playing". **Serato 2/3** — low: `Music/_Serato_/History/Sessions/<n>.session`, binary chunks appended on
+   every load / eject. **Serato 4** — medium: `master.sqlite` (unencrypted, `history_entry` of the open `history_session`), read
+   read-only; not tried on a real file. **rekordbox** — high: `master.db` SQLCipher; rekordbox 7's key is typed in by hand (a debugger
+   or "known sources"); no official output (a request on Pioneer's forum). **Traktor** — high: only its Broadcasting (a local Icecast
+   stream), turned on every set. **djay Pro** — medium ("basic" in What's Now Playing). **Poland:** no data; the world's census 2026
+   (Digital DJ Tips, club-heavy): rekordbox 34 %, Serato 27 %, VirtualDJ ~17 %; the guess for wedding DJs with a laptop: VirtualDJ
+   and Serato — to measure first (a question "Na czym grasz?" to the DJs; `dj_library.format` read-only on production; Railway's logs
+   hold 7 days, no upload in them). **The spike** `tools/spike/dj_history_spike.py` (reads, sends nothing; `selftest`): four real
+   Serato 2.4 / 2.5 session files read (3, 16, 51, 5 songs); a song without tags has no artist and the file's name as its title, so
+   the match splits "Artist - Title" and a title alone only asks "Chyba leciało, potwierdź". **Into Scan2Play:** a card "Program na
+   komputerze" (a 6-digit code for 10 minutes swapped for a token; table `dj_device` with its hash, "Ostatnio", "Odłącz"; Pro), `POST
+   /api/device/plays` with a bearer token (≤ 20 songs, no path, idempotent), matched by `LibraryKey` (V42) to the waiting requests →
+   `markPlayed`; a song off the requests to `evening_play` (the summary's whole set, the AI's "already played", later "Co to było?");
+   1 call per 5 s, 600 songs a day, 3 devices a party; never in "Trendy" (16); a line in the privacy policy. **Variants:** E (recommended
+   first) no program — the panel in Chrome / Edge reads the History folder (File System Access API; VirtualDJ and Serato 2/3 only, the tab
+   open on the DJ's laptop); A a Java tray app (jpackage; signing: Apple 99 USD a year and notarisation, a Windows certificate and
+   SmartScreen); B Electron; C Go / Rust; D a script (a beta with 1–2 DJs). **Not to promise:** rekordbox, Traktor, djay, CDJs without a
+   laptop, the DJ's phone, "at once". **Open for the owner:** E first or A at once; the question to the DJs before building; rekordbox
+   left out (recommended) or with a typed key; Pro or Free; the whole set kept or only the requests marked; "Leci Twoja piosenka!" and
+   "Co to było?" with it or later; 1–2 DJs for a beta with a real history file.
+   **Seen on the owner's Windows (2026-11-21):** VirtualDJ's history is in `%LOCALAPPDATA%\VirtualDJ\History` (`<date>.m3u` and
+   `tracklist.txt`), not under Documents as the sources say — VirtualDJ's wiki: new installs keep their data in AppData — and **Chrome refuses
+   it** ("Nie można otworzyć tego folderu, bo zawiera on pliki systemowe", the owner's try). So E reads Serato 2/3 (Music) and an older
+   VirtualDJ install (Documents) only; a newer VirtualDJ on Windows needs the registry's `HomeFolder` moved (not for a DJ; reported
+   to fall back to AppData) or the program of item 19. **Variant E, built (the owner, 2026-11-21: "to zróbmy na razie E"; after "Brave?" and "musimy płacić?" — A needs Apple's 99 USD a
+   year and a Windows certificate, else the DJ meets Gatekeeper's "Otwórz mimo to" and SmartScreen):** "🎧 Z programu DJ-a" over the
+   queue reads VirtualDJ's or Serato 2/3's history folder in Chrome / Edge on a computer (`play-history.js`) and sends each new song to
+   `POST /dj/dashboard/plays`; `DeckHistoryService` marks only a "✓" match played. Pro (the owner, 2026-11-21, after the review — `PlanFeature.DECK`, with the program; it counts once
+   `PLANS_ENFORCE` is on), nothing of the set kept (a song off the requests dropped; the privacy policy says so),
+   no "Chyba leciało, potwierdź" for a title alone yet. Details: `docs/context/05-1d-panel-heading-queue.md`. **Its limits:** Firefox,
+   Safari, Brave (only behind a flag) and phones see no button; Serato 4 and rekordbox not read; the tab must stay open (a background
+   tab's timers may slow to one a minute — not measured); Serato writes a song when it is loaded on a deck, so "Zagrane" may come
+   a little early. **To try:** a real VirtualDJ and a real Serato history at a party (the formats are from the open-source readers and
+   Serato 2.4 / 2.5 sample files). **Still open:** Pro or Free; the whole set kept for the summary and "Co to było?"; "Leci Twoja
+   piosenka!"; A (a tray app) if DJs of other browsers ask.
+
+19. **A program in the tray on the DJ's computer — item 18's variant A, stage (1) built on `claude/loving-maxwell-sl8pkl`, not released (V78)** (the owner, 2026-11-21: "rozpisz wariant A", then "to może zrobimy wersję A?" once Chrome refused AppData; after
+   E is built: E first, A only if the DJs use E and those of other browsers ask). What E cannot: Firefox, Safari, Brave and the tab
+   left open; the folders a browser may not open (Serato 4's and djay's databases under `AppData` / `~/Library`); the hardware.
+   **The program:** Java 21 + `jpackage` (the server's language; an installer with its own Java, ~40–60 MB — a guess), a tray icon
+   (`java.awt.SystemTray`), a separate Maven module outside the app's `src/` (its own release, never deployed to Railway); it reads
+   files only — never the screen, other programs or their memory (an antivirus flags that, a DJ would not trust it) — and sends the
+   artist, title and time of each new song, never a path. **Logging in:** a device token, as the kiosk's link — "Połącz komputer" in
+   the panel shows a 6-digit code valid 10 minutes, the program swaps it for a token of 128 bits; a table `dj_device` (the party, the
+   token's hash, a name, created, last seen; a migration), the panel's card "Ostatnio: 21:43" and "Odłącz"; at most 3 a party.
+   **The server:** `DeckHistoryService` as it is; a new `POST /api/device/plays` with `Authorization: Bearer` (no session, no CSRF, the
+   same ≤ 20 songs and the same match), 1 call per 5 s and 600 songs a day a device; a revoked token 401, the program says "Połączenie
+   odłączone w panelu". **Stages:** (1) VirtualDJ and Serato 2/3 (the parsers of `play-history.js` in Java), Serato 4 (`master.sqlite`
+   read-only, `sqlite-jdbc`), the pairing, Windows and macOS — roughly 1–2 weeks of work plus tries on a real Mac and PC (a guess); (2)
+   djay Pro (its `MediaLibrary.db`); (3) Traktor — the program listens as a local Icecast server Traktor broadcasts to (as What's Now
+   Playing does; the DJ turns broadcasting on each set, the artist sometimes missing); (4) CDJs / XDJs on a network — the Java library
+   beat-link (Deep Symmetry; not beside rekordbox on the same computer), only if customers play clubs. **Not planned:** rekordbox's
+   encrypted `master.db` (a key typed in by hand, AlphaTheta's licence, broken by each update); recognising the sound (paid services,
+   a microphone, mistakes on mixes). **Installing and costs:** macOS — the Apple Developer Program 99 USD a year and notarisation, else
+   the DJ goes through System Settings → Privacy & Security → "Open Anyway" (since macOS 15 the right-click "Open" is gone); Windows —
+   unsigned: SmartScreen's "More info → Run anyway"; signed: Microsoft Artifact Signing (~10 USD a month, from memory; whether it takes a
+   person from Poland is to check) or an OV certificate (hundreds of PLN a year); even signed, warnings until the program has a
+   reputation. Updates: the program asks the server for the latest version and opens the download page (no auto-updater). **The way
+   to it:** a beta unsigned with the 1–2 DJs of E's tries, the signing paid only for a release to everyone. **Open:** A at all (E's
+   numbers first); Pro only (recommended, as the kiosk); which stages after (1); the support it needs (an installation guide, a page
+   of "it does not see my songs").
+   **Stage (1), built (2026-11-21):** `deck-agent/` (Java 21, Swing and the tray, `sqlite-jdbc`; VirtualDJ — the registry's
+   `HomeFolder`, `%LOCALAPPDATA%`, the Documents —, Serato 2/3 and Serato 4), the panel's "Program na komputerze" in the card of "🎧 Z
+   programu DJ-a" ("Połącz komputer", the computers, "Odłącz"), V78 `dj_device`, `/api/device/pair` and `/api/device/plays`; details:
+   `docs/context/05-1d-panel-heading-queue.md`. Tried end to end in the container: the app on a throw-away database, the real program
+   (`--console`) paired by a token, a VirtualDJ file written line by line → the request "Zagrane", the other one and the earlier set
+   untouched; 400 / 401 / 403 and no session as they should be. The packages: `.github/workflows/deck-agent.yml` by hand ("Run
+   workflow"), unsigned zips for Windows and macOS (~127 MB unpacked on Linux; less without the locale data). Taken as recommended:
+   nothing of the set kept, Polish only; Pro (the owner, 2026-11-21). **To try (the owner):** "Run workflow", the Windows zip on the PC with
+   VirtualDJ — "Połącz komputer" in the panel of `dev.`, the server `https://dev.scan2play.com.pl` in the program's window; whether
+   Cloudflare lets a program (not a browser) through to `/api/device/*`. **Still open:** stages (2)–(4); the signing. **Done after the review (2026-11-21):** the download links in the card (the
+   GitHub release `zagrane`, written by "Run workflow" from `main`; Windows, Mac with Apple's chips, Mac with Intel) and the
+   first start's help; review `docs/history/review-2026-11-21-play-history.md`. Its third pass: the release uploads all three packages together,
+   the Mac bundle is signed ad hoc, the program takes the newest history file of all folders (OneDrive's too); the program's "Odłącz ten komputer" removes it from
+   the panel too (`/api/device/unpair`, any plan), Windows' known folders asked by PowerShell, the help for a Windows without "Uruchom
+   mimo to" (the owner: "jak uważasz").

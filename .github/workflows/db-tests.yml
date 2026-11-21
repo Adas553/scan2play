@@ -12,9 +12,9 @@ name: Database tests
 on:
   push:
     branches: [main]
-    paths-ignore: ['**.md', 'docs/**']
+    paths-ignore: ['**.md', 'docs/**', 'deck-agent/**']
   pull_request:
-    paths-ignore: ['**.md', 'docs/**']
+    paths-ignore: ['**.md', 'docs/**', 'deck-agent/**']
   workflow_dispatch:
 
 permissions:
