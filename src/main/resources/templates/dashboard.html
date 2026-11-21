@@ -338,6 +338,14 @@
                         class="btn btn-sm btn-outline-light text-nowrap" aria-expanded="false" aria-controls="addSongForm"
                         th:attr="aria-label=#{dashboard.add_song.label}"><span class="d-none d-sm-inline" th:text="#{dashboard.add_song}">+ Add a song</span><span
                         class="d-sm-none" th:text="#{dashboard.add_song.short}">+ Add</span></button>
+                <!--/* "Zagrane samo" (docs/ideas.md item 18, variant E): the panel reads VirtualDJ's or Serato's play history on this
+                     computer and marks the queue's songs played (play-history.js). Hidden until the script finds a browser that can read a
+                     folder (Chrome, Edge on a computer); not in the demo. */-->
+                <button th:if="${(access == null or access.may('QUEUE')) and demo != true}" type="button" id="deckToggle" hidden
+                        class="btn btn-sm btn-outline-light text-nowrap" aria-expanded="false" aria-controls="deckReader"
+                        th:title="#{dashboard.deck.toggle.title}" th:attr="aria-label=#{dashboard.deck.toggle}"><span class="d-none d-sm-inline"
+                        th:text="#{dashboard.deck.toggle}">🎧 From DJ software</span><span class="d-sm-none"
+                        th:text="#{dashboard.deck.toggle.short}">🎧 Software</span></button>
                 <input type="search" data-list-search class="form-control form-control-sm bg-black text-light border-secondary s2p-list-search"
                        th:placeholder="#{dashboard.list.search}" autocomplete="off">
             </div>
@@ -358,6 +366,23 @@
             </div>
             <p class="small text-secondary mt-1 mb-0" th:text="#{dashboard.add_song.help}">It goes straight into the queue, without the AI.</p>
         </form>
+        <!--/* "Zagrane samo": folded out by #deckToggle. The texts with {…} are filled in by play-history.js. */-->
+        <section th:if="${(access == null or access.may('QUEUE')) and demo != true}" id="deckReader" class="mb-3 s2p-deck-reader" hidden
+                 aria-labelledby="deckReaderTitle"
+                 th:attr="data-resume=#{dashboard.deck.resume},data-reading=#{dashboard.deck.reading},data-marked=#{dashboard.deck.marked},
+                          data-none=#{dashboard.deck.none},data-denied=#{dashboard.deck.denied},data-failed=#{dashboard.deck.failed},
+                          data-refused=#{dashboard.deck.refused}">
+            <h3 id="deckReaderTitle" class="h6 text-light mb-1" th:text="#{dashboard.deck.title}">Played, from your DJ software</h3>
+            <p class="small text-light mb-1" th:text="#{dashboard.deck.help}">When VirtualDJ or Serato plays a song of the queue…</p>
+            <p class="small text-secondary mb-2" th:text="#{dashboard.deck.privacy}">Keep this tab of the panel open…</p>
+            <div class="d-flex flex-wrap align-items-center gap-2">
+                <button type="button" id="deckPick" class="btn btn-sm btn-outline-light" th:text="#{dashboard.deck.pick}">Choose the history folder</button>
+                <button type="button" id="deckResume" class="btn btn-sm btn-outline-light" hidden>Resume</button>
+                <button type="button" id="deckStop" class="btn btn-sm btn-outline-secondary" hidden th:text="#{dashboard.deck.stop}">Turn off</button>
+            </div>
+            <p id="deckStatus" class="small text-secondary mt-2 mb-0" role="status" aria-live="polite"></p>
+            <p id="deckMarked" class="small text-success mt-1 mb-0" aria-live="polite"></p>
+        </section>
         <!--/* A server limit that stops guest songs now, or the AI not judging: shown from the page's model, then shown / hidden by
              polling.js from the X-Guest-Limits header of every queue poll (data-guest-limit = the flag of the header). */-->
         <!--/* Polls that keep failing (the DJ's Wi-Fi gone): the list on the screen may be old — polling.js shows this after a few

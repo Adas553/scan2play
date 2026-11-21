@@ -91,6 +91,7 @@ GuestQueueService          → DjService
 | POST | `/dj/invitation/decline` | `id`: the invitation goes (V34; only the verified address it names) → the panel with a note |
 | GET | `/dj/dashboard/updates` | the guest queue `<tbody>` (ETag / 304); every answer, 304 too, carries `X-Guest-Limits`, `X-Guest-Limits-Use`, `X-Party-Active`, `X-Panel-Access` (V32); 403 when the access was taken away |
 | POST | `/dj/dashboard/add-song` | `song`: a song the DJ adds to the queue by hand (V44; QUEUE; nothing typed: 400) |
+| POST | `/dj/dashboard/plays` | JSON `{partyCode, plays: [{at, artist, title}]}`: the songs the DJ's program played, read by the panel ("Zagrane samo"; QUEUE; ≤ 20, a field ≤ 500, else 400) → `{marked: [song names]}` |
 | POST | `/dj/dashboard/play` | `id`: a request marked played |
 | POST | `/dj/dashboard/dismiss` | `id`: a waiting request skipped by the DJ → rejected, `skipped_at`, the AI's comment kept (the song stays out for 2 h) |
 | POST | `/dj/dashboard/restore` | `id`: a request the DJ skipped or marked played → waiting again ("Cofnij", "↩ Przywróć"; only the DJ's own, not one the AI rejected or cleared with the queue, not when the same song waits) |

@@ -96,7 +96,8 @@ class PlanFeatureEndpointsTest {
         ReflectionTestUtils.setField(dashboard, "rawBaseUrl", "http://localhost:8080");
         dashboard.init();
         return MockMvcBuilders.standaloneSetup(
-                        new DjSongController(mock(DjService.class), helper, plans, mock(com.scan2play.service.SongRequestCommandService.class)),
+                        new DjSongController(mock(DjService.class), helper, plans, mock(com.scan2play.service.SongRequestCommandService.class),
+                                mock(com.scan2play.service.DeckHistoryService.class)),
                         new DjPartySettingsController(settings, mock(AccountDeletionService.class), mock(com.scan2play.service.PartyCodeService.class), helper, plans, com.scan2play.service.PartySchedules.of(settings)),
                         dashboard,
                         new DjSummaryController(oneEvening(), helper, codesAsTexts(), plans, "https://www.scan2play.com.pl/"),

@@ -123,6 +123,8 @@ def default_state():
         'pushStatus': 204,             # what POST /dj/push/subscribe answers (400: the server refuses the browser's subscription)
         'djLinksStatus': 302,          # what POST /dj/dashboard/dj-links answers (400: one of the DJ's profiles is not a profile there)
         # What POST /dj/library answers (V41): its status and the server's one sentence (422: not a library, 413: too large)
+        # "Zagrane samo" (play-history.js): the song names POST /dj/dashboard/plays answers it marked played
+        'deckMarked': [],
         'libraryStatus': 200,
         'libraryAnswer': 'Gotowe — utwory w bibliotece: 3.',
         # ... and its type: a proxy's own page (Cloudflare's 413 for more than 100 MB) is 'text/html'
@@ -442,6 +444,9 @@ class Handler(BaseHTTPRequestHandler):
             fields['X-Requested-With'] = self.headers.get('X-Requested-With')
         if path == '/dj/dashboard/kiosk-link':        # the kiosk's link sent by fetch (V56): with its headers
             fields['X-Requested-With'] = self.headers.get('X-Requested-With')
+        if path == '/dj/dashboard/plays':              # "Zagrane samo": JSON sent by fetch, with the CSRF token in its header
+            fields['X-CSRF-TOKEN'] = self.headers.get('X-CSRF-TOKEN')
+            fields['Content-Type'] = self.headers.get('Content-Type')
         if path in ('/dj/dashboard/schedule', '/dj/dashboard/guest-theme', '/dj/dashboard/morning-summary',
                     '/dj/library/hints'):   # by fetch (V55, V59, V64, V58)
             fields['X-Requested-With'] = self.headers.get('X-Requested-With')
@@ -464,6 +469,8 @@ class Handler(BaseHTTPRequestHandler):
                 # either can be put back ("Cofnij", "↩ Przywróć" — a "Zagrane" too since 2026-10-10)
                 state.setdefault('skipped', []).extend(leaving)
             return self._json({})
+        if path == '/dj/dashboard/plays':              # "Zagrane samo": the requests the server marked played
+            return self._json({'marked': state['deckMarked']})
         if path == '/dj/dashboard/tip-count':         # the DJ counts a tip (V28), or takes one back (add=false), as the real server
             with stand.lock:
                 for r in state['queue']:

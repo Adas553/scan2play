@@ -77,3 +77,19 @@ The same header carries `ai-down` (the review of 2026-10-21, O2): while the AI d
 Section 7.1) every panel but the demo's shows a red bar above the queue, "⚠ AI chwilowo nie ocenia próśb: nowe trafiają na listę z
 plakietką „bez oceny AI” — przejrzyj je przed zagraniem.", gone with the next poll after the AI answers again.
 
+**"Zagrane samo" — the DJ's program marks the queue played** (`docs/ideas.md` item 18, variant E; no migration, nothing kept): "🎧 Z
+programu DJ-a" beside "+ Dodaj piosenkę" (QUEUE, not in the demo; shown only by a browser that can pick a folder — Chrome and Edge on
+a computer, 768 px wide or more — else hidden) folds out a card; "Wskaż folder historii" (`showDirectoryPicker`) takes VirtualDJ's
+`History` or Serato's `History/Sessions`, or a folder above them (`VirtualDJ`, `_Serato_`). `play-history.js` reads the folder's newest
+file every 5 s when it changed (which file is the newest, every 30 s): VirtualDJ's `.m3u` (the `#EXTVDJ:` lines, `<lastplaytime>`,
+`<artist>`, `<title>`), Serato's binary `.session` (`oent` / `adat`, fields 6 title, 7 artist, 28 start, 50 played — a song only loaded on
+a deck left out). The songs that started more than 10 minutes before the reading began are tonight's earlier set and are not sent; a
+new one is sent once — artist, title, time, never a path — to `POST /dj/dashboard/plays` (JSON, ≤ 20, the CSRF header). The server
+(`DeckHistoryService`) marks played each waiting request of that song by the library's keys (`LibraryKey`, V42): the title and an
+artist in common ("✓"); a title alone, a request without an artist, a song that started more than 5 minutes before the request (the
+computer's clock) mark nothing; a song with no artist (a file without tags: Serato writes its name as the title) is read as "Artist -
+Title". Each mark is `DjService.markSongAsPlayed` (the conditional `UPDATE`), the answer names the marked songs ("✓ Zagrane samo: …"
+under the card) and the queue is fetched at once. The folder's handle is kept in IndexedDB (`s2p-deck`): after a page load the panel
+reads on when the browser still allows it, else "Wznów czytanie: History"; "Wyłącz" forgets it. The privacy policy (PL / EN, section 2)
+says what is sent and that nothing is kept. Browser scenarios `deck-reader-*`, `DeckHistoryServiceTest`; the formats' sources and the
+other programs (rekordbox, Traktor, djay — not read): `docs/ideas.md` item 18 and `tools/spike/dj_history_spike.py`.

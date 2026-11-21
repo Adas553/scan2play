@@ -284,7 +284,7 @@ piece of work or when a task names an item. A finished item stays here until its
    plan in the hosts' evening summary. **Rejected:** a chat or comments, contracts and payments, a form builder first, the AI checking
    the plan.
 
-18. **A program on the DJ's computer that reads what really plays — waiting** (Claude's idea, 2026-11-20, the third of
+18. **A program on the DJ's computer that reads what really plays — variant E built on `claude/loving-maxwell-sl8pkl`, not released (no migration)** (Claude's idea, 2026-11-20, the third of
    the three "to bind the DJs" with "Trendy próśb" (16) and "Plan imprezy" (17); the owner: 3 first, then 1 — this one
    not picked yet). A small program in the background reads the play history of VirtualDJ, Serato or rekordbox and sends
    it to Scan2Play: a request is marked "Zagrane" by itself (no tap during the set), and it unlocks what item 13 parked
@@ -318,3 +318,14 @@ piece of work or when a task names an item. A finished item stays here until its
    laptop, the DJ's phone, "at once". **Open for the owner:** E first or A at once; the question to the DJs before building; rekordbox
    left out (recommended) or with a typed key; Pro or Free; the whole set kept or only the requests marked; "Leci Twoja piosenka!" and
    "Co to było?" with it or later; 1–2 DJs for a beta with a real history file.
+   **Variant E, built (the owner, 2026-11-21: "to zróbmy na razie E"; after "Brave?" and "musimy płacić?" — A needs Apple's 99 USD a
+   year and a Windows certificate, else the DJ meets Gatekeeper's "Otwórz mimo to" and SmartScreen):** "🎧 Z programu DJ-a" over the
+   queue reads VirtualDJ's or Serato 2/3's history folder in Chrome / Edge on a computer (`play-history.js`) and sends each new song to
+   `POST /dj/dashboard/plays`; `DeckHistoryService` marks only a "✓" match played. Taken as recommended, open to change: any plan (no
+   Pro gate yet — `PLANS_ENFORCE=false` anyway), nothing of the set kept (a song off the requests dropped; the privacy policy says so),
+   no "Chyba leciało, potwierdź" for a title alone yet. Details: `docs/context/05-1d-panel-heading-queue.md`. **Its limits:** Firefox,
+   Safari, Brave (only behind a flag) and phones see no button; Serato 4 and rekordbox not read; the tab must stay open (a background
+   tab's timers may slow to one a minute — not measured); Serato writes a song when it is loaded on a deck, so "Zagrane" may come
+   a little early. **To try:** a real VirtualDJ and a real Serato history at a party (the formats are from the open-source readers and
+   Serato 2.4 / 2.5 sample files). **Still open:** Pro or Free; the whole set kept for the summary and "Co to było?"; "Leci Twoja
+   piosenka!"; A (a tray app) if DJs of other browsers ask.

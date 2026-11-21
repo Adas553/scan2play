@@ -2,18 +2,26 @@ package com.scan2play.controller;
 
 import com.scan2play.model.PlanFeature;
 import com.scan2play.model.StaffPermission;
+import com.scan2play.service.DeckHistoryService;
 import com.scan2play.service.DjService;
 import com.scan2play.service.PlanService;
 import com.scan2play.service.SongRequestCommandService;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.server.ResponseStatusException;
+
+import java.time.Instant;
+import java.util.List;
+import java.util.Map;
 
 import static com.scan2play.controller.ViewAttributes.REDIRECT_DASHBOARD;
 
@@ -26,7 +34,7 @@ import static com.scan2play.controller.ViewAttributes.REDIRECT_DASHBOARD;
  * Handles:
  * <ul>
  *     <li>Adding a song the DJ was asked for at the booth</li>
- *     <li>Marking songs as played</li>
+ *     <li>Marking songs as played — by the DJ, or by the DJ's program's play history read in the panel</li>
  *     <li>Skipping a song, clearing the queue</li>
  * </ul>
  * Dashboard views are handled by {@link DjDashboardController}.
@@ -41,6 +49,7 @@ public class DjSongController {
     private final DjSessionHelper sessionHelper;
     private final PlanService planService;
     private final SongRequestCommandService songRequestCommandService;
+    private final DeckHistoryService deckHistoryService;
 
     /**
      * Adds a song to the queue by hand ("Dodaj piosenkę", V44): a guest asked at the booth. For whom may work the queue; no AI,
@@ -73,6 +82,46 @@ public class DjSongController {
         String ownerPartyCode = sessionHelper.require(partyCode, StaffPermission.QUEUE, authentication, session).getPartyCode();
         djService.markSongAsPlayed(id, ownerPartyCode);
         return REDIRECT_DASHBOARD;
+    }
+
+    /** The songs the panel read from the DJ's program's play history (play-history.js): {@code at} in seconds since 1970, or none. */
+    public record DeckPlays(String partyCode, List<DeckPlay> plays) {
+    }
+
+    /** One song as the program's history writes it. */
+    public record DeckPlay(Long at, String artist, String title) {
+    }
+
+    /** The longest artist or title taken: more is no song's name (the keys cut at {@code LibraryKey.MAX} anyway). */
+    static final int DECK_FIELD_MAX = 500;
+
+    /**
+     * "Zagrane samo" (docs/ideas.md item 18, variant E): the songs VirtualDJ or Serato played, read from its history by the panel in
+     * the DJ's browser, mark the waiting requests they are played ({@link DeckHistoryService}) — for whom may work the queue, as
+     * "Zagrane". At most {@value DeckHistoryService#MAX_PLAYS} songs, each field at most {@value #DECK_FIELD_MAX} characters: else 400.
+     * Nothing of them is kept.
+     *
+     * @return the marked requests' song names, {@code {"marked": [...]}}
+     */
+    @PostMapping(value = "/dashboard/plays", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @ResponseBody
+    public Map<String, List<String>> deckPlays(@RequestBody DeckPlays body, OAuth2AuthenticationToken authentication,
+                                               HttpSession session) {
+        String ownerPartyCode = sessionHelper.require(body.partyCode(), StaffPermission.QUEUE, authentication, session).getPartyCode();
+        List<DeckPlay> plays = body.plays() == null ? List.of() : body.plays();
+        if (plays.size() > DeckHistoryService.MAX_PLAYS || plays.stream().anyMatch(play -> play == null
+                || tooLong(play.artist()) || tooLong(play.title()))) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
+        }
+        List<DeckHistoryService.Play> songs = plays.stream()
+                .map(play -> new DeckHistoryService.Play(play.at() == null ? null : Instant.ofEpochSecond(play.at()), play.artist(),
+                        play.title()))
+                .toList();
+        return Map.of("marked", deckHistoryService.markPlayed(ownerPartyCode, songs, Instant.now()));
+    }
+
+    private static boolean tooLong(String field) {
+        return field != null && field.length() > DECK_FIELD_MAX;
     }
 
     /**

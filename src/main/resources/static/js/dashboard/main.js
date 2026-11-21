@@ -14,6 +14,7 @@
  *   install-hint.js    on a phone, under an empty queue: "Panel jako aplikacja", leading to "Zainstaluj aplikację"
  *   welcome.js         a new organiser's welcome above the queue, "Pierwszy raz? Napisz do nas", closed on the server
  *   plan-card.js       "Plan wieczoru" above the queue (V77): tonight's plan, the next moment counted down, ✓ for each
+ *   play-history.js    "Zagrane samo": VirtualDJ's or Serato's play history on this computer marks the queue's songs played
  *
  * "Zainstaluj aplikację" (install.js) and the notifications' switch (push.js) are on the page "Ustawienia imprezy" since 2026-10-10
  * (settings-page.js loads them with forms.js).
@@ -33,3 +34,4 @@ import './add-song.js';
 import './install-hint.js';
 import './welcome.js';
 import './plan-card.js';
+import './play-history.js';
