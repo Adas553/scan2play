@@ -96,7 +96,8 @@ class PlanFeatureEndpointsTest {
         ReflectionTestUtils.setField(dashboard, "rawBaseUrl", "http://localhost:8080");
         dashboard.init();
         return MockMvcBuilders.standaloneSetup(
-                        new DjSongController(mock(DjService.class), helper, plans, mock(com.scan2play.service.SongRequestCommandService.class)),
+                        new DjSongController(mock(DjService.class), helper, plans, mock(com.scan2play.service.SongRequestCommandService.class),
+                                mock(com.scan2play.service.DeckHistoryService.class)),
                         new DjPartySettingsController(settings, mock(AccountDeletionService.class), mock(com.scan2play.service.PartyCodeService.class), helper, plans, com.scan2play.service.PartySchedules.of(settings)),
                         dashboard,
                         new DjSummaryController(oneEvening(), helper, codesAsTexts(), plans, "https://www.scan2play.com.pl/"),
@@ -105,8 +106,17 @@ class PlanFeatureEndpointsTest {
                         new PartyLogoController(mock(com.scan2play.service.PartyLogoService.class), query, helper, plans, codesAsTexts()),
                         WishControllers.djWishes(wishes, helper, plans, settings, codesAsTexts()),
                         WishControllers.djPlan(wishes, helper, plans, settings, codesAsTexts()),
-                        new DjPollsController(polls, helper, plans, codesAsTexts()))
+                        new DjPollsController(polls, helper, plans, codesAsTexts()),
+                        new DjDeviceController(devices(), helper, plans))
                 .setViewResolvers(new InternalResourceViewResolver("/WEB-INF/views/", ".html")).build();
+    }
+
+    /** The DJ's program's pairing (V78): a code, and "Odłącz" finding its computer. */
+    private static com.scan2play.service.DjDeviceService devices() {
+        com.scan2play.service.DjDeviceService devices = mock(com.scan2play.service.DjDeviceService.class);
+        when(devices.newCode(PUB)).thenReturn("123456");
+        when(devices.remove(PUB, 1L)).thenReturn(true);
+        return devices;
     }
 
     /** The answer's status: a request let through is answered (below 400), not only "nothing thrown" (the review of 2026-10-14). */
@@ -155,7 +165,12 @@ class PlanFeatureEndpointsTest {
                 // "Pytanie do gości" (V74): a new question, asking one
                 Arguments.of(PlanFeature.POLLS, true, post("/dj/polls/create").param("partyCode", PUB).param("question", "Disco polo?")),
                 Arguments.of(PlanFeature.POLLS, true, post("/dj/polls/1/ask").param("partyCode", PUB)),
-                Arguments.of(PlanFeature.POLLS, true, post("/dj/polls/1/edit").param("partyCode", PUB).param("question", "Disco polo?")));
+                Arguments.of(PlanFeature.POLLS, true, post("/dj/polls/1/edit").param("partyCode", PUB).param("question", "Disco polo?")),
+                // "Zagrane samo" (items 18, 19, V78): the panel's songs, the program's pairing code and the list of computers
+                Arguments.of(PlanFeature.DECK, true, post("/dj/dashboard/plays").contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                        .content("{\"partyCode\":\"" + PUB + "\",\"plays\":[]}")),
+                Arguments.of(PlanFeature.DECK, true, post("/dj/devices/code").param("partyCode", PUB)),
+                Arguments.of(PlanFeature.DECK, true, get("/dj/devices").param("partyCode", PUB)));
     }
 
     @ParameterizedTest(name = "{0}: {2}")
@@ -210,6 +225,8 @@ class PlanFeatureEndpointsTest {
                 Arguments.of(post("/dj/library/hints").param("partyCode", PUB).param("on", "false")),
                 // nor deleting the logo (V45)
                 Arguments.of(post("/dj/logo/delete").param("partyCode", PUB)),
+                // nor taking a paired computer away (V78): "Odłącz" after Pro ended
+                Arguments.of(post("/dj/devices/remove").param("partyCode", PUB).param("id", "1")),
                 // nor the events of "Życzenia przed imprezą" made before (V68): seen, closed, downloaded, deleted
                 Arguments.of(get("/dj/wishes").param("party", PUB).param("event", "1")),
                 Arguments.of(post("/dj/wishes/1/closed").param("partyCode", PUB).param("closed", "true")),

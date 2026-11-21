@@ -141,15 +141,17 @@ public class DjService {
      *
      * @param id             The ID of the song request.
      * @param ownerPartyCode The partyCode of the authenticated DJ (from session).
+     * @return whether the request is played now (false: not the party's, gone, or no longer waiting)
      */
     @Transactional
-    public void markSongAsPlayed(Long id, String ownerPartyCode) {
+    public boolean markSongAsPlayed(Long id, String ownerPartyCode) {
         if (songRequestRepository.markPlayed(id, ownerPartyCode, Instant.now()) > 0) {
             evictDashboardQueueAfterCommit(ownerPartyCode);
             log.info("Marked song ID={} as PLAYED for party {}", id, ownerPartyCode);
-        } else {
-            log.warn("Not marked played: DJ party {} asked for song {} (not theirs, gone, or no longer waiting)", ownerPartyCode, id);
+            return true;
         }
+        log.warn("Not marked played: DJ party {} asked for song {} (not theirs, gone, or no longer waiting)", ownerPartyCode, id);
+        return false;
     }
 
     /**

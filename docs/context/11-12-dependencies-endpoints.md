@@ -65,6 +65,9 @@ GuestQueueService          → DjService
 | GET | `/w/{token}` | "Życzenia przed imprezą" (V68, Pro): the event's guests' page — its name and day, the field, or a farewell when it is closed, past or full; 404 for an unknown token or a party without Pro |
 | POST | `/w/{token}` | `song`: a guest's wish (five a session, 30 an address in 10 min, 2 000 an event), back to the page saying what became of it |
 | GET | `/k/{token}/list` | the kiosk's list alone (`kiosk :: kioskList`), fetched by `kiosk.js` every 10 s |
+| POST | `/api/device/pair` | JSON `{code, name}`: the DJ's program swaps the panel's 6-digit code for its token (V78) → `{token}`; a wrong, used or old code 400 `{error: "code"}`, too many tries 429; no login, no CSRF, no session |
+| POST | `/api/device/plays` | `Authorization: Bearer <token>`, JSON `{plays: [{at, artist, title}], sentAt}` (≤ 20; `sentAt` the computer's clock, which corrects the songs' times): the songs the program read → `{marked: [song names]}` (`DeckHistoryService`); 401 unknown or "Odłącz", 429 over 30 a minute, 413 a body over 128 KB, 403 `{error: "plan"}` for a party without Pro (`DECK`; the token stays); no login, no CSRF |
+| POST | `/api/device/unpair` | `Authorization: Bearer <token>`, no body: the program's own "Odłącz ten komputer" — its computer gone from the party's list, the token dead → 204; unknown 401; any plan (without Pro the panel shows no list); no login, no CSRF |
 | POST | `/k/{token}/request`, `/k/{token}/vote`, `/k/{token}/next` | the kiosk's request (async, the guests' way, `viaKiosk`, the kiosk's limit), 👍 (`id`, `on`; with `X-Requested-With: fetch` the list), "Następny gość" (the session ends; with a login in it, only the turn's state at the party is forgotten); CSRF; an expired form back to the kiosk |
 | GET | `/join` | `link`: an invitation link pasted on the landing page (V30) — a party's → its invitation `/join/{token}`, else `/?staffLink=invalid#staffLogin` (`guests` for a guests' link); keeps nothing, no session (review 2026-10-21, S2) |
 | GET | `/join/{token}` | the staff's invitation (V30): names the party, who invites, the role; logged in it asks "Dołącz", else keeps the token for the login; 404 "Ten link zaproszenia już nie działa" for an unknown or old one |
@@ -91,6 +94,9 @@ GuestQueueService          → DjService
 | POST | `/dj/invitation/decline` | `id`: the invitation goes (V34; only the verified address it names) → the panel with a note |
 | GET | `/dj/dashboard/updates` | the guest queue `<tbody>` (ETag / 304); every answer, 304 too, carries `X-Guest-Limits`, `X-Guest-Limits-Use`, `X-Party-Active`, `X-Panel-Access` (V32); 403 when the access was taken away |
 | POST | `/dj/dashboard/add-song` | `song`: a song the DJ adds to the queue by hand (V44; QUEUE; nothing typed: 400) |
+| POST | `/dj/dashboard/plays` | JSON `{partyCode, plays: [{at, artist, title}], sentAt}`: the songs the DJ's program played, read by the panel ("Zagrane samo"; QUEUE, Pro — `DECK`; ≤ 20, a field ≤ 500, else 400) → `{marked: [song names]}` |
+| GET | `/dj/devices` | `partyCode`: the party's computers paired with it (V78; QUEUE, Pro — `DECK`) → `[{id, name, createdAt, lastSeenAt}]` |
+| POST | `/dj/devices/code`, `/dj/devices/remove` | "Połącz komputer" → `{code, minutes}`; "Odłącz" (`id`) → 204, 404 for a computer not of the party (V78; QUEUE; CSRF; the code with Pro — `DECK`, "Odłącz" any plan) |
 | POST | `/dj/dashboard/play` | `id`: a request marked played |
 | POST | `/dj/dashboard/dismiss` | `id`: a waiting request skipped by the DJ → rejected, `skipped_at`, the AI's comment kept (the song stays out for 2 h) |
 | POST | `/dj/dashboard/restore` | `id`: a request the DJ skipped or marked played → waiting again ("Cofnij", "↩ Przywróć"; only the DJ's own, not one the AI rejected or cleared with the queue, not when the same song waits) |

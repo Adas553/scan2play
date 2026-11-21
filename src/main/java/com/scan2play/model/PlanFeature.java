@@ -42,5 +42,12 @@ public enum PlanFeature {
      * "Pytanie do gości" (V74): the DJ asks the guests a question of their own and sees the answers live. Without Pro no question is
      * made or asked and the guests' page and the TV show none; the questions are kept, and ending or deleting one needs no plan.
      */
-    POLLS
+    POLLS,
+    /**
+     * "Zagrane samo" (docs/ideas.md items 18, 19, V78): VirtualDJ's or Serato's play history — read by the panel or by the program on
+     * the DJ's computer — marks the queue's requests played. Without Pro the panel shows no "🎧 Z programu DJ-a" (no offer in the queue:
+     * /pro names it), no code is made, and a paired program's songs are refused ({@code 403 {"error": "plan"}}); the computers stay
+     * paired, and "Odłącz" needs no plan.
+     */
+    DECK
 }
