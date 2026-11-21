@@ -276,6 +276,45 @@ piece of work or when a task names an item. A finished item stays here until its
    **B, done too:** a card "Plan wieczoru" above the queue on the event's evening (the next moment counted down by the DJ's device,
    ticked off on it, "📋 z planu" in the queue). Its review (`docs/history/review-2026-11-21-event-plan-trends.md`) and the fixes:
    a save over a plan changed meanwhile refused with the typed content kept, a limit on the hosts' link, the card only with WISHES,
-   "Użyj ich" on the card, ticks by name, the countdown in Polish time, two plans a day, the settings' row "Życzenia i plan imprezy". **Later, only if DJs ask:** C a push 10 minutes before a moment; D the DJ's own templates; E the
+   "Użyj ich" on the card, ticks by name, the countdown in Polish time, two plans a day, the settings' row "Życzenia i plan imprezy".
+   **Known limits of B:** one is left — the ticks are kept on the device that made them (the DJ's phone does not see the
+   computer's). The countdown counts in Polish time already (the server's `data-at`), and the queue's poll every 3 s is answered from
+   30 s in memory (#295). **"Życzenia" → "Wydarzenia":** half done — the settings' row says "Życzenia i plan imprezy", the DJ's page,
+   the panel's card and the guests' texts still say "Życzenia"; open whether to rename the rest. **Later, only if DJs ask:** C a push 10 minutes before a moment; D the DJ's own templates; E the
    plan in the hosts' evening summary. **Rejected:** a chat or comments, contracts and payments, a form builder first, the AI checking
    the plan.
+
+18. **A program on the DJ's computer that reads what really plays — waiting** (Claude's idea, 2026-11-20, the third of
+   the three "to bind the DJs" with "Trendy próśb" (16) and "Plan imprezy" (17); the owner: 3 first, then 1 — this one
+   not picked yet). A small program in the background reads the play history of VirtualDJ, Serato or rekordbox and sends
+   it to Scan2Play: a request is marked "Zagrane" by itself (no tap during the set), and it unlocks what item 13 parked
+   for want of the set's data — "🎶 Leci Twoja piosenka!" for the guest, "Co to było?" (the night's whole set for the
+   guests), the evening summary with every song played, not only the requested ones. Binds the DJ: it works at every
+   party and takes a chore away. **Risk, to check first:** every program writes its history differently, and not every
+   one in a file that can be read while it plays — try one (the one most of the DJs use) before promising any. **Open:**
+   which program first; a Java tray app or a small native one; how it logs in (a device token made in the panel, as the
+   kiosk's link); what the privacy policy says (the DJ's set is the DJ's data).
+   **The analysis (2026-11-21; the artifact https://claude.ai/artifact/Psa7Ve58PHUmVzAFMtJGTA; no code in the app):** the sources are
+   the open-source readers on GitHub (What's Now Playing, SSLScrobbler, pyrekordbox) — the vendors' sites were out of the session's
+   network, their forums seen only as search snippets. **VirtualDJ** — low risk: `Documents/VirtualDJ/History/<date>.m3u`, plain text,
+   a line `#EXTVDJ:<time>…<lastplaytime>…<artist>…<title>…` appended once a song played `historyDelay` (reported 45 s), read while it
+   plays; no official "now playing". **Serato 2/3** — low: `Music/_Serato_/History/Sessions/<n>.session`, binary chunks appended on
+   every load / eject. **Serato 4** — medium: `master.sqlite` (unencrypted, `history_entry` of the open `history_session`), read
+   read-only; not tried on a real file. **rekordbox** — high: `master.db` SQLCipher; rekordbox 7's key is typed in by hand (a debugger
+   or "known sources"); no official output (a request on Pioneer's forum). **Traktor** — high: only its Broadcasting (a local Icecast
+   stream), turned on every set. **djay Pro** — medium ("basic" in What's Now Playing). **Poland:** no data; the world's census 2026
+   (Digital DJ Tips, club-heavy): rekordbox 34 %, Serato 27 %, VirtualDJ ~17 %; the guess for wedding DJs with a laptop: VirtualDJ
+   and Serato — to measure first (a question "Na czym grasz?" to the DJs; `dj_library.format` read-only on production; Railway's logs
+   hold 7 days, no upload in them). **The spike** `tools/spike/dj_history_spike.py` (reads, sends nothing; `selftest`): four real
+   Serato 2.4 / 2.5 session files read (3, 16, 51, 5 songs); a song without tags has no artist and the file's name as its title, so
+   the match splits "Artist - Title" and a title alone only asks "Chyba leciało, potwierdź". **Into Scan2Play:** a card "Program na
+   komputerze" (a 6-digit code for 10 minutes swapped for a token; table `dj_device` with its hash, "Ostatnio", "Odłącz"; Pro), `POST
+   /api/device/plays` with a bearer token (≤ 20 songs, no path, idempotent), matched by `LibraryKey` (V42) to the waiting requests →
+   `markPlayed`; a song off the requests to `evening_play` (the summary's whole set, the AI's "already played", later "Co to było?");
+   1 call per 5 s, 600 songs a day, 3 devices a party; never in "Trendy" (16); a line in the privacy policy. **Variants:** E (recommended
+   first) no program — the panel in Chrome / Edge reads the History folder (File System Access API; VirtualDJ and Serato 2/3 only, the tab
+   open on the DJ's laptop); A a Java tray app (jpackage; signing: Apple 99 USD a year and notarisation, a Windows certificate and
+   SmartScreen); B Electron; C Go / Rust; D a script (a beta with 1–2 DJs). **Not to promise:** rekordbox, Traktor, djay, CDJs without a
+   laptop, the DJ's phone, "at once". **Open for the owner:** E first or A at once; the question to the DJs before building; rekordbox
+   left out (recommended) or with a typed key; Pro or Free; the whole set kept or only the requests marked; "Leci Twoja piosenka!" and
+   "Co to było?" with it or later; 1–2 DJs for a beta with a real history file.
