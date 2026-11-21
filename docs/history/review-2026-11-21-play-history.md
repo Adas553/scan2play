@@ -38,8 +38,10 @@ W kopii repo, nigdy Maven w repo (CLAUDE.md):
 Tomcat ogranicza tylko formularze (`server.tomcat.max-http-form-post-size=10KB`, `application.properties:50`). Scenariusz: ktoś bez
 konta wysyła w pętli 50 MB JSON-a na `/api/device/pair` — każda prośba to megabajty pamięci i czas CPU na parsowanie, zanim padnie
 400/401. `CspReportController` (inny publiczny JSON) robi to dobrze: `readNBytes(MAX_BODY)`.
-**Poprawka:** `config/DeviceBodyLimitFilter` — dla `/api/device/*` ciało powyżej 128 KB to 413, bez długości (chunked) 411, zanim
-cokolwiek przeczyta. 128 KB mieści najgorszy prawdziwy przypadek (20 piosenek × 1000 znaków × 4 bajty). Test
+**Poprawka:** `config/DeviceBodyLimitFilter` — dla `/api/device/*` ciało, które samo mówi, że ma ponad 128 KB, to 413 bez czytania;
+każde inne czytane najwyżej do 128 KB + 1 bajt (dłuższe — 413) i podawane dalej z pamięci. Ciało bez długości (chunked) nie jest
+odrzucane: tak może je przekazać pośrednik między programem a aplikacją (Cloudflare, krawędź Railway) — pierwsza wersja poprawki
+dawała mu 411 i mogła odciąć program w całości (znalezione w drugim przejściu, niżej). 128 KB mieści najgorszy prawdziwy przypadek (20 piosenek × 1000 znaków × 4 bajty). Test
 `DeviceApiWebTest.aBodyOfMegabytes_isRefusedBeforeItIsRead_toThePairingAndToTheSongsAlike` (czerwony: 401 zamiast 413).
 
 ### P2 — błąd (poprawiony): zegar komputera DJ-a spóźniony o więcej niż 5 minut — nic się nie oznacza, po cichu
@@ -47,8 +49,9 @@ cokolwiek przeczyta. 128 KB mieści najgorszy prawdziwy przypadek (20 piosenek �
 `DeckHistoryService.java:79` — prośba jest oznaczana tylko przez piosenkę, której `at` ≥ czas prośby − 5 min (`CLOCK_SLACK`, :36).
 `at` to zegar komputera DJ-a (VirtualDJ `lastplaytime`, Serato start). Scenariusz: laptop bez synchronizacji czasu (wyłączona w
 Windows, BIOS po wymianie baterii, ręcznie ustawiona godzina) chodzi 8 minut do tyłu. Gość prosi o 21:00, DJ gra o 21:10 według
-serwera, plik zapisuje 21:02 — „zagrane przed prośbą”, nic się nie oznacza, ani DJ, ani program tego nie widzi. Zegar do przodu jest
-już obsłużony (`at` z przyszłości = teraz, :66).
+serwera, plik zapisuje 21:02 — „zagrane przed prośbą”, nic się nie oznacza, ani DJ, ani program tego nie widzi. Zegar do przodu daje
+odwrotny błąd: piosenka zagrana przed prośbą wygląda na zagraną po niej i oznacza prośbę, której nikt nie zagrał (przycięcie `at`
+z przyszłości do „teraz”, :66, chroni tylko przed czasem z przyszłości).
 **Poprawka:** wysyłający podaje swój zegar w chwili wysłania (`sentAt`, sekundy): program (`Json.plays`, `ServerClient`) i panel
 (`play-history.js`, `send`). `DjSongController.songsOf(plays, sentAt, now)` przesuwa każde `at` o różnicę `now − sentAt`; bez `sentAt`
 (stary klient) — jak dotąd. Testy: `DeviceApiControllerTest.aClockEightMinutesSlow_isCorrectedBythe_sentAt_ofTheCall`,
@@ -76,8 +79,8 @@ ma 3 komputery, czwarty zastępuje najdawniej widziany — lista tak samo długa
 ### P5 — ryzyko (poprawione): plik z tokenem przez chwilę czytelny dla innych, folder `~/.scan2play` 755, zapis nieatomowy
 
 `deck-agent/.../Settings.java` (dawniej :271) — `Files.newOutputStream` tworzył plik z umaską (zwykle 644), dopiero potem
-`chmod 600`; folder zostawał `rwxr-xr-x`; awaria w trakcie `store` zostawiała pusty plik (DJ musi parować od nowa). Na macOS
-`/Users/<dj>` jest zwykle zamknięty dla innych, więc realne ryzyko to wspólny komputer z kilkoma kontami albo Linux.
+`chmod 600`; folder zostawał `rwxr-xr-x`; awaria w trakcie `store` zostawiała pusty plik (DJ musi parować od nowa). Czy inne konta
+komputera widzą katalog domowy, zależy od systemu i jego wersji; realne ryzyko to wspólny komputer z kilkoma kontami.
 **Poprawka:** plik tymczasowy w tym samym folderze (owner-only od utworzenia), `ATOMIC_MOVE` na miejsce, folder `rwx------`.
 Na Windows plik leży w profilu użytkownika (ACL profilu: tylko on, SYSTEM i administratorzy) — bez zmian. Test
 `SettingsTest.theTokensFileAndFolder_areTheOwnersAlone_whateverTheyWereBefore` (czerwony: folder `rwxr-xr-x`).
@@ -223,7 +226,7 @@ rosnąca do 1 min. Zostawione: działa, a zmiana dotyka testu `aFailedCall_keeps
 
 Zrobione na gałęzi (każda zmiana zachowania z testem albo scenariuszem widzianym najpierw na czerwono, chyba że napisano inaczej):
 
-- P1 `DeviceBodyLimitFilter` (413 / 411 dla `/api/device/*`) — `DeviceApiWebTest` czerwony (401), potem zielony.
+- P1 `DeviceBodyLimitFilter` (413 dla `/api/device/*`) — `DeviceApiWebTest` czerwony (401), potem zielony; bez długości: P17.
 - P2 `sentAt` w programie i panelu, `DjSongController.songsOf(plays, sentAt, now)` — testy Java czerwone (kompilacja), krok
   `sentAt` w `deck-reader-virtualdj` dopisany razem z kodem (nie widziany osobno na czerwono).
 - P3 jeden ważny kod na imprezę — `DjDeviceIT` czerwony, potem zielony.
@@ -244,3 +247,43 @@ set (2 h temu) nic nie oznacza; linia „Sanah &amp; Kwiat Jabłoni — Szampan 
 tokenu, kodu parowania i nazwy komputera. Baza `s2p_e2e` usunięta.
 
 Zostawione: P9–P16 (decyzje właściciela albo zmiany bez pilnej potrzeby — powody przy każdym punkcie).
+
+## Drugie przejście (2026-11-21, ten sam dzień)
+
+Ponowne sprawdzenie, przede wszystkim własnych poprawek P1–P8 (nikt ich jeszcze nie przejrzał) i twierdzeń tego pliku.
+
+### P17 — błąd (poprawiony): moja poprawka P1 odrzucała ciało bez długości (411)
+
+`DeviceBodyLimitFilter` w pierwszej wersji: `getContentLengthLong() < 0` → 411. Program (`java.net.http`) długość wysyła, ale między
+nim a aplikacją są Cloudflare i krawędź Railway; jeśli któryś przekaże ciało w kawałkach (chunked, np. po HTTP/2 od klienta), każde
+`/api/device/*` dostaje 411 — program nie połączy się nigdy i pokazuje „Brak połączenia z serwerem”. Tutaj tego nie da się sprawdzić,
+więc filtr nie może na tym polegać. **Poprawka:** ciało bez długości czytane najwyżej do limitu, dłuższe 413, krótsze podane dalej
+z pamięci (`ReadBody`). Test `DeviceBodyLimitFilterTest` (oba przypadki czerwone na pierwszej wersji, potem zielone).
+
+### P18 — błąd (poprawiony): moja poprawka P4 gasiła kod, gdy „Połącz komputer” wyprzedziło listę
+
+`play-history.js` `computers()` — `newest` zaczyna od -1. DJ otwiera kartę i od razu klika „Połącz komputer” (albo pobranie listy się
+nie udało): `atCode = -1`, pierwsza lista (pusta: `newest = 0`) wygląda na „program wziął kod” i kod znika z panelu, choć jest ważny.
+Stara wersja miała na to `shown >= 0`. **Poprawka:** kod zrobiony przed pierwszą listą bierze za punkt odniesienia pierwszą listę,
+która przyjdzie. Scenariusz `deck-computers-code-before-list` (lista opóźniona o 1,5 s; czerwony, potem zielony).
+
+### Poprawione w tym pliku
+
+- P2: zegar do przodu nie był „obsłużony” — daje fałszywe trafienia; `sentAt` poprawia oba kierunki.
+- P5: zdanie o katalogu domowym na macOS złagodzone (zależy od wersji systemu).
+
+### Sprawdzone jeszcze raz, bez zmian
+
+- `sentAt`: przesunięcie liczone na serwerze z jego `now`; niepoprawne `sentAt` (ujemne, spoza zakresu) — bez przesunięcia;
+  sparowany program i tak mógł podać dowolne `at`, więc `sentAt` nie daje mu nic nowego. Wyniki po przesunięciu mieszczą się w
+  zakresie `Instant`.
+- Jeden kod na imprezę: `removeIf` na widoku Caffeine (≤ 10 000 wpisów) — `DjDeviceIT` zielony. Dwa jednoczesne „Połącz komputer”
+  tej samej imprezy mogą zostawić dwa kody — nieszkodliwe (oba jednorazowe, 10 minut).
+- `Settings`: na Windows `setPosixFilePermissions` rzuca `UnsupportedOperationException` (złapane), `ATOMIC_MOVE` z zastąpieniem
+  istniejącego pliku działa (`MoveFileEx`).
+- Okno: `wasPaired` przechodzi na `true` przy pierwszym odświeżeniu po sparowaniu, więc „odłączono” pojawi się po „Odłącz” w panelu,
+  a nie po złym kodzie ani po własnym „Odłącz ten komputer”.
+- Wyniki drugiego przejścia: `check.py unit` 1518/1518, scenariusze `deck-*` 8/8; od końca do końca 16/16 — to samo co wyżej
+  i dodatkowo prawdziwe zapytanie chunked przez Tomcat (`curl -H "Transfer-Encoding: chunked"`): małe z tokenem 200, 200 KB 413.
+- Dopisane do P13: zapytania z nieznanym tokenem nie mają limitu (jedno wyszukanie w indeksie na zapytanie, po P1/P17 najwyżej 128 KB
+  ciała) — przed floodem chroni Cloudflare.

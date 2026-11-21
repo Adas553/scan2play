@@ -19,7 +19,7 @@ Spring Security's `no-store`,
 stub on the loopback; the `ObjectMapper` bean), `WebConfig` (the `LocaleResolver`: `?lang=`, then
 the cookie `lang` it writes, then `Accept-Language`, then Polish — also for an empty header), `NoIndexFilter` (`X-Robots-Tag: noindex, nofollow` on `/p/…`, `/h/…`, `/join…`, `/dj/…` — a party's
 link put on the web is no search result; a header, not `robots.txt`, so a crawler sees it), `OriginGuardFilter` (only requests with
-Cloudflare's secret header, `ORIGIN_SECRET` — Section 8), `DeviceBodyLimitFilter` (the DJ's program's `/api/device/*`: a body over 128 KB or without a length refused before it is read, V78), `SiteUrlAdvice` (in `controller/`; `siteUrl` —
+Cloudflare's secret header, `ORIGIN_SECRET` — Section 8), `DeviceBodyLimitFilter` (the DJ's program's `/api/device/*`: a body over 128 KB refused, read at most that far, V78), `SiteUrlAdvice` (in `controller/`; `siteUrl` —
 `scan2play.site-url`, env `SCAN2PLAY_SITE_URL`, the production domain also locally — for the head of the public pages; only for
 the controllers it names, `HomeController`, `LegalController`, `ForWhomController` — a new public page's controller goes there, or
 its head has no canonical address:

@@ -207,7 +207,7 @@ function computers() {
     const codeLine = document.getElementById('deviceCode');
     const list = document.getElementById('deviceList');
     let newest = -1;      // the highest id of the list: a program that took the code is a computer newer than this
-    let atCode = -1;      // the highest id when the code was made
+    let atCode = -1;      // the highest id when the code was made (-1: no list yet then)
     let watching = null;
 
     async function post(path, fields) {
@@ -262,7 +262,9 @@ function computers() {
         newest = devices.reduce(function (most, device) { return Math.max(most, device.id); }, 0);
         // the program took the code: it is used up. By the newest id, not the count: a fourth computer replaces the one seen
         // longest ago (the count stays), and an "Odłącz" meanwhile shortens the list while the code is still good
-        if (watching !== null && newest > atCode) {
+        if (watching !== null && atCode < 0) {
+            atCode = newest;   // the code was made before the list came: the list as it is now is the one before the program
+        } else if (watching !== null && newest > atCode) {
             clearInterval(watching);
             watching = null;
             codeLine.textContent = '';

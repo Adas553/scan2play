@@ -267,4 +267,21 @@
             await t.waitFor(function () { return code() === ''; }, 'the code gone, the list as long as before', 8000);
         }
     });
+
+    S2P.scenario({
+        name: 'deck-computers-code-before-list',
+        title: '"Połącz komputer" pressed before the list of computers came: the code stays until a program takes it',
+        setup: { devices: [], delays: { '/dj/devices': 1.5 } },
+        run: async function (t) {
+            const code = function () { return document.getElementById('deviceCode').textContent; };
+            await t.sleep(300);
+            toggle().click();
+            document.getElementById('deviceConnect').click();
+            await t.waitFor(function () { return code().indexOf('123 456') >= 0; }, 'the code', 3000);
+            await t.waitFor(function () { return document.getElementById('deviceList').textContent === reader().dataset.deviceNone; },
+                'the (empty) list came', 4000);
+            await t.sleep(300);
+            t.check('the code still shown after the list came', code().indexOf('123 456') >= 0);
+        }
+    });
 })();
