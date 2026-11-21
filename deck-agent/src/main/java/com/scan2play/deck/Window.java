@@ -13,6 +13,7 @@ import javax.swing.WindowConstants;
 import java.awt.AWTException;
 import java.awt.BasicStroke;
 import java.awt.Color;
+import java.awt.Dimension;
 import java.awt.Component;
 import java.awt.Font;
 import java.awt.Graphics2D;
@@ -52,9 +53,11 @@ final class Window {
     private final JLabel problem = new JLabel(" ");
     private final JButton disconnect = new JButton("Odłącz ten komputer");
     private final Settings settings;
+    private boolean wasPaired;
 
     Window(Settings settings, Consumer<String[]> onConnect, Runnable onDisconnect) {
         this.settings = settings;
+        this.wasPaired = settings.token() != null;
         pairPanel.setLayout(new BoxLayout(pairPanel, BoxLayout.Y_AXIS));
         pairPanel.add(left(new JLabel("<html>1. W panelu Scan2Play: kolejka › „🎧 Z programu DJ-a” › „Połącz komputer”.<br>"
                 + "2. Wpisz tutaj kod z panelu.</html>")));
@@ -124,10 +127,13 @@ final class Window {
 
     void update(Agent.Status status) {
         SwingUtilities.invokeLater(() -> {
+            Dimension before = frame.getContentPane().getPreferredSize();
             showPaired(status.paired());
-            if (!status.paired() && status.last() == ServerClient.Outcome.DISCONNECTED) {
+            // said once, when the panel's "Odłącz" is heard: said at every look it would wipe the answer to the code just typed
+            if (wasPaired && !status.paired() && status.last() == ServerClient.Outcome.DISCONNECTED) {
                 pairAnswer.setText("Ten komputer odłączono w panelu — połącz go nowym kodem.");
             }
+            wasPaired = status.paired();
             reading.setText(status.reading().isEmpty()
                     ? "Nie widać historii VirtualDJ ani Serato na tym komputerze."
                     : "Czyta: " + String.join(", ", status.reading()));
@@ -135,13 +141,20 @@ final class Window {
             marked.setText(status.marked().isEmpty() ? " " : "✓ Zagrane samo: " + String.join(" · ", lastOf(status.marked())));
             problem.setText(status.last() == ServerClient.Outcome.FAILED ? "Brak połączenia z serwerem — kolejna próba za chwilę."
                     : status.last() == ServerClient.Outcome.TOO_MANY ? "Serwer prosi o chwilę przerwy." : " ");
-            frame.pack();
+            // only when the content changed its size: a pack at every look (3 s) would undo a window the DJ stretched
+            if (!before.equals(frame.getContentPane().getPreferredSize())) {
+                frame.pack();
+            }
         });
     }
 
     private void showPaired(boolean paired) {
+        boolean changed = pairedPanel.isVisible() != paired;
         pairPanel.setVisible(!paired);
         pairedPanel.setVisible(paired);
+        if (changed) {
+            frame.pack();
+        }
     }
 
     private static List<String> lastOf(List<String> songs) {

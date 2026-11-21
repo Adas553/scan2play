@@ -37,8 +37,12 @@ const XML_ENTITIES = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'" };
 
 function unescapeXml(text) {
     return text.replace(/&(#x[0-9a-fA-F]+|#\d+|amp|lt|gt|quot|apos);/g, function (all, name) {
-        if (name[0] === '#') return String.fromCodePoint(name[1] === 'x' ? parseInt(name.slice(2), 16) : parseInt(name.slice(1), 10));
-        return XML_ENTITIES[name];
+        if (name[0] !== '#') return XML_ENTITIES[name];
+        try {
+            return String.fromCodePoint(name[1] === 'x' ? parseInt(name.slice(2), 16) : parseInt(name.slice(1), 10));
+        } catch (e) {
+            return all;   // no such character (&#x110000;): left as written, it must not stop the whole file being read
+        }
     });
 }
 
@@ -202,7 +206,8 @@ function computers() {
     const connect = document.getElementById('deviceConnect');
     const codeLine = document.getElementById('deviceCode');
     const list = document.getElementById('deviceList');
-    let shown = -1;
+    let newest = -1;      // the highest id of the list: a program that took the code is a computer newer than this
+    let atCode = -1;      // the highest id when the code was made
     let watching = null;
 
     async function post(path, fields) {
@@ -242,6 +247,7 @@ function computers() {
             remove.type = 'button';
             remove.className = 'btn btn-sm btn-outline-secondary py-0';
             remove.textContent = text('deviceRemove');
+            remove.setAttribute('aria-label', text('deviceRemove') + ' ' + device.name);   // a screen reader hears which computer
             remove.addEventListener('click', async function () {
                 remove.disabled = true;
                 try {
@@ -253,12 +259,14 @@ function computers() {
             row.append(name, seen, remove);
             list.append(row);
         });
-        if (watching !== null && shown >= 0 && devices.length !== shown) {   // the program took the code: it is used up
+        newest = devices.reduce(function (most, device) { return Math.max(most, device.id); }, 0);
+        // the program took the code: it is used up. By the newest id, not the count: a fourth computer replaces the one seen
+        // longest ago (the count stays), and an "Odłącz" meanwhile shortens the list while the code is still good
+        if (watching !== null && newest > atCode) {
             clearInterval(watching);
             watching = null;
             codeLine.textContent = '';
         }
-        shown = devices.length;
     }
 
     connect.addEventListener('click', async function () {
@@ -269,6 +277,7 @@ function computers() {
             const answer = await response.json();
             codeLine.textContent = text('deviceCode', { code: answer.code.slice(0, 3) + ' ' + answer.code.slice(3), minutes: answer.minutes });
             clearInterval(watching);
+            atCode = newest;
             const until = Date.now() + Number(answer.minutes) * 60000;
             watching = setInterval(function () {
                 if (Date.now() > until) {
@@ -342,7 +351,7 @@ if (toggle && reader && wide && canPickFolders) {
             const response = await fetch('/dj/dashboard/plays', {
                 method: 'POST',
                 headers: Object.assign({ 'Content-Type': 'application/json', 'X-Requested-With': 'fetch' }, csrfHeaders()),
-                body: JSON.stringify({ partyCode: partyCode(), plays: batch })
+                body: JSON.stringify({ partyCode: partyCode(), plays: batch, sentAt: Math.floor(Date.now() / 1000) })
             });
             if (response.status === 401 || response.status === 403) {
                 halt(text('refused'));

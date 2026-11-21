@@ -3,8 +3,10 @@ package com.scan2play.deck;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.util.Properties;
 
@@ -53,15 +55,36 @@ final class Settings {
         save();
     }
 
+    /**
+     * Written to a file of its own, owner-only from its creation, then moved over the old one: the token is never readable by
+     * another user of the computer (not for the moment between creating the file and restricting it), and a crash while writing
+     * never leaves a half file — the DJ would have to pair again.
+     */
     private void save() throws IOException {
-        Files.createDirectories(file.getParent());
-        try (OutputStream out = Files.newOutputStream(file)) {
-            values.store(out, "Scan2Play - Zagrane samo");
-        }
+        Path folder = file.toAbsolutePath().getParent();
+        Files.createDirectories(folder);
+        restrict(folder, "rwx------");
+        Path temp = Files.createTempFile(folder, "zagrane", ".tmp");
         try {
-            Files.setPosixFilePermissions(file, PosixFilePermissions.fromString("rw-------"));
+            restrict(temp, "rw-------");
+            try (OutputStream out = Files.newOutputStream(temp)) {
+                values.store(out, "Scan2Play - Zagrane samo");
+            }
+            try {
+                Files.move(temp, file, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+            } catch (AtomicMoveNotSupportedException e) {
+                Files.move(temp, file, StandardCopyOption.REPLACE_EXISTING);
+            }
+        } finally {
+            Files.deleteIfExists(temp);
+        }
+    }
+
+    private static void restrict(Path path, String permissions) {
+        try {
+            Files.setPosixFilePermissions(path, PosixFilePermissions.fromString(permissions));
         } catch (UnsupportedOperationException | IOException e) {
-            // Windows: the file is in the user's own profile already
+            // Windows: the file is in the user's own profile, closed to the other users already
         }
     }
 }

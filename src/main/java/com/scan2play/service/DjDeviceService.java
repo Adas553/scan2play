@@ -73,8 +73,13 @@ public class DjDeviceService {
     public record Pairing(String token, PairRefusal refusal) {
     }
 
-    /** A new code for the party (the panel's "Połącz komputer"): 6 digits, valid {@value #CODE_MINUTES} minutes, used once. */
+    /**
+     * A new code for the party (the panel's "Połącz komputer"): 6 digits, valid {@value #CODE_MINUTES} minutes, used once. The party's
+     * earlier code dies with it: a party has one code at a time, so pressing the button again (or a loop of requests) neither leaves
+     * two codes to be guessed nor fills the memory the other parties' codes live in.
+     */
     public String newCode(String partyCode) {
+        codes.asMap().values().removeIf(partyCode::equals);
         String code;
         do {
             code = String.format("%06d", RANDOM.nextInt(1_000_000));

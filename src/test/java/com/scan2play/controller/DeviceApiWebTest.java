@@ -66,6 +66,16 @@ class DeviceApiWebTest {
     }
 
     @Test
+    void aBodyOfMegabytes_isRefusedBeforeItIsRead_toThePairingAndToTheSongsAlike() throws Exception {
+        String big = "{\"plays\":[],\"x\":\"" + "a".repeat(200_000) + "\"}";
+        mockMvc.perform(post("/api/device/plays").header("Authorization", "Bearer tok").contentType(MediaType.APPLICATION_JSON)
+                .content(big)).andExpect(status().isPayloadTooLarge());
+        mockMvc.perform(post("/api/device/pair").contentType(MediaType.APPLICATION_JSON).content(big))
+                .andExpect(status().isPayloadTooLarge());
+        org.mockito.Mockito.verifyNoInteractions(devices, deckHistory);
+    }
+
+    @Test
     void thePanelsSide_needsTheLogin() throws Exception {
         int status = mockMvc.perform(post("/dj/devices/code").param("partyCode", "AB123")).andReturn().getResponse().getStatus();
         assertThat(status).as("refused without a login").isGreaterThanOrEqualTo(300);

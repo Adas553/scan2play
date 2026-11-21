@@ -53,6 +53,19 @@ class DjDeviceIT extends PostgresIntegrationTest {
     }
 
     @Test
+    void aNewCode_killsThePartysEarlierOne_andNoOtherPartys() {
+        String party = party();
+        String other = party();
+        String first = devices.newCode(party);
+        String othersCode = devices.newCode(other);
+        String second = devices.newCode(party);
+
+        assertThat(devices.pair(first, "Stary", "it-" + party, NOW).refusal()).isEqualTo(DjDeviceService.PairRefusal.WRONG_CODE);
+        assertThat(devices.pair(second, "Nowy", "it-" + party, NOW).token()).isNotNull();
+        assertThat(devices.pair(othersCode, "Cudzy", "it-" + other, NOW).token()).isNotNull();
+    }
+
+    @Test
     void theLastCall_isNotedAtMostOnceAMinute() {
         String party = party();
         String token = pair(party, "PC", NOW);

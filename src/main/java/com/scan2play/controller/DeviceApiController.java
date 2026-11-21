@@ -41,8 +41,11 @@ public class DeviceApiController {
     public record PairRequest(String code, String name) {
     }
 
-    /** The songs the program read since its last call, as the panel's {@link DjSongController.DeckPlay}. */
-    public record PlaysRequest(List<DjSongController.DeckPlay> plays) {
+    /**
+     * The songs the program read since its last call, as the panel's {@link DjSongController.DeckPlay}, and its clock as it sent them
+     * (seconds since 1970; {@link DjSongController#songsOf}).
+     */
+    public record PlaysRequest(List<DjSongController.DeckPlay> plays, Long sentAt) {
     }
 
     /**
@@ -81,6 +84,7 @@ public class DeviceApiController {
         if (!DjSongController.validPlays(plays)) {
             return ResponseEntity.badRequest().build();
         }
-        return ResponseEntity.ok(Map.of("marked", deckHistory.markPlayed(paired.get().partyCode(), DjSongController.songsOf(plays), now)));
+        List<DeckHistoryService.Play> songs = DjSongController.songsOf(plays, body.sentAt(), now);
+        return ResponseEntity.ok(Map.of("marked", deckHistory.markPlayed(paired.get().partyCode(), songs, now)));
     }
 }

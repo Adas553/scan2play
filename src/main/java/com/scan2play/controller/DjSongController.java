@@ -84,8 +84,11 @@ public class DjSongController {
         return REDIRECT_DASHBOARD;
     }
 
-    /** The songs the panel read from the DJ's program's play history (play-history.js): {@code at} in seconds since 1970, or none. */
-    public record DeckPlays(String partyCode, List<DeckPlay> plays) {
+    /**
+     * The songs the panel read from the DJ's program's play history (play-history.js): {@code at} in seconds since 1970, or none;
+     * {@code sentAt} the sender's clock when it sent them (seconds since 1970), see {@link #songsOf}.
+     */
+    public record DeckPlays(String partyCode, List<DeckPlay> plays, Long sentAt) {
     }
 
     /** One song as the program's history writes it. */
@@ -107,12 +110,13 @@ public class DjSongController {
     @ResponseBody
     public Map<String, List<String>> deckPlays(@RequestBody DeckPlays body, OAuth2AuthenticationToken authentication,
                                                HttpSession session) {
+        Instant now = Instant.now();
         String ownerPartyCode = sessionHelper.require(body.partyCode(), StaffPermission.QUEUE, authentication, session).getPartyCode();
         List<DeckPlay> plays = body.plays() == null ? List.of() : body.plays();
         if (!validPlays(plays)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
         }
-        return Map.of("marked", deckHistoryService.markPlayed(ownerPartyCode, songsOf(plays), Instant.now()));
+        return Map.of("marked", deckHistoryService.markPlayed(ownerPartyCode, songsOf(plays, body.sentAt(), now), now));
     }
 
     /** At most {@value DeckHistoryService#MAX_PLAYS} songs, none null, each field at most {@value #DECK_FIELD_MAX} characters. */
@@ -121,11 +125,17 @@ public class DjSongController {
                 || tooLong(play.artist()) || tooLong(play.title()));
     }
 
-    /** The songs as the service takes them; a time out of {@link Instant}'s range is taken as none (now). */
-    static List<DeckHistoryService.Play> songsOf(List<DeckPlay> plays) {
+    /**
+     * The songs as the service takes them; a time out of {@link Instant}'s range is taken as none (now). A song's time is the DJ's
+     * computer's clock, which may be minutes off: when the sender says what its clock showed as it sent ({@code sentAt}), every time
+     * is moved by the difference from the server's {@code now} — a computer whose clock runs 8 minutes slow would otherwise play every
+     * song "before the guest asked" ({@link DeckHistoryService}) and mark nothing. Without it, the times are taken as they are.
+     */
+    static List<DeckHistoryService.Play> songsOf(List<DeckPlay> plays, Long sentAt, Instant now) {
+        long skew = sentAt == null || sentAt < 0 || sentAt > 100_000_000_000L ? 0 : now.getEpochSecond() - sentAt;
         return plays.stream()
                 .map(play -> new DeckHistoryService.Play(play.at() == null || play.at() < 0 || play.at() > 100_000_000_000L
-                        ? null : Instant.ofEpochSecond(play.at()), play.artist(), play.title()))
+                        ? null : Instant.ofEpochSecond(play.at() + skew), play.artist(), play.title()))
                 .toList();
     }
 

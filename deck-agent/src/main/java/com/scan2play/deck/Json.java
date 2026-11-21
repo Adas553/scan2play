@@ -1,5 +1,6 @@
 package com.scan2play.deck;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -31,15 +32,18 @@ final class Json {
         return out.append('"').toString();
     }
 
-    /** The songs as the server takes them: {@code {"plays":[{"at":…,"artist":"…","title":"…"}]}}. */
-    static String plays(List<Played> songs) {
+    /**
+     * The songs as the server takes them: {@code {"plays":[{"at":…,"artist":"…","title":"…"}],"sentAt":…}} — {@code sentAt} this
+     * computer's clock as it sends, so the server can correct the songs' times if the clock is off.
+     */
+    static String plays(List<Played> songs, Instant sentAt) {
         StringBuilder out = new StringBuilder("{\"plays\":[");
         for (int i = 0; i < songs.size(); i++) {
             Played song = songs.get(i);
             out.append(i == 0 ? "" : ",").append("{\"at\":").append(song.at() == null ? "null" : song.at().getEpochSecond())
                     .append(",\"artist\":").append(quote(song.artist())).append(",\"title\":").append(quote(song.title())).append('}');
         }
-        return out.append("]}").toString();
+        return out.append("],\"sentAt\":").append(sentAt.getEpochSecond()).append('}').toString();
     }
 
     /** A string member of an object: {@code "token"} of {"token":"…"}. */

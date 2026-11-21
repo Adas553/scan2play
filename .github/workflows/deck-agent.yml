@@ -57,13 +57,14 @@ jobs:
           cp deck-agent/target/deck-agent-1.0.0.jar deck-agent/target/app/
 
       # An application folder with its own trimmed Java (no installer: nothing to install, unpack and run). The modules: Swing and
-      # the tray, the HTTP client, SQLite's JDBC (Serato 4); jdk.crypto.ec for the TLS of www.scan2play.com.pl.
+      # the tray, the HTTP client, SQLite's JDBC (Serato 4); jdk.crypto.ec for the TLS of www.scan2play.com.pl; jdk.accessibility
+      # for the Java Access Bridge, without which a screen reader on Windows (NVDA, Narrator) reads nothing of the window.
       - name: Package
         shell: bash
         run: |
           jpackage --type app-image --name "Scan2Play Zagrane" --app-version 1.0.0 --vendor Scan2Play \
             --input deck-agent/target/app --main-jar deck-agent-1.0.0.jar --main-class com.scan2play.deck.Main \
-            --add-modules java.desktop,java.net.http,java.sql,java.logging,java.naming,jdk.crypto.ec \
+            --add-modules java.desktop,java.net.http,java.sql,java.logging,java.naming,jdk.crypto.ec,jdk.accessibility \
             --jlink-options "--strip-debug --no-man-pages --no-header-files" \
             --dest out
 

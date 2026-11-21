@@ -7,6 +7,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 
 /**
@@ -50,7 +51,7 @@ class ServerClient {
 
     Answer plays(String server, String token, List<Played> songs) {
         try {
-            HttpResponse<String> response = send(server, "/api/device/plays", Json.plays(songs), token);
+            HttpResponse<String> response = send(server, "/api/device/plays", Json.plays(songs, Instant.now()), token);
             return switch (response.statusCode()) {
                 case 200 -> new Answer(Outcome.OK, token, Json.strings(response.body(), "marked"));
                 case 401 -> new Answer(Outcome.DISCONNECTED, null, List.of());

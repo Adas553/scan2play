@@ -123,6 +123,7 @@
                 sent.plays[0].title, Math.abs(sent.plays[0].at - now()) < 30], [document.getElementById('partyCode').value, 1, 'Sanah',
                 'Szampan & więcej', true]);
             t.check('as JSON, with the CSRF token', /application\/json/.test(sent['Content-Type']) && !!sent['X-CSRF-TOKEN']);
+            t.check('with this computer\'s clock (sentAt), so the server corrects a clock that is off', Math.abs(sent.sentAt - now()) < 30);
             await t.waitFor(function () { return document.getElementById('deckMarked').textContent.indexOf('Sanah - Szampan') >= 0; },
                 'the marked request said', 3000);
 
@@ -211,6 +212,59 @@
             const removed = (await t.stand.requests('POST /dj/devices/remove'))[0].q;
             t.step('"Odłącz" names the computer and the party', [removed.id, removed.partyCode, !!removed['X-CSRF-TOKEN']],
                 ['5', document.getElementById('partyCode').value, true]);
+        }
+    });
+
+    S2P.scenario({
+        name: 'deck-reader-bad-entity',
+        title: '"Zagrane samo": a character reference to no character in a line (&#x110000;) does not stop the file being read: the next song is still sent',
+        setup: { queue: [], deckMarked: [] },
+        run: async function (t) {
+            const today = fakeFile('2026-11-21.m3u', vdjLine(now() - 7200, 'Wcześniej', 'Grane dwie godziny temu'));
+            const virtualDj = fakeFolder('VirtualDJ', [fakeFolder('History', [today])]);
+            window.showDirectoryPicker = async function () { return virtualDj; };
+            await t.sleep(300);
+            toggle().click();
+            document.getElementById('deckPick').click();
+            await t.waitFor(function () { return status().indexOf('VirtualDJ') >= 0; }, 'reading VirtualDJ', 4000);
+            today.grow(vdjLine(now(), 'Sanah', 'Zepsuty &#x110000; wpis'));
+            today.grow(vdjLine(now(), 'Dawid Podsiadło', 'Małomiasteczkowy'));
+            await waitForPlays(t, 1, 'the songs sent', 8000);
+            const sent = (await t.stand.requests(PLAYS))[0].q;
+            t.step('both songs read, the bad reference left as written', sent.plays.map(function (song) { return song.title; }),
+                ['Zepsuty &#x110000; wpis', 'Małomiasteczkowy']);
+        }
+    });
+
+    S2P.scenario({
+        name: 'deck-computers-code-kept',
+        title: '"Połącz komputer": the code stays while another computer is disconnected, and goes when a program took it even with the list as long as before (3 computers: the fourth replaces the oldest)',
+        setup: { devices: [] },
+        run: async function (t) {
+            const code = function () { return document.getElementById('deviceCode').textContent; };
+            const at = new Date().toISOString();
+            const device = function (id) { return { id: id, name: 'Komputer ' + id, createdAt: at, lastSeenAt: at }; };
+            await t.stand.config({ devices: [device(5), device(6), device(7)] });
+            await t.sleep(300);
+            toggle().click();
+            await t.waitFor(function () { return document.querySelectorAll('#deviceList [data-device-id]').length === 3; }, 'three computers', 3000);
+            t.step('a "Odłącz" names its computer for a screen reader',
+                document.querySelector('#deviceList [data-device-id="5"] button').getAttribute('aria-label'), 'Odłącz Komputer 5');
+
+            document.getElementById('deviceConnect').click();
+            await t.waitFor(function () { return code().indexOf('123 456') >= 0; }, 'the code', 3000);
+
+            await t.stand.config({ devices: [device(6), device(7)] });                  // one disconnected: the code is still good
+            await t.waitFor(function () { return document.querySelectorAll('#deviceList [data-device-id]').length === 2; }, 'two computers', 8000);
+            t.check('the code stays after another computer was disconnected', code().indexOf('123 456') >= 0);
+
+            await t.stand.config({ devices: [device(6), device(7), device(8)] });       // a program took it
+            await t.waitFor(function () { return code() === ''; }, 'the code gone', 8000);
+
+            document.getElementById('deviceConnect').click();
+            await t.waitFor(function () { return code().indexOf('123 456') >= 0; }, 'a second code', 3000);
+            await t.stand.config({ devices: [device(7), device(8), device(9)] });       // the list as long as before: the oldest replaced
+            await t.waitFor(function () { return code() === ''; }, 'the code gone, the list as long as before', 8000);
         }
     });
 })();

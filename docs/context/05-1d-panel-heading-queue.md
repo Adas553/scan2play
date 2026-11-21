@@ -87,7 +87,7 @@ a deck left out). The songs that started more than 10 minutes before the reading
 new one is sent once — artist, title, time, never a path — to `POST /dj/dashboard/plays` (JSON, ≤ 20, the CSRF header). The server
 (`DeckHistoryService`) marks played each waiting request of that song by the library's keys (`LibraryKey`, V42): the title and an
 artist in common ("✓"); a title alone, a request without an artist, a song that started more than 5 minutes before the request (the
-computer's clock) mark nothing; a song with no artist (a file without tags: Serato writes its name as the title) is read as "Artist -
+computer's clock — moved by the difference between the sender's `sentAt` and the server's time, so a computer whose clock is off still matches) mark nothing; a song with no artist (a file without tags: Serato writes its name as the title) is read as "Artist -
 Title". Each mark is `DjService.markSongAsPlayed` (the conditional `UPDATE`), the answer names the marked songs ("✓ Zagrane samo: …"
 under the card) and the queue is fetched at once. The folder's handle is kept in IndexedDB (`s2p-deck`): after a page load the panel
 reads on when the browser still allows it, else "Wznów czytanie: History"; "Wyłącz" forgets it. The privacy policy (PL / EN, section 2)
@@ -101,7 +101,7 @@ card once the program took it; the party's computers (`GET /dj/devices`: name, "
 /dj/devices/remove`). The program (`deck-agent/`, below) swaps the code for its own token (`POST /api/device/pair`) and sends the songs
 to `POST /api/device/plays` with `Authorization: Bearer` — the same `DeckHistoryService` as the panel's `/dj/dashboard/plays`.
 `DjDeviceService`: only the token's SHA-256 in `dj_device`; at most 3 computers a party (pairing a 4th forgets the one seen longest ago);
-a code used once; 10 tries of a code per address and 200 wrong codes in all per 10 minutes, 30 calls a minute per computer (in memory);
+a code used once, one at a time per party (a new one kills the earlier); 10 tries of a code per address and 200 wrong codes in all per 10 minutes, 30 calls a minute per computer (in memory);
 `last_seen_at` written once a minute at most. Browser scenario `deck-computers`; `DjDeviceIT` (PostgreSQL), `DeviceApiControllerTest`,
 `DeviceApiWebTest` (the real security: no login, no CSRF, no session for `/api/device/*`; `/dj/devices` needs the login).
 
