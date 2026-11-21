@@ -329,3 +329,29 @@ piece of work or when a task names an item. A finished item stays here until its
    a little early. **To try:** a real VirtualDJ and a real Serato history at a party (the formats are from the open-source readers and
    Serato 2.4 / 2.5 sample files). **Still open:** Pro or Free; the whole set kept for the summary and "Co to było?"; "Leci Twoja
    piosenka!"; A (a tray app) if DJs of other browsers ask.
+
+19. **A program in the tray on the DJ's computer — item 18's variant A, waiting** (the owner, 2026-11-21: "rozpisz wariant A"; after
+   E is built: E first, A only if the DJs use E and those of other browsers ask). What E cannot: Firefox, Safari, Brave and the tab
+   left open; the folders a browser may not open (Serato 4's and djay's databases under `AppData` / `~/Library`); the hardware.
+   **The program:** Java 21 + `jpackage` (the server's language; an installer with its own Java, ~40–60 MB — a guess), a tray icon
+   (`java.awt.SystemTray`), a separate Maven module outside the app's `src/` (its own release, never deployed to Railway); it reads
+   files only — never the screen, other programs or their memory (an antivirus flags that, a DJ would not trust it) — and sends the
+   artist, title and time of each new song, never a path. **Logging in:** a device token, as the kiosk's link — "Połącz komputer" in
+   the panel shows a 6-digit code valid 10 minutes, the program swaps it for a token of 128 bits; a table `dj_device` (the party, the
+   token's hash, a name, created, last seen; a migration), the panel's card "Ostatnio: 21:43" and "Odłącz"; at most 3 a party.
+   **The server:** `DeckHistoryService` as it is; a new `POST /api/device/plays` with `Authorization: Bearer` (no session, no CSRF, the
+   same ≤ 20 songs and the same match), 1 call per 5 s and 600 songs a day a device; a revoked token 401, the program says "Połączenie
+   odłączone w panelu". **Stages:** (1) VirtualDJ and Serato 2/3 (the parsers of `play-history.js` in Java), Serato 4 (`master.sqlite`
+   read-only, `sqlite-jdbc`), the pairing, Windows and macOS — roughly 1–2 weeks of work plus tries on a real Mac and PC (a guess); (2)
+   djay Pro (its `MediaLibrary.db`); (3) Traktor — the program listens as a local Icecast server Traktor broadcasts to (as What's Now
+   Playing does; the DJ turns broadcasting on each set, the artist sometimes missing); (4) CDJs / XDJs on a network — the Java library
+   beat-link (Deep Symmetry; not beside rekordbox on the same computer), only if customers play clubs. **Not planned:** rekordbox's
+   encrypted `master.db` (a key typed in by hand, AlphaTheta's licence, broken by each update); recognising the sound (paid services,
+   a microphone, mistakes on mixes). **Installing and costs:** macOS — the Apple Developer Program 99 USD a year and notarisation, else
+   the DJ goes through System Settings → Privacy & Security → "Open Anyway" (since macOS 15 the right-click "Open" is gone); Windows —
+   unsigned: SmartScreen's "More info → Run anyway"; signed: Microsoft Artifact Signing (~10 USD a month, from memory; whether it takes a
+   person from Poland is to check) or an OV certificate (hundreds of PLN a year); even signed, warnings until the program has a
+   reputation. Updates: the program asks the server for the latest version and opens the download page (no auto-updater). **The way
+   to it:** a beta unsigned with the 1–2 DJs of E's tries, the signing paid only for a release to everyone. **Open:** A at all (E's
+   numbers first); Pro only (recommended, as the kiosk); which stages after (1); the support it needs (an installation guide, a page
+   of "it does not see my songs").
