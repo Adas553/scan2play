@@ -159,6 +159,17 @@ public class DjDeviceService {
         return jdbc.update("DELETE FROM dj_device WHERE id = ? AND party_code = ?", deviceId, partyCode) > 0;
     }
 
+    /**
+     * The program's own "Odłącz ten komputer": its row forgotten by its token — in any plan, as the panel's "Odłącz" (without Pro the
+     * panel shows no list to take it from). False for a token unknown.
+     */
+    public boolean removeByToken(String token) {
+        if (token == null || token.isBlank() || token.length() > 100) {
+            return false;
+        }
+        return jdbc.update("DELETE FROM dj_device WHERE token_hash = ?", hash(token)) > 0;
+    }
+
     static String cleanName(String name) {
         String clean = name == null ? "" : name.replaceAll("\\p{Cntrl}", " ").strip();
         if (clean.isEmpty()) {

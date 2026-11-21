@@ -1075,6 +1075,8 @@ class DashboardPageRenderTest {
         assertThat(card.indexOf("Ta karta panelu musi zostać otwarta")).as("said in the browser's part, after the program's")
                 .isGreaterThan(card.indexOf("id=\"deckBrowser\""));
         assertThat(card).as("what reaches Scan2Play: said once, for both").containsOnlyOnce("trafiają tylko wykonawca, tytuł i godzina");
+        assertThat(card).as("the first start: a Windows that gives no way past SmartScreen, the Mac's second question")
+                .contains("Jeśli „Uruchom mimo to” się nie pojawia", "potwierdź hasłem");
     }
 
     /** "Podsumowanie wieczoru" (V35): to an organiser without Pro, the way to /pro with "PRO"; to the staff of such a party, nothing. */

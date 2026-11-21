@@ -11,12 +11,11 @@ import java.time.Instant;
 import java.util.List;
 
 /**
- * Scan2Play's two calls for the program (DeviceApiController): the panel's code swapped for the program's token, and the songs that
- * played, answered with the requests marked. Nothing else is sent.
+ * Scan2Play's calls for the program (DeviceApiController): the panel's code swapped for the program's token, the songs that played
+ * (answered with the requests marked), and "Odłącz ten komputer". Nothing else is sent.
  */
 class ServerClient {
 
-    /** What a call came to. */
     /** What a call came to; NO_PLAN: the party's organiser has no Pro (any more) — the token stays, the songs are not taken. */
     enum Outcome { OK, WRONG_CODE, DISCONNECTED, TOO_MANY, NO_PLAN, FAILED }
 
@@ -71,13 +70,26 @@ class ServerClient {
         }
     }
 
+    /** "Odłącz ten komputer": the server forgets this computer. True when it is gone there (204, or 401: not known any more). */
+    boolean unpair(String server, String token) {
+        try {
+            int status = send(server, "/api/device/unpair", null, token).statusCode();
+            return status == 204 || status == 401;
+        } catch (IOException | IllegalArgumentException e) {
+            return false;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return false;
+        }
+    }
+
     private HttpResponse<String> send(String server, String path, String json, String token) throws IOException, InterruptedException {
         HttpRequest.Builder request = HttpRequest.newBuilder(URI.create(stripSlash(server) + path))
                 .timeout(Duration.ofSeconds(15))
                 .header("Content-Type", "application/json")
                 .header("Accept", "application/json")
                 .header("User-Agent", userAgent)
-                .POST(HttpRequest.BodyPublishers.ofString(json, StandardCharsets.UTF_8));
+                .POST(json == null ? HttpRequest.BodyPublishers.noBody() : HttpRequest.BodyPublishers.ofString(json, StandardCharsets.UTF_8));
         if (token != null) {
             request.header("Authorization", "Bearer " + token);
         }

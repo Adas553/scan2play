@@ -90,6 +90,20 @@ class DjDeviceIT extends PostgresIntegrationTest {
     }
 
     @Test
+    void theProgramsOwnOdlacz_removesOnlyItsOwnComputer() {
+        String party = party();
+        String mine = pair(party, "Mój", NOW);
+        String other = pair(party, "Drugi", NOW);
+
+        assertThat(devices.removeByToken(mine)).isTrue();
+        assertThat(devices.removeByToken(mine)).as("gone already").isFalse();
+        assertThat(devices.removeByToken("x".repeat(101))).isFalse();
+        assertThat(devices.device(mine, NOW)).isEmpty();
+        assertThat(devices.device(other, NOW)).isPresent();
+        assertThat(devices.devices(party)).extracting(DjDeviceService.Device::name).containsExactly("Drugi");
+    }
+
+    @Test
     void odlacz_killsTheToken_onlyForItsOwnParty() {
         String party = party();
         String other = party();

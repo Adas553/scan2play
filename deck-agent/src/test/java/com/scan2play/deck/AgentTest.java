@@ -48,6 +48,17 @@ class AgentTest {
             super("test");
         }
 
+        final List<String> unpaired = new ArrayList<>();
+        boolean online = true;
+
+        @Override
+        boolean unpair(String server, String token) {
+            if (online) {
+                unpaired.add(token);
+            }
+            return online;
+        }
+
         @Override
         Answer plays(String server, String token, List<Played> songs) {
             calls.add(songs);
@@ -176,6 +187,22 @@ class AgentTest {
 
         assertEquals(2, server.calls.size(), "called at once, not a minute after the last call");
         assertEquals(ServerClient.Outcome.NO_PLAN, shown.get().last());
+    }
+
+    /** "Odłącz ten komputer" in the window: the server forgets the computer too (the panel's list), and so does the disk. */
+    @Test
+    void theWindowsOdlacz_tellsTheServer_andForgetsTheToken(@TempDir Path dir) throws Exception {
+        Settings settings = paired(dir);
+        Agent agent = agent(settings);
+
+        agent.disconnect();
+
+        assertEquals(List.of("tok"), server.unpaired);
+        assertNull(new Settings(dir.resolve("zagrane.properties")).token());
+        server.online = false;
+        settings.paired("https://example.test", "tok2");
+        agent.disconnect();
+        assertNull(settings.token(), "no network: forgotten here all the same");
     }
 
     @Test

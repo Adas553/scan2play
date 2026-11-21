@@ -44,6 +44,12 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.5.6</version>
+                <configuration>
+                    <!-- the tests' paths of a Polish Windows ("Michał"): a JVM in the POSIX locale cannot make them -->
+                    <environmentVariables>
+                        <LC_ALL>C.UTF-8</LC_ALL>
+                    </environmentVariables>
+                </configuration>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

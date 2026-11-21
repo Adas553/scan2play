@@ -544,3 +544,28 @@ przewijania w bok i błędów (te same 4 stare małe cele), program `verify` 21/
 
 Zostawione: P24 (niesprawdzalne tutaj), P25 i P29 (pytania), P30 (bez prawdziwej historii Serato), P31–P33 (drobne, przy następnej
 zmianie); z wcześniejszych P11 (Cloudflare), P14, P15, P16 bez zmian.
+
+### Odpowiedzi właściciela na pytania trzeciego przejścia i co z nich zrobione (2026-11-21)
+
+Na wszystkie trzy: „jak uważasz”.
+
+1. **P25 — zrobione tak:** „Odłącz ten komputer” w oknie programu woła nowe `POST /api/device/unpair` (token w nagłówku, bez ciała;
+   204, nieznany token 401; w każdym planie; publiczne i bez CSRF jak `/pair` i `/plays`) — komputer znika z listy w panelu i jego
+   token umiera; bez sieci program i tak zapomina token u siebie (wiersz zostaje do „Odłącz” w panelu albo czwartego komputera).
+   Panel bez Pro dalej nie pokazuje listy — zasada „żadnej oferty w kolejce” zostaje; komputer odłącza się z programu. Testy
+   (czerwone przed kodem — nie kompilowały się): `DeviceApiControllerTest.theProgramsOwnOdlacz_removesItsComputer_byItsToken_inAnyPlan`,
+   `DeviceApiWebTest` (bez logowania, CSRF i sesji), `DjDeviceIT.theProgramsOwnOdlacz_removesOnlyItsOwnComputer`,
+   `AgentTest.theWindowsOdlacz_tellsTheServer_andForgetsTheToken`, `ServerClientTest.unpair_sendsTheToken_andIsDoneOn204Or401`.
+2. **P29 — zrobione:** „Pierwsze uruchomienie” mówi, że gdy „Uruchom mimo to” się nie pojawia, ten Windows nie uruchamia programów bez
+   podpisu i zostaje czytanie w Chrome lub Edge; na Macu „na dole „Otwórz mimo to”, i potwierdź hasłem”. Bez nazwy funkcji Windows (jej
+   polskiej nazwy nie sprawdziłem). Test `DashboardPageRenderTest.aProOrganiser_hasThePanelAsToday` (czerwony).
+3. **P23/P24 — zrobione bez czekania na próbę, ale tak, by nic nie psuło:** na Windows program pyta raz przy starcie PowerShell (wyjście
+   UTF-8), gdzie są Muzyka i Dokumenty (`[Environment]::GetFolderPath` — OneDrive i polskie nazwy folderów) i gdzie wskazuje `HomeFolder`
+   VirtualDJ (polska litera w nazwie użytkownika cała). To dodatkowe foldery obok dotychczasowych — przy braku PowerShell albo po 10 s
+   bez odpowiedzi zostają zwykłe, a `reg query` dalej jest zapasem dla `HomeFolder`; od P22 wygrywa najnowszy plik wszystkich folderów.
+   Test `HistoryFormatsTest.windows_theKnownFoldersOfWindowsItself_areLookedInToo` (czerwony; ścieżki z „Michał” — surefire programu
+   dostał `LC_ALL=C.UTF-8`, bo JVM w lokalu POSIX nie zbuduje takiej ścieżki na Linuksie). Na Windows niesprawdzone: przy próbie
+   zobaczyć w oknie „Czyta: …” dla użytkownika z polską literą.
+
+Sprawdzenia po tych zmianach (w kopii): `check.py unit` 1532/1532, `it` 220/220, `browser` 473/473, `audit -t dashboard,pro` 19 stron × 3
+szerokości bez przewijania w bok i błędów (te same 4 stare małe cele), program `verify` 24/24.

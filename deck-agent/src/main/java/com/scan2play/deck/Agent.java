@@ -129,6 +129,18 @@ final class Agent {
         }
     }
 
+    /**
+     * "Odłącz ten komputer" in the window: the server is told (the computer leaves the panel's list, in any plan), then the token is
+     * forgotten here — also when the server cannot be reached (its row then stays until the panel's "Odłącz" or a 4th computer).
+     */
+    synchronized void disconnect() throws IOException {
+        String token = settings.token();
+        if (token != null) {
+            client.unpair(settings.server(), token);
+        }
+        settings.disconnected();
+    }
+
     /** The songs read and not sent yet (the tests). */
     synchronized List<Played> waiting() {
         return List.copyOf(waiting);

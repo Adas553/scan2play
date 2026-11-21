@@ -123,6 +123,28 @@ class HistoryFormatsTest {
                 "not on a Mac");
     }
 
+    /**
+     * Windows' own answer where the Music and the Documents are (OneDrive's backup, a folder named in Polish, a user name with a Polish
+     * letter) and VirtualDJ's HomeFolder — PowerShell's lines in UTF-8, its byte order mark first: those folders are looked in too.
+     */
+    @Test
+    void windows_theKnownFoldersOfWindowsItself_areLookedInToo() {
+        Map<String, Path> known = Platform.knownFolders("\uFEFFmusic=C:\\Users\\Michał\\OneDrive\\Muzyka\r\n"
+                + "documents=C:\\Users\\Michał\\OneDrive\\Dokumenty\r\nvirtualdj=\r\nnonsense\r\n");
+        assertEquals(Map.of("music", Path.of("C:\\Users\\Michał\\OneDrive\\Muzyka"),
+                "documents", Path.of("C:\\Users\\Michał\\OneDrive\\Dokumenty")), known, "an empty value is no folder");
+
+        Platform windows = new Platform(Path.of("C:\\Users\\Michał"), Map.of(), true, known);
+        assertTrue(windows.seratoSessionFolders().contains(
+                Path.of("C:\\Users\\Michał\\OneDrive\\Muzyka", "_Serato_", "History", "Sessions")));
+        assertTrue(windows.virtualDjFolders().contains(
+                Path.of("C:\\Users\\Michał\\OneDrive\\Dokumenty", "VirtualDJ", "History")));
+        assertEquals(Path.of("C:\\dj", "History"), new Platform(Path.of("C:\\Users\\x"), Map.of(), true,
+                Platform.knownFolders("virtualdj=C:\\dj\n")).virtualDjFolders().getFirst(), "VirtualDJ's own setting first");
+        Platform plain = new Platform(Path.of("C:\\Users\\dj"), Map.of(), true, Platform.knownFolders("music=C:\\Users\\dj\\Music"));
+        assertEquals(plain.seratoSessionFolders().size(), plain.seratoSessionFolders().stream().distinct().count(), "each folder once");
+    }
+
     @Test
     void windows_theFoldersAsADjsLaptopHasThem() {
         Platform windows = new Platform(Path.of("C:\\Users\\dj"), Map.of("LOCALAPPDATA", "C:\\Users\\dj\\AppData\\Local",

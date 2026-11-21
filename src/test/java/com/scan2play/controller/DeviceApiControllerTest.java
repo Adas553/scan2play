@@ -115,6 +115,21 @@ class DeviceApiControllerTest {
         verify(deckHistory, never()).markPlayed(anyString(), anyList(), any(), org.mockito.ArgumentMatchers.anyBoolean());
     }
 
+    /**
+     * The program's own "Odłącz ten komputer": its row goes by its token (204), in any plan — without Pro the panel shows no list to
+     * take it away from; a token unknown 401. No plan is asked.
+     */
+    @Test
+    void theProgramsOwnOdlacz_removesItsComputer_byItsToken_inAnyPlan() throws Exception {
+        MockMvc free = mvc(com.scan2play.service.Plans.enforced());
+        when(devices.removeByToken("good")).thenReturn(true);
+
+        free.perform(post("/api/device/unpair").header("Authorization", "Bearer good")).andExpect(status().isNoContent());
+        free.perform(post("/api/device/unpair").header("Authorization", "Bearer revoked")).andExpect(status().isUnauthorized());
+        free.perform(post("/api/device/unpair")).andExpect(status().isUnauthorized());
+        verify(devices).removeByToken("good");
+    }
+
     @Test
     void tooManyCalls_is429_tooManySongs400() throws Exception {
         String many = "{\"plays\":[" + String.join(",", java.util.Collections.nCopies(21, "{\"artist\":\"A\",\"title\":\"B\"}")) + "]}";

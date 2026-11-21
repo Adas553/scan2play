@@ -371,5 +371,6 @@ piece of work or when a task names an item. A finished item stays here until its
    Cloudflare lets a program (not a browser) through to `/api/device/*`. **Still open:** stages (2)–(4); the signing. **Done after the review (2026-11-21):** the download links in the card (the
    GitHub release `zagrane`, written by "Run workflow" from `main`; Windows, Mac with Apple's chips, Mac with Intel) and the
    first start's help; review `docs/history/review-2026-11-21-play-history.md`. Its third pass: the release uploads all three packages together,
-   the Mac bundle is signed ad hoc, the program takes the newest history file of all folders (OneDrive's too); open: "Odłącz" without Pro
-   (P25), a Windows without "Uruchom mimo to" (P29).
+   the Mac bundle is signed ad hoc, the program takes the newest history file of all folders (OneDrive's too); the program's "Odłącz ten komputer" removes it from
+   the panel too (`/api/device/unpair`, any plan), Windows' known folders asked by PowerShell, the help for a Windows without "Uruchom
+   mimo to" (the owner: "jak uważasz").

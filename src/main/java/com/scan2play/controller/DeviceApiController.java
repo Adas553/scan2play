@@ -27,7 +27,8 @@ import java.util.Optional;
  * The DJ's program on the DJ's computer ("Program na komputerze", docs/ideas.md item 19, V78): it pairs with a party by the code the
  * panel shows, then sends the songs VirtualDJ or Serato played — the same as the panel's "Zagrane samo" (variant E), with its own
  * token instead of the DJ's session. Public (no login, no CSRF: no cookie is used — SecurityConfig); a token unknown or revoked
- * ("Odłącz") is a 401, too many calls a 429, a party whose organiser has no Pro (any more) a 403 {@code {"error": "plan"}}.
+ * ("Odłącz") is a 401, too many calls a 429, a party whose organiser has no Pro (any more) a 403 {@code {"error": "plan"}}. The
+ * program's own "Odłącz ten komputer" forgets its computer here too ({@code /unpair}).
  */
 @RestController
 @RequestMapping(value = "/api/device", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -77,8 +78,8 @@ public class DeviceApiController {
     public ResponseEntity<Map<String, ?>> plays(@RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorization,
                                                            @RequestBody PlaysRequest body) {
         Instant now = Instant.now();
-        Optional<DjDeviceService.Paired> paired = authorization != null && authorization.startsWith(BEARER)
-                ? devices.device(authorization.substring(BEARER.length()).strip(), now) : Optional.empty();
+        String token = bearer(authorization);
+        Optional<DjDeviceService.Paired> paired = token != null ? devices.device(token, now) : Optional.empty();
         if (paired.isEmpty()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
@@ -96,5 +97,20 @@ public class DeviceApiController {
         List<DeckHistoryService.Play> songs = DjSongController.songsOf(plays, body.sentAt(), now);
         return ResponseEntity.ok(Map.of("marked", deckHistory.markPlayed(paired.get().partyCode(), songs, now,
                 DjSongController.clockKnown(body.sentAt()))));
+    }
+
+    /**
+     * The program's "Odłącz ten komputer": its computer gone from the party's list, its token dead — 204; a token unknown 401 (the
+     * program forgets it either way). Any plan: without Pro the panel shows no list to take a computer away from.
+     */
+    @PostMapping("/unpair")
+    public ResponseEntity<Void> unpair(@RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorization) {
+        String token = bearer(authorization);
+        return token != null && devices.removeByToken(token)
+                ? ResponseEntity.noContent().build() : ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+    }
+
+    private static String bearer(String authorization) {
+        return authorization != null && authorization.startsWith(BEARER) ? authorization.substring(BEARER.length()).strip() : null;
     }
 }

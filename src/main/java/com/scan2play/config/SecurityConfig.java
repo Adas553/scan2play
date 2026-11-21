@@ -232,7 +232,7 @@ public class SecurityConfig {
                 // written slowly: a form kept open past the session must not lose it to a refused token
                 // The DJ's program on the DJ's computer (V78, DeviceApiController) sends a token of its own, never a cookie
                 .csrf(csrf -> csrf.csrfTokenRepository(CSRF_TOKENS).ignoringRequestMatchers("/csp-report", "/email/stop/*",
-                        "/h/e/*", "/h/e/*/template", "/api/device/pair", "/api/device/plays"))
+                        "/h/e/*", "/h/e/*/template", "/api/device/pair", "/api/device/plays", "/api/device/unpair"))
                 // a guest's request from a page open longer than its session: back to the party with the typed song, not a 403
                 .exceptionHandling(denied -> denied.accessDeniedHandler(new GuestFormExpiredHandler(messageSource, localeResolver))
                         // no login: a DJ's page → the login page and back; a fetch of the panel → "/"; any other address → 404
@@ -286,7 +286,7 @@ public class SecurityConfig {
                         // password — "/login" and "/login/**" (the login page, its form, "Sprawdź skrzynkę") are above
                         .requestMatchers("/register", "/register/confirm", "/password/forgot", "/password/reset").permitAll()
                         // the DJ's program on the DJ's computer (V78): its pairing code, then its own token (DeviceApiController)
-                        .requestMatchers(HttpMethod.POST, "/api/device/pair", "/api/device/plays").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/device/pair", "/api/device/plays", "/api/device/unpair").permitAll()
                         // DJ dashboard is protected
                         .requestMatchers("/dj/**").authenticated()
                         // Everything else requires authentication

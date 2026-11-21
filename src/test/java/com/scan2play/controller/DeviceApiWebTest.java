@@ -68,6 +68,9 @@ class DeviceApiWebTest {
                 .content("{\"code\":\"123456\",\"name\":\"PC\"}")).andExpect(status().isOk()).andReturn());
         noSession(mockMvc.perform(post("/api/device/plays").header("Authorization", "Bearer tok").contentType(MediaType.APPLICATION_JSON)
                 .content("{\"plays\":[]}")).andExpect(status().isOk()).andReturn());
+        when(devices.removeByToken("tok")).thenReturn(true);
+        noSession(mockMvc.perform(post("/api/device/unpair").header("Authorization", "Bearer tok"))
+                .andExpect(status().isNoContent()).andReturn());
     }
 
     @Test

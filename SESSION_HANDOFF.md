@@ -75,8 +75,8 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
   "Zagrane samo" — item 18's variant E (the panel reads VirtualDJ / Serato history, `POST /dj/dashboard/plays`) and item 19's program
   (`deck-agent/`, `dj_device`, `/api/device/*`, "Połącz komputer"); Pro (`DECK`), the GitHub release `zagrane`. Reviewed twice
   (`docs/history/review-2026-11-21-play-history.md`: P1–P18 and the owner's answers; the third, independent pass P19–P33, "merge
-  after fixes", P19–P23 and P26–P28 fixed). Waits: answers to its 3 questions (P25 "Odłącz" without Pro, P29, P23/P24), the merge,
-  then at once "Run workflow" from `main` (the links need it), tries on Windows 11 and an M1 Mac.
+  after fixes", P19–P29 done (P20, P24, P27 untried on a Mac / Windows), P30–P33 left; the owner's "jak uważasz": `POST /api/device/unpair`, PowerShell's known folders). Waits:
+  the merge, then at once "Run workflow" from `main` (the links need it), tries on Windows 11 (a Polish user name) and an M1 Mac.
 - **Waits for the owner (from #269):** after the first commit the deploy window holds back (Fri–Sun 18:00–6:00): does Railway
   deploy it on the workflow's re-run? UptimeRobot is set up (the owner, 2026-11-17; `docs/monitoring.md`).
 - **Waits for the owner (the wishes, #263):** the three older Polish texts with "DJ" and a masculine verb (`guest.vote.gone`,

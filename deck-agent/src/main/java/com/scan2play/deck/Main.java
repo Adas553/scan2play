@@ -57,7 +57,7 @@ public final class Main {
             agent.tick();
         }), () -> looks.execute(() -> {
             try {
-                settings.disconnected();
+                agent.disconnect();
             } catch (IOException e) {
                 window[0].failedToSave(e);
             }

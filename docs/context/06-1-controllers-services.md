@@ -23,7 +23,7 @@
 | `HostController` | the hosts' page `/h/{token}` (V29): their two lists, without an account; an event's plan for its hosts `/h/e/{token}` (V77) |
 | `DjEventPlanController` / `EventPlanForm` | "Plan imprezy" (V77, Pro, WISHES): `/dj/wishes/{id}/plan` — an event's plan, its hosts' link, "Użyj list na imprezie" (HOST_LISTS too), the print; `EventPlanForm` the form's rows, shared with the hosts' page |
 | `DjDeviceController` | "Program na komputerze" (V78): the panel's side — a pairing code, the party's computers, "Odłącz" (`/dj/devices`, JSON) |
-| `DeviceApiController` | the DJ's program (V78, `deck-agent/`): `/api/device/pair` and `/api/device/plays`, by its own token — no login, no CSRF |
+| `DeviceApiController` | the DJ's program (V78, `deck-agent/`): `/api/device/pair`, `/api/device/plays` and `/api/device/unpair` (its own "Odłącz"), by its own token — no login, no CSRF |
 | `WishController` | "Życzenia przed imprezą" (V68, Pro): the guests' page `/w/{token}` of an event — the songs they want, five a guest, without an account |
 | `DjWishesController` | "Życzenia przed imprezą" (V68, Pro, WISHES): `/dj/wishes` — the events and their links, the wishes counted and marked by the library, "⭐ Do „Koniecznie zagrać”", the CSV |
 | `GuestPollController`, `PollView` | "Pytanie do gości" (V74, Pro): the card of the DJ's question on the guest's page (`/p/{code}/poll`), a guest's answer; `PollView` puts the question, its results and the guest's answer in the model of the guest's pages and the TV (Section 5.1, `05-1j-polls.md`) |

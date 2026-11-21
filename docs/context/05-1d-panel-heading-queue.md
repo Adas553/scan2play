@@ -94,7 +94,8 @@ reads on when the browser still allows it, else "Wznów czytanie: History"; "Wy�
 says what is sent and that nothing is kept. Browser scenarios `deck-reader-*`, `DeckHistoryServiceTest`; the formats' sources and the
 other programs (rekordbox, Traktor, djay — not read): `docs/ideas.md` item 18 and `tools/spike/dj_history_spike.py`.
 
-**"Program na komputerze" — the same from a program on the DJ's computer** (V78, `docs/ideas.md` item 19; Pro — `PlanFeature.DECK`, with the browser's part: without Pro neither the button nor the card, no offer in the queue, `/pro` names it; `POST /dj/devices/remove` needs no plan, but without Pro the card and the list (`GET /dj/devices`, 403) are not shown, so a computer is not taken away there then — its calls are refused anyway; the card's "Pobierz program": Windows, Mac with Apple's chips, Mac with Intel — the GitHub release `zagrane` of `deck-agent.yml`, no account needed — and "Pierwsze uruchomienie", what SmartScreen and Gatekeeper ask): the card of "🎧 Z programu
+**"Program na komputerze" — the same from a program on the DJ's computer** (V78, `docs/ideas.md` item 19; Pro — `PlanFeature.DECK`, with the browser's part: without Pro neither the button nor the card, no offer in the queue, `/pro` names it; the list (`GET /dj/devices`) is 403 then too, so a computer is taken away by the program's own "Odłącz ten komputer" (`POST /api/device/unpair`, any plan; `/dj/devices/remove` needs no plan either); its calls are refused anyway; the card's "Pobierz program": Windows, Mac with Apple's chips, Mac with Intel — the GitHub release `zagrane` of `deck-agent.yml`, no account needed — and "Pierwsze uruchomienie", what SmartScreen and Gatekeeper ask — and a Windows that gives no "Uruchom mimo to" (Smart App Control: no
+unsigned program at all; the browser's reading is left)): the card of "🎧 Z programu
 DJ-a" (now shown on any browser 768 px wide or more; its browser part only where a folder can be picked) has "Program na komputerze
 (Windows, Mac)" (what reaches Scan2Play is said once above both parts; "keep this tab open" only in the browser's part —
 the program reads with no tab open): "Połącz komputer" (`POST /dj/devices/code`, QUEUE) shows a 6-digit code valid 10 minutes ("123 456"), gone from the
@@ -113,7 +114,10 @@ does not hide tonight's file), Serato 2/3's newest `.session` (`Music/_Serato_/H
 and Serato 4's `master.sqlite` (read-only; `%APPDATA%\Serato\Library`, `~/Library/Application Support/Serato/Library`) when they
 changed; sends each new song once (≤ 20 a call, the set before the program started minus 10 minutes not), calls once a minute with
 nothing (alive) and at once after a new pairing (a party without Pro said at once); a 401 = "Odłącz" in the panel: the token
-forgotten, the window asks for a new code. On macOS the Dock icon shows the window closed into the menu bar. The window: the code and the server
+forgotten, the window asks for a new code; "Odłącz ten komputer" in the window tells the server (`/api/device/unpair`: the computer
+leaves the panel's list) and forgets the token here even offline. On Windows it asks PowerShell once at the start where the Music and
+Documents are and where VirtualDJ's `HomeFolder` points (UTF-8: a user name with a Polish letter whole; OneDrive, Polish folder names)
+— extra folders beside the usual ones, nothing when PowerShell is missing. On macOS the Dock icon shows the window closed into the menu bar. The window: the code and the server
 (`https://www.scan2play.com.pl`, changeable — `dev.` for a try), then what it reads and the songs marked; a tray icon ("Pokaż",
 "Zakończ"). `~/.scan2play/zagrane.properties` keeps the server and the token. Without a screen: `--pair <code> [--server …]`, then
 `--console`. Tests: `sh mvnw -f deck-agent/pom.xml -B -ntp verify` (`HistoryFormatsTest`, `AgentTest`). Packages:
