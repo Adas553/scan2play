@@ -13,7 +13,7 @@
  * ways were too much to choose from; its code is in the git history (docs/ideas.md item 18 says where).
  *
  * Dependencies (DOM): <button id="deckToggle" hidden>, <section id="deckReader" hidden> with its texts in data-* (device-code,
- * device-seen, device-remove, device-failed — "{…}" filled in here), #deviceList, #deviceAnother, #deviceSetup, #deviceConnect,
+ * device-copy, device-copied, device-seen, device-remove, device-failed — "{…}" filled in here), #deviceList, #deviceAnother, #deviceSetup, #deviceConnect,
  * #deviceCode.
  */
 import { csrfHeaders, partyCode } from './common.js';
@@ -121,6 +121,25 @@ function computers() {
         toggle.classList.toggle('btn-outline-light', count === 0);
     }
 
+    /**
+     * "Kod do wpisania w programie: 123 456 (ważny 10 min) [Kopiuj]": the code bold, split in two for the eye; "Kopiuj" copies the
+     * digits alone (the program takes them with or without the space) by dj-nav.js's one handler of every "Kopiuj" (data-copy-text,
+     * "Skopiowano" for a moment) — the party link's button, the same look.
+     */
+    function showCode(code, minutes) {
+        const [before, after] = text('deviceCode', { minutes: minutes }).split('{code}');
+        const shown = document.createElement('strong');
+        shown.className = 's2p-device-code';
+        shown.textContent = code.slice(0, 3) + ' ' + code.slice(3);
+        const copy = document.createElement('button');
+        copy.type = 'button';
+        copy.className = 'btn btn-sm btn-outline-secondary py-0 ms-2';
+        copy.textContent = reader.dataset.deviceCopy;
+        copy.setAttribute('data-copy-text', code);
+        copy.setAttribute('data-copied', reader.dataset.deviceCopied);
+        codeLine.replaceChildren(before, shown, after === undefined ? '' : after, copy);
+    }
+
     another.addEventListener('click', function () {
         adding = true;
         show();
@@ -133,7 +152,7 @@ function computers() {
             if (!response.ok) throw new Error(String(response.status));
             const answer = await response.json();
             adding = true;
-            codeLine.textContent = text('deviceCode', { code: answer.code.slice(0, 3) + ' ' + answer.code.slice(3), minutes: answer.minutes });
+            showCode(answer.code, answer.minutes);
             clearInterval(watching);
             atCode = newest;
             const until = Date.now() + Number(answer.minutes) * 60000;

@@ -88,8 +88,8 @@ of the program). **No computer paired:** three numbered steps (`.s2p-deck-steps`
 nowsze)", "Mac (Intel)" (the GitHub release `zagrane` of `deck-agent.yml`, no account needed); 2. "Rozpakuj plik zip i uruchom" with
 "Pierwsze uruchomienie" folded (what SmartScreen — "System Windows ochronił ten komputer" — and Gatekeeper ask; a Windows that gives
 no "Uruchom mimo to", Smart App Control, runs no unsigned program: "napisz do nas przez „Pomoc i kontakt”"); 3. "Połącz go z tą
-imprezą:" and "Połącz komputer" (`POST /dj/devices/code`, QUEUE): a 6-digit code valid 10 minutes ("123 456"), gone once the program
-took it. **One or more paired:** their rows only ("✓ DESKTOP-1AB2 — Windows · ostatnio 21:43 · Odłącz"), the steps behind "Połącz
+imprezą:" and "Połącz komputer" (`POST /dj/devices/code`, QUEUE): a 6-digit code valid 10 minutes ("123 456", large, with a "Kopiuj"
+of the digits — dj-nav.js's `data-copy-text`, as the party link's), gone once the program took it. **One or more paired:** their rows only ("✓ DESKTOP-1AB2 — Windows · ostatnio 21:43 · Odłącz"), the steps behind "Połącz
 kolejny komputer" (and shown while a code waits). Last, small: what reaches Scan2Play (artist, title, time; nothing kept). The
 party's computers: `GET /dj/devices` (name, last seen; 403 without Pro); "Odłącz"
 (`POST /dj/devices/remove`, any plan; a program without Pro is taken away by its own "Odłącz ten komputer", `POST /api/device/unpair`).

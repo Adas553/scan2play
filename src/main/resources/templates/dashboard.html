@@ -374,7 +374,7 @@
              texts with {…} are filled in by play-history.js. */-->
         <section th:if="${(access == null or access.may('QUEUE')) and demo != true and (plan == null or plan.allows('DECK'))}" id="deckReader"
                  class="card bg-dark border-secondary p-3 mb-3 s2p-deck-reader" hidden aria-labelledby="deckReaderTitle"
-                 th:attr="data-device-code=#{dashboard.computer.code},
+                 th:attr="data-device-code=#{dashboard.computer.code},data-device-copy=#{dashboard.qr.copy},data-device-copied=#{dashboard.qr.copied},
                           data-device-seen=#{dashboard.computer.seen},data-device-remove=#{dashboard.computer.remove},
                           data-device-failed=#{dashboard.computer.failed}">
             <h3 id="deckReaderTitle" class="s2p-card-title" th:text="#{dashboard.deck.title}">Played, from your DJ software</h3>

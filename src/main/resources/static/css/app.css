@@ -828,6 +828,8 @@ th[data-sort].sort-desc::after {
 .s2p-deck-steps summary  { cursor: pointer; }
 /* a computer paired: its row, the tick green */
 .s2p-deck-device-ok      { color: var(--s2p-green); font-weight: 700; }
+/* the pairing code: read off the screen and typed in the program — large digits, apart */
+.s2p-device-code         { font-size: 1.1em; letter-spacing: 0.08em; font-variant-numeric: tabular-nums; }
 @media (max-width: 575.98px) {
     #queueList .s2p-list-tools { flex: 1 1 100%; flex-wrap: wrap; }
     #queueList .s2p-list-tools .s2p-list-search { flex: 1 1 8rem; max-width: none !important; }
