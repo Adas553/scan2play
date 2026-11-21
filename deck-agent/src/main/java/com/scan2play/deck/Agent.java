@@ -75,6 +75,9 @@ final class Agent {
                 }
             } catch (IOException | RuntimeException e) {
                 versions.remove(source);   // a file being written, a database busy: read again at the next look
+                // said, not left out: a history there that cannot be read (a program's new format) would look like no history at all
+                String file = source.reading();
+                reading.add(source.program() + " (" + (file.isEmpty() ? "" : file + " — ") + "nie da się odczytać)");
             }
         }
         String token = settings.token();

@@ -635,3 +635,13 @@ uruchomienie” zwinięte; Połącz: „Połącz komputer” jako główny przyc
 wiersz („✓ nazwa · ostatnio 17:43 · Odłącz”), kroki za „Połącz kolejny komputer”, a przycisk „🎧 Z programu DJ-a” zielony już po
 wczytaniu strony (lista pytana raz przy wczytaniu i przy powrocie do karty przeglądarki). Scenariusze `deck-reader-program-only`,
 `deck-connected-on-load`, `deck-computers*` — czerwone przed zmianą.
+
+### Serato na prawdziwym komputerze (2026-11-21, ok. 23:25)
+
+Właściciel zainstalował **Serato DJ Lite 5.1.0** (Windows 11) i zagrał „Linkin Park – Session” (ze Spotify): okno programu pokazywało
+tylko „Czyta: VirtualDJ (…)”. Wyszukanie plików Serato (same nazwy, bez treści): baza jest w
+`%LOCALAPPDATA%\Serato\Library\master.sqlite` (z `-wal`), a program szukał w `%APPDATA%` (tak podają czytniki Serato 4); w
+`Music\_Serato_` nie ma `History\Sessions`. Poprawione: oba miejsca, z dwóch baza zapisana ostatnio
+(`HistoryFormatsTest.windows_serato_theDatabaseUnderLocalAppData_andTheNewestOfTwo`, czerwony). I: historia, która jest, ale nie da się
+jej odczytać (np. inne tabele w nowym Serato), jest teraz pokazana w oknie zamiast pominięta (`AgentTest.aHistoryThatCannotBeRead_isSaid`,
+czerwony). **Niesprawdzone:** czy Serato 5.1 ma tabele `history_entry` / `history_session` takie jak Serato 4 — do próby z nową paczką.

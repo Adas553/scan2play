@@ -25,12 +25,18 @@ class AgentTest {
     private static final class FakeSource implements HistorySource {
         final List<Played> songs = new ArrayList<>();
         int version;
+        boolean unreadable;
 
         @Override public String program() { return "VirtualDJ"; }
         @Override public boolean present() { return true; }
         @Override public String version() { return String.valueOf(version); }
         @Override public String reading() { return "2026-11-21.m3u"; }
-        @Override public List<Played> songs() { return List.copyOf(songs); }
+        @Override public List<Played> songs() throws java.io.IOException {
+            if (unreadable) {
+                throw new java.io.IOException("no such table: history_entry");
+            }
+            return List.copyOf(songs);
+        }
 
         void played(Instant at, String artist, String title) {
             songs.add(new Played(at, artist, title));
@@ -126,6 +132,21 @@ class AgentTest {
         agent.tick();   // the minute's call marks nothing: the list stays
 
         assertEquals(List.of(songs[1], songs[2], songs[3]), shown.get().marked());
+    }
+
+    /** A history there but not readable (a new format of the program) is said in the window, not left out as if there were none. */
+    @Test
+    void aHistoryThatCannotBeRead_isSaid(@TempDir Path dir) throws Exception {
+        source.unreadable = true;
+        source.version = 1;
+        Agent agent = agent(paired(dir));
+        agent.tick();
+        assertEquals(List.of("VirtualDJ (2026-11-21.m3u — nie da się odczytać)"), shown.get().reading());
+
+        source.unreadable = false;
+        now.set(START.plusSeconds(3));
+        agent.tick();
+        assertEquals(List.of("VirtualDJ (2026-11-21.m3u)"), shown.get().reading(), "read again at the next look");
     }
 
     @Test

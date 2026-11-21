@@ -154,6 +154,30 @@ class HistoryFormatsTest {
                 "\r\nHKEY_CURRENT_USER\\Software\\VirtualDJ\r\n    HomeFolder    REG_SZ    C:\\Users\\dj\\Documents\\VirtualDJ\r\n").orElseThrow());
     }
 
+    /**
+     * Serato DJ Lite 5.1 on the owner's Windows 11 keeps master.sqlite under %LOCALAPPDATA%, not %APPDATA% as the readers of Serato 4
+     * say: both are looked in, and of two the one Serato wrote last is read (an old install's database must not hide tonight's).
+     */
+    @Test
+    void windows_serato_theDatabaseUnderLocalAppData_andTheNewestOfTwo(@TempDir Path dir) throws Exception {
+        Path local = dir.resolve("Local");
+        Path roaming = dir.resolve("Roaming");
+        Platform windows = new Platform(dir, Map.of("LOCALAPPDATA", local.toString(), "APPDATA", roaming.toString()), true);
+        Path tonight = local.resolve("Serato").resolve("Library").resolve("master.sqlite");
+        assertTrue(windows.serato4Databases().contains(tonight), "Serato 5's place");
+
+        Path old = roaming.resolve("Serato").resolve("Library").resolve("master.sqlite");
+        Files.createDirectories(old.getParent());
+        Files.createDirectories(tonight.getParent());
+        Files.writeString(old, "old");
+        Files.writeString(tonight, "new");
+        Files.setLastModifiedTime(old, java.nio.file.attribute.FileTime.from(Instant.ofEpochSecond(NIGHT - 86400 * 30)));
+        Files.setLastModifiedTime(tonight, java.nio.file.attribute.FileTime.from(Instant.ofEpochSecond(NIGHT)));
+        Serato4Database serato = new Serato4Database(windows.serato4Databases());
+        serato.version();
+        assertEquals(tonight, serato.current(), "the database written last");
+    }
+
     // ---- Serato's chunks ----
 
     private static byte[] utf16(String text) {

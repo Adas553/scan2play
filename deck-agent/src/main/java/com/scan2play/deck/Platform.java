@@ -77,11 +77,18 @@ final class Platform {
         return windows ? folder("OneDrive") : Optional.empty();
     }
 
+    /**
+     * Serato 4 and later: {@code master.sqlite}. On Windows under {@code %LOCALAPPDATA%} (Serato DJ Lite 5.1 on a DJ's Windows 11) and
+     * under {@code %APPDATA%} (where the readers of Serato 4 put it); the one written last is read ({@link Serato4Database#version}).
+     */
     List<Path> serato4Databases() {
-        Path library = windows
-                ? folder("APPDATA").orElse(home.resolve("AppData").resolve("Roaming")).resolve("Serato").resolve("Library")
-                : home.resolve("Library").resolve("Application Support").resolve("Serato").resolve("Library");
-        return List.of(library.resolve("master.sqlite"));
+        if (!windows) {
+            return List.of(home.resolve("Library").resolve("Application Support").resolve("Serato").resolve("Library").resolve("master.sqlite"));
+        }
+        Path local = folder("LOCALAPPDATA").orElse(home.resolve("AppData").resolve("Local"));
+        Path roaming = folder("APPDATA").orElse(home.resolve("AppData").resolve("Roaming"));
+        return List.of(local.resolve("Serato").resolve("Library").resolve("master.sqlite"),
+                roaming.resolve("Serato").resolve("Library").resolve("master.sqlite"));
     }
 
     /** A computer's name for the panel's list: "DESKTOP-1AB2 — Windows". */

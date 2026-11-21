@@ -12,7 +12,8 @@ import java.util.List;
 import org.sqlite.SQLiteConfig;
 
 /**
- * Serato DJ 4.x: its library and history in one SQLite database, {@code master.sqlite} ({@code %APPDATA%\Serato\Library} on Windows,
+ * Serato DJ 4.x and later: its library and history in one SQLite database, {@code master.sqlite} ({@code %LOCALAPPDATA%} or
+ * {@code %APPDATA%\Serato\Library} on Windows — Serato DJ Lite 5.1 uses the first —,
  * {@code ~/Library/Application Support/Serato/Library} on macOS — SSLScrobbler, What's Now Playing). The songs are the
  * {@code history_entry} rows marked played of the session still open ({@code history_session.end_time = -1}). Opened read-only, never
  * written: Serato keeps writing it while it runs (its journal, {@code master.sqlite-wal}, changes with each song).
@@ -42,12 +43,32 @@ final class Serato4Database implements HistorySource {
 
     @Override
     public String version() throws IOException {
-        current = databases.stream().filter(Files::isRegularFile).findFirst().orElse(null);
+        current = databases.stream().filter(Files::isRegularFile).max(java.util.Comparator.comparing(Serato4Database::writtenAt)).orElse(null);
         if (current == null) {
             return "";
         }
         Path journal = current.resolveSibling(current.getFileName() + "-wal");
         return NewestFile.version(current) + (Files.isRegularFile(journal) ? "|" + NewestFile.version(journal) : "");
+    }
+
+    /** When Serato last wrote the database: its journal ({@code -wal}) changes with each song, the file itself less often. */
+    private static java.nio.file.attribute.FileTime writtenAt(Path database) {
+        try {
+            Path journal = database.resolveSibling(database.getFileName() + "-wal");
+            java.nio.file.attribute.FileTime file = Files.getLastModifiedTime(database);
+            if (Files.isRegularFile(journal)) {
+                java.nio.file.attribute.FileTime wal = Files.getLastModifiedTime(journal);
+                return wal.compareTo(file) > 0 ? wal : file;
+            }
+            return file;
+        } catch (IOException e) {
+            return java.nio.file.attribute.FileTime.fromMillis(0);
+        }
+    }
+
+    /** The database read (the tests). */
+    Path current() {
+        return current;
     }
 
     @Override
