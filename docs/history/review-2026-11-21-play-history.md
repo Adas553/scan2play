@@ -624,3 +624,14 @@ typu `/.env`, `/.aws/credentials`, `/.git/config`, `/config/openai.json`, `/phpi
 Odpowiedzi: 404 (z jednej próbki 501 wierszy: 469) i 400 (32 — dziwne ścieżki, np. `//`); żadna nie trafiła w ścieżki aplikacji ani
 `/api/device/*`, nic nie zostało wydane. Pozostałe ok. 70 × 4xx dnia rozproszone, wielkość zwykłego szumu skanerów. W aplikacji nic do
 zrobienia; zablokowanie adresu w Cloudflare — do decyzji właściciela.
+
+### Karta „Zagrane samo” przebudowana (2026-11-21, po zrzucie właściciela z produkcji)
+
+Właściciel zapytał, czy karta wygląda profesjonalnie i przejrzyście. Odpowiedź: nie — ściana tekstu bez ramki (inaczej niż „Impreza”
+i „Kod QR”), główny przycisk na końcu, prywatność na górze, niebieskie linki zamiast przycisków, ta sama instrukcja także wtedy, gdy
+komputer już jest połączony. Właściciel: „zrób to”. Zrobione: karta w ramce jak „Impreza”, jedno zdanie o programie (z „około 45
+sekund”), trzy ponumerowane kroki (Pobierz: przyciski Windows / Mac (M1 i nowsze) / Mac (Intel); Rozpakuj i uruchom, „Pierwsze
+uruchomienie” zwinięte; Połącz: „Połącz komputer” jako główny przycisk), prywatność na dole. Gdy komputer jest połączony: tylko jego
+wiersz („✓ nazwa · ostatnio 17:43 · Odłącz”), kroki za „Połącz kolejny komputer”, a przycisk „🎧 Z programu DJ-a” zielony już po
+wczytaniu strony (lista pytana raz przy wczytaniu i przy powrocie do karty przeglądarki). Scenariusze `deck-reader-program-only`,
+`deck-connected-on-load`, `deck-computers*` — czerwone przed zmianą.

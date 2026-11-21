@@ -1066,13 +1066,18 @@ class DashboardPageRenderTest {
         assertThat(html).as("\"Zagrane samo\": the button, the card and the program's three downloads with the first start's help")
                 .contains("id=\"deckToggle\"", "id=\"deckReader\"", "Pobierz program:",
                         "releases/download/zagrane/Scan2Play-Zagrane-windows.zip", "releases/download/zagrane/Scan2Play-Zagrane-macos.zip",
-                        "releases/download/zagrane/Scan2Play-Zagrane-macos-intel.zip", "Mac z procesorem Intel", "„Uruchom mimo to”",
-                        "„Otwórz mimo to”");
+                        "releases/download/zagrane/Scan2Play-Zagrane-macos-intel.zip", "Mac (M1 i nowsze)", "Mac (Intel)",
+                        "„Uruchom mimo to”", "„Otwórz mimo to”");
         String card = html.substring(html.indexOf("id=\"deckReader\""), html.indexOf("</section>", html.indexOf("id=\"deckReader\"")));
         // one way only, the program: a second one in the browser was too much to choose from (variant E parked, docs/ideas.md item 18)
         assertThat(card).as("no reading in this browser").doesNotContain("deckBrowser", "deckPick", "Wskaż folder historii",
                 "Ta karta panelu musi zostać otwarta", "Chrome lub Edge", "W tej przeglądarce");
         assertThat(card).as("what reaches Scan2Play: said once").containsOnlyOnce("trafiają tylko wykonawca, tytuł i godzina");
+        assertThat(card).as("a card as \"Impreza\": framed, the first time's three steps in order, the privacy line last")
+                .contains("class=\"card bg-dark border-secondary p-3 mb-3 s2p-deck-reader\"", "class=\"s2p-deck-steps");
+        assertThat(card.indexOf("Pobierz program:")).isLessThan(card.indexOf("Rozpakuj plik zip i uruchom"));
+        assertThat(card.indexOf("Rozpakuj plik zip i uruchom")).isLessThan(card.indexOf("Połącz go z tą imprezą:"));
+        assertThat(card.indexOf("Połącz go z tą imprezą:")).isLessThan(card.indexOf("trafiają tylko wykonawca"));
         assertThat(card).as("when a song is marked: VirtualDJ writes it to its history some 45 seconds after it started")
                 .contains("około 45 sekund");
         assertThat(card).as("the first start: SmartScreen's own words; a Windows that gives no way past it leads to the panel's help; "

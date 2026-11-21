@@ -4,11 +4,17 @@
  * screen 768 px wide or more (a computer), in any browser. "Połącz komputer" shows the code from /dj/devices/code until the program
  * takes it (the list of /dj/devices grows), the paired computers with "Odłącz" (/dj/devices/remove).
  *
+ * Two states: no computer paired — the three steps (#deviceSetup: download, start, connect); one or more — their rows only, the steps
+ * behind "Połącz kolejny komputer" (#deviceAnother) and shown again while a code waits for its program. The list is asked once when
+ * the page loads and again when the page is shown again, so the queue's button is green (btn-outline-success) whenever a computer
+ * is paired: the DJ sees it at a glance, without opening the card.
+ *
  * The panel reads no folder itself: that way (variant E of item 18, the File System Access API in Chrome and Edge) is parked — two
  * ways were too much to choose from; its code is in the git history (docs/ideas.md item 18 says where).
  *
  * Dependencies (DOM): <button id="deckToggle" hidden>, <section id="deckReader" hidden> with its texts in data-* (device-code,
- * device-seen, device-remove, device-none, device-failed — "{…}" filled in here), #deviceConnect, #deviceCode, #deviceList.
+ * device-seen, device-remove, device-failed — "{…}" filled in here), #deviceList, #deviceAnother, #deviceSetup, #deviceConnect,
+ * #deviceCode.
  */
 import { csrfHeaders, partyCode } from './common.js';
 
@@ -35,6 +41,10 @@ function computers() {
     const connect = document.getElementById('deviceConnect');
     const codeLine = document.getElementById('deviceCode');
     const list = document.getElementById('deviceList');
+    const setup = document.getElementById('deviceSetup');
+    const another = document.getElementById('deviceAnother');
+    let count = 0;        // the computers paired, as last listed
+    let adding = false;   // "Połącz kolejny komputer" pressed, or a code waiting: the steps shown beside the rows
     let newest = -1;      // the highest id of the list: a program that took the code is a computer newer than this
     let atCode = -1;      // the highest id when the code was made (-1: no list yet then)
     let watching = null;
@@ -58,19 +68,19 @@ function computers() {
             return;
         }
         list.replaceChildren();
-        if (devices.length === 0) {
-            const none = document.createElement('li');
-            none.textContent = text('deviceNone');
-            list.append(none);
-        }
         devices.forEach(function (device) {
             const row = document.createElement('li');
             row.className = 'd-flex flex-wrap align-items-center gap-2 mb-1';
             row.dataset.deviceId = device.id;
+            const ok = document.createElement('span');
+            ok.className = 's2p-deck-device-ok';
+            ok.setAttribute('aria-hidden', 'true');
+            ok.textContent = '✓';
             const name = document.createElement('span');
-            name.className = 'text-light';
+            name.className = 'text-light fw-semibold';
             name.textContent = device.name;
             const seen = document.createElement('span');
+            seen.className = 'text-secondary';
             seen.textContent = text('deviceSeen', { time: clock(device.lastSeenAt || device.createdAt) });
             const remove = document.createElement('button');
             remove.type = 'button';
@@ -85,9 +95,10 @@ function computers() {
                     await load();
                 }
             });
-            row.append(name, seen, remove);
+            row.append(ok, name, seen, remove);
             list.append(row);
         });
+        count = devices.length;
         newest = devices.reduce(function (most, device) { return Math.max(most, device.id); }, 0);
         // the program took the code: it is used up. By the newest id, not the count: a fourth computer replaces the one seen
         // longest ago (the count stays), and an "Odłącz" meanwhile shortens the list while the code is still good
@@ -97,8 +108,23 @@ function computers() {
             clearInterval(watching);
             watching = null;
             codeLine.textContent = '';
+            adding = false;
         }
+        show();
+        list.dataset.loaded = 'true';
     }
+
+    function show() {
+        setup.hidden = count > 0 && !adding;
+        another.hidden = count === 0 || adding;
+        toggle.classList.toggle('btn-outline-success', count > 0);
+        toggle.classList.toggle('btn-outline-light', count === 0);
+    }
+
+    another.addEventListener('click', function () {
+        adding = true;
+        show();
+    });
 
     connect.addEventListener('click', async function () {
         connect.disabled = true;
@@ -106,6 +132,7 @@ function computers() {
             const response = await post('/dj/devices/code', {});
             if (!response.ok) throw new Error(String(response.status));
             const answer = await response.json();
+            adding = true;
             codeLine.textContent = text('deviceCode', { code: answer.code.slice(0, 3) + ' ' + answer.code.slice(3), minutes: answer.minutes });
             clearInterval(watching);
             atCode = newest;
@@ -114,7 +141,7 @@ function computers() {
                 if (Date.now() > until) {
                     clearInterval(watching);
                     watching = null;
-                    codeLine.textContent = '';
+                    codeLine.textContent = '';   // the steps stay: the DJ is still pairing, a new code is one tap away
                 }
                 load();
             }, 5000);
@@ -131,6 +158,11 @@ function computers() {
 if (toggle && reader && wide) {
     const loadComputers = computers();
     toggle.hidden = false;
+    loadComputers();
+    // back to the panel from the program's window (paired just now) or from another tab: the button tells the truth again
+    document.addEventListener('visibilitychange', function () {
+        if (document.visibilityState === 'visible') loadComputers();
+    });
     toggle.addEventListener('click', function () {
         const open = reader.hidden;
         reader.hidden = !open;

@@ -80,14 +80,18 @@ plakietką „bez oceny AI” — przejrzyj je przed zagraniem.", gone with the 
 **"Zagrane samo" — the DJ's program marks the queue played** (`docs/ideas.md` items 18, 19; V78; Pro — `PlanFeature.DECK`: without
 Pro neither the button nor the card, no offer in the queue, `/pro` names it). One way: a program on the DJ's computer (below) reads
 VirtualDJ's or Serato's play history and sends the songs; the panel only pairs it. "🎧 Z programu DJ-a" beside "+ Dodaj piosenkę"
-(QUEUE, not in the demo; shown by `play-history.js` on a screen 768 px wide or more, any browser) folds out a card: what reaches
-Scan2Play (artist, title, time; nothing kept), "Program na komputerze (Windows, Mac)" — the program reads in the background, the panel
-need not be open; with VirtualDJ a song is marked about 45 s after it started (VirtualDJ writes it to its history after its
-`historyDelay`, ~45 s, + up to 3 s of the program) —, "Pobierz program" (Windows, Mac with Apple's chips, Mac with Intel — the GitHub
-release `zagrane` of `deck-agent.yml`, no account needed), "Pierwsze uruchomienie" (what SmartScreen — "System Windows ochronił ten
-komputer" — and Gatekeeper ask; a Windows that gives no "Uruchom mimo to", Smart App Control, runs no unsigned program: "napisz do nas
-przez „Pomoc i kontakt”"), "Połącz komputer" (`POST /dj/devices/code`, QUEUE): a 6-digit code valid 10 minutes ("123 456"), gone from
-the card once the program took it; the party's computers (`GET /dj/devices`: name, "ostatnio 21:43", 403 without Pro) with "Odłącz"
+(QUEUE, not in the demo; shown by `play-history.js` on a screen 768 px wide or more, any browser; green — `btn-outline-success` —
+whenever a computer is paired: the list is asked when the page loads and when it is shown again) folds out a card framed as "Impreza"
+(`card bg-dark border-secondary`): one line of what the program does — it reads in the background, the panel need not be open; with
+VirtualDJ a song is marked about 45 s after it started (VirtualDJ writes it to its history after its `historyDelay`, ~45 s, + up to 3 s
+of the program). **No computer paired:** three numbered steps (`.s2p-deck-steps`) — 1. "Pobierz program": buttons Windows, "Mac (M1 i
+nowsze)", "Mac (Intel)" (the GitHub release `zagrane` of `deck-agent.yml`, no account needed); 2. "Rozpakuj plik zip i uruchom" with
+"Pierwsze uruchomienie" folded (what SmartScreen — "System Windows ochronił ten komputer" — and Gatekeeper ask; a Windows that gives
+no "Uruchom mimo to", Smart App Control, runs no unsigned program: "napisz do nas przez „Pomoc i kontakt”"); 3. "Połącz go z tą
+imprezą:" and "Połącz komputer" (`POST /dj/devices/code`, QUEUE): a 6-digit code valid 10 minutes ("123 456"), gone once the program
+took it. **One or more paired:** their rows only ("✓ DESKTOP-1AB2 — Windows · ostatnio 21:43 · Odłącz"), the steps behind "Połącz
+kolejny komputer" (and shown while a code waits). Last, small: what reaches Scan2Play (artist, title, time; nothing kept). The
+party's computers: `GET /dj/devices` (name, last seen; 403 without Pro); "Odłącz"
 (`POST /dj/devices/remove`, any plan; a program without Pro is taken away by its own "Odłącz ten komputer", `POST /api/device/unpair`).
 The program swaps the code for its own token (`POST /api/device/pair`) and sends the songs to `POST /api/device/plays` with
 `Authorization: Bearer` (JSON `{plays: [{at, artist, title}], sentAt}`, ≤ 20, a field ≤ 500 characters). The server
@@ -99,7 +103,7 @@ read as "Artist - Title". Each mark is `DjService.markSongAsPlayed` (the conditi
 2) says what is sent and that nothing is kept. `DjDeviceService`: only the token's SHA-256 in `dj_device`; at most 3 computers a party
 (pairing a 4th forgets the one seen longest ago); a code used once, one at a time per party (a new one kills the earlier); 10 tries of
 a code per address and 1000 wrong codes in all per 10 minutes (reaching it: one WARN in the log), 30 calls a minute per computer (in
-memory); `last_seen_at` written once a minute at most. Browser scenarios `deck-reader-program-only`, `deck-computers*`;
+memory); `last_seen_at` written once a minute at most. Browser scenarios `deck-reader-program-only`, `deck-connected-on-load`, `deck-computers*`;
 `DeckHistoryServiceTest`, `DjDeviceIT` (PostgreSQL), `DeviceApiControllerTest`, `DeviceApiWebTest` (the real security: no login, no
 CSRF, no session for `/api/device/*`; `/dj/devices` needs the login). The other programs (rekordbox, Traktor, djay — not read):
 `docs/ideas.md` item 18 and `tools/spike/dj_history_spike.py`.

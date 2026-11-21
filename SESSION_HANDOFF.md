@@ -74,7 +74,7 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
 - **2026-11-21 — "Zagrane samo" merged (#297 `main`, #298 `dev`), V78; tried on the owner's Windows 11 (VirtualDJ 8.5) — works**
   (`docs/history/review-2026-11-21-play-history.md`, "Próby na prawdziwych komputerach"). `claude/gallant-ritchie-rl80ux`, pushed, no
   PR, no migration: a second copy of the program refused, the window's fixes, variant E parked (the card: the program only;
-  `/dj/dashboard/plays` gone). Waits: the owner's read, PRs; after the merge "Run workflow" of "Program DJ-a (deck-agent)" from `main`.
+  `/dj/dashboard/plays` gone), the card rebuilt (framed, three steps; paired: its row and the button green). Waits: the owner's read, PRs; after the merge "Run workflow" of "Program DJ-a (deck-agent)" from `main`.
   Untried: a Mac (P20, P27), a Polish user name (P23), the history in OneDrive (P24).
 - **Waits for the owner (from #269):** after the first commit the deploy window holds back (Fri–Sun 18:00–6:00): does Railway
   deploy it on the workflow's re-run? UptimeRobot is set up (the owner, 2026-11-17; `docs/monitoring.md`).
