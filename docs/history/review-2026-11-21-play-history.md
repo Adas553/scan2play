@@ -331,3 +331,216 @@ Sprawdzenia po tych zmianach (w kopii): `check.py unit` 1531/1531, `it` 219/219,
 (plany wyłączone, jak na produkcji), a z `scan2play.plans.enforce=true` na koncie Free: brak „🎧 Z programu DJ-a” w panelu,
 `/dj/devices/code` → 403, `/pro` z `data-feature="DECK"`. Workflow (Mac z Intelem, wydanie `zagrane`) — niesprawdzony; ruszy dopiero
 po „Run workflow” na GitHubie.
+
+## Trzecie przejście (niezależne, 2026-11-21)
+
+Drugi, niezależny review całej gałęzi i poprawek pierwszego (P1–P18, odpowiedzi właściciela) — traktowanych jak cudzy kod.
+
+### Werdykt
+
+**Scalić po poprawkach** — poprawki P19–P23 i P26–P28 są już na gałęzi (lista „Poprawki” niżej). Nie znalazłem błędu, który psułby
+kolejkę, dane ani bezpieczeństwo: oznaczenie idzie przez to samo warunkowe `UPDATE`, token jest tylko skrótem, publiczne endpointy
+nie robią sesji i mają limit ciała (sprawdzone na prawdziwym Tomcacie, także chunked i UTF-16). Najważniejsze było to, czego testy
+w kontenerze nie pokażą: wydanie paczek (P19, P20), komputery DJ-ów z innym układem folderów (P22, P23) i sprzeczny tekst w karcie
+(P21). Przed powiedzeniem DJ-om nadal: „Run workflow” z `main`, próba zipa na Windows 11 i na Macu z M1 (P20, P24, P29), pytania niżej.
+
+### Sprawdzenia (w kopii; nigdy Maven w repo)
+
+- Przed poprawkami: `check.py unit` 1531/1531, `it` 219/219 (PostgreSQL 16 w kontenerze), `browser` 473/473, `audit -t dashboard,pro`
+  19 stron × 3 szerokości bez przewijania w bok i błędów (te same 4 stare małe cele: „Szczegóły”, godziny w harmonogramie).
+- Program: `sh mvnw -f deck-agent/pom.xml -B -ntp verify` — 18/18 przed, 21/21 po (3 nowe testy, każdy najpierw czerwony).
+- Od końca do końca: aplikacja z kopii (`java -jar`, profil `local`) na jednorazowej bazie `s2p_e2e` (Flyway do V78), konto z hasłem
+  (link potwierdzenia z logu), dwie prośby („Sanah - Szampan”, „Dawid Podsiadło - Małomiasteczkowy”), kod z `/dj/devices/code`,
+  prawdziwy program `--pair <kod> --server http://localhost:8099` z `user.home` w katalogu tymczasowym — po „Połączono” sam przechodzi
+  w czytanie. Plik `Documents/VirtualDJ/History/<dziś>.m3u` z linią sprzed 2 h (nic nie oznacza), potem linia „Sanah &amp; Kwiat
+  Jab|łoni — Szampan (Radio Edit)” dopisana w dwóch kawałkach z 4 s przerwy → prośba „Zagrane” po 6 s, druga czeka. Plik tokenu 600,
+  folder 700, w bazie 64 znaki skrótu. `curl` chunked z tokenem: małe 200, 200 KB 413; 200 KB z długością na `/pair` 413; bez tokenu
+  401; ciało w UTF-16LE z `charset` — oznacza drugą prośbę (filtr podaje bajty, Jackson rozpoznaje kodowanie); `ISO-8859-2` 200; żadnego
+  `Set-Cookie`. „Odłącz” w panelu → program słyszy 401 po 36 s i usuwa token z pliku. Potem aplikacja z
+  `--scan2play.plans.enforce=true` (konto Free, program sparowany wcześniej): w panelu brak „🎧 Z programu DJ-a” i linków,
+  `/dj/devices/code` 403, `GET /dj/devices` 403, `/dj/dashboard/plays` 403, program pokazuje `NO_PLAN` (token zostaje), `/pro` z
+  `data-feature="DECK"`. W logach: kod imprezy i liczba oznaczonych — nigdy token, kod parowania ani nazwa komputera. Baza usunięta.
+- Nie dało się sprawdzić tutaj: Windows, macOS, prawdziwy VirtualDJ / Serato, Cloudflare przed programem, sam workflow (rusza na GitHubie).
+
+### Ustalenia
+
+#### P19 — ryzyko (poprawione): wydanie paczek mogło zostać w połowie — nowa paczka obok starych albo brak pliku
+
+`.github/workflows/deck-agent.yml` (przed poprawką: krok „Release” w każdym zadaniu macierzy, `cancel-in-progress: true` dla całego
+`github.ref`). Scenariusz 1: „Run workflow” z `main`, paczka Windows już wgrana, a zadanie `macos-15-intel` pada (brak runnera, błąd
+`jpackage`) — `fail-fast` przerywa pozostałe: w wydaniu Windows 1.0.1 obok Maców 1.0.0, tytuł wydania mówi już „1.0.1”. Scenariusz 2:
+w trakcie „Run workflow” ktoś scala do `main` zmianę `deck-agent/` — `push` z tej samej grupy anuluje uruchomienie; `gh release upload
+--clobber` usuwa stary plik przed wgraniem nowego, więc przerwanie między nimi zostawia link z karty bez pliku (404 u DJ-a). Do tego
+`contents: write` miały zadania, które uruchamiają wtyczki Mavena pobrane z sieci — wystarczyłaby jedna zła wtyczka, by pisała do repo.
+**Poprawka:** budowanie z tokenem tylko do odczytu; osobne zadanie `release` (`needs: package`, tylko z `main`) pobiera trzy artefakty,
+sprawdza, że są wszystkie, i wgrywa je razem; grupa `concurrency` dla „Run workflow” jest jego własna i bez anulowania; wersja jako
+wyjście zadania (`tr -d '\r'` na Windows). Bez testu — workflow rusza tylko na GitHubie (YAML sprawdzony parserem).
+
+#### P20 — ryzyko (poprawione, niesprawdzone): Mac z M1 może zobaczyć „aplikacja jest uszkodzona” zamiast „Otwórz mimo to”
+
+`deck-agent.yml` „Zip (macOS)”. Na procesorach Apple kod bez ważnego podpisu w ogóle się nie uruchamia (wystarcza podpis ad hoc).
+`jpackage` bez `--mac-sign` nie gwarantuje spójnego podpisu całej paczki (Java Temurin ma swoje podpisy, `jlink` składa z niej nową);
+paczka z niespójnym podpisem pobrana przez Safari (kwarantanna) daje macOS-owe „„Scan2Play Zagrane” jest uszkodzony i nie może zostać
+otwarty” — bez przycisku „Otwórz mimo to”, więc instrukcja z karty nie działa. **Poprawka:** `codesign --force --deep --sign -` przed
+spakowaniem (podpis ad hoc: bez konta Apple, bez nazwy dewelopera — Gatekeeper dalej pyta, zgodnie z decyzją „bez podpisu”).
+Sprawdzić przy pierwszej próbie na Macu z M1: pobrać zip przeglądarką, rozpakować, dwuklik.
+
+#### P21 — błąd (poprawiony): karta mówiła „ta karta musi zostać otwarta” nad programem, który działa bez karty
+
+`templates/dashboard.html` (`dashboard.deck.privacy` na górze karty) i `dashboard.computer.help` („w tle — bez otwartej karty”).
+Scenariusz: DJ w Safari (widzi tylko część o programie) czyta najpierw „Ta karta panelu musi zostać otwarta”, dwie linijki niżej „bez
+otwartej karty” — nie wie, czy po połączeniu programu może zamknąć panel. **Poprawka:** „co trafia do Scan2Play” raz, nad obiema
+częściami; „Ta karta panelu musi zostać otwarta.” (`dashboard.deck.browser.open`, PL/EN) tylko w części „W tej przeglądarce”. Test
+`DashboardPageRenderTest.aProOrganiser_hasThePanelAsToday` (czerwony: zdanie przed `deckBrowser`).
+
+#### P22 — ryzyko (poprawione): program czytał najnowszy plik pierwszego folderu, w którym był jakikolwiek — także sprzed lat
+
+`deck-agent/.../NewestFile.java` (przed poprawką: `return` przy pierwszym folderze z plikiem), kolejność z `Platform.virtualDjFolders`:
+`HomeFolder` z rejestru, `%LOCALAPPDATA%`, Dokumenty. Scenariusz: laptop, na którym kiedyś był starszy VirtualDJ (historia w
+`Dokumenty\VirtualDJ\History`, a w rejestrze `HomeFolder` na ten folder), nowy VirtualDJ zapisuje w `%LOCALAPPDATA%`. Program czyta w
+kółko `2024-05-01.m3u`, okno pokazuje „Czyta: VirtualDJ (2024-05-01.m3u)”, nic się nie oznacza, a DJ nie zauważy daty. **Poprawka:**
+najnowszy plik ze wszystkich folderów. Test `HistoryFormatsTest.theNewestFile_ofAllTheFolders_notTheFirstOneWithAFile` (czerwony).
+
+#### P23 — ryzyko (poprawione częściowo): Windows z kopią folderów w OneDrive — program „nie widzi historii”
+
+`Platform.java`. Nowe laptopy z Windows 11 przy pierwszym uruchomieniu proponują kopię Dokumentów (i od 2023 Muzyki) w OneDrive —
+foldery przenoszą się do `%OneDrive%\Documents`, `%OneDrive%\Music`; Serato pisze `_Serato_` do folderu Muzyka, starszy VirtualDJ do
+Dokumentów. Program szukał tylko w `%USERPROFILE%\Music` / `Documents` → „Nie widać historii VirtualDJ ani Serato”. **Poprawka:** do
+list dochodzą `%OneDrive%\Music\_Serato_\History\Sessions` i `%OneDrive%\Documents\VirtualDJ\History` (zmienna środowiska, poprawna
+także dla nazwy użytkownika z polską literą). Test `windows_withOneDrive_looksInItsDocumentsAndMusicToo` (czerwony). **Zostaje:** gdy
+Windows nazywa te foldery w OneDrive po polsku („Dokumenty”, „Muzyka” — nie wiem, czy tak robi), dalej nie widać; pewne byłoby
+odczytanie znanego folderu z rejestru (`Shell Folders`) — razem z P24, po próbie na polskim Windows.
+
+#### P24 — ryzyko (otwarte): `reg query` czytane jako UTF-8
+
+`Platform.registryHomeFolder` — `new String(..., UTF_8)` z wyjścia `reg.exe`. Skierowane do potoku, `reg` pisze (o ile wiem) w stronie
+kodowej konsoli — na polskim Windows CP852, nie UTF-8. Scenariusz: `HomeFolder` = `C:\Users\Michał\Documents\VirtualDJ\` → ścieżka
+zniekształcona, folder nie istnieje. Zapasowe foldery (`%LOCALAPPDATA%`, `user.home`) są poprawne, więc dotyczy tylko `HomeFolder`
+z polską literą. **Propozycja:** przy próbie na Windows użytkownik z polską literą; jeśli ścieżka jest zła — `cmd /c chcp 65001 >nul &
+reg query …` albo PowerShell `Get-ItemProperty` z wyjściem UTF-8. Nie zmieniam na ślepo kodu, którego nie da się tu sprawdzić.
+
+#### P25 — ryzyko (otwarte, pytanie): „Odłącz w każdym planie” jest tylko na serwerze — DJ bez Pro nie ma gdzie kliknąć
+
+`DjDeviceController.list` wymaga `DECK`, karta jest ukryta bez Pro (`dashboard.html`), a `remove` planu nie wymaga. Od końca do końca
+(Free): `GET /dj/devices` 403, karty nie ma — komputer zostaje na liście, której DJ nie zobaczy, dopóki nie wróci Pro. Bezpieczeństwu
+to nie szkodzi (wywołania programu dostają 403), ale „Odłącz w każdym planie” z odpowiedzi właściciela nie jest wykonane w interfejsie.
+Do tego „Odłącz ten komputer” w oknie programu tylko zapomina token u siebie — wiersz w `dj_device` zostaje, panel dalej pokazuje
+komputer „ostatnio …” i liczy go do limitu 3. **Propozycja:** przycisk w programie woła `POST /api/device/unpair` (usuwa własny wiersz
+po tokenie — działa w każdym planie, bez panelu). Zapisane w `05-1d` tak, jak jest. Pytanie do właściciela niżej.
+
+#### P26 — drobiazg (poprawiony): po nowym sparowaniu program czekał do minuty na pierwsze wywołanie
+
+`Agent.tick` — „żyje” liczone od ostatniego wywołania starego tokenu. Scenariusz: DJ paruje program z imprezą bez Pro — przez minutę
+okno nie mówi nic, potem „działa w planie Pro”; albo zaraz po „odłączono w panelu” paruje na nowo i w ciągu minuty klika własne „Odłącz
+ten komputer” — okno pokazuje znowu „odłączono w panelu” (stary wynik `DISCONNECTED`). **Poprawka:** nowy token = wywołanie od razu
+i wynik od zera. Test `AgentTest.aNewPairing_isAskedAboutAtOnce` (czerwony).
+
+#### P27 — drobiazg (poprawiony, bez testu): Mac — klik w ikonę w Docku nie pokazywał zamkniętego okna
+
+`Window.java` — `HIDE_ON_CLOSE` chowa okno do paska menu; macOS przy kliknięciu ikony w Docku (albo ponownym otwarciu aplikacji, które
+drugiej kopii nie uruchamia) wysyła zdarzenie „reopen”, którego nikt nie obsługiwał — program wygląda na zawieszony. **Poprawka:**
+`AppReopenedListener` → pokaż okno. Swing bez ekranu — sprawdzić przy próbie na Macu.
+
+#### P28 — drobiazg (poprawiony): emoji w tekście okna Swing
+
+`Window.java` — „„🎧 Z programu DJ-a””. Czcionki Swinga na Windows (Tahoma / Segoe UI) mogą nie mieć tego znaku — DJ zobaczyłby kwadrat.
+Bez emoji tekst prowadzi tak samo. (Na Windows niesprawdzone w żadną stronę.)
+
+#### P29 — ryzyko (otwarte): Windows 11 może nie dać „Uruchom mimo to”
+
+`dashboard.computer.first.windows`. Na świeżo zainstalowanym Windows 11 bywa włączona „Inteligentna kontrola aplikacji” (Smart App
+Control) — blokuje program bez podpisu bez żadnego „Uruchom mimo to”; instrukcja z karty wtedy nie ma ścieżki. Tytuł okna SmartScreen
+po polsku sprawdzić na Windows 11 (w karcie „System Windows ochronił komputer”; przyciski „Więcej informacji” › „Uruchom mimo to” są
+dobre). Na macOS 15 po „Otwórz mimo to” w Ustawieniach jest jeszcze jedno okno i hasło — tekst mógłby to dodać. **Propozycja:** po
+próbie jedno zdanie „Jeśli nie ma „Uruchom mimo to”, ten Windows nie uruchamia programów bez podpisu — napisz do nas”. Decyzja (beta).
+
+#### P30 — ryzyko (otwarte, bez zmiany): zapas 2 min a Serato, które zapisuje piosenkę przy załadowaniu
+
+`DeckHistoryService.SLACK_CLOCK_KNOWN`. Serato 2/3 dopisuje piosenkę przy załadowaniu na deck (jej start może być czasem załadowania).
+Scenariusz: DJ ładuje „Szampan” o 21:00, gość prosi o 21:03, DJ gra o 21:05 — start 21:00 < 21:03 − 2 min, prośba czeka (DJ klika
+„Zagrane” sam). Pominięcie jest bezpieczne, fałszywe trafienie nie; VirtualDJ zapisuje po `historyDelay` od startu, więc tam problemu
+nie ma. Ta sama piosenka dwa razy (P12) po zmianie na 2 min nie oznacza się przy ponownym wysłaniu — sprawdzone testem z pierwszego
+review i od końca do końca (linia sprzed 2 h). Zostawiam: zmienić dopiero po prawdziwej historii Serato.
+
+#### P31 — drobiazg (otwarte): `FOR UPDATE` przy parowaniu wstrzymuje na chwilę dodawanie próśb tej imprezy
+
+`DjDeviceService.java:111`. `FOR UPDATE` na wierszu `party_settings` koliduje z `FOR KEY SHARE`, które bierze klucz obcy przy `INSERT`
+prośby — gość czeka przez czas transakcji parowania (milisekundy). `FOR NO KEY UPDATE` tak samo szereguje dwa parowania i
+`changeCode`, a próśb nie wstrzymuje. Do zrobienia przy następnej zmianie (zysk znikomy, potrzebny test IT na dwóch połączeniach).
+
+#### P32 — drobiazg (otwarte): dwie karty (właściciel i obsługa) — jedna pokazuje martwy kod
+
+`DjDeviceService.newCode` (jeden kod na imprezę, P3) i `play-history.js`. Obsługa klika „Połącz komputer” po właścicielu: kod
+właściciela umiera, a jego panel pokazuje go dalej „ważny 10 min”. DJ wpisuje go — „Ten kod nie działa — weź nowy z panelu”: tekst
+prowadzi dobrze. Rzadkie (dwie osoby parują w tej samej chwili). Zostaje.
+
+#### P33 — drobiazg (otwarte): wydanie `zagrane` zostaje na pierwszym commicie
+
+`gh release create --target` ustawia tag raz; kolejne „Run workflow” wymieniają pliki, tag i „Source code (zip)” na stronie wydania
+zostają z pierwszego razu. Nie szkodzi (linki w karcie prowadzą do plików), myli tylko na stronie GitHuba.
+
+### Sprawdzone i w porządku (niezależnie)
+
+- `DeviceBodyLimitFilter`: długość ponad limit — 413 bez czytania; bez długości — `readNBytes(MAX + 1)`; `ReadBody` podaje te same bajty
+  (`getInputStream` i `getReader` z kodowaniem z nagłówka, domyślnie UTF-8); Jackson czyta z `getInputStream` i sam rozpoznaje UTF-16
+  (od końca do końca). Filtr działa po Spring Security, ale ta nie czyta ciała tych ścieżek (CSRF wyłączone) — kolejność bez znaczenia.
+- `sentAt`: przesunięcie z `now` serwera; `sentAt` spoza zakresu (ujemne, ponad 10^11) — bez przesunięcia i dłuższy zapas; `at` po
+  przesunięciu w przyszłości przycięte do „teraz”, starsze niż 12 h pominięte; ponowne wysłanie (restart, odświeżenie) poprawione
+  zapasem 2 min. Program i panel liczą `sentAt` z tego samego zegara co czasy w plikach.
+- Kod w panelu po najwyższym `id` (P4, P18): przy liście, która nie przyszła, punktem odniesienia jest pierwsza lista — teoretycznie
+  lista wysłana przed kliknięciem, a odebrana po sparowaniu, zostawi kod na ekranie do 10 min (nieszkodliwe; DJ widzi komputer na liście).
+- `Settings`: `createTempFile` na POSIX tworzy plik 600 od razu, folder 700, `ATOMIC_MOVE` z zastąpieniem (sprawdzone: 600/700).
+  Na Windows plik w profilu użytkownika.
+- Okno: `wasPaired` i `pack()` (P6) — poprawne; po P26 stary wynik nie przechodzi na nowy token.
+- Pro: każda ścieżka bez Pro — od końca do końca (wyżej); kod zrobiony tuż przed końcem Pro paruje (parowanie planu nie sprawdza),
+  pierwsze wywołanie dostaje 403 planu i okno mówi o Pro (po P26 od razu). Koniec Pro w trakcie: karta w przeglądarce dostaje 403 →
+  „Panel nie może teraz wysyłać — odśwież stronę.”, po odświeżeniu karty nie ma; program pokazuje tekst o Pro.
+- Bezpieczeństwo: token 32 bajty `SecureRandom`, w bazie SHA-256, wyszukanie po unikalnym indeksie; kod 6 cyfr: przy limicie 1000
+  złych kodów na 10 min i (zwykle) 1–2 żywych kodach naraz trafienie to ~0,1–0,2 % na okno — przy ciągłym ataku z ~100 adresów kilka
+  dziesiątych procent na godzinę; zysk: oznaczanie „Zagrane” jednej przypadkowej imprezy, widoczne na liście komputerów (świadoma
+  decyzja właściciela, P13). IDOR w `/dj/devices/remove` — `WHERE id = ? AND party_code = ?` z sesji. Program wysyła tylko wykonawcę,
+  tytuł, czas, `sentAt` i raz nazwę komputera (`COMPUTERNAME`, bywa imieniem — polityka prywatności ją wymienia); nigdy ścieżek.
+  Workflow: PR z forka dostaje tylko testy z tokenem do odczytu; „Run workflow” wymaga prawa zapisu, a publikuje tylko z `main` — ktoś
+  z prawem zapisu mógłby zmienić workflow na swojej gałęzi, ale to prawo i tak daje mu repozytorium.
+- Kod: komentarze mówią „dlaczego”; zapytania ograniczone (`findTop400`, `LIMIT 3`, indeksy); parsery JS i Java różnią się tylko
+  rozpoznawaniem milisekund i czasu od 2001 (P16, opisane). `validPlays` / `songsOf` / `clockKnown` w `DjSongController` używane też
+  przez `DeviceApiController` (P16) — nadal do przeniesienia do `DeckHistoryService` przy następnej zmianie.
+
+### Błędne lub niepełne w poprzednich przejściach
+
+- Odpowiedź właściciela 1: „„Odłącz” działa w każdym planie” — tylko na serwerze; w interfejsie bez Pro nie ma listy ani przycisku (P25).
+- „Sprawdzone i w porządku” pierwszego review: „Nowy plik dnia / nowa sesja Serato: najnowszy plik po czasie zmiany” — tylko w pierwszym
+  folderze, który miał jakikolwiek plik (P22).
+- Odpowiedź właściciela 3: „Run workflow z `main` wgrywa paczki do wydania” — tak, ale każda paczka osobno, z możliwym stanem pół na pół
+  (P19); i bez podpisu ad hoc paczka dla M1 mogła nie dać „Otwórz mimo to” (P20).
+- Testy robią to, co mówią nazwy (sprawdzone: `DeviceBodyLimitFilterTest` na atrapie, potwierdzone prawdziwym `curl`;
+  `wrongCodesFromTwentyFiveAddresses…` — 250 złych kodów, czerwony przy limicie 200; `SettingsTest` — uprawnienia po zapisie).
+
+### Pytania do właściciela
+
+1. **P25:** czy „Odłącz ten komputer” w programie ma usuwać komputer także z panelu (nowy `POST /api/device/unpair`)? I czy bez Pro panel
+   ma pokazywać choćby listę komputerów z „Odłącz” (to byłoby coś z „Zagrane samo” w kolejce bez Pro, wbrew zasadzie „żadnej oferty”)?
+2. **P29:** dopisać do „Pierwsze uruchomienie” zdanie o Windows, który nie daje „Uruchom mimo to”, czy poczekać na próbę?
+3. **P23/P24:** czy przy próbie na Windows sprawdzić użytkownika z polską literą i kopię folderów w OneDrive (wtedy dokończę odczyt
+   znanych folderów z rejestru)?
+
+### Poprawki
+
+Zrobione na gałęzi (każda zmiana zachowania z testem widzianym najpierw na czerwono, chyba że napisano inaczej):
+
+- P19 workflow: budowanie bez prawa zapisu, zadanie `release` po wszystkich trzech paczkach, „Run workflow” bez anulowania — bez testu
+  (GitHub), YAML sprawdzony parserem; `actions/download-artifact` przypięty do commita v7.0.0.
+- P20 podpis ad hoc paczki Mac (`codesign --sign -`) — bez testu, do sprawdzenia na Macu z M1.
+- P21 tekst „karta musi zostać otwarta” tylko w części przeglądarki — `DashboardPageRenderTest` czerwony, potem zielony.
+- P22 najnowszy plik ze wszystkich folderów — `HistoryFormatsTest` czerwony, potem zielony.
+- P23 foldery OneDrive na Windows — `HistoryFormatsTest` czerwony, potem zielony (polskie nazwy folderów zostają, P24).
+- P26 nowe sparowanie pytane od razu — `AgentTest` czerwony, potem zielony.
+- P27 Dock na Macu, P28 emoji w oknie — bez testu (Swing bez ekranu).
+- Dokumentacja: `05-1d` (tekst karty, foldery programu, wywołanie po sparowaniu, Dock, workflow, „Odłącz” bez Pro), `docs/ideas.md`
+  p. 19, `SESSION_HANDOFF.md`.
+
+Wyniki po poprawkach (w kopii): `check.py unit` 1531/1531, `browser` 473/473, `audit -t dashboard,pro` 19 stron × 3 szerokości bez
+przewijania w bok i błędów (te same 4 stare małe cele), program `verify` 21/21; `it` 219/219 bez zmian SQL od pomiaru wyżej.
+
+Zostawione: P24 (niesprawdzalne tutaj), P25 i P29 (pytania), P30 (bez prawdziwej historii Serato), P31–P33 (drobne, przy następnej
+zmianie); z wcześniejszych P11 (Cloudflare), P14, P15, P16 bez zmian.

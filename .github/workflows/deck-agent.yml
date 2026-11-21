@@ -2,9 +2,9 @@ name: Program DJ-a (deck-agent)
 
 # "Scan2Play — Zagrane samo", the program on the DJ's computer (deck-agent/, docs/ideas.md item 19): its own project, never deployed.
 # A change of it runs its tests on Linux (cheap). The packages for Windows, macOS on Apple's chips and macOS on Intel are made only by
-# hand ("Run workflow"): a macOS runner's minute counts as ten of the month's Actions minutes. Run from `main`, they replace the files
-# of the GitHub release "zagrane" — the panel's download links (dashboard.html) point there, the same addresses for every version, and
-# the repository is public, so a DJ needs no account. Run from another branch: only the workflow's artifacts, to try first. The
+# hand ("Run workflow"): a macOS runner's minute counts as ten of the month's Actions minutes. Run from `main`, once all three are
+# built, they replace the files of the GitHub release "zagrane" (job release) — the panel's download links (dashboard.html) point
+# there, the same addresses for every version, and the repository is public, so a DJ needs no account. Run from another branch: only the workflow's artifacts, to try first. The
 # packages are not signed (a beta): Windows shows SmartScreen's "Więcej informacji → Uruchom mimo to", macOS needs System Settings →
 # Privacy & Security → "Open Anyway" once (the panel's "Pierwsze uruchomienie" says so).
 on:
@@ -18,9 +18,10 @@ on:
 permissions:
   contents: read
 
+# a push cancels the run before it; a "Run workflow" is never cancelled midway (it may be replacing the release's files)
 concurrency:
-  group: deck-agent-${{ github.ref }}
-  cancel-in-progress: true
+  group: deck-agent-${{ github.ref }}-${{ github.event_name == 'workflow_dispatch' && github.run_id || 'push' }}
+  cancel-in-progress: ${{ github.event_name != 'workflow_dispatch' }}
 
 jobs:
   test:
@@ -40,6 +41,8 @@ jobs:
   package:
     if: github.event_name == 'workflow_dispatch'
     needs: test
+    outputs:
+      version: ${{ steps.build.outputs.version }}
     strategy:
       matrix:
         include:
@@ -51,8 +54,6 @@ jobs:
             zip: macos-intel
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
-    permissions:
-      contents: write   # the release's files, from main only (below)
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
@@ -63,11 +64,13 @@ jobs:
 
       # the version of deck-agent/pom.xml: the jar's name, the application's version
       - name: Build
+        id: build
         shell: bash
         run: |
           sh mvnw -f deck-agent/pom.xml -B -ntp package -DskipTests
-          VERSION=$(sh mvnw -f deck-agent/pom.xml -q -ntp help:evaluate -Dexpression=project.version -DforceStdout)
+          VERSION=$(sh mvnw -f deck-agent/pom.xml -q -ntp help:evaluate -Dexpression=project.version -DforceStdout | tr -d '\r')
           echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           cp "deck-agent/target/deck-agent-$VERSION.jar" deck-agent/target/app/
 
       # An application folder with its own trimmed Java (no installer: nothing to install, unpack and run). The modules: Swing and
@@ -87,9 +90,13 @@ jobs:
         shell: pwsh
         run: Compress-Archive -Path "out/Scan2Play Zagrane" -DestinationPath "Scan2Play-Zagrane-${{ matrix.zip }}.zip"
 
+      # Apple's chips run no code without a signature: an ad-hoc one ("-", no developer's name, no Apple account) keeps the bundle
+      # whole, so Gatekeeper offers "Open Anyway" instead of saying the app is damaged. It is no signature for Gatekeeper.
       - name: Zip (macOS)
         if: runner.os == 'macOS'
-        run: ditto -c -k --keepParent "out/Scan2Play Zagrane.app" "Scan2Play-Zagrane-${{ matrix.zip }}.zip"
+        run: |
+          codesign --force --deep --sign - "out/Scan2Play Zagrane.app"
+          ditto -c -k --keepParent "out/Scan2Play Zagrane.app" "Scan2Play-Zagrane-${{ matrix.zip }}.zip"
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
@@ -97,19 +104,31 @@ jobs:
           path: Scan2Play-Zagrane-${{ matrix.zip }}.zip
           retention-days: 30
 
-      # From main: the file replaces its namesake on the release "zagrane" (made by the first package job to get here; the three
-      # run at once, so a "create" that loses the race is fine as long as the release is there after it)
+  # From main, once all three packages are built: they replace their namesakes on the release "zagrane" together — never one new
+  # beside two old. Only this job may write to the repository; the builds above run Maven's plugins with a read-only token.
+  release:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    needs: package
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          pattern: Scan2Play-Zagrane-*
+          merge-multiple: true
       - name: Release
-        if: github.ref == 'refs/heads/main'
-        shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
+          VERSION: ${{ needs.package.outputs.version }}
         run: |
+          ls Scan2Play-Zagrane-windows.zip Scan2Play-Zagrane-macos.zip Scan2Play-Zagrane-macos-intel.zip
           gh release view zagrane --repo "$REPO" > /dev/null 2>&1 \
             || gh release create zagrane --repo "$REPO" --target "$GITHUB_SHA" --latest=false \
                  --title "Scan2Play — Zagrane samo" \
-                 --notes "Program na komputer DJ-a: VirtualDJ albo Serato zagra piosenkę z kolejki, a Scan2Play sam oznaczy ją jako zagraną. Linki do pobrania i pierwsze uruchomienie: panel Scan2Play › „🎧 Z programu DJ-a”." \
-            || gh release view zagrane --repo "$REPO" > /dev/null
-          gh release upload zagrane "Scan2Play-Zagrane-${{ matrix.zip }}.zip" --clobber --repo "$REPO"
+                 --notes "Program na komputer DJ-a: VirtualDJ albo Serato zagra piosenkę z kolejki, a Scan2Play sam oznaczy ją jako zagraną. Linki do pobrania i pierwsze uruchomienie: panel Scan2Play › „🎧 Z programu DJ-a”."
+          gh release upload zagrane Scan2Play-Zagrane-windows.zip Scan2Play-Zagrane-macos.zip Scan2Play-Zagrane-macos-intel.zip \
+            --clobber --repo "$REPO"
           gh release edit zagrane --repo "$REPO" --title "Scan2Play — Zagrane samo $VERSION"

@@ -13,6 +13,7 @@ import javax.swing.WindowConstants;
 import java.awt.AWTException;
 import java.awt.BasicStroke;
 import java.awt.Color;
+import java.awt.Desktop;
 import java.awt.Dimension;
 import java.awt.Component;
 import java.awt.Font;
@@ -23,6 +24,7 @@ import java.awt.PopupMenu;
 import java.awt.RenderingHints;
 import java.awt.SystemTray;
 import java.awt.TrayIcon;
+import java.awt.desktop.AppReopenedListener;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.time.ZoneId;
@@ -59,7 +61,7 @@ final class Window {
         this.settings = settings;
         this.wasPaired = settings.token() != null;
         pairPanel.setLayout(new BoxLayout(pairPanel, BoxLayout.Y_AXIS));
-        pairPanel.add(left(new JLabel("<html>1. W panelu Scan2Play: kolejka › „🎧 Z programu DJ-a” › „Połącz komputer”.<br>"
+        pairPanel.add(left(new JLabel("<html>1. W panelu Scan2Play: kolejka › „Z programu DJ-a” › „Połącz komputer”.<br>"
                 + "2. Wpisz tutaj kod z panelu.</html>")));
         pairPanel.add(Box.createVerticalStrut(8));
         pairPanel.add(left(row(new JLabel("Kod:"), code, connect)));
@@ -96,6 +98,7 @@ final class Window {
         frame.setIconImage(icon(64));
         frame.setDefaultCloseOperation(SystemTray.isSupported() ? WindowConstants.HIDE_ON_CLOSE : WindowConstants.EXIT_ON_CLOSE);
         tray();
+        reopenFromTheDock();
         showPaired(settings.token() != null);
         frame.pack();
         frame.setLocationRelativeTo(null);
@@ -180,6 +183,16 @@ final class Window {
             SystemTray.getSystemTray().add(icon);
         } catch (AWTException e) {
             frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+        }
+    }
+
+    /**
+     * macOS: a click on the program's icon in the Dock (or opening the app again from Finder, which starts no second copy there)
+     * shows the window closed into the menu bar; without this the click does nothing and the program looks dead.
+     */
+    private void reopenFromTheDock() {
+        if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.APP_EVENT_REOPENED)) {
+            Desktop.getDesktop().addAppEventListener((AppReopenedListener) e -> show());
         }
     }
 

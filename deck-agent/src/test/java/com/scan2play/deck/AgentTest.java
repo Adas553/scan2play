@@ -157,6 +157,27 @@ class AgentTest {
         assertEquals(List.of(0, 20, 5), server.calls.stream().map(List::size).toList(), "the minute's call, then 20 and the rest");
     }
 
+    /**
+     * A new pairing (a new token) is asked about at once, not at the minute's call: a party without Pro is said in the window at once,
+     * and an earlier "odłączono w panelu" is not left to be shown again when the DJ disconnects this computer by its own button.
+     */
+    @Test
+    void aNewPairing_isAskedAboutAtOnce(@TempDir Path dir) throws Exception {
+        Settings settings = paired(dir);
+        Agent agent = agent(settings);
+        server.outcome = ServerClient.Outcome.DISCONNECTED;
+        agent.tick();
+        assertEquals(1, server.calls.size());
+
+        settings.paired("https://example.test", "tok2");
+        server.outcome = ServerClient.Outcome.NO_PLAN;
+        now.set(START.plusSeconds(10));
+        agent.tick();
+
+        assertEquals(2, server.calls.size(), "called at once, not a minute after the last call");
+        assertEquals(ServerClient.Outcome.NO_PLAN, shown.get().last());
+    }
+
     @Test
     void notPaired_sendsNothing(@TempDir Path dir) {
         Agent agent = agent(new Settings(dir.resolve("none.properties")));

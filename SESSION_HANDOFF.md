@@ -71,16 +71,12 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
   (`docs/history/review-2026-11-21-event-plan-trends.md`) and its fixes P1–P17 (left: see "Poprawki" there). Waits for the owner: the
   read, a look on a phone (the hosts' page, the panel's card), then PRs to `dev` / into the branches' PRs to `main`; on Railway
   `TRENDS_EXCLUDE_PARTIES` = the owner's test parties' codes (optional).
-- **2026-11-21 — `claude/loving-maxwell-sl8pkl` (from `main` = `6ba04f6`), PRs #297 (`main`) and #298 (`dev`), migration V78 (only adds):** item 18's analysis (the
-  artifact https://claude.ai/artifact/Psa7Ve58PHUmVzAFMtJGTA, `tools/spike/dj_history_spike.py`) and its variant E built — "🎧 Z programu
-  DJ-a" over the queue, `POST /dj/dashboard/plays`, `DeckHistoryService`. Chrome refused VirtualDJ's AppData (the owner's try), so item 19
-  (the program, variant A) stage (1) followed: `deck-agent/`, migration V78 `dj_device` (only adds), `/api/device/*`, "Połącz komputer".
-  Waits for the owner: "Run workflow" of `deck-agent.yml`, a try on the PC with VirtualDJ against `dev.`, the review, PRs.
-- **2026-11-21 — its review (`docs/history/review-2026-11-21-play-history.md`), on the same branch, no new migration:** "merge after
-  fixes" — P1–P8, P17–P18 fixed (a body limit, `sentAt` for a DJ computer's clock, one pairing code a party, the token file
-  owner-only, the window, `aria-label`s).
-  The owner's answers done: Pro (`PlanFeature.DECK`), download links (GitHub release `zagrane`, Intel Macs too), slack 2 min,
-  1000 wrong codes. Waits: the merge, then at once "Run workflow" of `deck-agent.yml` from `main` (the links need it).
+- **2026-11-21 — `claude/loving-maxwell-sl8pkl` (from `main` = `6ba04f6`), PRs #297 (`main`) and #298 (`dev`), V78 (only adds):**
+  "Zagrane samo" — item 18's variant E (the panel reads VirtualDJ / Serato history, `POST /dj/dashboard/plays`) and item 19's program
+  (`deck-agent/`, `dj_device`, `/api/device/*`, "Połącz komputer"); Pro (`DECK`), the GitHub release `zagrane`. Reviewed twice
+  (`docs/history/review-2026-11-21-play-history.md`: P1–P18 and the owner's answers; the third, independent pass P19–P33, "merge
+  after fixes", P19–P23 and P26–P28 fixed). Waits: answers to its 3 questions (P25 "Odłącz" without Pro, P29, P23/P24), the merge,
+  then at once "Run workflow" from `main` (the links need it), tries on Windows 11 and an M1 Mac.
 - **Waits for the owner (from #269):** after the first commit the deploy window holds back (Fri–Sun 18:00–6:00): does Railway
   deploy it on the workflow's re-run? UptimeRobot is set up (the owner, 2026-11-17; `docs/monitoring.md`).
 - **Waits for the owner (the wishes, #263):** the three older Polish texts with "DJ" and a masculine verb (`guest.vote.gone`,

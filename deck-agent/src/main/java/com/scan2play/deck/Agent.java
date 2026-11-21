@@ -16,7 +16,8 @@ import java.util.function.Consumer;
  * The program's work, a look every few seconds ({@link #tick}): each DJ program's history read again when it changed, its new songs
  * sent to Scan2Play — at most {@value #MAX_PER_CALL} a call, the rest at the next look —, the requests the server marked told to the
  * window. The songs that started more than 10 minutes before the program did are the set before it (or another day's): not sent.
- * With nothing to send the program still calls once a minute, so the panel shows it alive and a "Odłącz" there is heard.
+ * With nothing to send the program still calls once a minute, so the panel shows it alive and a "Odłącz" there is heard — and at
+ * once after a new pairing, so the window says at once what the server thinks of it (a party without Pro).
  */
 final class Agent {
 
@@ -40,6 +41,8 @@ final class Agent {
     private final Set<String> seen = new HashSet<>();
     private final List<Played> waiting = new ArrayList<>();
     private Instant lastCall = Instant.EPOCH;
+    /** The token of the last call: a new pairing is asked about at once, its answer not mixed with the old token's. */
+    private String lastToken;
     private List<String> lastMarked = List.of();
     private ServerClient.Outcome lastOutcome;
 
@@ -73,6 +76,11 @@ final class Agent {
             }
         }
         String token = settings.token();
+        if (token != null && !token.equals(lastToken)) {
+            lastToken = token;
+            lastCall = Instant.EPOCH;
+            lastOutcome = null;
+        }
         if (token != null && (!waiting.isEmpty() || Duration.between(lastCall, now).compareTo(ALIVE_EVERY) >= 0)) {
             send(token, now);
         }

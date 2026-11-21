@@ -9,19 +9,22 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 
-/** The newest file with an extension in the first of some folders that has one: VirtualDJ's day, Serato's session. */
+/**
+ * The newest file with an extension in some folders: VirtualDJ's day, Serato's session. Of all of them, not of the first that has
+ * one: an old install's history may stay in one folder (the registry's HomeFolder, the Documents) while tonight's is written in another.
+ */
 final class NewestFile {
 
     private NewestFile() {
     }
 
     static Optional<Path> in(List<Path> folders, String extension) throws IOException {
+        Path newest = null;
+        FileTime newestTime = null;
         for (Path folder : folders) {
             if (!Files.isDirectory(folder)) {
                 continue;
             }
-            Path newest = null;
-            FileTime newestTime = null;
             try (DirectoryStream<Path> files = Files.newDirectoryStream(folder)) {
                 for (Path file : files) {
                     if (!Files.isRegularFile(file) || !file.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(extension)) {
@@ -34,11 +37,8 @@ final class NewestFile {
                     }
                 }
             }
-            if (newest != null) {
-                return Optional.of(newest);
-            }
         }
-        return Optional.empty();
+        return Optional.ofNullable(newest);
     }
 
     static String version(Path file) throws IOException {

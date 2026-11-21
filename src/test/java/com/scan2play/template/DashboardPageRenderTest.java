@@ -1069,6 +1069,12 @@ class DashboardPageRenderTest {
                         "releases/download/zagrane/Scan2Play-Zagrane-macos-intel.zip", "Mac z procesorem Intel", "„Uruchom mimo to”",
                         "„Otwórz mimo to”")
                 .doesNotContain("napisz do nas");
+        // the program reads with no tab open: "keep the tab open" belongs to the browser's own reading (variant E) alone, never
+        // above the program's part, where it would say the opposite of the program's help
+        String card = html.substring(html.indexOf("id=\"deckReader\""), html.indexOf("id=\"deckMarked\""));
+        assertThat(card.indexOf("Ta karta panelu musi zostać otwarta")).as("said in the browser's part, after the program's")
+                .isGreaterThan(card.indexOf("id=\"deckBrowser\""));
+        assertThat(card).as("what reaches Scan2Play: said once, for both").containsOnlyOnce("trafiają tylko wykonawca, tytuł i godzina");
     }
 
     /** "Podsumowanie wieczoru" (V35): to an organiser without Pro, the way to /pro with "PRO"; to the staff of such a party, nothing. */

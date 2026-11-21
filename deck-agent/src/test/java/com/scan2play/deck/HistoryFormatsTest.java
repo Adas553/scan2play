@@ -85,7 +85,7 @@ class HistoryFormatsTest {
     }
 
     @Test
-    void theNewestFile_ofTheFirstFolderThatHasOne(@TempDir Path dir) throws Exception {
+    void theNewestFile_withTheExtension_anEmptyFolderSkipped(@TempDir Path dir) throws Exception {
         Path empty = Files.createDirectories(dir.resolve("AppData/Local/VirtualDJ/History"));
         Path documents = Files.createDirectories(dir.resolve("Documents/VirtualDJ/History"));
         Files.writeString(documents.resolve("2026-11-20.m3u"), "x");
@@ -94,6 +94,33 @@ class HistoryFormatsTest {
         Files.setLastModifiedTime(documents.resolve("2026-11-20.m3u"), java.nio.file.attribute.FileTime.fromMillis(1000));
 
         assertEquals(today, NewestFile.in(List.of(empty, documents), ".m3u").orElseThrow());
+    }
+
+    /**
+     * An old install's history left in one folder (the registry's HomeFolder, the Documents) while VirtualDJ writes tonight's in
+     * another (AppData): the file written last is tonight's, whichever folder comes first.
+     */
+    @Test
+    void theNewestFile_ofAllTheFolders_notTheFirstOneWithAFile(@TempDir Path dir) throws Exception {
+        Path old = Files.createDirectories(dir.resolve("Documents/VirtualDJ/History"));
+        Path appData = Files.createDirectories(dir.resolve("AppData/Local/VirtualDJ/History"));
+        Files.writeString(old.resolve("2024-05-01.m3u"), "x");
+        Files.setLastModifiedTime(old.resolve("2024-05-01.m3u"), java.nio.file.attribute.FileTime.fromMillis(1_714_000_000_000L));
+        Path today = Files.writeString(appData.resolve("2026-11-21.m3u"), "x");
+
+        assertEquals(today, NewestFile.in(List.of(old, appData), ".m3u").orElseThrow());
+    }
+
+    /** Windows with OneDrive's backup of the folders: the Documents and the Music are under %OneDrive%, the old ones stay listed. */
+    @Test
+    void windows_withOneDrive_looksInItsDocumentsAndMusicToo() {
+        Platform windows = new Platform(Path.of("C:\\Users\\dj"), Map.of("LOCALAPPDATA", "C:\\Users\\dj\\AppData\\Local",
+                "OneDrive", "C:\\Users\\dj\\OneDrive"), true);
+        assertTrue(windows.seratoSessionFolders().contains(Path.of("C:\\Users\\dj\\OneDrive", "Music", "_Serato_", "History", "Sessions")));
+        assertTrue(windows.seratoSessionFolders().contains(Path.of("C:\\Users\\dj", "Music", "_Serato_", "History", "Sessions")));
+        assertTrue(windows.virtualDjFolders().contains(Path.of("C:\\Users\\dj\\OneDrive", "Documents", "VirtualDJ", "History")));
+        assertEquals(1, new Platform(Path.of("/Users/dj"), Map.of("OneDrive", "/x"), false).seratoSessionFolders().size(),
+                "not on a Mac");
     }
 
     @Test

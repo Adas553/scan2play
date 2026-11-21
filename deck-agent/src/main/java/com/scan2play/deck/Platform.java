@@ -43,6 +43,7 @@ final class Platform {
         if (windows) {
             folder("LOCALAPPDATA").ifPresent(local -> folders.add(local.resolve("VirtualDJ").resolve("History")));
             folders.add(home.resolve("Documents").resolve("VirtualDJ").resolve("History"));
+            oneDrive().ifPresent(cloud -> folders.add(cloud.resolve("Documents").resolve("VirtualDJ").resolve("History")));
         } else {
             folders.add(home.resolve("Library").resolve("Application Support").resolve("VirtualDJ").resolve("History"));
             folders.add(home.resolve("Documents").resolve("VirtualDJ").resolve("History"));
@@ -51,7 +52,18 @@ final class Platform {
     }
 
     List<Path> seratoSessionFolders() {
-        return List.of(home.resolve("Music").resolve("_Serato_").resolve("History").resolve("Sessions"));
+        List<Path> folders = new ArrayList<>(List.of(home.resolve("Music").resolve("_Serato_").resolve("History").resolve("Sessions")));
+        oneDrive().ifPresent(cloud -> folders.add(cloud.resolve("Music").resolve("_Serato_").resolve("History").resolve("Sessions")));
+        return folders;
+    }
+
+    /**
+     * OneDrive's folder on a Windows that backs up the Documents (and the Music) there — a new laptop's default: the programs then write
+     * their history under it. The folders' names under it are taken as the English ones; a Windows that gives them its own language's
+     * names is not seen (to try on a Polish Windows).
+     */
+    private Optional<Path> oneDrive() {
+        return windows ? folder("OneDrive") : Optional.empty();
     }
 
     List<Path> serato4Databases() {
