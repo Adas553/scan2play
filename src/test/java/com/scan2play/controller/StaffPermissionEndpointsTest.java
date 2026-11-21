@@ -80,8 +80,7 @@ class StaffPermissionEndpointsTest {
         ReflectionTestUtils.setField(dashboard, "rawBaseUrl", "http://localhost:8080");
         dashboard.init();
         mockMvc = MockMvcBuilders.standaloneSetup(
-                        new DjSongController(mock(DjService.class), helper, com.scan2play.service.Plans.off(), songCommands,
-                                mock(com.scan2play.service.DeckHistoryService.class)),
+                        new DjSongController(mock(DjService.class), helper, com.scan2play.service.Plans.off(), songCommands),
                         new DjPartySettingsController(mock(PartySettingsCommandService.class), mock(AccountDeletionService.class), mock(com.scan2play.service.PartyCodeService.class), helper, com.scan2play.service.Plans.off(), com.scan2play.service.PartySchedules.of(mock(PartySettingsCommandService.class))),
                         dashboard,
                         new DjSummaryController(oneEvening(), helper, codesAsTexts(), com.scan2play.service.Plans.off(), "https://www.scan2play.com.pl/"),
@@ -116,9 +115,6 @@ class StaffPermissionEndpointsTest {
                 Arguments.of(StaffPermission.QUEUE, post("/dj/dashboard/dismiss").param("id", "1").param("partyCode", PUB)),
                 Arguments.of(StaffPermission.QUEUE, post("/dj/dashboard/restore").param("id", "1").param("partyCode", PUB)),
                 Arguments.of(StaffPermission.QUEUE, post("/dj/dashboard/add-song").param("song", "Wilki - Baśka").param("partyCode", PUB)),
-                // "Zagrane samo": the songs the DJ's program played, read by the panel (docs/ideas.md item 18)
-                Arguments.of(StaffPermission.QUEUE, post("/dj/dashboard/plays").contentType("application/json")
-                        .content("{\"partyCode\":\"" + PUB + "\",\"plays\":[{\"artist\":\"Wilki\",\"title\":\"Baśka\"}]}")),
                 Arguments.of(StaffPermission.TIPS, post("/dj/dashboard/tip-count").param("id", "1").param("partyCode", PUB)),
                 Arguments.of(StaffPermission.CLEAR_QUEUE, post("/dj/dashboard/clear-queue").param("partyCode", PUB)),
                 Arguments.of(StaffPermission.OPEN_CLOSE, post("/dj/end-party").param("partyCode", PUB)),

@@ -284,7 +284,7 @@ piece of work or when a task names an item. A finished item stays here until its
    plan in the hosts' evening summary. **Rejected:** a chat or comments, contracts and payments, a form builder first, the AI checking
    the plan.
 
-18. **A program on the DJ's computer that reads what really plays — variant E built on `claude/loving-maxwell-sl8pkl`, not released (no migration)** (Claude's idea, 2026-11-20, the third of
+18. **A program on the DJ's computer that reads what really plays — variant E released with #297, then parked (removed 2026-11-21); item 19 is the way** (Claude's idea, 2026-11-20, the third of
    the three "to bind the DJs" with "Trendy próśb" (16) and "Plan imprezy" (17); the owner: 3 first, then 1 — this one
    not picked yet). A small program in the background reads the play history of VirtualDJ, Serato or rekordbox and sends
    it to Scan2Play: a request is marked "Zagrane" by itself (no tap during the set), and it unlocks what item 13 parked
@@ -333,8 +333,13 @@ piece of work or when a task names an item. A finished item stays here until its
    a little early. **To try:** a real VirtualDJ and a real Serato history at a party (the formats are from the open-source readers and
    Serato 2.4 / 2.5 sample files). **Still open:** Pro or Free; the whole set kept for the summary and "Co to było?"; "Leci Twoja
    piosenka!"; A (a tray app) if DJs of other browsers ask.
+   **Variant E parked (the owner, 2026-11-21, after the program of item 19 worked on a real Windows 11):** removed from the panel —
+   "W tej przeglądarce (Chrome, Edge)", "Wskaż folder historii", `POST /dj/dashboard/plays`, the browser scenarios `deck-reader-*` —
+   because a DJ would get lost choosing between two ways in one card; the card shows the program only. Back only if the program does not
+   work out. Its code: commit `6c25e0a` (the merge of #297 on `main`): `js/dashboard/play-history.js`, `DjSongController.deckPlays`,
+   `src/test/browser/scenarios/play-history.js`. The server's `DeckHistoryService` stays (the program uses it).
 
-19. **A program in the tray on the DJ's computer — item 18's variant A, stage (1) built on `claude/loving-maxwell-sl8pkl`, not released (V78)** (the owner, 2026-11-21: "rozpisz wariant A", then "to może zrobimy wersję A?" once Chrome refused AppData; after
+19. **A program in the tray on the DJ's computer — item 18's variant A, stage (1) released (#297 `main`, #298 `dev`, V78); tried on a real Windows 11** (the owner, 2026-11-21: "rozpisz wariant A", then "to może zrobimy wersję A?" once Chrome refused AppData; after
    E is built: E first, A only if the DJs use E and those of other browsers ask). What E cannot: Firefox, Safari, Brave and the tab
    left open; the folders a browser may not open (Serato 4's and djay's databases under `AppData` / `~/Library`); the hardware.
    **The program:** Java 21 + `jpackage` (the server's language; an installer with its own Java, ~40–60 MB — a guess), a tray icon
@@ -366,9 +371,12 @@ piece of work or when a task names an item. A finished item stays here until its
    (`--console`) paired by a token, a VirtualDJ file written line by line → the request "Zagrane", the other one and the earlier set
    untouched; 400 / 401 / 403 and no session as they should be. The packages: `.github/workflows/deck-agent.yml` by hand ("Run
    workflow"), unsigned zips for Windows and macOS (~127 MB unpacked on Linux; less without the locale data). Taken as recommended:
-   nothing of the set kept, Polish only; Pro (the owner, 2026-11-21). **To try (the owner):** "Run workflow", the Windows zip on the PC with
-   VirtualDJ — "Połącz komputer" in the panel of `dev.`, the server `https://dev.scan2play.com.pl` in the program's window; whether
-   Cloudflare lets a program (not a browser) through to `/api/device/*`. **Still open:** stages (2)–(4); the signing. **Done after the review (2026-11-21):** the download links in the card (the
+   nothing of the set kept, Polish only; Pro (the owner, 2026-11-21). **Tried (the owner, 2026-11-21, Windows 11 with VirtualDJ 8.5, production):**
+   SmartScreen's "Uruchom mimo to", the history found in `%LOCALAPPDATA%\VirtualDJ\History`, the pairing, a request marked ~47 s
+   after it started (VirtualDJ's `historyDelay` ~45 s + up to 3 s), the other one left, nothing marked twice after a restart, both
+   "Odłącz", a wrong code; Cloudflare lets `/api/device/*` through (a 401 from the app). Fixed after it: a second copy of the program
+   refused (two tray icons), "Wpisz kod z panelu" for an empty code, the window's last three songs marked. **To try:** a Mac (M1 and
+   Intel), a Windows account with a Polish letter, the history under OneDrive's Documents; a real Serato. **Still open:** stages (2)–(4); the signing. **Done after the review (2026-11-21):** the download links in the card (the
    GitHub release `zagrane`, written by "Run workflow" from `main`; Windows, Mac with Apple's chips, Mac with Intel) and the
    first start's help; review `docs/history/review-2026-11-21-play-history.md`. Its third pass: the release uploads all three packages together,
    the Mac bundle is signed ad hoc, the program takes the newest history file of all folders (OneDrive's too); the program's "Odłącz ten komputer" removes it from

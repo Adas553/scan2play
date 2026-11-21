@@ -338,8 +338,8 @@
                         class="btn btn-sm btn-outline-light text-nowrap" aria-expanded="false" aria-controls="addSongForm"
                         th:attr="aria-label=#{dashboard.add_song.label}"><span class="d-none d-sm-inline" th:text="#{dashboard.add_song}">+ Add a song</span><span
                         class="d-sm-none" th:text="#{dashboard.add_song.short}">+ Add</span></button>
-                <!--/* "Zagrane samo" (docs/ideas.md items 18, 19): the program on the DJ's computer (V78), or this browser itself, reads
-                     VirtualDJ's or Serato's play history and the queue's songs are marked played (play-history.js). Shown by the script on
+                <!--/* "Zagrane samo" (docs/ideas.md item 19): the program on the DJ's computer (V78) reads VirtualDJ's or Serato's play
+                     history and the queue's songs are marked played; the card pairs it (play-history.js). Shown by the script on
                      a screen 768 px wide or more (a computer); not in the demo. With Pro (PlanFeature.DECK): without it nothing here, no
                      offer in the queue — /pro names it. */-->
                 <button th:if="${(access == null or access.may('QUEUE')) and demo != true and (plan == null or plan.allows('DECK'))}" type="button" id="deckToggle" hidden
@@ -367,54 +367,49 @@
             </div>
             <p class="small text-secondary mt-1 mb-0" th:text="#{dashboard.add_song.help}">It goes straight into the queue, without the AI.</p>
         </form>
-        <!--/* "Zagrane samo": folded out by #deckToggle. The texts with {…} are filled in by play-history.js. */-->
-        <section th:if="${(access == null or access.may('QUEUE')) and demo != true and (plan == null or plan.allows('DECK'))}" id="deckReader" class="mb-3 s2p-deck-reader" hidden
-                 aria-labelledby="deckReaderTitle"
-                 th:attr="data-resume=#{dashboard.deck.resume},data-reading=#{dashboard.deck.reading},data-marked=#{dashboard.deck.marked},
-                          data-none=#{dashboard.deck.none},data-denied=#{dashboard.deck.denied},data-failed=#{dashboard.deck.failed},
-                          data-refused=#{dashboard.deck.refused},data-device-code=#{dashboard.computer.code},
+        <!--/* "Zagrane samo": folded out by #deckToggle; a card as "Impreza". One way only, the program on the computer (the browser's
+             own reading, variant E of docs/ideas.md item 18, is parked). Without a computer paired: three steps (download, start,
+             connect); with one, its row only and "Połącz kolejny komputer" — the steps are for the first time, the row is what a DJ
+             checks at a party (play-history.js shows one or the other). The privacy line last: what the DJ needs first is how. The
+             texts with {…} are filled in by play-history.js. */-->
+        <section th:if="${(access == null or access.may('QUEUE')) and demo != true and (plan == null or plan.allows('DECK'))}" id="deckReader"
+                 class="card bg-dark border-secondary p-3 mb-3 s2p-deck-reader" hidden aria-labelledby="deckReaderTitle"
+                 th:attr="data-device-code=#{dashboard.computer.code},
                           data-device-seen=#{dashboard.computer.seen},data-device-remove=#{dashboard.computer.remove},
-                          data-device-none=#{dashboard.computer.none},data-device-failed=#{dashboard.computer.failed}">
-            <h3 id="deckReaderTitle" class="h6 text-light mb-1" th:text="#{dashboard.deck.title}">Played, from your DJ software</h3>
-            <p class="small text-secondary mb-2" th:text="#{dashboard.deck.privacy}">The files stay on the computer…</p>
-            <!--/* The program on the DJ's computer (V78, docs/ideas.md item 19): any browser; the code and the computers by
-                 /dj/devices (play-history.js) */-->
-            <div id="deviceBlock" class="mb-3">
-                <h4 class="small fw-bold text-light mb-1" th:text="#{dashboard.computer.title}">The program on your computer (Windows, Mac)</h4>
-                <p class="small text-light mb-1" th:text="#{dashboard.computer.help}">The program reads VirtualDJ’s and Serato’s history…</p>
-                <!--/* The packages of .github/workflows/deck-agent.yml, on the GitHub release "zagrane" (the repository is public: no
-                     account needed; the same addresses for every version). The first start's warnings: the program is not signed. */-->
-                <p id="deviceDownload" class="small text-light mb-1"><span th:text="#{dashboard.computer.download}">Download the program:</span>
-                    <a href="https://github.com/Adas553/scan2play/releases/download/zagrane/Scan2Play-Zagrane-windows.zip">Windows</a> ·
-                    <a href="https://github.com/Adas553/scan2play/releases/download/zagrane/Scan2Play-Zagrane-macos.zip"
-                       th:text="#{dashboard.computer.download.mac}">Mac (Apple M1 and later)</a> ·
-                    <a href="https://github.com/Adas553/scan2play/releases/download/zagrane/Scan2Play-Zagrane-macos-intel.zip"
-                       th:text="#{dashboard.computer.download.intel}">Mac with an Intel processor</a></p>
-                <details class="small text-secondary mb-2">
-                    <summary th:text="#{dashboard.computer.first}">The first start</summary>
-                    <p class="mb-1 mt-1" th:text="#{dashboard.computer.first.windows}">Windows: unpack the zip…</p>
-                    <p class="mb-0" th:text="#{dashboard.computer.first.mac}">Mac: unpack the zip…</p>
-                </details>
-                <div class="d-flex flex-wrap align-items-center gap-2">
-                    <button type="button" id="deviceConnect" class="btn btn-sm btn-outline-light" th:text="#{dashboard.computer.connect}">Connect a computer</button>
-                    <span id="deviceCode" class="small text-warning" aria-live="polite"></span>
-                </div>
-                <ul id="deviceList" class="list-unstyled small text-secondary mt-2 mb-0"></ul>
+                          data-device-failed=#{dashboard.computer.failed}">
+            <h3 id="deckReaderTitle" class="s2p-card-title" th:text="#{dashboard.deck.title}">Played, from your DJ software</h3>
+            <p class="s2p-card-help" th:text="#{dashboard.computer.help}">A program for Windows or Mac reads…</p>
+            <!--/* The computers paired (/dj/devices), each with "Odłącz" */-->
+            <ul id="deviceList" class="list-unstyled small mb-0"></ul>
+            <button type="button" id="deviceAnother" class="btn btn-sm btn-outline-secondary mt-2 align-self-start" hidden
+                    th:text="#{dashboard.computer.another}">Connect another computer</button>
+            <div id="deviceSetup">
+                <ol class="s2p-deck-steps small text-light mb-0">
+                    <!--/* The packages of .github/workflows/deck-agent.yml, on the GitHub release "zagrane" (the repository is public:
+                         no account needed; the same addresses for every version) */-->
+                    <li><span th:text="#{dashboard.computer.download}">Download the program:</span>
+                        <span class="d-inline-flex flex-wrap gap-2 ms-1">
+                            <a class="btn btn-sm btn-outline-light" href="https://github.com/Adas553/scan2play/releases/download/zagrane/Scan2Play-Zagrane-windows.zip">Windows</a>
+                            <a class="btn btn-sm btn-outline-light" href="https://github.com/Adas553/scan2play/releases/download/zagrane/Scan2Play-Zagrane-macos.zip"
+                               th:text="#{dashboard.computer.download.mac}">Mac (M1 and later)</a>
+                            <a class="btn btn-sm btn-outline-light" href="https://github.com/Adas553/scan2play/releases/download/zagrane/Scan2Play-Zagrane-macos-intel.zip"
+                               th:text="#{dashboard.computer.download.intel}">Mac (Intel)</a>
+                        </span></li>
+                    <!--/* The first start's warnings, folded: the program is not signed */-->
+                    <li><span th:text="#{dashboard.computer.start}">Unpack the zip file and start “Scan2Play Zagrane”.</span>
+                        <details class="text-secondary mt-1">
+                            <summary th:text="#{dashboard.computer.first}">The first start</summary>
+                            <p class="mb-1 mt-1" th:text="#{dashboard.computer.first.windows}">Windows: the program is not signed yet…</p>
+                            <p class="mb-0" th:text="#{dashboard.computer.first.mac}">Mac: the first time macOS stops it…</p>
+                        </details></li>
+                    <li><span th:text="#{dashboard.computer.pair}">Connect it to this party:</span>
+                        <span class="d-inline-flex flex-wrap align-items-center gap-2 ms-1">
+                            <button type="button" id="deviceConnect" class="btn btn-sm btn-action" th:text="#{dashboard.computer.connect}">Connect a computer</button>
+                            <span id="deviceCode" class="text-warning" aria-live="polite"></span>
+                        </span></li>
+                </ol>
             </div>
-            <!--/* Variant E: this browser reads the history folder itself (Chrome, Edge) — shown by play-history.js when it can */-->
-            <div id="deckBrowser" hidden>
-            <h4 class="small fw-bold text-light mb-1" th:text="#{dashboard.deck.browser.title}">In this browser (Chrome, Edge)</h4>
-            <p class="small text-light mb-1" th:text="#{dashboard.deck.help}">When VirtualDJ or Serato plays a song of the queue…</p>
-            <!--/* only here: the program above reads with no tab open */-->
-            <p class="small text-secondary mb-2" th:text="#{dashboard.deck.browser.open}">Keep this tab of the panel open.</p>
-            <div class="d-flex flex-wrap align-items-center gap-2">
-                <button type="button" id="deckPick" class="btn btn-sm btn-outline-light" th:text="#{dashboard.deck.pick}">Choose the history folder</button>
-                <button type="button" id="deckResume" class="btn btn-sm btn-outline-light" hidden>Resume</button>
-                <button type="button" id="deckStop" class="btn btn-sm btn-outline-secondary" hidden th:text="#{dashboard.deck.stop}">Turn off</button>
-            </div>
-            <p id="deckStatus" class="small text-secondary mt-2 mb-0" role="status" aria-live="polite"></p>
-            </div>
-            <p id="deckMarked" class="small text-success mt-1 mb-0" aria-live="polite"></p>
+            <p class="small text-secondary mt-3 mb-0" th:text="#{dashboard.deck.privacy}">The files stay on the computer…</p>
         </section>
         <!--/* A server limit that stops guest songs now, or the AI not judging: shown from the page's model, then shown / hidden by
              polling.js from the X-Guest-Limits header of every queue poll (data-guest-limit = the flag of the header). */-->

@@ -1,5 +1,6 @@
 package com.scan2play.deck;
 
+import javax.swing.JOptionPane;
 import java.awt.GraphicsEnvironment;
 import java.io.IOException;
 import java.time.Clock;
@@ -21,6 +22,11 @@ public final class Main {
 
     static final int LOOK_EVERY_SECONDS = 3;
 
+    static final String ALREADY_RUNNING = "Program już działa — kliknij jego ikonę w zasobniku (obok zegara) i wybierz „Pokaż”.";
+
+    /** Held for the program's whole life: a lock no longer reachable could be closed by the garbage collector. */
+    private static SingleInstance running;
+
     private Main() {
     }
 
@@ -35,7 +41,16 @@ public final class Main {
             return thread;
         });
 
-        if (GraphicsEnvironment.isHeadless() || List.of(args).contains("--pair") || List.of(args).contains("--console")) {
+        boolean inConsole = GraphicsEnvironment.isHeadless() || List.of(args).contains("--pair") || List.of(args).contains("--console");
+        if (!onlyCopy()) {
+            if (inConsole) {
+                System.out.println(ALREADY_RUNNING);
+            } else {
+                JOptionPane.showMessageDialog(null, ALREADY_RUNNING, "Scan2Play — Zagrane samo", JOptionPane.INFORMATION_MESSAGE);
+            }
+            System.exit(1);
+        }
+        if (inConsole) {
             console(args, settings, client, sources, looks);
             return;
         }
@@ -65,6 +80,19 @@ public final class Main {
         }));
         window[0].show();
         looks.scheduleWithFixedDelay(agent::tick, 0, LOOK_EVERY_SECONDS, TimeUnit.SECONDS);
+    }
+
+    /**
+     * True when no other copy runs. A lock that cannot be made at all (the folder not writable) does not stop the program: the guard
+     * only spares the DJ a second copy, it must never keep the only one from starting.
+     */
+    private static boolean onlyCopy() {
+        try {
+            running = SingleInstance.tryAcquire(SingleInstance.forThisUser());
+            return running != null;
+        } catch (IOException e) {
+            return true;
+        }
     }
 
     private static void console(String[] args, Settings settings, ServerClient client, List<HistorySource> sources,

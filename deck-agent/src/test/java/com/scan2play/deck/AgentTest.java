@@ -109,6 +109,25 @@ class AgentTest {
         assertEquals(List.of("VirtualDJ (2026-11-21.m3u)"), shown.get().reading());
     }
 
+    /** The window lists the last songs marked since the start, not only the last call's: a call usually marks one song. */
+    @Test
+    void theMarkedSongs_add_upToTheLastThree(@TempDir Path dir) throws Exception {
+        Agent agent = agent(paired(dir));
+        agent.tick();
+        String[] songs = {"Sanah - Szampan", "Dawid Podsiadło - Małomiasteczkowy", "Kult - Arahja", "Perfect - Autobiografia"};
+        for (int i = 0; i < songs.length; i++) {
+            source.played(START.plusSeconds(10L * (i + 1)), "A" + i, "T" + i);
+            server.marked = List.of(songs[i]);
+            now.set(START.plusSeconds(10L * (i + 1) + 1));
+            agent.tick();
+        }
+        server.marked = List.of();
+        now.set(START.plusSeconds(200));
+        agent.tick();   // the minute's call marks nothing: the list stays
+
+        assertEquals(List.of(songs[1], songs[2], songs[3]), shown.get().marked());
+    }
+
     @Test
     void aFailedCall_keepsTheSongsForTheNextLook(@TempDir Path dir) throws Exception {
         Agent agent = agent(paired(dir));

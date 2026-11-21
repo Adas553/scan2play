@@ -25,8 +25,7 @@ import java.util.Optional;
 
 /**
  * The DJ's program on the DJ's computer ("Program na komputerze", docs/ideas.md item 19, V78): it pairs with a party by the code the
- * panel shows, then sends the songs VirtualDJ or Serato played — the same as the panel's "Zagrane samo" (variant E), with its own
- * token instead of the DJ's session. Public (no login, no CSRF: no cookie is used — SecurityConfig); a token unknown or revoked
+ * panel shows, then sends the songs VirtualDJ or Serato played, with its own token instead of the DJ's session. Public (no login, no CSRF: no cookie is used — SecurityConfig); a token unknown or revoked
  * ("Odłącz") is a 401, too many calls a 429, a party whose organiser has no Pro (any more) a 403 {@code {"error": "plan"}}. The
  * program's own "Odłącz ten komputer" forgets its computer here too ({@code /unpair}).
  */
@@ -48,11 +47,17 @@ public class DeviceApiController {
     }
 
     /**
-     * The songs the program read since its last call, as the panel's {@link DjSongController.DeckPlay}, and its clock as it sent them
-     * (seconds since 1970; {@link DjSongController#songsOf}).
+     * The songs the program read since its last call, and its clock as it sent them (seconds since 1970; {@link #songsOf}).
      */
-    public record PlaysRequest(List<DjSongController.DeckPlay> plays, Long sentAt) {
+    public record PlaysRequest(List<DeckPlay> plays, Long sentAt) {
     }
+
+    /** One song as the DJ's program's history writes it: {@code at} in seconds since 1970, or none. */
+    public record DeckPlay(Long at, String artist, String title) {
+    }
+
+    /** The longest artist or title taken: more is no song's name (the keys cut at {@code LibraryKey.MAX} anyway). */
+    static final int DECK_FIELD_MAX = 500;
 
     /**
      * The code swapped for the program's token: {@code {"token": "…"}}; a wrong, used or expired code 400 {@code {"error": "code"}},
@@ -72,7 +77,7 @@ public class DeviceApiController {
     /**
      * The songs that played: the waiting requests of them marked played ({@link DeckHistoryService}) — {@code {"marked": [...]}}. An
      * empty list is the program's "still paired?" ({@code {"marked": []}}). At most {@value DeckHistoryService#MAX_PLAYS} songs,
-     * each field at most {@value DjSongController#DECK_FIELD_MAX} characters, else 400.
+     * each field at most {@value #DECK_FIELD_MAX} characters, else 400.
      */
     @PostMapping(value = "/plays", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Map<String, ?>> plays(@RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorization,
@@ -90,13 +95,42 @@ public class DeviceApiController {
         if (!plans.allows(parties.getSettings(paired.get().partyCode()), PlanFeature.DECK)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "plan"));
         }
-        List<DjSongController.DeckPlay> plays = body.plays() == null ? List.of() : body.plays();
-        if (!DjSongController.validPlays(plays)) {
+        List<DeckPlay> plays = body.plays() == null ? List.of() : body.plays();
+        if (!validPlays(plays)) {
             return ResponseEntity.badRequest().build();
         }
-        List<DeckHistoryService.Play> songs = DjSongController.songsOf(plays, body.sentAt(), now);
+        List<DeckHistoryService.Play> songs = songsOf(plays, body.sentAt(), now);
         return ResponseEntity.ok(Map.of("marked", deckHistory.markPlayed(paired.get().partyCode(), songs, now,
-                DjSongController.clockKnown(body.sentAt()))));
+                clockKnown(body.sentAt()))));
+    }
+
+    /** At most {@value DeckHistoryService#MAX_PLAYS} songs, none null, each field at most {@value #DECK_FIELD_MAX} characters. */
+    static boolean validPlays(List<DeckPlay> plays) {
+        return plays.size() <= DeckHistoryService.MAX_PLAYS && plays.stream().noneMatch(play -> play == null
+                || tooLong(play.artist()) || tooLong(play.title()));
+    }
+
+    /**
+     * The songs as the service takes them; a time out of {@link Instant}'s range is taken as none (now). A song's time is the DJ's
+     * computer's clock, which may be minutes off: when the program says what its clock showed as it sent ({@code sentAt}), every time
+     * is moved by the difference from the server's {@code now} — a computer whose clock runs 8 minutes slow would otherwise play every
+     * song "before the guest asked" ({@link DeckHistoryService}) and mark nothing. Without it, the times are taken as they are.
+     */
+    static List<DeckHistoryService.Play> songsOf(List<DeckPlay> plays, Long sentAt, Instant now) {
+        long skew = clockKnown(sentAt) ? now.getEpochSecond() - sentAt : 0;
+        return plays.stream()
+                .map(play -> new DeckHistoryService.Play(play.at() == null || play.at() < 0 || play.at() > 100_000_000_000L
+                        ? null : Instant.ofEpochSecond(play.at() + skew), play.artist(), play.title()))
+                .toList();
+    }
+
+    /** Whether the program said its clock ({@code sentAt} in {@link Instant}'s range): the songs' times are then the server's. */
+    static boolean clockKnown(Long sentAt) {
+        return sentAt != null && sentAt >= 0 && sentAt <= 100_000_000_000L;
+    }
+
+    private static boolean tooLong(String field) {
+        return field != null && field.length() > DECK_FIELD_MAX;
     }
 
     /**

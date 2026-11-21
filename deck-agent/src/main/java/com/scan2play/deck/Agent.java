@@ -25,6 +25,8 @@ final class Agent {
     static final int MAX_WAITING = 200;
     static final Duration EARLIER_SET = Duration.ofMinutes(10);
     static final Duration ALIVE_EVERY = Duration.ofMinutes(1);
+    /** The window's line of songs marked: the last few since the start, enough to see the program works. */
+    static final int MARKED_SHOWN = 3;
 
     /** What the window shows. */
     record Status(boolean paired, List<String> reading, Instant checkedAt, List<String> marked, ServerClient.Outcome last) {
@@ -115,7 +117,9 @@ final class Agent {
             case OK -> {
                 waiting.subList(0, batch.size()).clear();
                 if (!answer.marked().isEmpty()) {
-                    lastMarked = answer.marked();
+                    List<String> all = new ArrayList<>(lastMarked);
+                    all.addAll(answer.marked());
+                    lastMarked = List.copyOf(all.subList(Math.max(0, all.size() - MARKED_SHOWN), all.size()));
                 }
             }
             case DISCONNECTED -> {

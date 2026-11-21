@@ -29,7 +29,6 @@ import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import java.util.List;
 import java.util.function.Consumer;
 
 /**
@@ -69,6 +68,11 @@ final class Window {
         pairPanel.add(left(pairAnswer));
         server.setText(settings.server());
         connect.addActionListener(e -> {
+            String notYet = beforeSending(code.getText());
+            if (notYet != null) {
+                pairAnswer.setText(notYet);
+                return;
+            }
             connect.setEnabled(false);
             pairAnswer.setText("Łączenie…");
             onConnect.accept(new String[]{code.getText(), server.getText()});
@@ -85,7 +89,6 @@ final class Window {
         pairedPanel.add(left(problem));
         pairedPanel.add(Box.createVerticalStrut(8));
         pairedPanel.add(left(disconnect));
-        marked.setForeground(new Color(0x1d7a46));
         problem.setForeground(new Color(0xa3271f));
         disconnect.addActionListener(e -> onDisconnect.run());
 
@@ -128,6 +131,11 @@ final class Window {
         });
     }
 
+    /** What to say instead of asking the server: an empty box is not a wrong code, the DJ has not typed one yet. */
+    static String beforeSending(String code) {
+        return code == null || code.isBlank() ? "Wpisz kod z panelu." : null;
+    }
+
     void update(Agent.Status status) {
         SwingUtilities.invokeLater(() -> {
             Dimension before = frame.getContentPane().getPreferredSize();
@@ -141,7 +149,9 @@ final class Window {
                     ? "Nie widać historii VirtualDJ ani Serato na tym komputerze."
                     : "Czyta: " + String.join(", ", status.reading()));
             checked.setText("Sprawdzone: " + TIME.format(status.checkedAt()));
-            marked.setText(status.marked().isEmpty() ? " " : "✓ Zagrane samo: " + String.join(" · ", lastOf(status.marked())));
+            marked.setForeground(status.marked().isEmpty() ? Color.GRAY.darker() : new Color(0x1d7a46));
+            marked.setText(status.marked().isEmpty() ? "Zagrane samo: jeszcze nic od uruchomienia programu."
+                    : "✓ Zagrane samo: " + String.join(" · ", status.marked()));
             problem.setText(status.last() == ServerClient.Outcome.FAILED ? "Brak połączenia z serwerem — kolejna próba za chwilę."
                     : status.last() == ServerClient.Outcome.TOO_MANY ? "Serwer prosi o chwilę przerwy."
                     : status.last() == ServerClient.Outcome.NO_PLAN ? "„Zagrane samo” działa w planie Pro — ta impreza go teraz nie ma." : " ");
@@ -159,10 +169,6 @@ final class Window {
         if (changed) {
             frame.pack();
         }
-    }
-
-    private static List<String> lastOf(List<String> songs) {
-        return songs.size() <= 3 ? songs : songs.subList(songs.size() - 3, songs.size());
     }
 
     private void tray() {

@@ -78,15 +78,15 @@ class DeviceApiControllerTest {
     void aClockEightMinutesSlow_isCorrectedBythe_sentAt_ofTheCall() {
         java.time.Instant now = java.time.Instant.parse("2026-11-21T21:00:00Z");
         long slow = now.getEpochSecond() - 480;
-        List<DjSongController.DeckPlay> plays = List.of(new DjSongController.DeckPlay(slow - 60, "Sanah", "Szampan"),
-                new DjSongController.DeckPlay(null, "A", "B"));
+        List<DeviceApiController.DeckPlay> plays = List.of(new DeviceApiController.DeckPlay(slow - 60, "Sanah", "Szampan"),
+                new DeviceApiController.DeckPlay(null, "A", "B"));
 
-        List<DeckHistoryService.Play> songs = DjSongController.songsOf(plays, slow, now);
+        List<DeckHistoryService.Play> songs = DeviceApiController.songsOf(plays, slow, now);
 
         assertThat(songs.get(0).at()).as("a minute before the call, on the server's clock").isEqualTo(now.minusSeconds(60));
         assertThat(songs.get(1).at()).as("no time stays none").isNull();
-        assertThat(DjSongController.songsOf(plays, null, now).get(0).at()).as("no sentAt: as written").isEqualTo(java.time.Instant.ofEpochSecond(slow - 60));
-        assertThat(DjSongController.songsOf(plays, -5L, now).get(0).at()).as("a nonsense sentAt: as written").isEqualTo(java.time.Instant.ofEpochSecond(slow - 60));
+        assertThat(DeviceApiController.songsOf(plays, null, now).get(0).at()).as("no sentAt: as written").isEqualTo(java.time.Instant.ofEpochSecond(slow - 60));
+        assertThat(DeviceApiController.songsOf(plays, -5L, now).get(0).at()).as("a nonsense sentAt: as written").isEqualTo(java.time.Instant.ofEpochSecond(slow - 60));
     }
 
     @Test
