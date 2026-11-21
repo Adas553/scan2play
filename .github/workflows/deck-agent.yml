@@ -1,0 +1,83 @@
+name: Program DJ-a (deck-agent)
+
+# "Scan2Play — Zagrane samo", the program on the DJ's computer (deck-agent/, docs/ideas.md item 19): its own project, never deployed.
+# A change of it runs its tests on Linux (cheap). The packages for Windows and macOS are made only by hand ("Run workflow"): a macOS
+# runner's minute counts as ten of the month's Actions minutes. The packages are not signed (a beta): Windows shows SmartScreen's
+# "Więcej informacji → Uruchom mimo to", macOS needs System Settings → Privacy & Security → "Open Anyway" once.
+on:
+  push:
+    branches: [main, dev]
+    paths: ['deck-agent/**', '.github/workflows/deck-agent.yml']
+  pull_request:
+    paths: ['deck-agent/**', '.github/workflows/deck-agent.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deck-agent-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      # mvnw is committed without the executable bit, hence sh
+      - name: Tests
+        run: sh mvnw -f deck-agent/pom.xml -B -ntp verify
+
+  package:
+    if: github.event_name == 'workflow_dispatch'
+    needs: test
+    strategy:
+      matrix:
+        os: [windows-2025, macos-15]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Build
+        shell: bash
+        run: |
+          sh mvnw -f deck-agent/pom.xml -B -ntp package -DskipTests
+          cp deck-agent/target/deck-agent-1.0.0.jar deck-agent/target/app/
+
+      # An application folder with its own trimmed Java (no installer: nothing to install, unpack and run). The modules: Swing and
+      # the tray, the HTTP client, SQLite's JDBC (Serato 4); jdk.crypto.ec for the TLS of www.scan2play.com.pl.
+      - name: Package
+        shell: bash
+        run: |
+          jpackage --type app-image --name "Scan2Play Zagrane" --app-version 1.0.0 --vendor Scan2Play \
+            --input deck-agent/target/app --main-jar deck-agent-1.0.0.jar --main-class com.scan2play.deck.Main \
+            --add-modules java.desktop,java.net.http,java.sql,java.logging,java.naming,jdk.crypto.ec \
+            --jlink-options "--strip-debug --no-man-pages --no-header-files" \
+            --dest out
+
+      - name: Zip (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: Compress-Archive -Path "out/Scan2Play Zagrane" -DestinationPath "Scan2Play-Zagrane-windows.zip"
+
+      - name: Zip (macOS)
+        if: runner.os == 'macOS'
+        run: ditto -c -k --keepParent "out/Scan2Play Zagrane.app" "Scan2Play-Zagrane-macos.zip"
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: Scan2Play-Zagrane-${{ runner.os }}
+          path: Scan2Play-Zagrane-*.zip
+          retention-days: 30

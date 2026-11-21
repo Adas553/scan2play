@@ -334,7 +334,7 @@ piece of work or when a task names an item. A finished item stays here until its
    Serato 2.4 / 2.5 sample files). **Still open:** Pro or Free; the whole set kept for the summary and "Co to było?"; "Leci Twoja
    piosenka!"; A (a tray app) if DJs of other browsers ask.
 
-19. **A program in the tray on the DJ's computer — item 18's variant A, waiting** (the owner, 2026-11-21: "rozpisz wariant A"; after
+19. **A program in the tray on the DJ's computer — item 18's variant A, stage (1) built on `claude/loving-maxwell-sl8pkl`, not released (V78)** (the owner, 2026-11-21: "rozpisz wariant A", then "to może zrobimy wersję A?" once Chrome refused AppData; after
    E is built: E first, A only if the DJs use E and those of other browsers ask). What E cannot: Firefox, Safari, Brave and the tab
    left open; the folders a browser may not open (Serato 4's and djay's databases under `AppData` / `~/Library`); the hardware.
    **The program:** Java 21 + `jpackage` (the server's language; an installer with its own Java, ~40–60 MB — a guess), a tray icon
@@ -359,3 +359,14 @@ piece of work or when a task names an item. A finished item stays here until its
    to it:** a beta unsigned with the 1–2 DJs of E's tries, the signing paid only for a release to everyone. **Open:** A at all (E's
    numbers first); Pro only (recommended, as the kiosk); which stages after (1); the support it needs (an installation guide, a page
    of "it does not see my songs").
+   **Stage (1), built (2026-11-21):** `deck-agent/` (Java 21, Swing and the tray, `sqlite-jdbc`; VirtualDJ — the registry's
+   `HomeFolder`, `%LOCALAPPDATA%`, the Documents —, Serato 2/3 and Serato 4), the panel's "Program na komputerze" in the card of "🎧 Z
+   programu DJ-a" ("Połącz komputer", the computers, "Odłącz"), V78 `dj_device`, `/api/device/pair` and `/api/device/plays`; details:
+   `docs/context/05-1d-panel-heading-queue.md`. Tried end to end in the container: the app on a throw-away database, the real program
+   (`--console`) paired by a token, a VirtualDJ file written line by line → the request "Zagrane", the other one and the earlier set
+   untouched; 400 / 401 / 403 and no session as they should be. The packages: `.github/workflows/deck-agent.yml` by hand ("Run
+   workflow"), unsigned zips for Windows and macOS (~127 MB unpacked on Linux; less without the locale data). Taken as recommended:
+   any plan (as E), nothing of the set kept, Polish only. **To try (the owner):** "Run workflow", the Windows zip on the PC with
+   VirtualDJ — "Połącz komputer" in the panel of `dev.`, the server `https://dev.scan2play.com.pl` in the program's window; whether
+   Cloudflare lets a program (not a browser) through to `/api/device/*`. **Still open:** stages (2)–(4); Pro; the signing; a download
+   page instead of "napisz do nas".

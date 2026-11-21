@@ -109,15 +109,24 @@ public class DjSongController {
                                                HttpSession session) {
         String ownerPartyCode = sessionHelper.require(body.partyCode(), StaffPermission.QUEUE, authentication, session).getPartyCode();
         List<DeckPlay> plays = body.plays() == null ? List.of() : body.plays();
-        if (plays.size() > DeckHistoryService.MAX_PLAYS || plays.stream().anyMatch(play -> play == null
-                || tooLong(play.artist()) || tooLong(play.title()))) {
+        if (!validPlays(plays)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
         }
-        List<DeckHistoryService.Play> songs = plays.stream()
-                .map(play -> new DeckHistoryService.Play(play.at() == null ? null : Instant.ofEpochSecond(play.at()), play.artist(),
-                        play.title()))
+        return Map.of("marked", deckHistoryService.markPlayed(ownerPartyCode, songsOf(plays), Instant.now()));
+    }
+
+    /** At most {@value DeckHistoryService#MAX_PLAYS} songs, none null, each field at most {@value #DECK_FIELD_MAX} characters. */
+    static boolean validPlays(List<DeckPlay> plays) {
+        return plays.size() <= DeckHistoryService.MAX_PLAYS && plays.stream().noneMatch(play -> play == null
+                || tooLong(play.artist()) || tooLong(play.title()));
+    }
+
+    /** The songs as the service takes them; a time out of {@link Instant}'s range is taken as none (now). */
+    static List<DeckHistoryService.Play> songsOf(List<DeckPlay> plays) {
+        return plays.stream()
+                .map(play -> new DeckHistoryService.Play(play.at() == null || play.at() < 0 || play.at() > 100_000_000_000L
+                        ? null : Instant.ofEpochSecond(play.at()), play.artist(), play.title()))
                 .toList();
-        return Map.of("marked", deckHistoryService.markPlayed(ownerPartyCode, songs, Instant.now()));
     }
 
     private static boolean tooLong(String field) {

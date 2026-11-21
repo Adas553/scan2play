@@ -174,10 +174,43 @@
 
     S2P.scenario({
         name: 'deck-reader-hidden',
-        title: '"Zagrane samo": in a browser that cannot read a folder the button stays hidden',
+        title: '"Zagrane samo": a browser that cannot read a folder offers the program on the computer only',
         run: async function (t) {
             await t.sleep(500);
-            t.step('no button, no card', [typeof window.showDirectoryPicker, toggle().hidden, reader().hidden], ['undefined', true, true]);
+            toggle().click();
+            t.step('the program\'s part shown, not the browser\'s', [typeof window.showDirectoryPicker, reader().hidden,
+                document.getElementById('deviceBlock').hidden, document.getElementById('deckBrowser').hidden], ['undefined', false, false, true]);
+        }
+    });
+
+    S2P.scenario({
+        name: 'deck-computers',
+        title: '"Program na komputerze" (V78): the card lists the paired computers, "Połącz komputer" shows the code until the program takes it, "Odłącz" forgets one',
+        setup: { devices: [] },
+        run: async function (t) {
+            const list = function () { return document.getElementById('deviceList').textContent; };
+            const code = function () { return document.getElementById('deviceCode').textContent; };
+            await t.sleep(300);
+            toggle().click();
+            await t.waitFor(function () { return list().length > 0; }, 'the list', 3000);
+            t.step('none yet', list(), reader().dataset.deviceNone);
+
+            document.getElementById('deviceConnect').click();
+            await t.waitFor(function () { return code().indexOf('123 456') >= 0; }, 'the code', 3000);
+            const asked = (await t.stand.requests('POST /dj/devices/code'))[0].q;
+            t.step('the code asked for the party, with the CSRF token', [asked.partyCode, !!asked['X-CSRF-TOKEN']],
+                [document.getElementById('partyCode').value, true]);
+
+            await t.stand.config({ devices: [{ id: 5, name: 'Laptop DJ-a — Windows', createdAt: new Date().toISOString(),
+                lastSeenAt: new Date().toISOString() }] });
+            await t.waitFor(function () { return list().indexOf('Laptop DJ-a') >= 0; }, 'the paired computer', 8000);
+            t.step('the code gone once the program took it', code(), '');
+
+            document.querySelector('#deviceList [data-device-id="5"] button').click();
+            await t.waitFor(function () { return list() === reader().dataset.deviceNone; }, 'the list without it', 3000);
+            const removed = (await t.stand.requests('POST /dj/devices/remove'))[0].q;
+            t.step('"Odłącz" names the computer and the party', [removed.id, removed.partyCode, !!removed['X-CSRF-TOKEN']],
+                ['5', document.getElementById('partyCode').value, true]);
         }
     });
 })();

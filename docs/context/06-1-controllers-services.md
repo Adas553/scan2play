@@ -22,6 +22,8 @@
 | `GuestController` | the guest's page, its list, the request (limits, style, evaluation), the guest's 👍; `GET /p/{code}/library/has` (V58: which of the guest's suggestions the DJ has, JSON, no session) |
 | `HostController` | the hosts' page `/h/{token}` (V29): their two lists, without an account; an event's plan for its hosts `/h/e/{token}` (V77) |
 | `DjEventPlanController` / `EventPlanForm` | "Plan imprezy" (V77, Pro, WISHES): `/dj/wishes/{id}/plan` — an event's plan, its hosts' link, "Użyj list na imprezie" (HOST_LISTS too), the print; `EventPlanForm` the form's rows, shared with the hosts' page |
+| `DjDeviceController` | "Program na komputerze" (V78): the panel's side — a pairing code, the party's computers, "Odłącz" (`/dj/devices`, JSON) |
+| `DeviceApiController` | the DJ's program (V78, `deck-agent/`): `/api/device/pair` and `/api/device/plays`, by its own token — no login, no CSRF |
 | `WishController` | "Życzenia przed imprezą" (V68, Pro): the guests' page `/w/{token}` of an event — the songs they want, five a guest, without an account |
 | `DjWishesController` | "Życzenia przed imprezą" (V68, Pro, WISHES): `/dj/wishes` — the events and their links, the wishes counted and marked by the library, "⭐ Do „Koniecznie zagrać”", the CSV |
 | `GuestPollController`, `PollView` | "Pytanie do gości" (V74, Pro): the card of the DJ's question on the guest's page (`/p/{code}/poll`), a guest's answer; `PollView` puts the question, its results and the guest's answer in the model of the guest's pages and the TV (Section 5.1, `05-1j-polls.md`) |
@@ -53,6 +55,7 @@
 | `PromptBuilder` | the prompt of a request (`src/main/resources/prompts`, per language): the request, the genre, the DJ's note, the songs played lately, the comment style, the dedication — pure text, out of `SongEvaluationService` since the review of 2026-10-21 (R1); `GeminiComparison` builds the same prompts, or a proposed rewrite of them |
 | `DjService` | the guest queue (`dashboardQueue` cache; `getWaiting` uncached, for the poll), its fingerprint (ETag), mark played (a conditional `UPDATE`), skip (`dismissSong`, a conditional `UPDATE` too), clear the queue |
 | `PlayHistoryService` | the history (Section 5.1) |
+| `DjDeviceService` | "Program na komputerze" (V78): pairing codes, the computers' tokens (their hashes), limits |
 | `DeckHistoryService` | "Zagrane samo": the songs of the DJ's program's history mark the waiting requests played (Section 5.1, the queue) |
 | `EveningSummaryService` | "Podsumowanie wieczoru": the party's evenings (by month), one evening's requests from `song_requests` and `evening_song` (V61), its counts, waits, top songs, missed songs, artists, half-hours and setlist, the CSV (Section 5.1); with a library (V42, Pro) "Nie masz w bibliotece" and the CSV's column "W bibliotece"; the evening's title and hosts' link |
 | `GuestQueueService` | what the guest sees under the form (with the most wanted songs, every waiting one by votes — but a request the AI did not judge, V39, only to the guest who sent it); `mostWanted`: the first ten of that order, for the screen for a TV, only requests the AI judged |

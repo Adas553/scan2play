@@ -93,3 +93,26 @@ under the card) and the queue is fetched at once. The folder's handle is kept in
 reads on when the browser still allows it, else "Wznów czytanie: History"; "Wyłącz" forgets it. The privacy policy (PL / EN, section 2)
 says what is sent and that nothing is kept. Browser scenarios `deck-reader-*`, `DeckHistoryServiceTest`; the formats' sources and the
 other programs (rekordbox, Traktor, djay — not read): `docs/ideas.md` item 18 and `tools/spike/dj_history_spike.py`.
+
+**"Program na komputerze" — the same from a program on the DJ's computer** (V78, `docs/ideas.md` item 19): the card of "🎧 Z programu
+DJ-a" (now shown on any browser 768 px wide or more; its browser part only where a folder can be picked) has "Program na komputerze
+(Windows, Mac)": "Połącz komputer" (`POST /dj/devices/code`, QUEUE) shows a 6-digit code valid 10 minutes ("123 456"), gone from the
+card once the program took it; the party's computers (`GET /dj/devices`: name, "ostatnio 21:43") with "Odłącz" (`POST
+/dj/devices/remove`). The program (`deck-agent/`, below) swaps the code for its own token (`POST /api/device/pair`) and sends the songs
+to `POST /api/device/plays` with `Authorization: Bearer` — the same `DeckHistoryService` as the panel's `/dj/dashboard/plays`.
+`DjDeviceService`: only the token's SHA-256 in `dj_device`; at most 3 computers a party (pairing a 4th forgets the one seen longest ago);
+a code used once; 10 tries of a code per address and 200 wrong codes in all per 10 minutes, 30 calls a minute per computer (in memory);
+`last_seen_at` written once a minute at most. Browser scenario `deck-computers`; `DjDeviceIT` (PostgreSQL), `DeviceApiControllerTest`,
+`DeviceApiWebTest` (the real security: no login, no CSRF, no session for `/api/device/*`; `/dj/devices` needs the login).
+
+**The program, `deck-agent/`** — a Maven project of its own beside the app (not a module, never deployed; Java 21, Swing, `sqlite-jdbc`):
+every 3 s it reads VirtualDJ's newest `.m3u` (the registry's `HomeFolder`, `%LOCALAPPDATA%\VirtualDJ\History`, the Documents' — on
+macOS `~/Library/Application Support/VirtualDJ` and the Documents'), Serato 2/3's newest `.session` (`Music/_Serato_/History/Sessions`)
+and Serato 4's `master.sqlite` (read-only; `%APPDATA%\Serato\Library`, `~/Library/Application Support/Serato/Library`) when they
+changed; sends each new song once (≤ 20 a call, the set before the program started minus 10 minutes not), calls once a minute with
+nothing (alive; a 401 = "Odłącz" in the panel: the token forgotten, the window asks for a new code). The window: the code and the server
+(`https://www.scan2play.com.pl`, changeable — `dev.` for a try), then what it reads and the songs marked; a tray icon ("Pokaż",
+"Zakończ"). `~/.scan2play/zagrane.properties` keeps the server and the token. Without a screen: `--pair <code> [--server …]`, then
+`--console`. Tests: `sh mvnw -f deck-agent/pom.xml -B -ntp verify` (`HistoryFormatsTest`, `AgentTest`). Packages:
+`.github/workflows/deck-agent.yml`, by hand ("Run workflow"): a jpackage app folder with its own Java for Windows and macOS, zipped,
+**not signed** (SmartScreen's "Uruchom mimo to"; macOS's "Open Anyway" once).

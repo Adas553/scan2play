@@ -15,8 +15,13 @@
  * another day's) and are not sent. The folder is remembered (IndexedDB, the handle itself): after a page load the panel reads on if
  * the browser still allows it, else it offers "Wznów czytanie".
  *
+ * The card also pairs the DJ's program on the computer (V78, docs/ideas.md item 19; any browser, a screen 768 px wide or more):
+ * "Połącz komputer" shows the code from /dj/devices/code until the program takes it (the list of /dj/devices grows), the paired
+ * computers with "Odłącz" (/dj/devices/remove).
+ *
  * Dependencies (DOM): <button id="deckToggle" hidden>, <section id="deckReader" hidden> with its texts in data-* (resume, reading,
- * marked, none, denied, failed, refused — "{…}" filled in here), #deckPick, #deckResume, #deckStop, #deckStatus, #deckMarked.
+ * marked, none, denied, failed, refused, device-code, device-seen, device-remove, device-none, device-failed — "{…}" filled in here),
+ * #deviceConnect, #deviceCode, #deviceList, <div id="deckBrowser" hidden>, #deckPick, #deckResume, #deckStop, #deckStatus, #deckMarked.
  */
 import { csrfHeaders, partyCode } from './common.js';
 import { emit, EVENTS } from './events.js';
@@ -175,23 +180,134 @@ const remembered = function () { return store('readonly', function (s) { return 
 const toggle = document.getElementById('deckToggle');
 const reader = document.getElementById('deckReader');
 
-/**
- * Chrome and Edge on a computer; Firefox, Safari and the phones' browsers have no folder picker. A narrow screen is no DJ's laptop
- * either, and the queue's tools share one line there (scenario library-tools-one-row-phone).
- */
-function canReadFolders() {
-    return typeof window.showDirectoryPicker === 'function' && window.matchMedia('(min-width: 768px)').matches;
+/** A narrow screen is no DJ's laptop, and the queue's tools share one line there (scenario library-tools-one-row-phone). */
+const wide = window.matchMedia('(min-width: 768px)').matches;
+/** Chrome and Edge on a computer; Firefox, Safari and the phones' browsers have no folder picker. */
+const canPickFolders = typeof window.showDirectoryPicker === 'function';
+
+function text(name, values) {
+    return (reader.dataset[name] || '').replace(/\{(\w+)\}/g, function (all, key) { return values && key in values ? values[key] : all; });
 }
 
-if (toggle && reader && canReadFolders()) {
+function clock(iso) {
+    const at = new Date(iso);
+    const options = at.toDateString() === new Date().toDateString()
+        ? { hour: '2-digit', minute: '2-digit' } : { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' };
+    return at.toLocaleString(document.documentElement.lang || undefined, options);
+}
+
+// ---- the program on the DJ's computer (V78): a code to pair it, the computers paired, "Odłącz" ----
+
+function computers() {
+    const connect = document.getElementById('deviceConnect');
+    const codeLine = document.getElementById('deviceCode');
+    const list = document.getElementById('deviceList');
+    let shown = -1;
+    let watching = null;
+
+    async function post(path, fields) {
+        return fetch(path, {
+            method: 'POST',
+            headers: Object.assign({ 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'fetch' }, csrfHeaders()),
+            body: new URLSearchParams(Object.assign({ partyCode: partyCode() || '' }, fields)).toString()
+        });
+    }
+
+    async function load() {
+        let devices;
+        try {
+            const response = await fetch('/dj/devices?partyCode=' + encodeURIComponent(partyCode() || ''),
+                { headers: { 'X-Requested-With': 'fetch' } });
+            if (!response.ok) return;
+            devices = await response.json();
+        } catch (e) {
+            return;
+        }
+        list.replaceChildren();
+        if (devices.length === 0) {
+            const none = document.createElement('li');
+            none.textContent = text('deviceNone');
+            list.append(none);
+        }
+        devices.forEach(function (device) {
+            const row = document.createElement('li');
+            row.className = 'd-flex flex-wrap align-items-center gap-2 mb-1';
+            row.dataset.deviceId = device.id;
+            const name = document.createElement('span');
+            name.className = 'text-light';
+            name.textContent = device.name;
+            const seen = document.createElement('span');
+            seen.textContent = text('deviceSeen', { time: clock(device.lastSeenAt || device.createdAt) });
+            const remove = document.createElement('button');
+            remove.type = 'button';
+            remove.className = 'btn btn-sm btn-outline-secondary py-0';
+            remove.textContent = text('deviceRemove');
+            remove.addEventListener('click', async function () {
+                remove.disabled = true;
+                try {
+                    await post('/dj/devices/remove', { id: device.id });
+                } finally {
+                    await load();
+                }
+            });
+            row.append(name, seen, remove);
+            list.append(row);
+        });
+        if (watching !== null && shown >= 0 && devices.length !== shown) {   // the program took the code: it is used up
+            clearInterval(watching);
+            watching = null;
+            codeLine.textContent = '';
+        }
+        shown = devices.length;
+    }
+
+    connect.addEventListener('click', async function () {
+        connect.disabled = true;
+        try {
+            const response = await post('/dj/devices/code', {});
+            if (!response.ok) throw new Error(String(response.status));
+            const answer = await response.json();
+            codeLine.textContent = text('deviceCode', { code: answer.code.slice(0, 3) + ' ' + answer.code.slice(3), minutes: answer.minutes });
+            clearInterval(watching);
+            const until = Date.now() + Number(answer.minutes) * 60000;
+            watching = setInterval(function () {
+                if (Date.now() > until) {
+                    clearInterval(watching);
+                    watching = null;
+                    codeLine.textContent = '';
+                }
+                load();
+            }, 5000);
+        } catch (e) {
+            codeLine.textContent = text('deviceFailed');
+        } finally {
+            connect.disabled = false;
+        }
+    });
+
+    return load;
+}
+
+if (toggle && reader && wide) {
+    const loadComputers = computers();
+    toggle.hidden = false;
+    toggle.addEventListener('click', function () {
+        const open = reader.hidden;
+        reader.hidden = !open;
+        toggle.setAttribute('aria-expanded', String(open));
+        if (open) loadComputers();
+    });
+}
+
+// ---- this browser reads the folder itself (variant E) ----
+
+if (toggle && reader && wide && canPickFolders) {
+    document.getElementById('deckBrowser').hidden = false;
     const pick = document.getElementById('deckPick');
     const resume = document.getElementById('deckResume');
     const stop = document.getElementById('deckStop');
     const status = document.getElementById('deckStatus');
     const markedLine = document.getElementById('deckMarked');
-    const text = function (name, values) {
-        return (reader.dataset[name] || '').replace(/\{(\w+)\}/g, function (all, key) { return values && key in values ? values[key] : all; });
-    };
 
     let picked = null;      // the folder the DJ picked
     let folder = null;      // {dir, program}
@@ -300,13 +416,6 @@ if (toggle && reader && canReadFolders()) {
         await look();
         timer = setInterval(look, READ_EVERY_MS);
     }
-
-    toggle.hidden = false;
-    toggle.addEventListener('click', function () {
-        const open = reader.hidden;
-        reader.hidden = !open;
-        toggle.setAttribute('aria-expanded', String(open));
-    });
 
     pick.addEventListener('click', async function () {
         let handle;
