@@ -4,7 +4,8 @@
  * that song played (DeckHistoryService). No program to install: the DJ picks the history folder once (the File System Access API,
  * Chrome and Edge on a computer; elsewhere the button stays hidden) and the panel's tab stays open while the set plays.
  *
- *   VirtualDJ  Documents/VirtualDJ/History/<date>.m3u — a line "#EXTVDJ:<time>…<lastplaytime>…<artist>…<title>…" appended once
+ *   VirtualDJ  %LOCALAPPDATA%\VirtualDJ\History\<date>.m3u (a recent install on Windows; older ones Documents/VirtualDJ/History)
+ *              — a line "#EXTVDJ:<time>…<lastplaytime>…<artist>…<title>…" appended once
  *              a song has played (its setting historyDelay)
  *   Serato     Music/_Serato_/History/Sessions/<n>.session — binary chunks (4 letters, a 4-byte length); a song an "oent" with
  *              its "adat" fields (6 title, 7 artist, 28 start, 50 played), text in UTF-16BE; appended while Serato runs

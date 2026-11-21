@@ -318,7 +318,9 @@ piece of work or when a task names an item. A finished item stays here until its
    laptop, the DJ's phone, "at once". **Open for the owner:** E first or A at once; the question to the DJs before building; rekordbox
    left out (recommended) or with a typed key; Pro or Free; the whole set kept or only the requests marked; "Leci Twoja piosenka!" and
    "Co to było?" with it or later; 1–2 DJs for a beta with a real history file.
-   **Variant E, built (the owner, 2026-11-21: "to zróbmy na razie E"; after "Brave?" and "musimy płacić?" — A needs Apple's 99 USD a
+   **Seen on the owner's Windows (2026-11-21):** VirtualDJ's history is in `%LOCALAPPDATA%\VirtualDJ\History` (`<date>.m3u` and
+   `tracklist.txt`), not under Documents as the sources say; whether Chrome's folder picker lets the DJ pick it (under `AppData`) is
+   the owner's try. **Variant E, built (the owner, 2026-11-21: "to zróbmy na razie E"; after "Brave?" and "musimy płacić?" — A needs Apple's 99 USD a
    year and a Windows certificate, else the DJ meets Gatekeeper's "Otwórz mimo to" and SmartScreen):** "🎧 Z programu DJ-a" over the
    queue reads VirtualDJ's or Serato 2/3's history folder in Chrome / Edge on a computer (`play-history.js`) and sends each new song to
    `POST /dj/dashboard/plays`; `DeckHistoryService` marks only a "✓" match played. Taken as recommended, open to change: any plan (no
