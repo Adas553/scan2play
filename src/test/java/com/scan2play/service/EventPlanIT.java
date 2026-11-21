@@ -161,6 +161,29 @@ class EventPlanIT extends PostgresIntegrationTest {
     }
 
     @Test
+    void clearing_takesTheMomentsTheListsAndTheLastSave_keepsTheHostsLink_andAnOlderPageSavesNothingOverIt() {
+        WishService.Event event = event();
+        java.time.Instant evening = event.date().atTime(20, 0).atZone(com.scan2play.util.Times.DISPLAY_ZONE).toInstant();
+        plans.save(event.id(), List.of(new Moment("Tort", null, "Ktoś - Coś", "imiona")), "Akcent", "Wilki", EventPlanService.BY_HOSTS);
+        plans.newHostLink(event.partyCode(), event.id());
+        String token = plans.hostToken(event.partyCode(), event.id()).orElseThrow();
+        String before = plans.plan(event.id()).version();
+        assertThat(plans.tonight(event.partyCode(), evening)).isPresent();
+
+        assertThat(plans.clear(event.id())).isTrue();
+
+        EventPlanService.Plan plan = plans.plan(event.id());
+        assertThat(plan.isEmpty()).isTrue();
+        assertThat(plan.savedAt()).isNull();
+        assertThat(plan.savedBy()).isNull();
+        assertThat(plans.tonight(event.partyCode(), evening.plusSeconds(1))).as("the panel's card gone at once").isEmpty();
+        assertThat(plans.byHostToken(token)).as("the hosts' link stays").isPresent();
+        assertThat(plans.saveByHosts(token, List.of(moment("Stara strona")), null, null, before))
+                .as("a page opened before the clearing").isEqualTo(EventPlanService.Saved.CHANGED);
+        assertThat(plans.clear(-1)).isFalse();
+    }
+
+    @Test
     void aSaveFromAnOlderVersion_writesNothing_andOneFromTheCurrentOneDoes() {
         WishService.Event event = event();
         String never = plans.plan(event.id()).version();

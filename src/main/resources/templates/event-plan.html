@@ -73,6 +73,12 @@
     <section class="card bg-dark border-secondary p-3 text-light d-flex flex-column gap-3" id="planFormCard">
         <div th:replace="~{fragments/event-plan :: planTemplate}"></div>
         <div th:replace="~{fragments/event-plan :: planForm}"></div>
+        <!--/* "Wyczyść plan": only a plan with something in it, asks first; the hosts' link stays */-->
+        <form th:if="${planEditable and !eventPlan.isEmpty()}" th:action="@{/dj/wishes/{id}/plan/clear(id=${wishEvent.id()})}" method="POST"
+              class="m-0" th:attr="data-confirm=#{eventplan.clear.confirm}">
+            <input type="hidden" name="partyCode" th:value="${partyCode}">
+            <button type="submit" id="planClear" class="btn btn-sm btn-outline-danger" th:text="#{eventplan.clear}">Clear the plan</button>
+        </form>
     </section>
 
     <!--/* on the night: the event's lists as the party's, and the plan on paper */-->

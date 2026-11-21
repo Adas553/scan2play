@@ -110,6 +110,21 @@ public class DjEventPlanController {
         return back(partyCode, id);
     }
 
+    /**
+     * "Wyczyść plan": the moments and both lists gone (asks first, data-confirm) — a plan started from the wrong template, an evening
+     * called off, the hosts' notes not kept till the event goes. The hosts' link stays; Pro, as any change of the plan.
+     */
+    @PostMapping("/clear")
+    public String clear(@PathVariable long id, @RequestParam String partyCode, OAuth2AuthenticationToken authentication,
+                        HttpSession session, RedirectAttributes redirectAttributes) {
+        planService.require(sessionHelper.require(partyCode, StaffPermission.WISHES, authentication, session), PlanFeature.WISHES);
+        eventOf(partyCode, id);
+        found(eventPlanService.clear(id));
+        log.info("Party [{}]: the plan of wishes event {} cleared", partyCode, id);
+        done(redirectAttributes, "cleared");
+        return back(partyCode, id);
+    }
+
     /** "Utwórz link dla gospodarzy" / "Nowy link" (the old one opens nothing then). */
     @PostMapping("/host-link")
     public String hostLink(@PathVariable long id, @RequestParam String partyCode, @RequestParam(defaultValue = "true") boolean on,

@@ -84,7 +84,9 @@ its commas by Spring). **On the night:** the event's lists are not the party's �
 other, and the party's lists are what the AI and the queue use tonight —; "Użyj list na imprezie" (HOST_LISTS too) puts them over
 the party's (asks first). "🖨 Drukuj plan" (`/dj/wishes/{id}/plan/print`, `event-plan-print.html`): one A4, black on white, the times
 big, on a phone nothing sideways; printed: A4 with 12 mm margins, the lists small in two columns — a wedding's plan is one or two
-pages. Without Pro the DJ's page shows the plan read only (a disabled fieldset) and the hosts' link is a 404. Nothing of the plan goes
+pages. "Wyczyść plan" (`…/plan/clear`, the DJ's page only, asks first, shown while the plan has something): the moments, both lists and
+the last save gone — the templates come back —, the hosts' link kept (its own "Wyłącz link"); a page opened before saves nothing over
+it (`EventPlanIT`). Without Pro the DJ's page shows the plan read only (a disabled fieldset) and the hosts' link is a 404. Nothing of the plan goes
 to the guests, the TV or the AI; it is deleted with the event (7 days after its date) — the privacy policy says so, and that lists put
 over the party's stay the party's. **Where:** Ustawienia → "Życzenia i plan imprezy" (`settings.wishes.title`) → the event's
 "📋 Plan imprezy"; the list of events says which have a plan ("📋 plan (6)", `EventPlanService.momentCounts`, one query). The

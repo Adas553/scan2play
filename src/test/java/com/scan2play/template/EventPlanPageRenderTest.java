@@ -173,6 +173,9 @@ class EventPlanPageRenderTest {
         assertThat(html.indexOf("Wejście pary")).isLessThan(html.indexOf("Podziękowania dla rodziców"));
         assertThat(html.split("data-plan-row", -1)).as("three moments and three spare rows").hasSize(7);
         assertThat(html).as("a plan with moments offers no template").doesNotContain("id=\"planTemplateForm\"");
+        // "Wyczyść plan": asked first, the hosts' link stays
+        assertThat(html).contains("action=\"/dj/wishes/7/plan/clear\"", ">Wyczyść plan<",
+                "data-confirm=\"Usunąć wszystkie momenty i obie listy tego wydarzenia? Gospodarze też ich już nie zobaczą. Link dla gospodarzy zostaje.\"");
         // on the night: the lists over the party's, asked first; the print
         assertThat(html).contains("action=\"/dj/wishes/7/plan/use-lists\"", "zostaną zastąpione listami tego wydarzenia",
                 "href=\"/dj/wishes/7/plan/print?party=PLAN1\"");
@@ -188,7 +191,7 @@ class EventPlanPageRenderTest {
         owner = true;
         String free = page(Plans.enforced(), StaffPermission.all(), Map.of());
         assertThat(free).contains("value=\"Wejście pary\"", "przejrzeć, ale nie zmienić").containsPattern("<fieldset[^>]*disabled")
-                .doesNotContain(">Zapisz plan<", "id=\"planHostCard\"", "action=\"/dj/wishes/7/plan/use-lists\"");
+                .doesNotContain(">Zapisz plan<", "id=\"planHostCard\"", "action=\"/dj/wishes/7/plan/use-lists\"", ">Wyczyść plan<");
         assertThatThrownBy(() -> controller(Plans.enforced(), StaffPermission.all()).save(7L, PARTY, null, null,
                 new MockHttpServletRequest(), PL, user(), new MockHttpSession(), new RedirectAttributesModelMap()))
                 .isInstanceOf(PlanRequiredException.class);
@@ -205,6 +208,7 @@ class EventPlanPageRenderTest {
         assertThat(html).contains("id=\"planTemplateForm\"", "action=\"/dj/wishes/7/plan/template\"", ">Wesele<", ">Impreza firmowa<",
                 ">🔗 Utwórz link<", "Plan nie jest jeszcze zapisany.");
         assertThat(html.split("data-plan-row", -1)).as("three spare rows").hasSize(4);
+        assertThat(html).as("nothing to clear").doesNotContain(">Wyczyść plan<");
         write("event-plan-empty.html", html);
     }
 

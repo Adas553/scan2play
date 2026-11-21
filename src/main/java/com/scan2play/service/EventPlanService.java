@@ -231,6 +231,23 @@ public class EventPlanService {
     }
 
     /**
+     * "Wyczyść plan" (the DJ's page): the moments, both lists and the last save gone — the plan as never written, the templates offered
+     * again; the hosts' link stays (it has its own "Wyłącz link"). A page opened before saves nothing over it (its version is not "").
+     * False for an event that is not there.
+     */
+    @Transactional
+    public boolean clear(long eventId) {
+        if (jdbc.queryForList("SELECT id FROM wish_event WHERE id = ? FOR UPDATE", Long.class, eventId).isEmpty()) {
+            return false;
+        }
+        jdbc.update("DELETE FROM event_plan_item WHERE event_id = ?", eventId);
+        jdbc.queryForList("UPDATE wish_event SET plan_blocked = NULL, plan_wanted = NULL, plan_saved_at = NULL, plan_saved_by = NULL"
+                + " WHERE id = ? RETURNING party_code", String.class, eventId).forEach(tonights::invalidate);
+        log.info("Wishes event {}: plan cleared", eventId);
+        return true;
+    }
+
+    /**
      * A template's moments for an empty plan: their names only, the times and songs left to the people. Nothing when the plan has
      * moments already (two people choosing a template at once make one plan, not two) — false then.
      */
