@@ -645,3 +645,12 @@ tylko „Czyta: VirtualDJ (…)”. Wyszukanie plików Serato (same nazwy, bez t
 (`HistoryFormatsTest.windows_serato_theDatabaseUnderLocalAppData_andTheNewestOfTwo`, czerwony). I: historia, która jest, ale nie da się
 jej odczytać (np. inne tabele w nowym Serato), jest teraz pokazana w oknie zamiast pominięta (`AgentTest.aHistoryThatCannotBeRead_isSaid`,
 czerwony). **Niesprawdzone:** czy Serato 5.1 ma tabele `history_entry` / `history_session` takie jak Serato 4 — do próby z nową paczką.
+
+Potem (właściciel przysłał budowę tabel, bez danych): Serato 5.1 ma `history_session` i `history_entry` z `artist` i `name` jak Serato 4,
+ale kilka kolumn usunął (migracje „Remove the … columns”), a otwarta sesja może mieć `end_time` puste. Zapytanie jest teraz budowane
+z kolumn, które są: piosenki najnowszej sesji, „played” tylko gdy kolumna jest
+(`HistoryFormatsTest.serato5_theNewestSessionsSongs_whateverItsEndTime_andWithoutAPlayedColumn`, czerwony). Na prośbę właściciela
+(„żeby program sam szukał”): przy starcie krótkie przejrzenie folderów użytkownika (profil, AppData, Muzyka, Dokumenty, OneDrive; 4
+poziomy, najwyżej 30 000 folderów, bez linków) w poszukiwaniu „Serato/Library/master.sqlite”, „_Serato_/History/Sessions”,
+„VirtualDJ/History” w miejscach, których żaden opis nie podaje (`theHistories_areFound_inPlacesNoReaderNames_aFewLevelsDeep`,
+czerwony). Całego dysku nie (czas, antywirus). Program `verify` 32/32.

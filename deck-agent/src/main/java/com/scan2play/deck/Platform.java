@@ -2,13 +2,21 @@ package com.scan2play.deck;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.FileVisitOption;
+import java.nio.file.FileVisitResult;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -22,22 +30,105 @@ final class Platform {
     private final boolean windows;
     /** Windows' own answer where its folders are ({@link #knownFolders}): "music", "documents", "virtualdj" (its HomeFolder). */
     private final Map<String, Path> known;
+    /** What {@link #look} found at the start beside the usual places. */
+    private final Found found;
+
+    /** The histories found by looking through the user's folders: added to the usual places, never instead of them. */
+    record Found(List<Path> virtualDjFolders, List<Path> seratoSessionFolders, List<Path> serato4Databases) {
+        static final Found NONE = new Found(List.of(), List.of(), List.of());
+    }
+
+    /** How deep a look goes below each of its folders, and how many folders it sees at most: seconds, never the whole disk. */
+    static final int LOOK_DEPTH = 4;
+    static final int LOOK_MAX_FOLDERS = 30_000;
 
     Platform(Path home, Map<String, String> env, boolean windows) {
         this(home, env, windows, Map.of());
     }
 
     Platform(Path home, Map<String, String> env, boolean windows, Map<String, Path> known) {
+        this(home, env, windows, known, Found.NONE);
+    }
+
+    Platform(Path home, Map<String, String> env, boolean windows, Map<String, Path> known, Found found) {
         this.home = home;
         this.env = env;
         this.windows = windows;
         this.known = known;
+        this.found = found;
     }
 
     static Platform current() {
         boolean windows = System.getProperty("os.name", "").toLowerCase(Locale.ROOT).contains("win");
-        return new Platform(Path.of(System.getProperty("user.home")), System.getenv(), windows,
-                windows ? askWindows() : Map.of());
+        Path home = Path.of(System.getProperty("user.home"));
+        Map<String, String> env = System.getenv();
+        Map<String, Path> known = windows ? askWindows() : Map.of();
+        Platform usual = new Platform(home, env, windows, known);
+        return new Platform(home, env, windows, known, look(usual.lookIn()));
+    }
+
+    /** Where {@link #look} looks: the user's own folders — the profile, AppData (both), Music, Documents, OneDrive. */
+    List<Path> lookIn() {
+        List<Path> roots = new ArrayList<>(List.of(home));
+        folder("LOCALAPPDATA").ifPresent(roots::add);
+        folder("APPDATA").ifPresent(roots::add);
+        Optional.ofNullable(known.get("music")).ifPresent(roots::add);
+        Optional.ofNullable(known.get("documents")).ifPresent(roots::add);
+        oneDrive().ifPresent(roots::add);
+        return roots.stream().distinct().toList();
+    }
+
+    /**
+     * A short look through the folders for the DJ programs' histories in places no reader names (another version, another install —
+     * Serato DJ Lite 5.1 moved its database): a folder "Serato" with {@code Library/master.sqlite}, "_Serato_" with
+     * {@code History/Sessions}, "VirtualDJ" with {@code History}, at most {@value #LOOK_DEPTH} levels down and {@value #LOOK_MAX_FOLDERS}
+     * folders in all; links not followed, a folder that cannot be opened skipped. Once, at the start.
+     */
+    static Found look(List<Path> roots) {
+        Set<Path> virtualDj = new LinkedHashSet<>();
+        Set<Path> sessions = new LinkedHashSet<>();
+        Set<Path> databases = new LinkedHashSet<>();
+        int[] seen = {0};
+        for (Path root : roots) {
+            if (!Files.isDirectory(root)) {
+                continue;
+            }
+            try {
+                Files.walkFileTree(root, EnumSet.noneOf(FileVisitOption.class), LOOK_DEPTH, new SimpleFileVisitor<>() {
+                    @Override
+                    public FileVisitResult preVisitDirectory(Path folder, BasicFileAttributes attributes) {
+                        if (++seen[0] > LOOK_MAX_FOLDERS) {
+                            return FileVisitResult.TERMINATE;
+                        }
+                        String name = folder.getFileName() == null ? "" : folder.getFileName().toString();
+                        if (name.equalsIgnoreCase("Serato") && Files.isRegularFile(folder.resolve("Library").resolve("master.sqlite"))) {
+                            databases.add(folder.resolve("Library").resolve("master.sqlite"));
+                        } else if (name.equalsIgnoreCase("_Serato_") && Files.isDirectory(folder.resolve("History").resolve("Sessions"))) {
+                            sessions.add(folder.resolve("History").resolve("Sessions"));
+                        } else if (name.equalsIgnoreCase("VirtualDJ") && Files.isDirectory(folder.resolve("History"))) {
+                            virtualDj.add(folder.resolve("History"));
+                        }
+                        return FileVisitResult.CONTINUE;
+                    }
+
+                    @Override
+                    public FileVisitResult visitFile(Path file, BasicFileAttributes attributes) {
+                        return FileVisitResult.CONTINUE;
+                    }
+
+                    @Override
+                    public FileVisitResult visitFileFailed(Path file, IOException e) {
+                        return FileVisitResult.CONTINUE;   // a folder closed to the user, a link that leads nowhere
+                    }
+                });
+            } catch (IOException | RuntimeException e) {
+                // the root itself unreadable: the usual places stay
+            }
+            if (seen[0] > LOOK_MAX_FOLDERS) {
+                break;
+            }
+        }
+        return new Found(List.copyOf(virtualDj), List.copyOf(sessions), List.copyOf(databases));
     }
 
     /** Every program's history this computer may have; which of them is there is the source's own question (present()). */
@@ -58,6 +149,7 @@ final class Platform {
             folders.add(home.resolve("Library").resolve("Application Support").resolve("VirtualDJ").resolve("History"));
             folders.add(home.resolve("Documents").resolve("VirtualDJ").resolve("History"));
         }
+        folders.addAll(found.virtualDjFolders());
         return folders.stream().distinct().toList();
     }
 
@@ -65,6 +157,7 @@ final class Platform {
         List<Path> folders = new ArrayList<>(List.of(home.resolve("Music").resolve("_Serato_").resolve("History").resolve("Sessions")));
         Optional.ofNullable(known.get("music")).ifPresent(music -> folders.add(music.resolve("_Serato_").resolve("History").resolve("Sessions")));
         oneDrive().ifPresent(cloud -> folders.add(cloud.resolve("Music").resolve("_Serato_").resolve("History").resolve("Sessions")));
+        folders.addAll(found.seratoSessionFolders());
         return folders.stream().distinct().toList();
     }
 
@@ -82,13 +175,17 @@ final class Platform {
      * under {@code %APPDATA%} (where the readers of Serato 4 put it); the one written last is read ({@link Serato4Database#version}).
      */
     List<Path> serato4Databases() {
-        if (!windows) {
-            return List.of(home.resolve("Library").resolve("Application Support").resolve("Serato").resolve("Library").resolve("master.sqlite"));
+        List<Path> databases = new ArrayList<>();
+        if (windows) {
+            Path local = folder("LOCALAPPDATA").orElse(home.resolve("AppData").resolve("Local"));
+            Path roaming = folder("APPDATA").orElse(home.resolve("AppData").resolve("Roaming"));
+            databases.add(local.resolve("Serato").resolve("Library").resolve("master.sqlite"));
+            databases.add(roaming.resolve("Serato").resolve("Library").resolve("master.sqlite"));
+        } else {
+            databases.add(home.resolve("Library").resolve("Application Support").resolve("Serato").resolve("Library").resolve("master.sqlite"));
         }
-        Path local = folder("LOCALAPPDATA").orElse(home.resolve("AppData").resolve("Local"));
-        Path roaming = folder("APPDATA").orElse(home.resolve("AppData").resolve("Roaming"));
-        return List.of(local.resolve("Serato").resolve("Library").resolve("master.sqlite"),
-                roaming.resolve("Serato").resolve("Library").resolve("master.sqlite"));
+        databases.addAll(found.serato4Databases());
+        return databases.stream().distinct().toList();
     }
 
     /** A computer's name for the panel's list: "DESKTOP-1AB2 — Windows". */

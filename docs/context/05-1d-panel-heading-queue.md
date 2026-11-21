@@ -118,8 +118,12 @@ every 3 s it reads VirtualDJ's newest `.m3u` of all its folders (the registry's 
 Documents', OneDrive's `Documents` — on macOS `~/Library/Application Support/VirtualDJ` and the Documents'; an old install's folder
 does not hide tonight's file), Serato 2/3's newest `.session` (`Music/_Serato_/History/Sessions`, on Windows also under OneDrive)
 and Serato 4 / 5's `master.sqlite` (read-only; `%LOCALAPPDATA%\Serato\Library` — Serato DJ Lite 5.1 on the owner's Windows —
-or `%APPDATA%\Serato\Library`, the one written last; `~/Library/Application Support/Serato/Library`) when they changed; a history
-there that cannot be read is said in the window ("Serato (master.sqlite — nie da się odczytać)"); sends each new song once (≤ 20 a call, the set before the program started minus 10 minutes not), calls once a minute with
+or `%APPDATA%\Serato\Library`, the one written last; `~/Library/Application Support/Serato/Library`) when they changed; the query made
+from the columns the tables have (Serato 5.1 dropped some of 4's; the newest session's songs, "played" only where the column is); a
+history there that cannot be read is said in the window ("Serato (master.sqlite — nie da się odczytać)"); and at the start a short
+look through the user's folders (the profile, AppData, Music, Documents, OneDrive; 4 levels, at most 30 000 folders, no links
+followed) for a "Serato" with `Library/master.sqlite`, a "_Serato_" with `History/Sessions`, a "VirtualDJ" with `History` in places
+no reader names; sends each new song once (≤ 20 a call, the set before the program started minus 10 minutes not), calls once a minute with
 nothing (alive) and at once after a new pairing (a party without Pro said at once); a 401 = "Odłącz" in the panel: the token
 forgotten, the window asks for a new code; "Odłącz ten komputer" in the window tells the server (`/api/device/unpair`: the computer
 leaves the panel's list) and forgets the token here even offline. On Windows it asks PowerShell once at the start where the Music and

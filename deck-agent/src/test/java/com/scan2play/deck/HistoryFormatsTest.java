@@ -155,6 +155,61 @@ class HistoryFormatsTest {
     }
 
     /**
+     * Serato 5.1's tables (seen on the owner's Windows): history_entry with artist and name as in Serato 4, but the open session's
+     * end_time may be empty (NULL) rather than -1, and a column of Serato 4 may be gone. The query is made from the columns there are:
+     * the newest session's songs, by their start; "played" only where the column is.
+     */
+    @Test
+    void serato5_theNewestSessionsSongs_whateverItsEndTime_andWithoutAPlayedColumn(@TempDir Path dir) throws Exception {
+        Path database = dir.resolve("master.sqlite");
+        try (Connection connection = DriverManager.getConnection("jdbc:sqlite:" + database);
+             Statement sql = connection.createStatement()) {
+            sql.executeUpdate("CREATE TABLE history_session (id INTEGER PRIMARY KEY AUTOINCREMENT, start_time INTEGER NOT NULL, end_time INTEGER,"
+                    + " notes TEXT, name TEXT)");
+            sql.executeUpdate("CREATE TABLE history_entry (id INTEGER PRIMARY KEY AUTOINCREMENT, location_id INTEGER, portable_id TEXT NOT NULL"
+                    + " DEFAULT '', file_name TEXT, artist TEXT NOT NULL DEFAULT '', name TEXT NOT NULL DEFAULT '', album TEXT NOT NULL DEFAULT '',"
+                    + " session_id INTEGER, start_time INTEGER)");
+            sql.executeUpdate("INSERT INTO history_session (id, start_time, end_time) VALUES (1, " + (NIGHT - 90000) + ", " + (NIGHT - 80000) + ")");
+            sql.executeUpdate("INSERT INTO history_session (id, start_time, end_time) VALUES (2, " + (NIGHT - 60) + ", NULL)");
+            sql.executeUpdate("INSERT INTO history_entry (session_id, artist, name, start_time) VALUES"
+                    + " (1, 'Wczoraj', 'Inny dzień', " + (NIGHT - 85000) + "),"
+                    + " (2, 'Linkin Park', 'Session', " + (NIGHT + 100) + "),"
+                    + " (2, 'Sanah', 'Szampan', " + NIGHT + ")");
+        }
+
+        assertEquals(List.of(new Played(Instant.ofEpochSecond(NIGHT), "Sanah", "Szampan"),
+                new Played(Instant.ofEpochSecond(NIGHT + 100), "Linkin Park", "Session")), Serato4Database.read(database));
+    }
+
+    /**
+     * A DJ program's history in a place no reader names (another version, another install): found by a short look through the user's
+     * own folders — a folder "Serato" with Library/master.sqlite, "_Serato_" with History/Sessions, "VirtualDJ" with History — a few
+     * levels deep, never the whole disk.
+     */
+    @Test
+    void theHistories_areFound_inPlacesNoReaderNames_aFewLevelsDeep(@TempDir Path dir) throws Exception {
+        Path serato = dir.resolve("Local").resolve("Programs").resolve("Serato").resolve("Library");
+        Files.createDirectories(serato);
+        Files.writeString(serato.resolve("master.sqlite"), "x");
+        Path sessions = dir.resolve("Muzyka DJ").resolve("_Serato_").resolve("History").resolve("Sessions");
+        Files.createDirectories(sessions);
+        Path virtualDj = dir.resolve("Dane").resolve("VirtualDJ").resolve("History");
+        Files.createDirectories(virtualDj);
+        Path tooDeep = dir.resolve("a").resolve("b").resolve("c").resolve("d").resolve("e").resolve("VirtualDJ").resolve("History");
+        Files.createDirectories(tooDeep);
+
+        Platform.Found found = Platform.look(List.of(dir));
+
+        assertEquals(List.of(serato.resolve("master.sqlite")), found.serato4Databases());
+        assertEquals(List.of(sessions), found.seratoSessionFolders());
+        assertEquals(List.of(virtualDj), found.virtualDjFolders(), "not the one too deep");
+        Platform platform = new Platform(Path.of("/nowhere"), Map.of(), false, Map.of(), found);
+        assertTrue(platform.serato4Databases().contains(serato.resolve("master.sqlite")));
+        assertTrue(platform.seratoSessionFolders().contains(sessions));
+        assertTrue(platform.virtualDjFolders().contains(virtualDj));
+    }
+
+    /**
      * Serato DJ Lite 5.1 on the owner's Windows 11 keeps master.sqlite under %LOCALAPPDATA%, not %APPDATA% as the readers of Serato 4
      * say: both are looked in, and of two the one Serato wrote last is read (an old install's database must not hide tonight's).
      */
