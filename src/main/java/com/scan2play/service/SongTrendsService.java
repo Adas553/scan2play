@@ -3,6 +3,7 @@ package com.scan2play.service;
 import com.scan2play.util.SongNames;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
@@ -17,11 +18,15 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * "Trendy próśb" (docs/ideas.md item 16): the songs the guests of every party asked for in the last {@value #DAYS} days, counted by
- * parties, not by votes — one big room with forty 👍 is one party. Only what the AI let through (accepted, played, skipped or
- * cleared later — not an AI's refusal), checked by the AI, never the DJ's own additions or the demo's. A song by its
+ * parties, not by votes — one big room with forty 👍 is one party. A party is a DJ's ({@code party_settings}, one a DJ), not an
+ * evening: five weddings of one DJ count once — so the report says "DJ-ów", and a song is never one DJ's taste. Only what the AI let through (accepted, played, skipped or
+ * cleared later — not an AI's refusal), checked by the AI, never the DJ's own additions, the demo's or the parties of
+ * {@code scan2play.trends.exclude-parties} (the owner's own tries). A song by its
  * {@link SongNames#comparable} name, shown as it was written most often.
  * <p>
  * The thresholds are what keeps a list anonymous before anyone but the owner sees it: a song on fewer than
@@ -33,7 +38,8 @@ import java.util.Set;
 @Slf4j
 public class SongTrendsService {
 
-    static final int DAYS = 30;
+    /** Two halves of {@value #HALF_DAYS}: every day of the period in one of them, so "nowość" and the arrows count all of it. */
+    static final int DAYS = 28;
     /** "Rising": the parties of the last {@value #HALF_DAYS} days against the {@value #HALF_DAYS} before them. */
     static final int HALF_DAYS = 14;
     static final int MIN_PARTIES_PER_SONG = 3;
@@ -61,15 +67,24 @@ public class SongTrendsService {
 
     private final JdbcTemplate jdbc;
     private final Clock clock;
+    /** The parties not counted, comma-separated: the demo's two always, and the configured ones. */
+    private final String excluded;
 
     @Autowired
-    public SongTrendsService(JdbcTemplate jdbc) {
-        this(jdbc, Clock.systemUTC());
+    public SongTrendsService(JdbcTemplate jdbc, @Value("${scan2play.trends.exclude-parties:}") String excludeParties) {
+        this(jdbc, Clock.systemUTC(), excludeParties);
     }
 
     SongTrendsService(JdbcTemplate jdbc, Clock clock) {
+        this(jdbc, clock, "");
+    }
+
+    SongTrendsService(JdbcTemplate jdbc, Clock clock, String excludeParties) {
         this.jdbc = jdbc;
         this.clock = clock;
+        this.excluded = Stream.concat(Stream.of(DemoParty.CODE, DemoParty.CODE_EN),
+                        Stream.of(excludeParties == null ? new String[0] : excludeParties.split(",")))
+                .map(String::strip).filter(code -> !code.isEmpty()).distinct().collect(Collectors.joining(","));
     }
 
     /** The trends of the {@value #DAYS} days before now. */
@@ -88,12 +103,12 @@ public class SongTrendsService {
         // idx_song_requests_requested_at finds the period; an AI's refusal is "rejected" with no skip and no clearing
         List<Row> rows = jdbc.query("SELECT party_code, song_name, bool_or(requested_at >= ?), bool_or(requested_at >= ? AND requested_at < ?)"
                         + " FROM song_requests WHERE requested_at >= ? AND requested_at < ? AND checked AND NOT added_by_dj"
-                        + " AND party_code NOT IN (?, ?)"
+                        + " AND NOT (party_code = ANY (string_to_array(?, ',')))"
                         + " AND NOT (decision = 'rejected' AND skipped_at IS NULL AND cleared_at IS NULL)"
                         + " GROUP BY party_code, song_name ORDER BY max(requested_at) DESC LIMIT ?",
                 (row, n) -> new Row(row.getString(1), row.getString(2), row.getBoolean(3), row.getBoolean(4)),
                 Timestamp.from(recent), Timestamp.from(earlier), Timestamp.from(recent), Timestamp.from(since), Timestamp.from(now),
-                DemoParty.CODE, DemoParty.CODE_EN, MAX_ROWS + 1);
+                excluded, MAX_ROWS + 1);
         boolean truncated = rows.size() > MAX_ROWS;
         if (truncated) {
             log.warn("Song trends: more than {} (party, song) rows in {} days; the oldest left out", MAX_ROWS, DAYS);

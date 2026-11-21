@@ -1,24 +1,30 @@
 /**
  * "Plan wieczoru" above the queue ("Plan imprezy", V77, variant B): the next moment of tonight's plan — the first one not ticked
  * off — with its time counted down ("za 12 min", "za 1 h 05 min", "teraz"), the whole plan under "Cały plan" with a ✓ for each
- * moment. The ticks are this device's (localStorage, by the event): nothing is sent, a reload keeps them. The countdown follows this
- * device's clock, every 30 s.
+ * moment. The ticks are this device's (localStorage, by the event): nothing is sent, a reload keeps them. Every 30 s again.
  *
- * A moment's time is on the evening's date (#planCard data-plan-evening), or the next day's when it is earlier than 6:00 — the
- * evening runs until 6:00, as the evening summary counts it (oczepiny at 0:30 come after the cake at 23:00).
+ * A tick is kept by the moment's name and time (data-key), not by its place: a moment added or removed in the plan meanwhile must
+ * not move the ticks onto other moments. The countdown is to data-at — the moment in milliseconds, worked out by the server in Polish
+ * time (a time before 6:00 on the night after the evening's day) — so a device whose clock is in another zone still counts right.
  *
- * Dependencies (DOM): #planCard with data-plan-event, data-plan-evening, data-text-in ("za {0} min"), data-text-in-hours
- * ("za {0} h {1} min"), data-text-now, data-text-done; #planNext with [data-plan-next-when], [data-plan-next-label],
- * [data-plan-next-song]; the moments [data-plan-moment] (data-index, data-time "HH:mm" or "", data-label, data-song) each with a
- * [data-plan-tick] button.
+ * The card is drawn with the page: the queue's poll brings tonight's plan's version (EVENTS.PLAN_TONIGHT); one other than the page's
+ * (#planTonightVersion) shows "Plan wieczoru się zmienił — Odśwież" (#planChanged) — the hosts moved the cake, or there is a plan now.
+ * Not a reload by itself: the DJ may be typing in the search or have a card open.
+ *
+ * Dependencies (DOM): #planCard with data-plan-event, data-text-in ("za {0} min"), data-text-in-hours ("za {0} h {1} min"),
+ * data-text-now, data-text-done; #planNext with [data-plan-next-when], [data-plan-next-label], [data-plan-next-song]; the moments
+ * [data-plan-moment] (data-key, data-at — none for a moment without a time —, data-time "HH:mm" or "", data-label, data-song) each with
+ * a [data-plan-tick] button.
  */
+import { EVENTS, on } from './events.js';
+
 const card = document.getElementById('planCard');
 
-/** The ticked moments' indexes kept on this device, by the event; none when the storage is not there. */
+/** The ticked moments' keys kept on this device, by the event; none when the storage is not there. */
 function load(key) {
     try {
         const kept = JSON.parse(window.localStorage.getItem(key) || '[]');
-        return new Set(Array.isArray(kept) ? kept : []);
+        return new Set(Array.isArray(kept) ? kept.filter(function (k) { return typeof k === 'string'; }) : []);
     } catch (e) {
         return new Set();
     }
@@ -32,16 +38,6 @@ function save(key, done) {
     }
 }
 
-/** The moment's time as a Date of this evening: the evening's day, the next day before 6:00; null for a moment without a time. */
-export function momentAt(evening, time) {
-    if (!time) return null;
-    const [year, month, day] = evening.split('-').map(Number);
-    const [hours, minutes] = time.split(':').map(Number);
-    const at = new Date(year, month - 1, day, hours, minutes, 0, 0);
-    if (hours < 6) at.setDate(at.getDate() + 1);
-    return at;
-}
-
 /** "za 12 min", "za 1 h 05 min" or "teraz" for the minutes until a moment (a moment past is "teraz" until it is ticked off). */
 export function untilText(minutes, texts) {
     if (minutes <= 0) return texts.now;
@@ -51,7 +47,6 @@ export function untilText(minutes, texts) {
 
 if (card) {
     const key = 's2p-plan-done-' + card.dataset.planEvent;
-    const evening = card.dataset.planEvening;
     const texts = { in: card.dataset.textIn, inHours: card.dataset.textInHours, now: card.dataset.textNow, done: card.dataset.textDone };
     const next = document.getElementById('planNext');
     const moments = Array.from(card.querySelectorAll('[data-plan-moment]'));
@@ -59,13 +54,13 @@ if (card) {
 
     const show = function () {
         moments.forEach(function (moment) {
-            const ticked = done.has(Number(moment.dataset.index));
+            const ticked = done.has(moment.dataset.key);
             moment.classList.toggle('s2p-plan-moment-done', ticked);
             const tick = moment.querySelector('[data-plan-tick]');
             tick.hidden = false;
             tick.setAttribute('aria-pressed', String(ticked));
         });
-        const first = moments.find(function (moment) { return !done.has(Number(moment.dataset.index)); });
+        const first = moments.find(function (moment) { return !done.has(moment.dataset.key); });
         next.hidden = false;
         const when = next.querySelector('[data-plan-next-when]');
         const label = next.querySelector('[data-plan-next-label]');
@@ -77,8 +72,8 @@ if (card) {
             song.textContent = '';
             return;
         }
-        const at = momentAt(evening, first.dataset.time);
-        when.textContent = at ? first.dataset.time + ' · ' + untilText(Math.ceil((at.getTime() - Date.now()) / 60000), texts) : '';
+        const at = Number(first.dataset.at);
+        when.textContent = at ? first.dataset.time + ' · ' + untilText(Math.ceil((at - Date.now()) / 60000), texts) : '';
         when.hidden = !at;
         label.textContent = first.dataset.label;
         song.textContent = first.dataset.song ? ' · ' + first.dataset.song : '';
@@ -87,16 +82,28 @@ if (card) {
     card.addEventListener('click', function (e) {
         const tick = e.target.closest('[data-plan-tick]');
         if (!tick) return;
-        const index = Number(tick.closest('[data-plan-moment]').dataset.index);
-        if (done.has(index)) {
-            done.delete(index);
+        const moment = tick.closest('[data-plan-moment]').dataset.key;
+        if (done.has(moment)) {
+            done.delete(moment);
         } else {
-            done.add(index);
+            done.add(moment);
         }
+        // only the keys of this plan: a moment gone from it takes its tick along
+        const keys = new Set(moments.map(function (m) { return m.dataset.key; }));
+        Array.from(done).forEach(function (k) { if (!keys.has(k)) done.delete(k); });
         save(key, done);
         show();
     });
 
     show();
     window.setInterval(show, 30000);
+}
+
+const drawn = document.getElementById('planTonightVersion');
+const changed = document.getElementById('planChanged');
+if (drawn && changed) {
+    on(EVENTS.PLAN_TONIGHT, function (detail) {
+        if (detail.version && detail.version !== drawn.value) changed.hidden = false;
+    });
+    changed.querySelector('[data-plan-reload]').addEventListener('click', function () { window.location.reload(); });
 }

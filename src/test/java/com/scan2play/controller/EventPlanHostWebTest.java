@@ -90,7 +90,7 @@ class EventPlanHostWebTest {
         when(eventPlanService.byHostToken(TOKEN)).thenReturn(Optional.of(new EventPlanService.HostEvent(EVENT, "PLN01")));
         when(wishService.event("PLN01", EVENT)).thenReturn(Optional.of(new WishService.Event(EVENT, "PLN01", "wish-token",
                 "Wesele Ani i Kuby", java.time.LocalDate.of(2099, 6, 14), false, 0, Instant.now(), com.scan2play.model.GuestTheme.CLASSIC)));
-        when(eventPlanService.saveByHosts(eq(TOKEN), any(), any(), any())).thenReturn(true);
+        when(eventPlanService.saveByHosts(eq(TOKEN), any(), any(), any(), any())).thenReturn(EventPlanService.Saved.SAVED);
     }
 
     private static String html(MvcResult result) throws Exception {
@@ -140,7 +140,7 @@ class EventPlanHostWebTest {
                 .andExpect(redirectedUrl(PAGE)).andExpect(flash().attribute(ViewAttributes.PLAN_DONE, "saved"));
 
         verify(eventPlanService).saveByHosts(TOKEN, List.of(new Moment("Wejście pary, potem toast", LocalTime.of(17, 30), null, null),
-                new Moment("Tort", null, null, "DJ wybiera")), "Akcent", "");
+                new Moment("Tort", null, null, "DJ wybiera")), "Akcent", "", null);
     }
 
     @Test
@@ -148,7 +148,7 @@ class EventPlanHostWebTest {
         mockMvc.perform(get("/h/e/nobodys-link")).andExpect(status().isNotFound());
         mockMvc.perform(post("/h/e/nobodys-link").param("label", "Tort")).andExpect(status().isNotFound());
         mockMvc.perform(post("/h/e/nobodys-link/template").param("template", "wedding")).andExpect(status().isNotFound());
-        verify(eventPlanService, never()).saveByHosts(anyString(), any(), any(), any());
+        verify(eventPlanService, never()).saveByHosts(anyString(), any(), any(), any(), any());
     }
 
     @Test
@@ -160,5 +160,42 @@ class EventPlanHostWebTest {
 
         verify(eventPlanService).startFrom(EVENT, List.of("Wejście pary", "Pierwszy taniec", "Podziękowania dla rodziców", "Tort",
                 "Oczepiny", "Ostatni taniec"), EventPlanService.BY_HOSTS);
+    }
+
+    /**
+     * A save made from a page opened before someone else saved the plan writes nothing: the page says who saved and when, and shows the
+     * form's content again (the draft, a flash attribute in the session), so nothing typed is lost; "Zapisz plan" then replaces the
+     * other save on purpose (the plan's current version in the form).
+     */
+    @Test
+    void aSaveOverAPlanChangedMeanwhile_isRefused_andWhatWasTypedComesBack() throws Exception {
+        when(eventPlanService.saveByHosts(eq(TOKEN), any(), any(), any(), eq("111"))).thenReturn(EventPlanService.Saved.CHANGED);
+        EventPlanService.Plan now = new EventPlanService.Plan(List.of(new Moment("Od DJ-a", null, null, null)), null, null,
+                Instant.parse("2099-06-01T19:03:00Z"), "dj");
+        when(eventPlanService.plan(EVENT)).thenReturn(now);
+
+        MvcResult saved = mockMvc.perform(post(PAGE).header("Accept-Language", "pl-PL").param("version", "111")
+                        .param("label", "Nasz moment").param("time", "").param("song", "").param("note", "")
+                        .param("blocked", "Akcent").param("wanted", ""))
+                .andExpect(redirectedUrl(PAGE)).andExpect(flash().attribute(ViewAttributes.PLAN_DONE, "changed")).andReturn();
+
+        // the page the redirect leads to, with the session the save made for its flash attributes (as a browser: by its cookie)
+        String session = saved.getResponse().getHeaders("Set-Cookie").stream().filter(cookie -> cookie.startsWith("SESSION="))
+                .findFirst().orElseThrow().split(";")[0].substring("SESSION=".length());
+        String html = html(mockMvc.perform(get(PAGE).header("Accept-Language", "pl-PL")
+                        .cookie(new jakarta.servlet.http.Cookie("SESSION", session))).andExpect(status().isOk()).andReturn());
+        assertThat(html).contains("Nic nie zostało zapisane: w międzyczasie plan zapisano jeszcze raz (DJ, 01.06.2099 21:03:00)",
+                "alert-warning", "value=\"Nasz moment\"", ">Akcent<", "name=\"version\" value=\"" + now.version() + "\"",
+                "data-plan-draft=\"true\"").doesNotContain("value=\"Od DJ-a\"");
+    }
+
+    @Test
+    void tooManySaves_onALink_areRefused_keepingWhatWasTyped() throws Exception {
+        when(eventPlanService.saveByHosts(eq(TOKEN), any(), any(), any(), any())).thenReturn(EventPlanService.Saved.TOO_MANY);
+
+        mockMvc.perform(post(PAGE).param("label", "Tort"))
+                .andExpect(redirectedUrl(PAGE)).andExpect(flash().attribute(ViewAttributes.PLAN_DONE, "too_many"))
+                .andExpect(flash().attribute(ViewAttributes.PLAN_DRAFT, new EventPlanService.Draft(
+                        List.of(new Moment("Tort", null, null, null)), null, null)));
     }
 }

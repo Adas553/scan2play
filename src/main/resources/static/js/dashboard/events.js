@@ -10,7 +10,12 @@ export const EVENTS = Object.freeze({
      */
     GUEST_QUEUE_CHANGED: 's2p:guest-queue-changed',
     /** The DJ changed the history here (a skipped request put back in the queue, the history cleared). The History tab: fetch the list again. */
-    HISTORY_CHANGED: 's2p:history-changed'
+    HISTORY_CHANGED: 's2p:history-changed',
+    /**
+     * The queue's poll answered with tonight's plan's version (`version`, the X-Plan-Tonight header; "-" for none). plan-card.js:
+     * a version other than the page's says the plan changed since.
+     */
+    PLAN_TONIGHT: 's2p:plan-tonight'
 });
 
 export function emit(name, detail) {

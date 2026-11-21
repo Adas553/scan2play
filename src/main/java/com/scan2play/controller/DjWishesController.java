@@ -7,6 +7,7 @@ import com.scan2play.model.PlanFeature;
 import com.scan2play.model.StaffPermission;
 import com.scan2play.service.DjLibraryService;
 import com.scan2play.service.DjService;
+import com.scan2play.service.EventPlanService;
 import com.scan2play.service.PartySettingsCommandService;
 import com.scan2play.service.PartyStaffService;
 import com.scan2play.service.PlanService;
@@ -79,6 +80,8 @@ public class DjWishesController {
     private final DjLibraryService djLibraryService;
     private final PartySettingsCommandService partySettingsCommandService;
     private final MessageSource messageSource;
+    /** "Plan imprezy" (V77): which events have a plan, on the list of events. */
+    private final EventPlanService eventPlanService;
 
     @Value("${scan2play.guest-url}")
     private String rawBaseUrl;
@@ -102,6 +105,7 @@ public class DjWishesController {
         model.addAttribute(PLAN, planService.view(settings, access.owner()));
         List<WishService.Event> events = wishService.eventsOf(partyCode);
         model.addAttribute(WISH_EVENTS, events);
+        model.addAttribute(PLAN_COUNTS, eventPlanService.momentCounts(partyCode));   // "📋 plan (6)" beside an event
         // eventsOf lists MAX_EVENTS at most, which is all a party keeps: as many listed is as many kept
         model.addAttribute(WISH_KEPT_FULL, events.size() >= WishService.MAX_EVENTS);
         model.addAttribute(WISH_MAX_EVENTS, WishService.MAX_EVENTS);

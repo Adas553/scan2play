@@ -74,7 +74,7 @@ class AdminReportWebTest {
 
         assertThat(html).contains("id=\"reportView\"", "Raport za sobota 7.11.2026", "<progress max=\"100\" value=\"100\"",
                 "s2p-dot s2p-dot-bad", "id=\"reportParties\"", "id=\"reportTrends\"", "id=\"reportTrendsBelow\"",
-                "Trendy — 30 dni · imprez 4 · piosenek na 3+ imprezach 1", "title=\"14 dni: 1 · 14 dni przed: 2\"");
+                "Trendy — 28 dni · DJ-ów 4 · piosenek u 3+ DJ-ów 1", ">2→1<", "title=\"14 dni: 1 · 14 dni przed: 2\"");
         assertThat(html).contains("id=\"reportText\"", "Wesele Ani i Tomka", "scan2playcontact@gmail.com", "id=\"reportSend\"",
                 "name=\"_csrf\"", "</html>");
         write("stats-report.html", html);

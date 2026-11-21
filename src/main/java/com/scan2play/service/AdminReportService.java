@@ -428,22 +428,22 @@ public class AdminReportService {
      * DJs' card ("Trendy próśb", docs/ideas.md item 16). Shown under the minimum of parties too, marked: the owner is the one judging it.
      */
     static void renderTrends(StringBuilder text, SongTrendsService.Result trends) {
-        text.append("TRENDY — ").append(SongTrendsService.DAYS).append(" dni · imprez ").append(trends.parties())
-                .append(" · piosenek na ").append(SongTrendsService.MIN_PARTIES_PER_SONG).append("+ imprezach ").append(trends.songs())
+        text.append("TRENDY — ").append(SongTrendsService.DAYS).append(" dni · DJ-ów ").append(trends.parties())
+                .append(" · piosenek u ").append(SongTrendsService.MIN_PARTIES_PER_SONG).append("+ DJ-ów ").append(trends.songs())
                 .append('\n');
         if (trends.belowMinimum()) {
-            text.append("(poniżej ").append(SongTrendsService.MIN_PARTIES).append(" imprez — DJ-e jeszcze by tego nie zobaczyli)\n");
+            text.append("(poniżej ").append(SongTrendsService.MIN_PARTIES).append(" DJ-ów — DJ-e jeszcze by tego nie zobaczyli)\n");
         }
         if (trends.truncated()) {
             text.append("(lista z najnowszych ").append(SongTrendsService.MAX_ROWS).append(" wierszy)\n");
         }
         int place = 1;
         for (SongTrendsService.Trend trend : trends.top()) {
-            text.append(String.format(PL, "%2d. %s — %d imp. · 14 dni %d / %d przed · %s\n", place++, trend.song(), trend.parties(),
+            text.append(String.format(PL, "%2d. %s — DJ: %d · 14 dni %d / %d przed · %s\n", place++, trend.song(), trend.parties(),
                     trend.recent(), trend.earlier(), arrow(trend)));
         }
         if (trends.top().isEmpty()) {
-            text.append("(żadnej piosenki na ").append(SongTrendsService.MIN_PARTIES_PER_SONG).append("+ imprezach)\n");
+            text.append("(żadnej piosenki u ").append(SongTrendsService.MIN_PARTIES_PER_SONG).append("+ DJ-ów)\n");
         }
         text.append('\n');
     }

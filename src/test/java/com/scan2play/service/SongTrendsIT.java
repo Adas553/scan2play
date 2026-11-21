@@ -42,7 +42,7 @@ class SongTrendsIT extends PostgresIntegrationTest {
     }
 
     @Test
-    void theQuery_countsWhatTheAiLetThrough_byParty_inTheThirtyDays() {
+    void theQuery_countsWhatTheAiLetThrough_byParty_inThePeriod_withoutTheExcludedParties() {
         String a = party();
         String b = party();
         String c = party();
@@ -52,7 +52,7 @@ class SongTrendsIT extends PostgresIntegrationTest {
         ask(a, "Wilki - Baśka", 2, r -> r.decision(DjService.DECISION_PLAYED));
         ask(b, "Wilki - Baśka", 3, r -> r.decision(DjService.DECISION_REJECTED).skippedAt(NOW.minus(Duration.ofDays(3))));
         ask(c, "WILKI – BAŚKA", 20, r -> r.decision(DjService.DECISION_REJECTED).clearedAt(NOW.minus(Duration.ofDays(19))));
-        // on one party each by what counts — the AI's refusal, unchecked, the DJ's own, older than 30 days
+        // on one party each by what counts — the AI's refusal, unchecked, the DJ's own, older than the period
         ask(b, "Lady Pank - Mniej niż zero", 1);
         ask(c, "Lady Pank - Mniej niż zero", 1, r -> r.decision(DjService.DECISION_REJECTED));
         ask(d, "Lady Pank - Mniej niż zero", 1, r -> r.checked(false));
@@ -61,7 +61,14 @@ class SongTrendsIT extends PostgresIntegrationTest {
         // not yet: a request after "now"
         ask(d, "Wilki - Baśka", -1);
 
-        SongTrendsService.Result result = new SongTrendsService(jdbc).trends(NOW);
+        // the owner's own party of tries: left out by the configuration
+        String mine = party();
+        ask(mine, "Lady Pank - Mniej niż zero", 1);
+        ask(mine, "Wilki - Baśka", 1);
+        // 29 days ago: past the 28 days (two halves of 14), counted in neither
+        ask(b, "Lady Pank - Mniej niż zero", 29);
+
+        SongTrendsService.Result result = new SongTrendsService(jdbc, "  , " + mine + " ").trends(NOW);
 
         assertThat(result.parties()).as("a, b, c — d has nothing that counts").isEqualTo(3);
         assertThat(result.songs()).isEqualTo(1);

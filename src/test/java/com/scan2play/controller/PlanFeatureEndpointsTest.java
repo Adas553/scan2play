@@ -149,6 +149,7 @@ class PlanFeatureEndpointsTest {
                 // "Plan imprezy" (V77): a save, a template, the hosts' link, the event's lists put over the party's
                 Arguments.of(PlanFeature.WISHES, true, post("/dj/wishes/1/plan").param("partyCode", PUB).param("label", "Tort")),
                 Arguments.of(PlanFeature.WISHES, true, post("/dj/wishes/1/plan/template").param("partyCode", PUB).param("template", "wedding")),
+                Arguments.of(PlanFeature.WISHES, true, post("/dj/wishes/1/plan/clear").param("partyCode", PUB)),
                 Arguments.of(PlanFeature.WISHES, true, post("/dj/wishes/1/plan/host-link").param("partyCode", PUB)),
                 Arguments.of(PlanFeature.WISHES, true, post("/dj/wishes/1/plan/use-lists").param("partyCode", PUB)),
                 // "Pytanie do gości" (V74): a new question, asking one

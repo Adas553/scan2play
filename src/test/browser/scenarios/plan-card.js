@@ -1,6 +1,7 @@
 // "Plan wieczoru" above the queue ("Plan imprezy", V77, variant B, js/dashboard/plan-card.js): the next moment is the first not
-// ticked off, with its time and the countdown; ✓ ticks a moment off (and back), this device keeps the ticks; every moment ticked
-// says so; a moment before 6:00 belongs to the night after the evening's day; the queue marks a song of the plan "📋 z planu".
+// ticked off, with its time and the countdown to its data-at (the server's moment in Polish time); ✓ ticks a moment off (and back),
+// this device keeps the ticks by the moments' names and times — a tick of a moment gone from the plan is dropped; every moment ticked
+// says so; the queue marks a song of the plan "📋 z planu".
 (function () {
     const fits = function () {
         return document.documentElement.scrollWidth <= document.documentElement.clientWidth;
@@ -8,8 +9,11 @@
     const nextLabel = function () {
         return document.querySelector('#planNext [data-plan-next-label]').textContent;
     };
+    const moment = function (index) {
+        return document.querySelectorAll('[data-plan-moment]')[index];
+    };
     const tick = function (index) {
-        document.querySelector('[data-plan-moment][data-index="' + index + '"] [data-plan-tick]').click();
+        moment(index).querySelector('[data-plan-tick]').click();
     };
 
     S2P.scenario({
@@ -28,10 +32,11 @@
 
             tick(0);
             t.step('ticked: the next is the cake', nextLabel(), 'Tort');
-            const first = document.querySelector('[data-plan-moment][data-index="0"]');
+            const first = moment(0);
             t.check('the ticked moment greyed and its ✓ pressed', first.classList.contains('s2p-plan-moment-done')
                 && first.querySelector('[data-plan-tick]').getAttribute('aria-pressed') === 'true');
-            t.step('kept on this device', window.localStorage.getItem('s2p-plan-done-7'), '[0]');
+            t.step('kept on this device, by the name and time', window.localStorage.getItem('s2p-plan-done-7'),
+                '["Podziękowania dla rodziców|21:00"]');
             tick(0);
             t.step('ticked back: the first again', nextLabel(), 'Podziękowania dla rodziców');
 
@@ -39,19 +44,41 @@
             t.step('every moment ticked', document.querySelector('#planNext [data-plan-next-when]').textContent, '✓ Wszystkie momenty odhaczone');
             t.step('no moment named then', nextLabel(), '');
 
-            // the clock's rules, from the module itself
+            // the countdown is to the server's moment (data-at), whatever this device's zone
+            [0, 1, 2, 3].forEach(tick);   // all back: the first is next again
+            const minutes = Math.ceil((Number(first.dataset.at) - Date.now()) / 60000);
+            const when = document.querySelector('#planNext [data-plan-next-when]').textContent;
+            t.check('counted down to data-at (' + when + ')', minutes <= 0 ? /teraz$/.test(when)
+                : when.indexOf(minutes < 60 ? 'za ' + minutes + ' min' : 'za ' + Math.floor(minutes / 60) + ' h') > 0);
+            t.check('a moment without a time has no data-at', !moment(3).hasAttribute('data-at'));
             const plan = await import('/js/dashboard/plan-card.js');
-            const afterMidnight = plan.momentAt('2027-06-14', '00:30');
-            t.step('0:30 is the night after the evening\'s day', [afterMidnight.getDate(), afterMidnight.getHours(), afterMidnight.getMinutes()],
-                [15, 0, 30]);
-            t.step('23:00 is the evening\'s day', plan.momentAt('2027-06-14', '23:00').getDate(), 14);
-            t.check('no time: no moment on the clock', plan.momentAt('2027-06-14', '') === null);
             const texts = { in: 'za {0} min', inHours: 'za {0} h {1} min', now: 'teraz' };
             t.step('the countdown\'s words', [plan.untilText(12, texts), plan.untilText(65, texts), plan.untilText(0, texts),
                 plan.untilText(-5, texts)], ['za 12 min', 'za 1 h 05 min', 'teraz', 'teraz']);
 
             t.step('the plan\'s song marked in the queue', document.querySelectorAll('#song-list .s2p-plan-song').length, 1);
             t.check('nothing sideways after it all', fits());
+        }
+    });
+    S2P.scenario({
+        name: 'plan-card-changed-notice',
+        title: 'the panel\'s "Plan wieczoru": the poll brings another version of tonight\'s plan — "Plan wieczoru się zmienił — Odśwież"',
+        page: 'dashboard-plan',
+        viewport: '390,844',
+        run: async function (t) {
+            const notice = document.getElementById('planChanged');
+            const drawn = document.getElementById('planTonightVersion').value;
+            const poll = function (version) {
+                document.dispatchEvent(new CustomEvent('s2p:plan-tonight', { detail: { version: version } }));
+            };
+            t.check('hidden at first', notice.hidden);
+            poll(drawn);
+            t.check('the same plan: still hidden', notice.hidden);
+            poll('-');
+            t.check('another plan (here: none any more): said', !notice.hidden);
+            t.step('its words', notice.textContent.replace(/\s+/g, ' ').trim(), '📋 Plan wieczoru się zmienił. Odśwież');
+            t.check('"Odśwież" a finger can hit', notice.querySelector('[data-plan-reload]').getBoundingClientRect().height >= 44);
+            t.check('nothing sideways', fits());
         }
     });
 })();

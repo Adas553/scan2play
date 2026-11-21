@@ -140,7 +140,10 @@ class WishesPageRenderTest {
         ResourceBundleMessageSource messages = new ResourceBundleMessageSource();
         messages.setBasename("messages");
         messages.setDefaultEncoding("UTF-8");
-        DjWishesController controller = new DjWishesController(wishes, sessionHelper, plans, djService, library, commands, messages);
+        com.scan2play.service.EventPlanService eventPlans = org.mockito.Mockito.mock(com.scan2play.service.EventPlanService.class);
+        when(eventPlans.momentCounts(PARTY)).thenReturn(Map.of(7L, 6));   // "Wesele Ani i Kuby" has a plan, "Osiemnastka Oli" none
+        DjWishesController controller = new DjWishesController(wishes, sessionHelper, plans, djService, library, commands, messages,
+                eventPlans);
         ReflectionTestUtils.setField(controller, "rawBaseUrl", "https://www.scan2play.com.pl/");
         return controller;
     }
@@ -170,6 +173,8 @@ class WishesPageRenderTest {
         assertThat(html).doesNotContain("??");
         assertThat(html).contains(">Życzenia przed imprezą<", "id=\"wishNewForm\"", "action=\"/dj/wishes/create\"", "Otwarte: 1 z 5.",
                 ">Osiemnastka Oli<", ">zakończone<", ">Wesele Ani i Kuby<", ">zbiera<", "życzeń: 23");
+        // which events have a plan, without opening each
+        assertThat(html.split(">📋 plan \\(6\\)<", -1)).as("the wedding's plan, once").hasSize(2);
         // the event opened: its link, the invitation's print, its buttons
         assertThat(html).contains("value=\"https://www.scan2play.com.pl/w/Wish_tok3n-AbCdEfGhIjKl\"",
                 "href=\"/dj/qr-print?party=WISH1&amp;wish=7&amp;layout=cards\"", ">Zakończ zbieranie<", ">Nowy link<", ">Usuń wydarzenie<",

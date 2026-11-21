@@ -66,8 +66,8 @@ class AdminReportServiceTest {
 
         assertThat(empty).startsWith("Scan2Play — raport za sobota 7.11.2026")
                 .contains("NOWI DJ-E — ostatnie 7 dni (0)\n(nikt nowy)", "IMPREZY WCZORAJ — wieczór 7.11, 6:00–6:00 (0)\n(żadnej)",
-                        "TRENDY — 30 dni · imprez 0 · piosenek na 3+ imprezach 0\n(poniżej 10 imprez — DJ-e jeszcze by tego nie zobaczyli)\n"
-                                + "(żadnej piosenki na 3+ imprezach)\n",
+                        "TRENDY — 28 dni · DJ-ów 0 · piosenek u 3+ DJ-ów 0\n(poniżej 10 DJ-ów — DJ-e jeszcze by tego nie zobaczyli)\n"
+                                + "(żadnej piosenki u 3+ DJ-ów)\n",
                         "AI (Gemini): odpowiada", "E-maile: klucz ustawiony\n", "Log od 07.11.2026 09:10:00: ERROR 0 · WARN 0")
                 .doesNotContain("OSTATNI BŁĄD", "Razem");
 
@@ -87,10 +87,10 @@ class AdminReportServiceTest {
                 .contains("Razem: prośby 50 · zagrane 31 (pokazane pierwsze 50)")
                 .contains("AI (Gemini): NIE ODPOWIADA", "OSTATNI BŁĄD 06.11.2026 09:00:00: the key was refused")
                 .contains("ERROR 3 · WARN 1\n    3× ERROR AiHealthMonitor: AI check: 3 of 5")
-                .contains("TRENDY — 30 dni · imprez 12 · piosenek na 3+ imprezach 2\n"
-                        + " 1. Wilki - Baśka — 7 imp. · 14 dni 5 / 2 przed · ↑\n"
-                        + " 2. Daria Zawiałow - Kaonashi — 3 imp. · 14 dni 3 / 0 przed · nowość\n\nZDROWIE")
-                .doesNotContain("poniżej 10 imprez");
+                .contains("TRENDY — 28 dni · DJ-ów 12 · piosenek u 3+ DJ-ów 2\n"
+                        + " 1. Wilki - Baśka — DJ: 7 · 14 dni 5 / 2 przed · ↑\n"
+                        + " 2. Daria Zawiałow - Kaonashi — DJ: 3 · 14 dni 3 / 0 przed · nowość\n\nZDROWIE")
+                .doesNotContain("poniżej 10 DJ-ów");
 
         // the e-mail: the parties by their code, no address, name or evening's title (the privacy policy gives Brevo those only to
         // write to that organiser)
@@ -194,7 +194,7 @@ class AdminReportServiceTest {
         assertThat(view.funnel().get(1)).isEqualTo(new AdminReportService.Step("„Zacznij”", 4, "10 % wejść"));
         assertThat(html).contains("sobota 7.11.2026", "▲ +", ">AB12<", ">48<", "width:50%;", "width:100%;", "ERROR 1 · WARN 0",
                 "ostatni błąd 07.11.2026 09:00:00: the key was refused", "1× ERROR X: boom", "href=\"https://www.scan2play.com.pl/dj/stats/report\"",
-                "Trendy — 30 dni · imprez 12 · piosenek na 3+ imprezach 2", ">Wilki - Baśka<", ">7 imp.<", ">nowość<")
+                "Trendy — 28 dni · DJ-ów 12 · piosenek u 3+ DJ-ów 2", ">Wilki - Baśka<", ">DJ: 7<", ">↑ 2→5<", ">nowość 0→3<")
                 .doesNotContain("jan@example.com", "Jan K.", "Wesele Ani");
     }
 

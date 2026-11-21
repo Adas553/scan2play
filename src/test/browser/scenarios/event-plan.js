@@ -1,6 +1,8 @@
 // "Plan imprezy" (V77): the plan's form (plan-form.js) on the hosts' page and the DJ's page — "+ Dodaj moment" adds an empty row
 // with fields of their own, ↑ / ↓ move a row (the order on the page is the order saved), ✕ removes one (the last one is emptied),
-// the plan's limit hides "+ Dodaj moment" — and the print's "Drukuj" opens the browser's print.
+// the plan's limit hides "+ Dodaj moment"; one spare empty row with the script; on a phone the time and the name on one line; a change
+// not saved marks the form (data-plan-dirty: the page asks before it is left) — and the print's "Drukuj" opens the browser's print,
+// the print nothing sideways on a small phone.
 (function () {
     /** Nothing wider than the screen: measured on the document, not window.innerWidth (CLAUDE.md, "Mind" 2). */
     const fits = function () {
@@ -15,7 +17,16 @@
 
     const rowsWork = async function (t) {
         const add = document.getElementById('planAdd');
+        const form = document.getElementById('planForm');
         t.check('nothing sideways', fits());
+        const isEmpty = function (row) {
+            return Array.from(row.querySelectorAll('input')).every(function (input) { return input.value === ''; });
+        };
+        t.step('one spare empty row with the script', rows().filter(isEmpty).length, 1);
+        const time = rows()[0].querySelector('input[name="time"]').getBoundingClientRect();
+        const name = rows()[0].querySelector('input[name="label"]').getBoundingClientRect();
+        t.check('the time and the name on one line', Math.abs(time.top - name.top) < 2 && time.right <= name.left);
+        t.step('nothing changed yet', form.dataset.planDirty, 'false');
         t.check('"+ Dodaj moment" shown', !add.hidden);
         t.check('↑ ↓ ✕ shown on every row', rows().every(function (row) { return !row.querySelector('[data-plan-tools]').hidden; }));
         const before = rows().length;
@@ -36,6 +47,7 @@
         t.step('↑ moved the second moment first', labels().slice(0, 2), [second, first]);
         rows()[0].querySelector('[data-plan-down]').click();
         t.step('↓ moved it back', labels().slice(0, 2), [first, second]);
+        t.step('a move is a change not saved', form.dataset.planDirty, 'true');
         // the form sends the rows in the page's order
         t.step('the form sends the names in the page\'s order', new FormData(document.getElementById('planForm')).getAll('label').slice(0, 2),
             [first, second]);
@@ -82,6 +94,16 @@
             window.print = function () { printed++; };
             document.querySelector('[data-plan-print]').click();
             t.step('the browser\'s print opened once', printed, 1);
+        }
+    });
+
+    S2P.scenario({
+        name: 'event-plan-print-fits-320',
+        title: 'the plan\'s print looked at on a small phone (320 × 640): nothing sideways',
+        page: 'event-plan-print',
+        viewport: '320,640',
+        run: async function (t) {
+            t.check('nothing sideways', fits());
         }
     });
 })();

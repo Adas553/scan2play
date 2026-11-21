@@ -238,25 +238,39 @@ class DashboardPageRenderTest {
     void tonightsPlan_isAboveTheQueue_andItsSongsAreMarked() throws IOException {
         com.scan2play.service.EventPlanService plans = mock(com.scan2play.service.EventPlanService.class);
         java.time.LocalDate evening = com.scan2play.service.EveningSummaryService.eveningOf(java.time.Instant.now());
-        when(plans.tonight(org.mockito.ArgumentMatchers.eq(PARTY), any())).thenReturn(java.util.Optional.of(
-                new com.scan2play.service.EventPlanService.Tonight(7L, "Wesele Ani i Kuby", evening, List.of(
+        com.scan2play.service.EventPlanService.Moment oczepiny =
+                new com.scan2play.service.EventPlanService.Moment("Oczepiny", java.time.LocalTime.of(0, 30), null, null);
+        com.scan2play.service.EventPlanService.Tonight tonight = new com.scan2play.service.EventPlanService.Tonight(7L,
+                "Wesele Ani i Kuby", evening, List.of(
                         new com.scan2play.service.EventPlanService.Moment("Podziękowania dla rodziców", java.time.LocalTime.of(21, 0),
                                 "Wilki - Baśka", "imiona: Ewa i Marek"),
                         new com.scan2play.service.EventPlanService.Moment("Tort", java.time.LocalTime.of(23, 0), null, "DJ wybiera"),
-                        new com.scan2play.service.EventPlanService.Moment("Oczepiny", java.time.LocalTime.of(0, 30), null, null),
-                        new com.scan2play.service.EventPlanService.Moment("Ostatni taniec", null, "Zespół - Na Koniec", null)))));
+                        oczepiny,
+                        new com.scan2play.service.EventPlanService.Moment("Ostatni taniec", null, "Zespół - Na Koniec", null)),
+                "Disco polo", null);
+        when(plans.tonight(org.mockito.ArgumentMatchers.eq(PARTY), any())).thenReturn(java.util.Optional.of(tonight));
         when(plans.tonightSongs(org.mockito.ArgumentMatchers.eq(PARTY), any())).thenReturn("Wilki - Baśka\nZespół - Na Koniec");
         String html;
+        String bartender;
+        String secondDj;
         try {
             eventPlans = plans;
             html = renderDashboard(party(), List.of(song(1, "Wilki - Baśka"), song(2, "sanah - Szampan")), PL);
+            // the plan's notes hold names: only whoever may see the events (WISHES), as the privacy policy says
+            bartender = renderDashboard(party(), List.of(song(1, "Wilki - Baśka")), PL, new GuestRequestLimiter(30, 10, 300, ""),
+                    ownerToken(), mock(PartyStaffService.class), new MockHttpSession(),
+                    new PartyStaffService.Access(party(), false, java.util.EnumSet.of(StaffPermission.QUEUE)), null);
+            secondDj = renderDashboard(party(), List.of(song(1, "Wilki - Baśka")), PL, new GuestRequestLimiter(30, 10, 300, ""),
+                    ownerToken(), mock(PartyStaffService.class), new MockHttpSession(),
+                    new PartyStaffService.Access(party(), false, java.util.EnumSet.of(StaffPermission.QUEUE, StaffPermission.WISHES)), null);
         } finally {
             eventPlans = mock(com.scan2play.service.EventPlanService.class);
         }
 
         assertWhatTheScriptsNeed(html);
         assertThat(html).doesNotContain("??");
-        assertThat(html).contains("id=\"planCard\"", "data-plan-event=\"7\"", "data-plan-evening=\"" + evening + "\"",
+        assertThat(html).contains("id=\"planCard\"", "data-plan-event=\"7\"", "data-key=\"Oczepiny|00:30\"",
+                "data-at=\"" + tonight.at(oczepiny) + "\"",
                 ">📋 Plan wieczoru<", "· Wesele Ani i Kuby", "href=\"/dj/wishes/7/plan?party=" + PARTY + "\"", ">Cały wieczór (4)<",
                 "data-time=\"23:00\"", "data-time=\"00:30\"", "data-label=\"Oczepiny\"", "data-song=\"Zespół - Na Koniec\"",
                 ">imiona: Ewa i Marek<", "aria-label=\"Odhacz: Tort\"", "data-text-in=\"za {0} min\"");
@@ -265,7 +279,18 @@ class DashboardPageRenderTest {
         assertThat(wilki.substring(0, wilki.indexOf("</tr>"))).as("the plan's song marked").contains(">📋 z planu<");
         String szampan = html.substring(html.indexOf("sanah - Szampan", html.indexOf("id=\"queueList\"")));
         assertThat(szampan.substring(0, szampan.indexOf("</tr>"))).as("another song not").doesNotContain("z planu");
+        assertThat(html).as("the event's lists are not the party's: \"Użyj\" on the card, back to the panel").contains(
+                "id=\"planListsOff\"", "action=\"/dj/wishes/7/plan/use-lists\"", "name=\"back\" value=\"panel\"", ">Użyj ich<");
+        assertThat(html.substring(html.indexOf("data-key=\"Ostatni taniec|\""))).as("no time: no data-at")
+                .startsWith("data-key=\"Ostatni taniec|\" data-label=");
+        assertThat(html).as("the plan's version as drawn, the notice of a change hidden till the poll brings another").contains(
+                "id=\"planTonightVersion\" value=\"" + com.scan2play.controller.DjDashboardController.planVersion(tonight) + "\"")
+                .containsPattern("id=\"planChanged\"[^>]*hidden");
         write("dashboard-plan.html", html);
+        assertThat(bartender).as("no WISHES: no version either").doesNotContain("id=\"planTonightVersion\"");
+        assertThat(bartender).as("no WISHES: no card, no mark").doesNotContain("id=\"planCard\"", "z planu<");
+        assertThat(secondDj).as("WISHES without HOST_LISTS: the card, not \"Użyj\"").contains("id=\"planCard\"")
+                .doesNotContain("id=\"planListsOff\"");
 
         assertThat(renderDashboard(party(), List.of(song(1, "Wilki - Baśka")), PL)).as("no plan tonight: no card, no mark")
                 .doesNotContain("id=\"planCard\"", "z planu<");

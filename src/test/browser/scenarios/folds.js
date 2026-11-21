@@ -37,7 +37,7 @@
             t.step('"Obsługa", "Życzenia", "Pytanie" lines like them, leading to their pages', ['staffRow', 'wishesRow', 'pollsRow'].map(function (id) {
                 const row = document.getElementById(id);
                 return [text(row.querySelector('.s2p-fold-name')), row.getAttribute('href')];
-            }), [['Obsługa', '/dj/staff?party=HARN1'], ['Życzenia przed imprezą', '/dj/wishes?party=HARN1'], ['Pytanie do gości', '/dj/polls?party=HARN1']]);
+            }), [['Obsługa', '/dj/staff?party=HARN1'], ['Życzenia i plan imprezy', '/dj/wishes?party=HARN1'], ['Pytanie do gości', '/dj/polls?party=HARN1']]);
             const rows = ['staffRow', 'wishesRow', 'pollsRow'].map(function (id) { return document.getElementById(id); });
             const lines = folds().map(function (fold) { return fold.querySelector('summary'); }).concat(rows);
             t.step('the page\'s first heading its h1 — the "party closed" banner above it is no heading (dj-nav)',

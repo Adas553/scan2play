@@ -361,12 +361,13 @@
                     </div>
                 </details>
 
-                <!--/* "Życzenia przed imprezą" (V68): the guests write songs before an event, on its own link — a row leading to the page of
-                     the events and their wishes (DjWishesController), as "Obsługa": nothing to set here, so no card to unfold first. Its
+                <!--/* "Życzenia i plan imprezy" (V68, V77): the guests write songs before an event, on its own link, and the event's plan
+                     is made with its hosts — a row leading to the page of the events, their wishes and plans (DjWishesController), named
+                     for both, as a DJ looking for the plan looks here; as "Obsługa": nothing to set here, so no card to unfold first. Its
                      state the events collecting now. Whoever has WISHES; without Pro "PRO" beside it and the page says what Pro adds. */-->
                 <a th:if="${access.may('WISHES') and (plan.allows('WISHES') or plan.pro('WISHES'))}" th:href="@{/dj/wishes(party=${partyCode})}"
                    href="/dj/wishes" id="wishesRow" class="card bg-dark border-secondary s2p-fold-link">
-                    <h3 class="s2p-card-title s2p-fold-name"><span th:text="#{wishes.title}">Wishes before the party</span><th:block th:if="${plan.pro('WISHES')}"><span th:replace="~{fragments/components :: proMark}"></span></th:block></h3>
+                    <h3 class="s2p-card-title s2p-fold-name"><span th:text="#{settings.wishes.title}">Wishes and party plan</span><th:block th:if="${plan.pro('WISHES')}"><span th:replace="~{fragments/components :: proMark}"></span></th:block></h3>
                     <span class="s2p-fold-state" id="wishesState" th:unless="${plan.pro('WISHES')}" th:classappend="${wishOpen == 0} ? 's2p-fold-state-empty'"
                           th:text="${wishOpen > 0} ? #{settings.wishes.open(${wishOpen})} : #{settings.wishes.none}">Inactive</span>
                 </a>
