@@ -12,7 +12,7 @@ import java.util.Properties;
 
 /**
  * What the program remembers between runs, in the DJ's own folder ({@code ~/.scan2play/zagrane.properties}): the server and the token
- * of the pairing. The token opens the party's "Zagrane" and nothing else; the file is the DJ's alone where the system allows it.
+ * of the pairing, and the history folder the DJ picked. The token opens the party's "Zagrane" and nothing else; the file is the DJ's alone where the system allows it.
  */
 final class Settings {
 
@@ -47,6 +47,25 @@ final class Settings {
     void paired(String server, String token) throws IOException {
         values.setProperty("server", server);
         values.setProperty("token", token);
+        save();
+    }
+
+    /** The history folder the DJ picked in the window ("Wskaż folder historii…"), or null: read beside the usual places. */
+    Path folder() {
+        String value = values.getProperty("folder");
+        try {
+            return value == null || value.isBlank() ? null : Path.of(value);
+        } catch (RuntimeException e) {
+            return null;
+        }
+    }
+
+    void folder(Path folder) throws IOException {
+        if (folder == null) {
+            values.remove("folder");
+        } else {
+            values.setProperty("folder", folder.toString());
+        }
         save();
     }
 

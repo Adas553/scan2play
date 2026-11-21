@@ -67,6 +67,17 @@ final class Platform {
         return new Platform(home, env, windows, known, look(usual.lookIn()));
     }
 
+    /**
+     * The histories a folder the DJ picked may hold, itself or right under it as the programs make them: VirtualDJ's {@code .m3u}
+     * (in it or its {@code History}), Serato's {@code .session} (in it, {@code History/Sessions} or {@code Sessions}) and Serato's
+     * {@code master.sqlite} (in it or {@code Library}). Each source says itself whether it is there.
+     */
+    static List<HistorySource> sourcesIn(Path folder) {
+        return List.of(new VirtualDjHistory(List.of(folder, folder.resolve("History"))),
+                new SeratoSessions(List.of(folder, folder.resolve("History").resolve("Sessions"), folder.resolve("Sessions"))),
+                new Serato4Database(List.of(folder.resolve("master.sqlite"), folder.resolve("Library").resolve("master.sqlite"))));
+    }
+
     /** Where {@link #look} looks: the user's own folders — the profile, AppData (both), Music, Documents, OneDrive. */
     List<Path> lookIn() {
         List<Path> roots = new ArrayList<>(List.of(home));

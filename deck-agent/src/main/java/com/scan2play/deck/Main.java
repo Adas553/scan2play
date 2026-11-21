@@ -1,10 +1,16 @@
 package com.scan2play.deck;
 
+import com.formdev.flatlaf.FlatDarkLaf;
+import com.formdev.flatlaf.FlatLaf;
+
 import javax.swing.JOptionPane;
+import javax.swing.UIManager;
 import java.awt.GraphicsEnvironment;
 import java.io.IOException;
 import java.time.Clock;
+import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -42,6 +48,9 @@ public final class Main {
         });
 
         boolean inConsole = GraphicsEnvironment.isHeadless() || List.of(args).contains("--pair") || List.of(args).contains("--console");
+        if (!inConsole) {
+            theme();
+        }
         if (!onlyCopy()) {
             if (inConsole) {
                 System.out.println(ALREADY_RUNNING);
@@ -57,6 +66,7 @@ public final class Main {
 
         Window[] window = new Window[1];
         Agent agent = new Agent(sources, client, settings, Clock.systemDefaultZone(), status -> window[0].update(status));
+        agent.useFolder(settings.folder());
         window[0] = new Window(settings, entered -> looks.execute(() -> {
             String server = entered[1].isBlank() ? Settings.DEFAULT_SERVER : ServerClient.stripSlash(entered[1]);
             ServerClient.Answer answer = client.pair(server, entered[0], Platform.computerName());
@@ -77,9 +87,44 @@ public final class Main {
                 window[0].failedToSave(e);
             }
             agent.tick();
-        }));
+        }), folder -> {
+            try {
+                settings.folder(folder);
+            } catch (IOException e) {
+                window[0].failedToSave(e);
+            }
+            agent.useFolder(folder);
+            looks.execute(agent::tick);
+            return folder == null || holdsAHistory(folder);
+        });
         window[0].show();
         looks.scheduleWithFixedDelay(agent::tick, 0, LOOK_EVERY_SECONDS, TimeUnit.SECONDS);
+    }
+
+    /** Scan2Play's look: FlatLaf's dark theme in the app's colours (app.css), round corners as the panel's buttons and fields. */
+    private static void theme() {
+        FlatLaf.setGlobalExtraDefaults(Map.of("@accentColor", "#0dcaf0", "@background", "#161616", "@foreground", "#e0e0e0"));
+        FlatDarkLaf.setup();
+        UIManager.put("Button.arc", 10);
+        UIManager.put("Component.arc", 10);
+        UIManager.put("TextComponent.arc", 10);
+        UIManager.put("Button.default.background", Window.CYAN);
+        UIManager.put("Button.default.foreground", new java.awt.Color(0x0b0b0b));
+        UIManager.put("Button.default.hoverBackground", new java.awt.Color(0x3dd5f3));
+    }
+
+    /** Whether a folder the DJ picked holds a VirtualDJ or Serato history (the window says so when not). */
+    static boolean holdsAHistory(Path folder) {
+        for (HistorySource source : Platform.sourcesIn(folder)) {
+            try {
+                if (source.present() && !source.version().isEmpty()) {
+                    return true;
+                }
+            } catch (IOException | RuntimeException e) {
+                return true;   // there, though not readable now: the window's "Czyta" says what is wrong
+            }
+        }
+        return false;
     }
 
     /**
@@ -122,7 +167,8 @@ public final class Main {
         }
         String[] said = {""};
         Agent agent = new Agent(sources, client, settings, Clock.systemDefaultZone(), status -> {
-            String line = "czyta " + status.reading() + "  " + status.last() + (status.marked().isEmpty() ? "" : "  zagrane: " + status.marked());
+            String line = "czyta " + status.reading() + "  " + status.last()
+                    + (status.marked().isEmpty() ? "" : "  zagrane (" + status.markedCount() + "): " + status.marked().getFirst().song());
             if (!line.equals(said[0])) {   // only what changed
                 said[0] = line;
                 System.out.println(status.checkedAt() + "  " + line);

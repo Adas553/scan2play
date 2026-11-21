@@ -654,3 +654,18 @@ z kolumn, które są: piosenki najnowszej sesji, „played” tylko gdy kolumna 
 poziomy, najwyżej 30 000 folderów, bez linków) w poszukiwaniu „Serato/Library/master.sqlite”, „_Serato_/History/Sessions”,
 „VirtualDJ/History” w miejscach, których żaden opis nie podaje (`theHistories_areFound_inPlacesNoReaderNames_aFewLevelsDeep`,
 czerwony). Całego dysku nie (czas, antywirus). Program `verify` 32/32.
+
+### Okno programu przebudowane i „Wskaż folder historii…” (2026-11-21, noc)
+
+Właściciel (zrzut okna z jednym „✓ Zagrane samo: LINKIN PARK - Session”): czy może być bardziej profesjonalne, co przy 100
+piosenkach, czy może mieć motyw albo logo Scan2Play; i ręczne wskazanie folderu. Zrobione: ciemny motyw FlatLaf (jeden jar, bez kodu
+natywnego) w kolorach `app.css`, znak Scan2Play rysowany z `logo-small.svg` (okno, pasek zadań, zasobnik), nagłówek „Scan2Play /
+Zagrane samo”; po połączeniu linia stanu z kropką, sekcja „CZYTA” (każda historia; nic — „Wskaż folder historii…”), sekcja
+„OZNACZONE OD URUCHOMIENIA · N” — **5 ostatnich z godziną, najnowsza na górze, i licznik**, nigdy cała lista nocy; serwer schowany za
+„Zmień serwer”. Folder wskazany: zapisany w ustawieniach programu (nie w Scan2Play — ścieżka nie opuszcza komputera), czytany obok
+zwykłych miejsc, „Nie czytaj go” go zapomina; w panelu w „Pierwszym uruchomieniu” jedno zdanie o nim. Testy czerwone przed kodem:
+`AgentTest.theMarkedSongs_theLastFiveWithTheirTimes_andHowManyInAll`, `aFolderThePickedDj_isReadBesideTheUsualPlaces`,
+`SettingsTest.theFolderPicked_isKept_andForgotten`, `HistoryFormatsTest.aPickedFolder_isReadAsWhicheverHistoryItHolds`,
+`DashboardPageRenderTest` (zdanie w panelu). Okno obejrzane w kontenerze (Xvfb, prawdziwy program z udawanym serwerem): przed
+połączeniem, połączony z 6 oznaczonymi, połączony bez historii. Program `verify` 35/35, `check.py unit` 1530/1530. Na Windows i Macu
+nieobejrzane (czcionki systemu, okno wyboru folderu w ciemnym motywie).

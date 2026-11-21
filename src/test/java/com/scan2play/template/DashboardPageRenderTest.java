@@ -1070,7 +1070,7 @@ class DashboardPageRenderTest {
                         "„Uruchom mimo to”", "„Otwórz mimo to”");
         String card = html.substring(html.indexOf("id=\"deckReader\""), html.indexOf("</section>", html.indexOf("id=\"deckReader\"")));
         // one way only, the program: a second one in the browser was too much to choose from (variant E parked, docs/ideas.md item 18)
-        assertThat(card).as("no reading in this browser").doesNotContain("deckBrowser", "deckPick", "Wskaż folder historii",
+        assertThat(card).as("no reading in this browser").doesNotContain("deckBrowser", "deckPick",   // the button "Wskaż folder historii" of E; the program's own is named in its help
                 "Ta karta panelu musi zostać otwarta", "Chrome lub Edge", "W tej przeglądarce");
         assertThat(card).as("what reaches Scan2Play: said once").containsOnlyOnce("trafiają tylko wykonawca, tytuł i godzina");
         assertThat(card).as("a card as \"Impreza\": framed, the first time's three steps in order, the privacy line last")
@@ -1083,7 +1083,8 @@ class DashboardPageRenderTest {
         assertThat(card).as("the first start: SmartScreen's own words; a Windows that gives no way past it leads to the panel's help; "
                         + "the Mac's second question")
                 .contains("„System Windows ochronił ten komputer”", "Jeśli „Uruchom mimo to” się nie pojawia",
-                        "napisz do nas przez „Pomoc i kontakt”", "potwierdź hasłem");
+                        "napisz do nas przez „Pomoc i kontakt”", "potwierdź hasłem",
+                        "Program nie widzi historii? W jego oknie: „Wskaż folder historii…”.");
     }
 
     /** "Podsumowanie wieczoru" (V35): to an organiser without Pro, the way to /pro with "PRO"; to the staff of such a party, nothing. */

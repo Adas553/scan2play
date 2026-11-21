@@ -128,11 +128,17 @@ nothing (alive) and at once after a new pairing (a party without Pro said at onc
 forgotten, the window asks for a new code; "Odłącz ten komputer" in the window tells the server (`/api/device/unpair`: the computer
 leaves the panel's list) and forgets the token here even offline. On Windows it asks PowerShell once at the start where the Music and
 Documents are and where VirtualDJ's `HomeFolder` points (UTF-8: a user name with a Polish letter whole; OneDrive, Polish folder names)
-— extra folders beside the usual ones, nothing when PowerShell is missing. On macOS the Dock icon shows the window closed into the menu bar. The window: the code and the server
-(`https://www.scan2play.com.pl`, changeable — `dev.` for a try; an empty code: "Wpisz kod z panelu."), then what it reads, when it
-last looked and the last three songs marked since the start ("jeszcze nic" before the first); a tray icon ("Pokaż", "Zakończ"). One
+— extra folders beside the usual ones, nothing when PowerShell is missing. On macOS the Dock icon shows the window closed into the menu bar. The window (`Window`, FlatLaf's dark theme in the app's colours, the Scan2Play mark drawn from `logo-small.svg` — the window's,
+the taskbar's and the tray's icon): unpaired, "Połącz ten komputer z imprezą", the code's large box and "Połącz" (an empty code:
+"Wpisz kod z panelu."), the server behind "Zmień serwer" (`https://www.scan2play.com.pl`; `dev.` for a try); paired, a status line
+with a dot ("Działa — połączono z imprezą" green; amber/red: no server, too many calls, no Pro, no history seen) and "sprawdzone
+23:53:52"; "CZYTA" — each history read ("✓ VirtualDJ (2026-11-21.m3u)", red "nie da się odczytać"), or "Nie widzę historii…" with the
+button "Wskaż folder historii…" (a quiet link "Inny folder historii…" when something is read): a folder the DJ picks is kept in the
+settings and read beside the usual places (`Platform.sourcesIn`: VirtualDJ's `.m3u`, Serato's `.session`, `master.sqlite`, in it or
+right under it; "Nie czytaj go" forgets it); "OZNACZONE OD URUCHOMIENIA · 12" — the last 5 songs marked with their times, newest
+first, never a night's whole list (empty: when a song marks itself); "Odłącz ten komputer"; a tray icon ("Pokaż", "Zakończ"). One
 copy per user: a second start finds `~/.scan2play/zagrane.lock` locked (`SingleInstance`, `FileChannel.tryLock`; the system drops the
-lock when the program ends) and says "Program już działa…" (a window, or a line and exit 1 in the console). `~/.scan2play/zagrane.properties` keeps the server and the token. Without a screen: `--pair <code> [--server …]`, then
+lock when the program ends) and says "Program już działa…" (a window, or a line and exit 1 in the console). `~/.scan2play/zagrane.properties` keeps the server, the token and the folder picked. Without a screen: `--pair <code> [--server …]`, then
 `--console`. Tests: `sh mvnw -f deck-agent/pom.xml -B -ntp verify` (`HistoryFormatsTest`, `AgentTest`, `SingleInstanceTest`, `WindowTest`). Packages:
 `.github/workflows/deck-agent.yml`, by hand ("Run workflow"): a jpackage app folder with its own Java for Windows and macOS, zipped,
 **not signed** (SmartScreen's "Uruchom mimo to"; macOS's "Open Anyway" once; the Mac bundle only signed ad hoc, which Apple's chips need

@@ -182,6 +182,37 @@ class HistoryFormatsTest {
     }
 
     /**
+     * A folder the DJ picked: whichever program's history is in it — or right under it as the programs make it (VirtualDJ's History,
+     * Serato's History/Sessions or Library/master.sqlite) — is read; a folder with none of them reads nothing.
+     */
+    @Test
+    void aPickedFolder_isReadAsWhicheverHistoryItHolds(@TempDir Path dir) throws Exception {
+        Path virtualDj = dir.resolve("VirtualDJ");
+        Files.createDirectories(virtualDj.resolve("History"));
+        Files.writeString(virtualDj.resolve("History").resolve("2026-11-21.m3u"), "#EXTVDJ:<artist>Sanah</artist><title>Szampan</title>\n");
+        Path serato = dir.resolve("Serato");
+        Files.createDirectories(serato.resolve("Library"));
+        Files.writeString(serato.resolve("Library").resolve("master.sqlite"), "x");
+        Path empty = dir.resolve("Pobrane");
+        Files.createDirectories(empty);
+
+        assertEquals(List.of("VirtualDJ"), present(Platform.sourcesIn(virtualDj)));
+        assertEquals(List.of("VirtualDJ"), present(Platform.sourcesIn(virtualDj.resolve("History"))));
+        assertEquals(List.of("Serato"), present(Platform.sourcesIn(serato)));
+        assertEquals(List.of(), present(Platform.sourcesIn(empty)));
+    }
+
+    private static List<String> present(List<HistorySource> sources) throws Exception {
+        List<String> programs = new java.util.ArrayList<>();
+        for (HistorySource source : sources) {
+            if (source.present() && !source.version().isEmpty()) {
+                programs.add(source.program());
+            }
+        }
+        return programs;
+    }
+
+    /**
      * A DJ program's history in a place no reader names (another version, another install): found by a short look through the user's
      * own folders — a folder "Serato" with Library/master.sqlite, "_Serato_" with History/Sessions, "VirtualDJ" with History — a few
      * levels deep, never the whole disk.
