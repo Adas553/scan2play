@@ -7,7 +7,7 @@
  * A hidden window does not poll at all — the DJ's phone in a pocket, a second tab, the dashboard behind the DJ's own software: nobody
  * sees the list, and it is fetched at once when the window is shown again.
  */
-import { EVENTS, on } from './events.js';
+import { EVENTS, emit, on } from './events.js';
 import { csrfHeaders, demoMode, focusSpot, hideRefused, partyCode, showPartyActive, showRefused } from './common.js';
 import { applyListFilters, reapplySort } from './list-tools.js';
 import { reopenCards } from './cards.js';
@@ -182,6 +182,9 @@ async function refreshTable() {
         if (partyActive === 'true' || partyActive === 'false') showPartyActive(partyActive === 'true', sentAt);
         // …and its plan (V55): a moment applied or cancelled leaves the line under the heading
         applySchedule(response.headers.get('X-Party-Schedule'));
+        // …and tonight's party plan's version (V77): the card says when the plan changed since the page was drawn
+        const planTonight = response.headers.get('X-Plan-Tonight');
+        if (planTonight) emit(EVENTS.PLAN_TONIGHT, { version: planTonight });
 
         // The person's access (V32): taken away (403) or changed by the organiser (X-Panel-Access) — the page loads itself again, and
         // the panel says what happened; before, the queue stood still and only the console knew

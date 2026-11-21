@@ -159,6 +159,13 @@ public class DjDashboardController {
     static final String PANEL_ACCESS_HEADER = "X-Panel-Access";
 
     /**
+     * On every answer of the queue poll, 304 too, for whoever sees the plan card: tonight's plan's version ({@link #planVersion}) —
+     * the card is drawn with the page, so a plan the hosts or another DJ changed during the evening (or one there is now) makes the
+     * panel say "Plan wieczoru się zmienił — Odśwież" (plan-card.js).
+     */
+    static final String PLAN_TONIGHT_HEADER = "X-Plan-Tonight";
+
+    /**
      * The DJ panel: the party {@code party} names, else the default panel ({@link DjSessionHelper#panel}); none at all — a person who
      * came by an invitation that did not work, or whose access was taken away — is the page "no-panel". A person back from Google's
      * login with an invitation waiting is asked "Dołączyć?" first ({@code /join/{token}}), and so is one whose Google address an
@@ -226,6 +233,7 @@ public class DjDashboardController {
         model.addAttribute(PLAN_TONIGHT, tonight);
         model.addAttribute(PLAN_SONGS, plans ? SongList.of(eventPlanService.tonightSongs(partyCode, Instant.now())) : null);
         model.addAttribute(PLAN_LISTS_OFF, tonight != null && listsOff(tonight, settings, access));
+        model.addAttribute(PLAN_TONIGHT_VERSION, plans ? planVersion(tonight) : null);
 
         return "dashboard";
     }
@@ -601,6 +609,14 @@ public class DjDashboardController {
     }
 
     /**
+     * Tonight's plan as one short text that changes with it — its event, moments and lists ("-": none). Kept 30 s with the plan
+     * (EventPlanService.tonight), so asking for it every 3 s costs no query.
+     */
+    public static String planVersion(EventPlanService.Tonight tonight) {
+        return tonight == null ? "-" : Integer.toHexString(tonight.hashCode());
+    }
+
+    /**
      * Whether tonight's event has lists the party does not use yet — the hosts wrote "don't play" on their link and nobody pressed
      * "Użyj list na imprezie": the card says so to whoever may change the party's lists (HOST_LISTS, with the plan that has them).
      */
@@ -655,8 +671,11 @@ public class DjDashboardController {
                 + (planned.getHostBlocked() == null ? "" : "-b" + Integer.toHexString(planned.getHostBlocked().hashCode()))
                 + (plan.allows("TIPS") ? "" : "-f") + library;
         // tonight's plan's songs (V77): a request becomes "📋 z planu" when the plan names it, with the queue as it was
-        String planSongs = plan.allows("WISHES") && access.may(StaffPermission.WISHES)
-                ? eventPlanService.tonightSongs(partyCode, Instant.now()) : null;
+        boolean plans = plan.allows("WISHES") && access.may(StaffPermission.WISHES);
+        String planSongs = plans ? eventPlanService.tonightSongs(partyCode, Instant.now()) : null;
+        if (plans) {
+            response.setHeader(PLAN_TONIGHT_HEADER, planVersion(eventPlanService.tonight(partyCode, Instant.now()).orElse(null)));
+        }
         wanted += planSongs == null ? "" : "-p" + Integer.toHexString(planSongs.hashCode());
         String etag = "\"q-" + fingerprint + wanted + "\"";
 

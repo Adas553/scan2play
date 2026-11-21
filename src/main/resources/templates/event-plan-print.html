@@ -8,8 +8,9 @@
     <meta name="referrer" content="no-referrer">
     <link href="/css/app.css" th:href="@{/css/app.css}" rel="stylesheet">
 </head>
-<!--/* "Plan imprezy" on paper (V77, DjEventPlanController.print): one A4 for the console — the moments with big times, then the
-     event's two lists. Black on white, no colour the printer must have; the button is not printed. */-->
+<!--/* "Plan imprezy" on paper (V77, DjEventPlanController.print): A4 for the console (a wedding's plan one or two pages) — the moments with big times, then the
+     event's two lists. Black on white, no colour the printer must have — the lists' headings without their 🚫 ⭐ (a colour emoji); the
+     button is not printed. */-->
 <body class="s2p-plan-print">
 <main class="s2p-plan-sheet">
     <div class="s2p-plan-print-bar">
@@ -33,11 +34,11 @@
 
     <div class="s2p-plan-print-lists">
         <section th:if="${eventPlan.blocked() != null and !#strings.isEmpty(eventPlan.blocked())}">
-            <h2 th:text="#{host.blocked.label}">🚫 Don't play</h2>
+            <h2 th:text="#{eventplan.print.blocked}">Don't play</h2>
             <p class="s2p-plan-print-list" th:text="${eventPlan.blocked()}">Artist A</p>
         </section>
         <section th:if="${eventPlan.wanted() != null and !#strings.isEmpty(eventPlan.wanted())}">
-            <h2 th:text="#{host.wanted.label}">⭐ Must play</h2>
+            <h2 th:text="#{eventplan.print.wanted}">Must play</h2>
             <p class="s2p-plan-print-list" th:text="${eventPlan.wanted()}">Artist B - Song</p>
         </section>
     </div>

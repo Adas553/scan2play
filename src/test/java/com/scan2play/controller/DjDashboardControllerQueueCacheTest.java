@@ -173,6 +173,31 @@ class DjDashboardControllerQueueCacheTest {
         assertThat(songs.matches("sanah - Szampan")).isFalse();
     }
 
+    /**
+     * Every answer of the poll, 304 too, carries tonight's plan's version: "-" without a plan, another text when there is one or it
+     * changes — the panel says "Plan wieczoru się zmienił" (plan-card.js).
+     */
+    @Test
+    void everyAnswer_carriesTonightsPlansVersion() {
+        queueIs("1-12-a", waiting(12, "Wilki - Baśka"));
+        Answer first = poll(null);
+        MockHttpServletResponse none = new MockHttpServletResponse();
+        MockHttpServletRequest again = new MockHttpServletRequest();
+        again.addHeader("If-None-Match", first.etag());
+        controller.getDashboardUpdates(PARTY, new ExtendedModelMap(), again, none, null, new MockHttpSession());
+        assertThat(none.getStatus()).isEqualTo(304);
+        assertThat(none.getHeader(DjDashboardController.PLAN_TONIGHT_HEADER)).isEqualTo("-");
+
+        com.scan2play.service.EventPlanService.Tonight tonight = new com.scan2play.service.EventPlanService.Tonight(7L, "Wesele",
+                java.time.LocalDate.of(2027, 6, 12), List.of(new com.scan2play.service.EventPlanService.Moment("Tort", null, null, null)),
+                null, null);
+        when(eventPlans.tonight(eq(PARTY), any())).thenReturn(java.util.Optional.of(tonight));
+        MockHttpServletResponse planned = new MockHttpServletResponse();
+        controller.getDashboardUpdates(PARTY, new ExtendedModelMap(), again, planned, null, new MockHttpSession());
+        assertThat(planned.getHeader(DjDashboardController.PLAN_TONIGHT_HEADER)).isEqualTo(DjDashboardController.planVersion(tonight))
+                .isNotEqualTo("-");
+    }
+
     /** The guests' list (the same cache) shows a new request, or one more vote, with its next read — not up to 3 s later. */
     @Test
     void aGuestsRequestOrVote_isInTheGuestsListAtOnce() {

@@ -375,10 +375,13 @@ Bez migracji. Decyzje produktowe wybrane tak, jak proponował przegląd.
   `EventPlanPageRenderTest` (cudze wydarzenie: 404 w `save`, `use-lists`, `template`, `print`, nic nie zapisane).
 
 **Zostawione:** „Przywróć poprzedni zapis” (P2 — odrzucenie zapisu ze starej wersji chroni już przed cichą utratą); link „Inny
-plan dziś” na karcie (P8 — wybór według godzin wystarcza na typowy dzień); odświeżanie samej karty po zmianie planu w trakcie
-wieczoru (P7 — znaki w kolejce odświeżają się same, kartę odświeża przeładowanie); potwierdzenie ✕ na wypełnionym wierszu (P12 —
-przed utratą chroni pytanie przy wyjściu); kolorowe emoji 🚫 ⭐ na wydruku (P9); liczenie trendów po wieczorach zamiast po DJ-ach
-(P14.1 — do decyzji właściciela, gdy przyjdzie wariant A).
+plan dziś” na karcie (P8 — wybór według godzin wystarcza na typowy dzień); potwierdzenie ✕ na wypełnionym wierszu (P12 — przed
+utratą chroni pytanie przy wyjściu); liczenie trendów po wieczorach zamiast po DJ-ach (P14.1 — do decyzji właściciela, gdy przyjdzie
+wariant A).
+
+**Dorobione później (właściciel, 2026-11-21):** „Wyczyść plan” na stronie DJ-a; karta mówi „📋 Plan wieczoru się zmienił.
+Odśwież”, gdy odpytywanie kolejki przyniesie inną wersję planu (`X-Plan-Tonight`, P7); wydruk bez kolorowych 🚫 ⭐ w nagłówkach
+list (P9).
 
 ### Sprawdzenia po poprawkach
 

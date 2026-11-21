@@ -283,7 +283,11 @@ class DashboardPageRenderTest {
                 "id=\"planListsOff\"", "action=\"/dj/wishes/7/plan/use-lists\"", "name=\"back\" value=\"panel\"", ">Użyj ich<");
         assertThat(html.substring(html.indexOf("data-key=\"Ostatni taniec|\""))).as("no time: no data-at")
                 .startsWith("data-key=\"Ostatni taniec|\" data-label=");
+        assertThat(html).as("the plan's version as drawn, the notice of a change hidden till the poll brings another").contains(
+                "id=\"planTonightVersion\" value=\"" + com.scan2play.controller.DjDashboardController.planVersion(tonight) + "\"")
+                .containsPattern("id=\"planChanged\"[^>]*hidden");
         write("dashboard-plan.html", html);
+        assertThat(bartender).as("no WISHES: no version either").doesNotContain("id=\"planTonightVersion\"");
         assertThat(bartender).as("no WISHES: no card, no mark").doesNotContain("id=\"planCard\"", "z planu<");
         assertThat(secondDj).as("WISHES without HOST_LISTS: the card, not \"Użyj\"").contains("id=\"planCard\"")
                 .doesNotContain("id=\"planListsOff\"");

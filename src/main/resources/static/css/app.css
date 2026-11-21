@@ -1878,6 +1878,10 @@ a.s2p-schedule-text:focus-visible { color: var(--s2p-white); text-decoration: un
 .s2p-plan-lists-off { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.75rem; margin: 0.4rem 0 0.6rem;
     color: var(--bs-warning); font-size: 0.95rem; }
 .s2p-plan-lists-off .btn { min-height: 44px; }
+/* the plan changed since the page was drawn: one line and "Odśwież" above the card */
+.s2p-plan-changed { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.75rem; margin: 0 0 0.6rem; color: var(--s2p-white); }
+.s2p-plan-changed[hidden] { display: none; }
+.s2p-plan-changed .btn { min-height: 44px; }
 .s2p-plan-tick[aria-pressed="true"] { background: var(--s2p-action); border-color: var(--s2p-action); color: var(--s2p-bg); }
 .s2p-plan-moment-done { color: var(--s2p-text-muted); }
 .s2p-plan-moment-done b { text-decoration: line-through; }

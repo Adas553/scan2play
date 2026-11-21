@@ -261,6 +261,12 @@
          changed meanwhile keeps the ticks on their moments). plan-card.js works it; the ticks are this device's (localStorage),
          nothing is sent. Without the script: the plan as it is, under "Cały plan". The event's lists not the party's yet: "Użyj"
          (whoever may change the party's lists). */-->
+    <!--/* the plan changed since this page was drawn (the poll's X-Plan-Tonight, plan-card.js): say so, the DJ reloads */-->
+    <th:block th:if="${planTonightVersion != null}">
+        <input type="hidden" id="planTonightVersion" th:value="${planTonightVersion}">
+        <p id="planChanged" class="s2p-plan-changed" role="status" hidden><span th:text="#{eventplan.card.changed}">📋 Tonight's plan has changed.</span>
+            <button type="button" class="btn btn-sm btn-outline-light" data-plan-reload th:text="#{eventplan.card.reload}">Reload</button></p>
+    </th:block>
     <section th:if="${planTonight != null}" id="planCard" class="s2p-plan-card mb-3" aria-labelledby="planCardTitle"
              th:attr="data-plan-event=${planTonight.eventId()},data-text-in=#{eventplan.card.in},data-text-in-hours=#{eventplan.card.in_hours},data-text-now=#{eventplan.card.now},data-text-done=#{eventplan.card.all_done}">
         <div class="d-flex flex-wrap align-items-baseline justify-content-between gap-2">

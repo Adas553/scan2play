@@ -7,11 +7,17 @@
  * not move the ticks onto other moments. The countdown is to data-at — the moment in milliseconds, worked out by the server in Polish
  * time (a time before 6:00 on the night after the evening's day) — so a device whose clock is in another zone still counts right.
  *
+ * The card is drawn with the page: the queue's poll brings tonight's plan's version (EVENTS.PLAN_TONIGHT); one other than the page's
+ * (#planTonightVersion) shows "Plan wieczoru się zmienił — Odśwież" (#planChanged) — the hosts moved the cake, or there is a plan now.
+ * Not a reload by itself: the DJ may be typing in the search or have a card open.
+ *
  * Dependencies (DOM): #planCard with data-plan-event, data-text-in ("za {0} min"), data-text-in-hours ("za {0} h {1} min"),
  * data-text-now, data-text-done; #planNext with [data-plan-next-when], [data-plan-next-label], [data-plan-next-song]; the moments
  * [data-plan-moment] (data-key, data-at — none for a moment without a time —, data-time "HH:mm" or "", data-label, data-song) each with
  * a [data-plan-tick] button.
  */
+import { EVENTS, on } from './events.js';
+
 const card = document.getElementById('planCard');
 
 /** The ticked moments' keys kept on this device, by the event; none when the storage is not there. */
@@ -91,4 +97,13 @@ if (card) {
 
     show();
     window.setInterval(show, 30000);
+}
+
+const drawn = document.getElementById('planTonightVersion');
+const changed = document.getElementById('planChanged');
+if (drawn && changed) {
+    on(EVENTS.PLAN_TONIGHT, function (detail) {
+        if (detail.version && detail.version !== drawn.value) changed.hidden = false;
+    });
+    changed.querySelector('[data-plan-reload]').addEventListener('click', function () { window.location.reload(); });
 }

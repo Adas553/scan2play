@@ -251,6 +251,8 @@ class EventPlanPageRenderTest {
         assertThat(html).doesNotContain("??");
         assertThat(html).contains(">Wesele Ani i Kuby<", ">DJ Koko<", ">17:30<", ">Wejście pary<", ">wolno, dopiero gdy wszyscy wstaną<",
                 ">Przykładowy Wykonawca - Tytuł Wejścia<", ">—<", ">Oczepiny<", "Akcent\nDisco polo", ">Drukuj<", "/js/plan-form.js");
+        assertThat(html).as("the lists' headings black on white: no colour emoji").contains(">Nie grać<", ">Koniecznie zagrać<")
+                .doesNotContain("🚫", "⭐");
         DashboardPageRenderTest.assertNothingInline(html);
         write("event-plan-print.html", html);
     }

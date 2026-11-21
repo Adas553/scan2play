@@ -60,4 +60,25 @@
             t.check('nothing sideways after it all', fits());
         }
     });
+    S2P.scenario({
+        name: 'plan-card-changed-notice',
+        title: 'the panel\'s "Plan wieczoru": the poll brings another version of tonight\'s plan — "Plan wieczoru się zmienił — Odśwież"',
+        page: 'dashboard-plan',
+        viewport: '390,844',
+        run: async function (t) {
+            const notice = document.getElementById('planChanged');
+            const drawn = document.getElementById('planTonightVersion').value;
+            const poll = function (version) {
+                document.dispatchEvent(new CustomEvent('s2p:plan-tonight', { detail: { version: version } }));
+            };
+            t.check('hidden at first', notice.hidden);
+            poll(drawn);
+            t.check('the same plan: still hidden', notice.hidden);
+            poll('-');
+            t.check('another plan (here: none any more): said', !notice.hidden);
+            t.step('its words', notice.textContent.replace(/\s+/g, ' ').trim(), '📋 Plan wieczoru się zmienił. Odśwież');
+            t.check('"Odśwież" a finger can hit', notice.querySelector('[data-plan-reload]').getBoundingClientRect().height >= 44);
+            t.check('nothing sideways', fits());
+        }
+    });
 })();

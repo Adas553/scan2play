@@ -83,7 +83,8 @@ momencie: …"), and the DJ's page has the dark fields of the DJ's other pages; 
 its commas by Spring). **On the night:** the event's lists are not the party's — two weddings planned at once must not overwrite each
 other, and the party's lists are what the AI and the queue use tonight —; "Użyj list na imprezie" (HOST_LISTS too) puts them over
 the party's (asks first). "🖨 Drukuj plan" (`/dj/wishes/{id}/plan/print`, `event-plan-print.html`): one A4, black on white, the times
-big, on a phone nothing sideways; printed: A4 with 12 mm margins, the lists small in two columns — a wedding's plan is one or two
+big, on a phone nothing sideways; printed: A4 with 12 mm margins, the lists small in two columns under headings without 🚫 ⭐ (black
+on white) — a wedding's plan is one or two
 pages. "Wyczyść plan" (`…/plan/clear`, the DJ's page only, asks first, shown while the plan has something): the moments, both lists and
 the last save gone — the templates come back —, the hosts' link kept (its own "Wyłącz link"); a page opened before saves nothing over
 it (`EventPlanIT`). Without Pro the DJ's page shows the plan read only (a disabled fieldset) and the hosts' link is a 404. Nothing of the plan goes
@@ -101,6 +102,9 @@ two with a plan on one day: the one started last, its first time at most an hour
 another zone counts right), every 30 s; the whole evening folded under "Cały wieczór (N)", a ✓ for each moment. The ticks are this
 device's (localStorage `s2p-plan-done-<event>`, by the moment's name and time — a moment added or removed does not move them):
 nothing is sent. While the event's lists are not the party's, the card says so to whoever has HOST_LISTS, with "Użyj ich" (the same
-POST, `back=panel`). `tonight` is kept 30 s by party (the queue's poll asks every 3 s), a save forgets it. A request for a song of tonight's plan is marked "📋 z planu" in the
+POST, `back=panel`). `tonight` is kept 30 s by party (the queue's poll asks every 3 s), a save forgets it. The card is drawn with
+the page: every answer of the poll, 304 too, carries tonight's plan's version (`X-Plan-Tonight`, `DjDashboardController.planVersion`;
+"-" for none), and one other than the page's (`#planTonightVersion`) shows "📋 Plan wieczoru się zmienił. Odśwież" above the card —
+not a reload by itself, the DJ may be typing (scenario `plan-card-changed-notice`). A request for a song of tonight's plan is marked "📋 z planu" in the
 queue (`EventPlanService.tonightSongs`, matched as the hosts' lists, `SongList`); the poll's ETag carries the songs' hash, so a plan
 saved during the party marks the queue as it was (`DjDashboardControllerQueueCacheTest`). Scenario `plan-card-next-and-ticks`.

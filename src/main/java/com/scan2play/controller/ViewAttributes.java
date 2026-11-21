@@ -344,6 +344,8 @@ public final class ViewAttributes {
     public static final String PLAN_VERSION = "planVersion";
     /** The panel: tonight's event's lists are not the party's yet — "Użyj" on the card (whoever may change the party's lists). */
     public static final String PLAN_LISTS_OFF = "planListsOff";
+    /** The panel: tonight's plan's version as the page was drawn ({@code DjDashboardController.planVersion}); null: no plan card here. */
+    public static final String PLAN_TONIGHT_VERSION = "planTonightVersion";
     /** The list of events: the moments of each event's plan, by the event's id (none: no plan). */
     public static final String PLAN_COUNTS = "planCounts";
     /** The panel: tonight's plan above the queue ({@code EventPlanService.Tonight}), null for none or without Pro. */
