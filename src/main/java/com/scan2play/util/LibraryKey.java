@@ -14,7 +14,7 @@ import java.util.stream.Collectors;
  * {@link SongNames#comparable} — the case, the accents and the punctuation never tell two songs apart:
  * <ul>
  *     <li>the title without a version: in brackets ("(Radio Edit)", "[Extended Mix]", "(feat. X)") or after a dash with a version's
- *     word ("- Original Mix", "- 2011 Remaster", "- Live"), and without a guest artist ("feat. X");</li>
+ *     word ("- Original Mix", "- 2011 Remaster", "- Live", "- Prod. by X"), and without a guest artist ("feat. X");</li>
  *     <li>the spellings of one word made one (V60, {@link #SPELLINGS}): "Livin'" is "Living", "Mambo No. 5" is "Mambo Number 5";</li>
  *     <li>the artists a set, sorted and joined by "+": split at ",", "&amp;", "x", "and", "i", "feat.", "vs" …, each without a leading
  *     "The" — "Kygo &amp; Selena Gomez" is "Selena Gomez, Kygo".</li>
@@ -42,10 +42,14 @@ public record LibraryKey(String title, String artists) {
     /** A guest artist in a title, up to the dash or the end: "feat. Rihanna", "ft. X", "featuring Y". */
     private static final Pattern FEATURING = Pattern.compile("(?i)\\s(?:feat\\.?|ft\\.?|featuring)\\s[^-]*");
 
-    /** The last part after a dash when it names a version: "Original Mix", "2011 Remaster", "Live". */
+    /**
+     * The last part after a dash when it names a version: "Original Mix", "2011 Remaster", "Live", or the producer: "Prod. by X",
+     * "Produced by X" (Serato and the files from the internet write "Toketeo - Prod. by Dj Honda x DJ Jerry"; V79 cut the keys saved
+     * before the same way). The word "prod" alone is not one: "- Prodigy Tribute" is a title's own words.
+     */
     private static final Pattern VERSION_AFTER_DASH = Pattern.compile(
             "(?i)\\s-\\s[^-]*\\b(?:mix|edit|remix|version|remaster(?:ed)?|radio|extended|original|club|live|acoustic|instrumental"
-                    + "|rework|bootleg|vip|dub)\\b[^-]*$");
+                    + "|rework|bootleg|vip|dub|prod(?:uced\\s+|\\.\\s*|\\s+)by)\\b[^-]*$");
 
     /**
      * The spellings of one word written two ways, made one in a title's key — on the key as {@link SongNames#comparable} leaves it,
