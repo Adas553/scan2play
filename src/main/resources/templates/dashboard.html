@@ -374,7 +374,7 @@
              texts with {…} are filled in by play-history.js. */-->
         <section th:if="${(access == null or access.may('QUEUE')) and demo != true and (plan == null or plan.allows('DECK'))}" id="deckReader"
                  class="card bg-dark border-secondary p-3 mb-3 s2p-deck-reader" hidden aria-labelledby="deckReaderTitle"
-                 th:attr="data-device-code=#{dashboard.computer.code},
+                 th:attr="data-device-code=#{dashboard.computer.code},data-device-copy=#{dashboard.qr.copy},data-device-copied=#{dashboard.qr.copied},
                           data-device-seen=#{dashboard.computer.seen},data-device-remove=#{dashboard.computer.remove},
                           data-device-failed=#{dashboard.computer.failed}">
             <h3 id="deckReaderTitle" class="s2p-card-title" th:text="#{dashboard.deck.title}">Played, from your DJ software</h3>
@@ -400,7 +400,8 @@
                         <details class="text-secondary mt-1">
                             <summary th:text="#{dashboard.computer.first}">The first start</summary>
                             <p class="mb-1 mt-1" th:text="#{dashboard.computer.first.windows}">Windows: the program is not signed yet…</p>
-                            <p class="mb-0" th:text="#{dashboard.computer.first.mac}">Mac: the first time macOS stops it…</p>
+                            <p class="mb-1" th:text="#{dashboard.computer.first.mac}">Mac: the first time macOS stops it…</p>
+                            <p class="mb-0" th:text="#{dashboard.computer.first.folder}">The program does not see the history?…</p>
                         </details></li>
                     <li><span th:text="#{dashboard.computer.pair}">Connect it to this party:</span>
                         <span class="d-inline-flex flex-wrap align-items-center gap-2 ms-1">
