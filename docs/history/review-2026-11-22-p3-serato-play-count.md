@@ -59,12 +59,15 @@ w połowie seta, nie oznaczy piosenek już zagranych (pominięcie). `05-1d-panel
 Komentarz o polskich tekstach okien Javy stał nad `NOTHING_MARKED` (dwa javadoc pod rząd), a dotyczy `polishDialogs()` —
 przeniesiony. Sprzed tego zakresu, poprawione przy okazji.
 
-### P7 — drobiazg (otwarte, pytanie 3): trzy zapytania bez jednej migawki
+### P7 — drobiazg (poprawione po pytaniu 3): trzy zapytania bez jednej migawki
 
 `read` robi `newestSession` → (raz na sesję) liczniki → zapytanie główne z podzapytaniem o sesję, każde w osobnej migawce WAL. Jeśli
 Serato założy nową sesję dokładnie między nimi, zapytanie główne czyta wiersze nowej sesji z licznikami starej: piosenka zagrana w
 starej sesji i tylko załadowana w nowej przejdzie (okno milisekund przy starcie Serato). **Propozycja:** `connection.setAutoCommit(false)`
 (jedna transakcja odczytu = jedna migawka) albo sesja z `newestSession` jako parametr zapytania. Bez testu (wyścig) — dlatego pytam.
+**Zrobione** (właściciel: „zrób”): `setAutoCommit(false)` przed pierwszym zapytaniem, zamknięcie połączenia ją wycofuje. Bez testu w
+programie (wyścigu nie da się pewnie ustawić w `read`); sprawdzone osobnym programem na `sqlite-jdbc` z projektu: połączenie tylko do
+odczytu, baza WAL, zapis drugiego połączenia między dwoma `SELECT` — bez transakcji drugi widzi nowy wiersz (1 → 2), z nią nie (1 → 1).
 
 ### P8 — drobiazg (otwarte, pytanie 4): restart Serato bez nowej sesji
 
@@ -97,10 +100,10 @@ utraty stanu przy dodaniu piosenki w trakcie seta — nie robię bez potrzeby.
 
 ## Pytania do właściciela
 
-1. (P5) Serato 5: program włączony w trakcie seta nie oznaczy piosenek już zagranych. Zostawić (dopisane w dokumencie), czy dopisać to w
-   oknie / karcie („włącz program przed pierwszą piosenką”)?
+1. (P5 — właściciel: „jak uważasz”; zostaje tylko w dokumencie: dotyczy tylko piosenek zagranych, zanim DJ włączył program — ich
+   prośby zostają w kolejce do ręcznego „Zagrane”, nic nie oznacza się fałszywie; trzecia linia „Oznaczone” poszerzałaby okno.)
 2. (P3) Czy Serato DJ Lite pozwala skasować licznik odtworzeń piosenki? Jeśli nie — P3 jest tylko zabezpieczeniem.
-3. (P7) Jedna migawka odczytu (`setAutoCommit(false)`) — zrobić bez testu na czerwono (wyścig), czy zostawić?
+3. (P7 — zrobione.)
 4. (P8) Przy następnej próbie: zamknąć i otworzyć Serato, załadować piosenkę bez Play i sprawdzić, czy `history_session` ma nowy wiersz
    (kopia bazy, tylko `SELECT id, start_time FROM history_session ORDER BY id DESC LIMIT 2`). Przy okazji: `PRAGMA table_info(asset)` —
    czy `id` ma `pk = 1`.

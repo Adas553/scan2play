@@ -116,6 +116,9 @@ final class Serato4Database implements HistorySource {
         options.setBusyTimeout(3000);
         try (Connection connection = options.createConnection("jdbc:sqlite:" + database.toAbsolutePath());
              Statement statement = connection.createStatement()) {
+            // one read transaction, one snapshot: the session, its counts and its rows seen together, not with a session Serato
+            // opens between two of the queries (its rows would be read against the old session's counts); closing rolls it back
+            connection.setAutoCommit(false);
             Set<String> entry = columns(statement, "history_entry");
             Set<String> session = columns(statement, "history_session");
             Set<String> asset = columns(statement, "asset");

@@ -76,8 +76,8 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
   #299 merged; its rest (Serato 5.1, the look through the folders, the new window) is PRs #301 (`main`) / #302 (`dev`).
 - **2026-11-22 — #301 / #302's branch (`claude/gallant-ritchie-rl80ux`) = its review (`review-2026-11-22-zagrane-serato-window.md`) + P3**
   (Serato 5.1: a song goes once `asset.dj_play_count` rose). **`claude/youthful-heisenberg-3whpcr` = it + P3's review**
-  (`review-2026-11-22-p3-serato-play-count.md`: P1–P6 fixed — a play given to the song's newest load, kept for the session; P7, P8 and
-  6 questions open). Waits: the read, this branch into #301 / #302, the merge; "Run workflow". Untried: a Mac (P20, P27), P23, P24.
+  (`review-2026-11-22-p3-serato-play-count.md`: P1–P7 fixed — a play given to the song's newest load, kept for the session; P8 and
+  4 checks on Serato open). Waits: the read, this branch into #301 / #302, the merge; "Run workflow". Untried: a Mac (P20, P27), P23, P24.
 - **Waits for the owner (from #269):** after the first commit the deploy window holds back (Fri–Sun 18:00–6:00): does Railway
   deploy it on the workflow's re-run? UptimeRobot is set up (the owner, 2026-11-17; `docs/monitoring.md`).
 - **Waits for the owner (the wishes, #263):** the three older Polish texts with "DJ" and a masculine verb (`guest.vote.gone`,
