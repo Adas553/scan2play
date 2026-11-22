@@ -111,6 +111,7 @@ public final class Main {
         UIManager.put("Button.default.background", Window.CYAN);
         UIManager.put("Button.default.foreground", new java.awt.Color(0x0b0b0b));
         UIManager.put("Button.default.hoverBackground", new java.awt.Color(0x3dd5f3));
+        Window.polishDialogs();
     }
 
     /** Whether a folder the DJ picked holds a VirtualDJ or Serato history (the window says so when not). */

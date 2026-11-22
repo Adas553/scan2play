@@ -63,6 +63,49 @@ final class Window {
     static final Color AMBER = new Color(0xffc107);
     static final Color RED = new Color(0xea868f);
 
+    /** Read: no history of either program anywhere it is looked for. */
+    static final String NO_HISTORY = "<html>Brak historii VirtualDJ i Serato. Zagraj w programie DJ-a jedną piosenkę<br>"
+            + "albo wskaż folder, w którym trzyma historię.</html>";
+    /** The folder picked holds no history the program reads. */
+    static final String NOT_IN_FOLDER = "<html>W tym folderze nie ma historii — VirtualDJ: …\\VirtualDJ\\History,<br>"
+            + "Serato: …\\_Serato_\\History\\Sessions albo …\\Serato\\Library.</html>";
+    /**
+     * The longest song or folder shown whole: a guest's request may be a remix's whole title, and the window, packed to its content,
+     * would grow past the screen with "Odłącz ten komputer" and the time. Longer is cut with "…", the whole in the line's tooltip.
+     */
+    static final int LONGEST_LINE = 60;
+
+    static String shortened(String text) {
+        return text.length() <= LONGEST_LINE ? text : text.substring(0, LONGEST_LINE - 1) + "…";
+    }
+
+    /** A line of a song or a folder: {@link #shortened}, the whole of a long one in its tooltip. */
+    private static JLabel longText(String words, Color color) {
+        JLabel label = text(shortened(words), color, 0);
+        label.setToolTipText(words.length() > LONGEST_LINE ? words : null);
+        return label;
+    }
+
+    /**
+     * The texts of Java's own dialogs in Polish — the folder chooser, the message of a second copy: Java has none of its own, and an
+     * English "Look In" / "Cancel" beside the program's "Wybierz" looks unfinished. Set after the theme, which may set its own.
+     */
+    static void polishDialogs() {
+        String[][] texts = {
+                {"FileChooser.lookInLabelText", "Szukaj w:"}, {"FileChooser.folderNameLabelText", "Nazwa folderu:"},
+                {"FileChooser.fileNameLabelText", "Nazwa:"}, {"FileChooser.filesOfTypeLabelText", "Pliki typu:"},
+                {"FileChooser.acceptAllFileFilterText", "Wszystkie pliki"}, {"FileChooser.cancelButtonText", "Anuluj"},
+                {"FileChooser.cancelButtonToolTipText", "Zamknij bez wyboru"}, {"FileChooser.openButtonText", "Otwórz"},
+                {"FileChooser.upFolderToolTipText", "W górę"}, {"FileChooser.homeFolderToolTipText", "Folder domowy"},
+                {"FileChooser.newFolderToolTipText", "Nowy folder"}, {"FileChooser.listViewButtonToolTipText", "Lista"},
+                {"FileChooser.detailsViewButtonToolTipText", "Szczegóły"}, {"FileChooser.fileNameHeaderText", "Nazwa"},
+                {"FileChooser.fileSizeHeaderText", "Rozmiar"}, {"FileChooser.fileDateHeaderText", "Zmieniono"},
+                {"OptionPane.cancelButtonText", "Anuluj"}, {"OptionPane.yesButtonText", "Tak"}, {"OptionPane.noButtonText", "Nie"}};
+        for (String[] text : texts) {
+            javax.swing.UIManager.put(text[0], text[1]);
+        }
+    }
+
     private static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("HH:mm:ss").withZone(ZoneId.systemDefault());
     private static final DateTimeFormatter MINUTE = DateTimeFormatter.ofPattern("HH:mm").withZone(ZoneId.systemDefault());
 
@@ -254,8 +297,7 @@ final class Window {
             if (shown == null || !shown.reading().equals(status.reading())) {
                 readingRows.removeAll();
                 if (status.reading().isEmpty()) {
-                    readingRows.add(left(text("<html>Nie widzę historii VirtualDJ ani Serato. Zagraj w nim jedną piosenkę<br>"
-                            + "albo wskaż folder, w którym ją trzyma.</html>", AMBER, 0)));
+                    readingRows.add(left(text(NO_HISTORY, AMBER, 0)));
                 }
                 for (String source : status.reading()) {
                     boolean broken = source.contains("nie da się odczytać");
@@ -278,7 +320,7 @@ final class Window {
                     JLabel time = text(MINUTE.format(song.at()), MUTED, 0);
                     time.setFont(time.getFont().deriveFont(Font.PLAIN));
                     readingWidth(time);
-                    markedRows.add(left(row(time, text(song.song(), TEXT, 0))));
+                    markedRows.add(left(row(time, longText(song.song(), TEXT))));
                 }
             }
             shown = status;
@@ -301,7 +343,7 @@ final class Window {
             return new Line("„Zagrane samo” działa w planie Pro — ta impreza go nie ma", AMBER);
         }
         if (status.reading().isEmpty()) {
-            return new Line("Połączono — czekam na historię VirtualDJ albo Serato", AMBER);
+            return new Line("Połączono — brak historii VirtualDJ i Serato", AMBER);
         }
         return new Line("Działa — połączono z imprezą", GREEN);
     }
@@ -318,8 +360,7 @@ final class Window {
         showFolder();
         if (!found) {
             folderLine.setForeground(AMBER);
-            folderLine.setText("<html>W tym folderze nie widzę historii — VirtualDJ: …\\VirtualDJ\\History,<br>"
-                    + "Serato: …\\_Serato_\\History\\Sessions albo …\\Serato\\Library.</html>");
+            folderLine.setText(NOT_IN_FOLDER);
             repack();
         }
     }
@@ -327,7 +368,8 @@ final class Window {
     private void showFolder() {
         Path folder = settings.folder();
         folderLine.setForeground(MUTED);
-        folderLine.setText(folder == null ? " " : "Wskazany folder: " + folder);
+        folderLine.setText(folder == null ? " " : "Wskazany folder: " + shortened(folder.toString()));
+        folderLine.setToolTipText(folder == null || folder.toString().length() <= LONGEST_LINE ? null : folder.toString());
         folderLine.setVisible(folder != null);
         forgetFolder.setVisible(folder != null);
         repack();

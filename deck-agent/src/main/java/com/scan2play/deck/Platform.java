@@ -96,6 +96,11 @@ final class Platform {
      * folders in all; links not followed, a folder that cannot be opened skipped. Once, at the start.
      */
     static Found look(List<Path> roots) {
+        return look(roots, LOOK_MAX_FOLDERS);
+    }
+
+    /** {@link #look} with a limit of its own (the tests). */
+    static Found look(List<Path> roots, int maxFolders) {
         Set<Path> virtualDj = new LinkedHashSet<>();
         Set<Path> sessions = new LinkedHashSet<>();
         Set<Path> databases = new LinkedHashSet<>();
@@ -108,7 +113,7 @@ final class Platform {
                 Files.walkFileTree(root, EnumSet.noneOf(FileVisitOption.class), LOOK_DEPTH, new SimpleFileVisitor<>() {
                     @Override
                     public FileVisitResult preVisitDirectory(Path folder, BasicFileAttributes attributes) {
-                        if (++seen[0] > LOOK_MAX_FOLDERS) {
+                        if (++seen[0] > maxFolders) {
                             return FileVisitResult.TERMINATE;
                         }
                         String name = folder.getFileName() == null ? "" : folder.getFileName().toString();
@@ -135,7 +140,7 @@ final class Platform {
             } catch (IOException | RuntimeException e) {
                 // the root itself unreadable: the usual places stay
             }
-            if (seen[0] > LOOK_MAX_FOLDERS) {
+            if (seen[0] > maxFolders) {
                 break;
             }
         }

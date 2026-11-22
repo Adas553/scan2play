@@ -53,8 +53,11 @@ final class Agent {
     private String lastToken;
     private List<Marked> lastMarked = List.of();
     private int markedCount;
-    /** The sources of the folder the DJ picked ({@link #useFolder}), read beside the usual ones. */
-    private List<HistorySource> picked = List.of();
+    /**
+     * The sources of the folder the DJ picked ({@link #useFolder}), read beside the usual ones. Volatile, not under the lock: the
+     * window sets it from its own thread and must not wait for a look's call to the server.
+     */
+    private volatile List<HistorySource> picked = List.of();
     private ServerClient.Outcome lastOutcome;
 
     Agent(List<HistorySource> sources, ServerClient client, Settings settings, Clock clock, Consumer<Status> window) {
@@ -167,7 +170,7 @@ final class Agent {
      * "Wskaż folder historii…": the folder the DJ picked is read from the next look on, beside the usual places (null: none). A song
      * of it already sent is not sent again; the first read of a new folder is a first read (the set before the program not sent).
      */
-    synchronized void useFolder(java.nio.file.Path folder) {
+    void useFolder(java.nio.file.Path folder) {
         picked = folder == null ? List.of() : Platform.sourcesIn(folder);
     }
 

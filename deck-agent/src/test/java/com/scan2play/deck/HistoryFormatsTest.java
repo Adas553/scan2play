@@ -226,7 +226,8 @@ class HistoryFormatsTest {
         Files.createDirectories(sessions);
         Path virtualDj = dir.resolve("Dane").resolve("VirtualDJ").resolve("History");
         Files.createDirectories(virtualDj);
-        Path tooDeep = dir.resolve("a").resolve("b").resolve("c").resolve("d").resolve("e").resolve("VirtualDJ").resolve("History");
+        // a program's folder is seen down to 3 levels below a root (its History or Library the 4th): one level more is not
+        Path tooDeep = dir.resolve("a").resolve("b").resolve("c").resolve("VirtualDJ").resolve("History");
         Files.createDirectories(tooDeep);
 
         Platform.Found found = Platform.look(List.of(dir));
@@ -262,6 +263,45 @@ class HistoryFormatsTest {
         Serato4Database serato = new Serato4Database(windows.serato4Databases());
         serato.version();
         assertEquals(tonight, serato.current(), "the database written last");
+
+        // and the other way round: not the first place's by its order, the one written last wherever it is
+        Files.setLastModifiedTime(old, java.nio.file.attribute.FileTime.from(Instant.ofEpochSecond(NIGHT + 60)));
+        serato.version();
+        assertEquals(old, serato.current(), "the database written last, under %APPDATA% this time");
+    }
+
+    /**
+     * The look never follows a link (a symbolic link to another disk, a loop): only the user's own folders are looked through. Where
+     * links cannot be made (Windows without the right), there is nothing to test.
+     */
+    @Test
+    void theLook_doesNotFollowLinks(@TempDir Path dir) throws Exception {
+        Path elsewhere = dir.resolve("elsewhere");
+        Files.createDirectories(elsewhere.resolve("VirtualDJ").resolve("History"));
+        Path user = dir.resolve("user");
+        Files.createDirectories(user);
+        try {
+            Files.createSymbolicLink(user.resolve("link"), elsewhere);
+            Files.createSymbolicLink(user.resolve("loop"), user);
+        } catch (UnsupportedOperationException | java.io.IOException e) {
+            org.junit.jupiter.api.Assumptions.abort("no symbolic links here");
+        }
+
+        assertEquals(List.of(), Platform.look(List.of(user)).virtualDjFolders());
+    }
+
+    /** At most so many folders are looked at in all, the roots together: a huge profile costs seconds, never minutes. */
+    @Test
+    void theLook_stopsAfterSoManyFolders(@TempDir Path dir) throws Exception {
+        for (int i = 0; i < 20; i++) {
+            Files.createDirectories(dir.resolve("first").resolve("f" + i));
+        }
+        Files.createDirectories(dir.resolve("second").resolve("VirtualDJ").resolve("History"));
+
+        assertEquals(List.of(), Platform.look(List.of(dir.resolve("first"), dir.resolve("second")), 10).virtualDjFolders(),
+                "the second root not reached: the first used up the folders");
+        assertEquals(List.of(dir.resolve("second").resolve("VirtualDJ").resolve("History")),
+                Platform.look(List.of(dir.resolve("first"), dir.resolve("second")), 100).virtualDjFolders());
     }
 
     // ---- Serato's chunks ----

@@ -78,12 +78,15 @@ class AgentTest {
     private final AtomicReference<Agent.Status> shown = new AtomicReference<>();
 
     private Agent agent(Settings settings) {
-        Clock clock = new Clock() {
+        return new Agent(List.of(source), server, settings, clock(), shown::set);
+    }
+
+    private Clock clock() {
+        return new Clock() {
             @Override public ZoneOffset getZone() { return ZoneOffset.UTC; }
             @Override public Clock withZone(java.time.ZoneId zone) { return this; }
             @Override public Instant instant() { return now.get(); }
         };
-        return new Agent(List.of(source), server, settings, clock, shown::set);
     }
 
     private static Settings paired(Path dir) throws Exception {
@@ -159,6 +162,63 @@ class AgentTest {
         now.set(START.plusSeconds(9));
         agent.tick();
         assertEquals(List.of("VirtualDJ (2026-11-21.m3u)"), shown.get().reading(), "the fake source alone: the picked folder given up");
+    }
+
+    /**
+     * The folder picked is also one of the usual places (or one the look found): the same history read twice, by two sources — each
+     * song still goes to the server once.
+     */
+    @Test
+    void aFolderPicked_thatIsAlsoAUsualPlace_sendsEachSongOnce(@TempDir Path dir) throws Exception {
+        Path history = dir.resolve("VirtualDJ").resolve("History");
+        java.nio.file.Files.createDirectories(history);
+        Agent agent = new Agent(List.of(new VirtualDjHistory(List.of(history))), server, paired(dir), clock(), shown::set);
+        agent.useFolder(history.getParent());
+        agent.tick();
+        java.nio.file.Files.writeString(history.resolve("dzisiaj.m3u"), "#EXTVDJ:<lastplaytime>" + START.plusSeconds(5).getEpochSecond()
+                + "</lastplaytime><artist>Sanah</artist><title>Szampan</title>\n");
+        now.set(START.plusSeconds(6));
+        agent.tick();
+        now.set(START.plusSeconds(9));
+        agent.tick();
+
+        assertEquals(List.of(new Played(START.plusSeconds(5), "Sanah", "Szampan")), server.calls.stream().flatMap(List::stream).toList());
+        assertEquals(List.of("VirtualDJ (dzisiaj.m3u)"), shown.get().reading(), "one line, not two");
+    }
+
+    /**
+     * "Wskaż folder historii…" and "Nie czytaj go" run in the window's thread: they must not wait for a look whose call to the server
+     * hangs (a venue's Wi-Fi, up to the call's 25 s) — the window would freeze that long.
+     */
+    @Test
+    void pickingAFolder_doesNotWaitForASlowServer(@TempDir Path dir) throws Exception {
+        java.util.concurrent.CountDownLatch inCall = new java.util.concurrent.CountDownLatch(1);
+        java.util.concurrent.CountDownLatch release = new java.util.concurrent.CountDownLatch(1);
+        ServerClient slow = new ServerClient("test") {
+            @Override
+            Answer plays(String server, String token, List<Played> songs) {
+                inCall.countDown();
+                try {
+                    release.await(30, java.util.concurrent.TimeUnit.SECONDS);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+                return new Answer(ServerClient.Outcome.FAILED, token, List.of());
+            }
+        };
+        Agent agent = new Agent(List.of(source), slow, paired(dir), clock(), shown::set);
+        Thread look = new Thread(agent::tick);
+        look.start();
+        try {
+            assertTrue(inCall.await(5, java.util.concurrent.TimeUnit.SECONDS), "the look is in its call");
+            Thread pick = new Thread(() -> agent.useFolder(dir));
+            pick.start();
+            pick.join(2000);
+            assertTrue(!pick.isAlive(), "the folder taken at once, while the call still hangs");
+        } finally {
+            release.countDown();
+            look.join(5000);
+        }
     }
 
     /** A history there but not readable (a new format of the program) is said in the window, not left out as if there were none. */
