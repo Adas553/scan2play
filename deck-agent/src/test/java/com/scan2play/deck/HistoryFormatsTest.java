@@ -155,12 +155,11 @@ class HistoryFormatsTest {
     }
 
     /**
-     * Serato 5.1's tables (seen on the owner's Windows): history_entry with artist and name as in Serato 4, but the open session's
-     * end_time may be empty (NULL) rather than -1, and a column of Serato 4 may be gone. The query is made from the columns there are:
-     * the newest session's songs, by their start; "played" only where the column is.
+     * A Serato database with fewer columns than 4's and 5.1's (no played, no asset_id; the open session's end_time empty, NULL, rather
+     * than -1): the query is made from the columns there are — the newest session's songs, by their start.
      */
     @Test
-    void serato5_theNewestSessionsSongs_whateverItsEndTime_andWithoutAPlayedColumn(@TempDir Path dir) throws Exception {
+    void serato_withFewerColumns_theNewestSessionsSongs_whateverItsEndTime(@TempDir Path dir) throws Exception {
         Path database = dir.resolve("master.sqlite");
         try (Connection connection = DriverManager.getConnection("jdbc:sqlite:" + database);
              Statement sql = connection.createStatement()) {
@@ -179,6 +178,67 @@ class HistoryFormatsTest {
 
         assertEquals(List.of(new Played(Instant.ofEpochSecond(NIGHT), "Sanah", "Szampan"),
                 new Played(Instant.ofEpochSecond(NIGHT + 100), "Linkin Park", "Session")), Serato4Database.read(database));
+    }
+
+    /**
+     * Serato DJ Lite 5.1 as seen on the owner's Windows (2026-11-22): a history_entry row is written when a song is loaded on a deck,
+     * already with played = 1, and stays so when the song leaves the deck unplayed. What tells a play is the library's count
+     * (asset.dj_play_count), raised a few seconds after Play, never by a load. A song goes once its count has risen since the session
+     * was first seen; a song played twice goes twice; a new session (Serato restarted, its songs renumbered) starts again.
+     */
+    @Test
+    void serato5_aSongOnlyLoaded_isNotSent_aSongPlayedIs_byTheLibrarysPlayCount(@TempDir Path dir) throws Exception {
+        Path database = dir.resolve("master.sqlite");
+        sql(database, "CREATE TABLE asset (id INTEGER PRIMARY KEY AUTOINCREMENT, artist TEXT NOT NULL DEFAULT '', name TEXT NOT NULL DEFAULT '',"
+                        + " dj_play_count INTEGER, dj_recently_played INTEGER NOT NULL DEFAULT 0)",
+                "CREATE TABLE history_session (id INTEGER PRIMARY KEY AUTOINCREMENT, start_time INTEGER NOT NULL, end_time INTEGER,"
+                        + " notes TEXT, name TEXT)",
+                "CREATE TABLE history_entry (id INTEGER PRIMARY KEY AUTOINCREMENT, location_id INTEGER, portable_id TEXT NOT NULL DEFAULT '',"
+                        + " file_name TEXT, artist TEXT NOT NULL DEFAULT '', name TEXT NOT NULL DEFAULT '', dj_play_count INTEGER,"
+                        + " session_id INTEGER NOT NULL DEFAULT -1, asset_id INTEGER DEFAULT -1, start_time INTEGER NOT NULL,"
+                        + " end_time INTEGER DEFAULT -1, played INTEGER NOT NULL DEFAULT 0, deck TEXT NOT NULL DEFAULT '')",
+                "INSERT INTO asset (id, artist, name, dj_play_count) VALUES (1, 'Sanah', 'Szampan', 4), (2, 'Preview', 'Tylko załadowana', 0)",
+                "INSERT INTO history_session (id, start_time) VALUES (1, " + (NIGHT - 60) + ")",
+                "INSERT INTO history_entry (session_id, asset_id, artist, name, start_time, played, deck) VALUES"
+                        + " (1, 1, 'Sanah', 'Szampan', " + NIGHT + ", 1, '1'), (1, 2, 'Preview', 'Tylko załadowana', " + (NIGHT + 30) + ", 1, '2')");
+        Serato4Database serato = new Serato4Database(List.of(database));
+        serato.version();
+        Played szampan = new Played(Instant.ofEpochSecond(NIGHT), "Sanah", "Szampan");
+
+        assertEquals(List.of(), serato.songs(), "both only loaded (Szampan's 4 are earlier nights')");
+
+        sql(database, "UPDATE asset SET dj_play_count = 5 WHERE id = 1");
+        assertEquals(List.of(szampan), serato.songs(), "Play pressed on Szampan");
+
+        sql(database, "UPDATE history_entry SET end_time = " + (NIGHT + 200) + " WHERE id = 1",
+                "INSERT INTO history_entry (session_id, asset_id, artist, name, start_time, played, deck) VALUES"
+                        + " (1, 1, 'Sanah', 'Szampan', " + (NIGHT + 200) + ", 1, '1')");
+        assertEquals(List.of(szampan), serato.songs(), "loaded again, not played yet");
+
+        sql(database, "UPDATE asset SET dj_play_count = 6 WHERE id = 1");
+        assertEquals(List.of(szampan, new Played(Instant.ofEpochSecond(NIGHT + 200), "Sanah", "Szampan")), serato.songs(), "played again");
+
+        // Serato restarted: a new session, the library's songs under new ids, their counts kept
+        sql(database, "UPDATE history_session SET end_time = " + (NIGHT + 900) + " WHERE id = 1",
+                "UPDATE history_entry SET asset_id = NULL",
+                "DELETE FROM asset",
+                "INSERT INTO asset (id, artist, name, dj_play_count) VALUES (10, 'Sanah', 'Szampan', 6), (11, 'Preview', 'Tylko załadowana', 0)",
+                "INSERT INTO history_session (id, start_time) VALUES (2, " + (NIGHT + 1000) + ")",
+                "INSERT INTO history_entry (session_id, asset_id, artist, name, start_time, played, deck) VALUES"
+                        + " (2, 10, 'Sanah', 'Szampan', " + (NIGHT + 1100) + ", 1, '2')");
+        assertEquals(List.of(), serato.songs(), "the new session: Szampan only loaded");
+
+        sql(database, "UPDATE asset SET dj_play_count = 7 WHERE id = 10");
+        assertEquals(List.of(new Played(Instant.ofEpochSecond(NIGHT + 1100), "Sanah", "Szampan")), serato.songs(), "and now played");
+    }
+
+    private static void sql(Path database, String... statements) throws Exception {
+        try (Connection connection = DriverManager.getConnection("jdbc:sqlite:" + database);
+             Statement sql = connection.createStatement()) {
+            for (String statement : statements) {
+                sql.executeUpdate(statement);
+            }
+        }
     }
 
     /**
