@@ -135,6 +135,7 @@ class LibraryKeyTest {
         assertThat(LibraryKey.of("X - Song - Prod.by Y").title()).isEqualTo("song");
         assertThat(LibraryKey.of("X - Song - Prodigy Tribute").title()).isEqualTo("songprodigytribute");
         assertThat(LibraryKey.of("X - Song - Production Line").title()).isEqualTo("songproductionline");
+        assertThat(LibraryKey.of("X - Song - Prod. Bylina").title()).as("\"by\" only as a word").isEqualTo("songprodbylina");
         assertThat(LibraryKey.of("X - Prod by Y").title()).as("a title of the producer alone stays").isEqualTo("prodbyy");
     }
 

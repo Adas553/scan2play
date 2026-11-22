@@ -23,9 +23,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * V79 on a database with libraries uploaded before it: a title's key loses the producer after a dash ("Toketeo - Prod. by Dj Honda x
  * DJ Jerry" is "toketeo") as {@link LibraryKey} makes the new ones — the same key for the same title, checked against the Java
- * itself —; a track whose key becomes one the library has goes, a title that only starts with "prod" and a track without its name
- * (uploaded before V57) stay, the other parties' are cut on their own. A throw-away database of its own, migrated to V78, given
- * libraries, and then to the end.
+ * itself, also with letters outside a-z, "feat." and two dashes —; a track whose key becomes one the library has goes, of two with one
+ * new key the shorter name stays; a track whose new key another one is leaving stays as it was (never deleted for it); a title
+ * that only starts with "prod", a name that does not make its saved key and a track without its name (uploaded before V57) stay;
+ * the other parties' are cut on their own. A throw-away database of its own, migrated to V78, given libraries, and then to the end.
  */
 @ExtendWith(PostgresIntegrationTest.OnlyUnderFailsafe.class)
 class LibraryKeyProducerMigrationIT {
@@ -68,9 +69,21 @@ class LibraryKeyProducerMigrationIT {
                     + " ('WED01', 'toketeoproducedbydjhonda', 'bebeshito', 'Toketeo – Produced by Dj Honda'),"
                     // an accent, a version in brackets before the dash
                     + " ('WED01', 'hitprodbysliwa', 'kali', 'Hit (Radio Edit) - Prod. by Śliwa'),"
-                    // two producers of one song: the smaller key of before stays
+                    // two producers of one song: the shorter name stays, as an upload keeps it
                     + " ('WED01', 'nocprodbya', 'mata', 'Noc - Prod. by A'),"
                     + " ('WED01', 'nocprodbyb', 'mata', 'Noc - Prod by B'),"
+                    // a third producer: its new key is one that moves away itself, so it stays (never deleted for it)
+                    + " ('WED01', 'nocprodbyaprodbyb', 'mata', 'Noc - Prod. by A - Prod. by B'),"
+                    // letters outside a-z before the producer: cut as the Java cuts, never to "olaничего" — another song's key
+                    + " ('WED01', 'olaничегоprodbyx', 'band2', 'Ola - Ничего prod by X'),"
+                    + " ('WED01', 'olaничего', 'band2', 'Ola Ничего'),"
+                    + " ('WED01', 'songøyaprodbyx', 'band', 'Song - Øya Prod. by X'),"
+                    // a guest artist after the producer, two dashes, ł and the spellings of V60
+                    + " ('WED01', 'songprodbyx', 'band3', 'Song - Prod. by X feat. Y'),"
+                    + " ('WED01', 'bitprodbyx', 'band', 'Bit -- Prod. by X'),"
+                    + " ('WED01', 'sinprodbylukaszno', 'band4', 'Sing - Prod. by Łukasz Number'),"
+                    // a name that does not make the key saved beside it: nothing to go by, left as it is
+                    + " ('WED01', 'otherkey', 'band5', 'Song - Prod. by X'),"
                     // a title's own words, a track without its name (uploaded before V57)
                     + " ('WED01', 'songprodigytribute', 'band', 'Song - Prodigy Tribute'),"
                     + " ('WED01', 'oldprodbyx', 'band', NULL),"
@@ -82,9 +95,17 @@ class LibraryKeyProducerMigrationIT {
 
         try (Connection connection = DriverManager.getConnection(url, USER, PASSWORD); Statement statement = connection.createStatement()) {
             assertThat(keys(statement, "WED01")).containsExactly(
+                    "bit|band|Bit -- Prod. by X",
                     "hit|kali|Hit (Radio Edit) - Prod. by Śliwa",
-                    "noc|mata|Noc - Prod. by A",
+                    "noc|mata|Noc - Prod by B",
+                    "nocprodbyaprodbyb|mata|Noc - Prod. by A - Prod. by B",
+                    "ola|band2|Ola - Ничего prod by X",
+                    "olaничего|band2|Ola Ничего",
                     "oldprodbyx|band|null",
+                    "otherkey|band5|Song - Prod. by X",
+                    "sin|band4|Sing - Prod. by Łukasz Number",
+                    "song|band|Song - Øya Prod. by X",
+                    "song|band3|Song - Prod. by X feat. Y",
                     "songprodigytribute|band|Song - Prodigy Tribute",
                     "toketeo|bebeshito|Toketeo",
                     "toketeo|bebeshito+djhonda+djjerry|Toketeo - Prod. by Dj Honda x DJ Jerry");
@@ -94,6 +115,11 @@ class LibraryKeyProducerMigrationIT {
             assertThat(LibraryKey.of("Kali", "Hit (Radio Edit) - Prod. by Śliwa").title()).isEqualTo("hit");
             assertThat(LibraryKey.of("Bebeshito", "Toketeo – Produced by Dj Honda").title()).isEqualTo("toketeo");
             assertThat(LibraryKey.of("Band", "Song - Prodigy Tribute").title()).isEqualTo("songprodigytribute");
+            assertThat(LibraryKey.of("Band2", "Ola - Ничего prod by X").title()).isEqualTo("ola");
+            assertThat(LibraryKey.of("Band", "Song - Øya Prod. by X").title()).isEqualTo("song");
+            assertThat(LibraryKey.of("Band3", "Song - Prod. by X feat. Y").title()).isEqualTo("song");
+            assertThat(LibraryKey.of("Band", "Bit -- Prod. by X").title()).isEqualTo("bit");
+            assertThat(LibraryKey.of("Band4", "Sing - Prod. by Łukasz Number").title()).isEqualTo("sin");
         }
     }
 

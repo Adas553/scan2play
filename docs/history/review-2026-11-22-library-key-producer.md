@@ -8,7 +8,8 @@ migracja V79 (zmienia wiersze `dj_library_track`), przed scaleniem. Diff: `git d
 
 ## Werdykt
 
-**Nie scalać w tej postaci; zmiana w Javie dobra, V79 do poprawienia.** `LibraryKey.VERSION_AFTER_DASH` robi to, co trzeba
+**Po poprawkach (sekcja na końcu) — do scalenia.** Przed nimi: **nie scalać w tej postaci; zmiana w Javie dobra, V79 do
+poprawienia.** `LibraryKey.VERSION_AFTER_DASH` robi to, co trzeba
 („Prodigy”, „Production”, „Prodigal Son”, „- Producer” zostają), a „Zagrane samo” działa od razu po wdrożeniu, bez migracji
 (`DeckHistoryService.markPlayed` liczy oba klucze w Javie). V79 ma jednak trzy wady: potrafi dać wierszowi klucz, którego Java nigdy
 nie zrobi, i przez to skasować inną piosenkę (P1); skasować wiersz, którego klucz się zwalnia (P3); a jej `DELETE` rośnie
@@ -197,3 +198,34 @@ tylko pokazywane `title_name` / tempo / tonacja do ponownego wgrania; tak samo r
 3. P1–P3 i testy z P5 — poprawiać na tej gałęzi (`claude/jovial-hodgkin-40e080`, wtedy #303/#304 dostaną nowy commit), czy na
    nowej? V79 nie jest jeszcze nigdzie zastosowana, więc można ją zmienić w miejscu (nie trzeba V80).
 4. P6: zostawić „mniejszy stary klucz”, czy wybierać najkrótszy tytuł jak parser?
+
+## Odpowiedzi właściciela i poprawki (2026-11-22)
+
+Właściciel: 1 — od nocnej kopii nie było ruchu DJ-ów, nocna wystarczy; 2–4 — „jak uważasz”; commit i push dozwolone. Poprawki na
+gałęzi sesji `claude/peaceful-bardeen-pu9g7y` = `145f3c1` (gałąź PR-ów) + ta review + poprawki; V79 zmieniona w miejscu (nigdzie
+niezastosowana). Do #303 / #304 trafią, gdy właściciel scali tę gałąź do `claude/jovial-hodgkin-40e080` (albo otworzy z niej PR-y
+w ich miejsce).
+
+- **P1 — poprawione.** V79 liczy teraz cały stary klucz z `title_name` krokami `LibraryKey.of` w ich kolejności (znak sterujący →
+  „ - ”, myślniki typograficzne → „-”, `--` sklejone, odstępy, nawiasy, „feat.”; litery `[^[:alnum:]]`, klasa odstępów ASCII jak
+  `\s` Javy — nie `\s` bazy, który bierze też spacje Unicode) w funkcjach tymczasowych `pg_temp.library_title` / `library_key`
+  (usuwane na końcu), i zmienia wiersz tylko, gdy wyszedł dokładnie zapisany `title_key`; nowy klucz z tytułu bez ogona. Test
+  różnicowy po poprawce: **19 422 zgodnych, 0 złych**; nieruszone 2 (klucz ≥ 200 znaków) i 112 śmieciowych tytułów, z których Java
+  nie robi już żadnego klucza (np. „& – - (Radio Edit) Prod.by”) — zostają jak były.
+- **P2 — poprawione.** Indeks `(party_code, artists, title_key)` i `ANALYZE` na tabeli tymczasowej, duplikaty przez `row_number()`
+  zamiast drugiego `EXISTS`. Przez Flyway: 500 250 wierszy, 25 000 z producentem, 250 duplikatów — **1,7 s** (było 33 s); 500 000,
+  110 000 z producentem — **5,3 s**.
+- **P3 — poprawione.** Wiersz, którego nowy klucz jest starym kluczem innego zmienianego wiersza, zostaje nieruszony.
+- **P4 — przyjęte** (dwa wiersze życzenia przed / po wdrożeniu); zdanie w `05-1i-wishes.md` i w wierszu V79 `10-2`.
+- **P5 — testy dopisane, każdy najpierw czerwony.** `LibraryKeyProducerMigrationIT`: „Ola - Ничего prod by X” + „Ola Ничего”, „Song
+  - Øya Prod. by X”, „Song - Prod. by X feat. Y”, „Bit -- Prod. by X”, łańcuch „Noc - Prod. by A - Prod. by B” — na starej V79
+  czerwony (Ola skasowana, łańcuch skasowany, `songø`, „feat.” i `--` nieruszone); „Sing - Prod. by Łukasz Number” (ł + `SPELLINGS`)
+  i „otherkey” z niepasującą nazwą (strażnik) — pilnują mutacji, które wcześniej były zielone. `LibraryKeyTest`: „X - Song - Prod.
+  Bylina” → `songprodbylina`, czerwony na mutacji `by[a-z]*`.
+- **P6 — zmienione:** z dwóch o jednym nowym kluczu zostaje najkrótsza nazwa (potem mniejszy stary klucz), jak przy wgraniu; IT:
+  zostaje „Noc - Prod by B”.
+- **P7 — poprawione:** komentarz V79 mówi teraz, co kod gwarantuje; wiersz V79 w `10-2` opisuje nowy sposób i czas. Opis PR
+  (link do review P3, kopia bazy) — do poprawienia przy PR-ach, gdy właściciel powie; nic w PR-ach nie pisałem.
+
+Sprawdzenia po poprawkach: `check.py unit` 1536/1536; `check.py it -t 'LibraryKeyProducerMigrationIT,MigrationIT,SongRequestRepositoryIT,
+LibraryKeySpellingsMigrationIT,LibraryDetailsMigrationIT'` 42/42; test różnicowy i pomiary jak wyżej (bazy `s2p_review_*` usunięte).
