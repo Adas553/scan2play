@@ -90,6 +90,18 @@ final class Window {
      * The texts of Java's own dialogs in Polish — the folder chooser, the message of a second copy: Java has none of its own, and an
      * English "Look In" / "Cancel" beside the program's "Wybierz" looks unfinished. Set after the theme, which may set its own.
      */
+    /** "Oznaczone" before the first song: when a song marks itself, for either program (VirtualDJ writes after ~45 s). */
+    static final String NOTHING_MARKED = "<html>Jeszcze nic. Piosenka z kolejki oznaczy się sama, gdy VirtualDJ<br>"
+            + "albo Serato zapisze ją w historii (VirtualDJ: około 45 s po puszczeniu).</html>";
+
+    /**
+     * The size a pack asks for: the content's height, but never narrower than before — the status line's width differs by state,
+     * and with a venue's Wi-Fi coming and going the window would change its width every few seconds.
+     */
+    static Dimension grownOnly(Dimension wanted, Dimension before) {
+        return before == null ? wanted : new Dimension(Math.max(wanted.width, before.width), wanted.height);
+    }
+
     static void polishDialogs() {
         String[][] texts = {
                 {"FileChooser.lookInLabelText", "Szukaj w:"}, {"FileChooser.folderNameLabelText", "Nazwa folderu:"},
@@ -313,8 +325,7 @@ final class Window {
                 markedTitle.setText("OZNACZONE OD URUCHOMIENIA" + (status.markedCount() > 0 ? " · " + status.markedCount() : ""));
                 markedRows.removeAll();
                 if (status.marked().isEmpty()) {
-                    markedRows.add(left(text("<html>Jeszcze nic. Piosenka z kolejki oznaczy się sama —<br>"
-                            + "z VirtualDJ około 45 sekund po puszczeniu.</html>", MUTED, 0)));
+                    markedRows.add(left(text(NOTHING_MARKED, MUTED, 0)));
                 }
                 for (Agent.Marked song : status.marked()) {
                     JLabel time = text(MINUTE.format(song.at()), MUTED, 0);
@@ -383,12 +394,19 @@ final class Window {
         }
     }
 
-    /** Packed only when the content's size changed: a pack at every look (3 s) would undo a window the DJ stretched. */
+    /**
+     * Packed only when the content's size changed: a pack at every look (3 s) would undo a window the DJ stretched. Never narrower
+     * than before ({@link #grownOnly}).
+     */
     private void repack() {
-        Dimension wanted = frame.getContentPane().getPreferredSize();
+        Dimension content = frame.getContentPane().getPreferredSize();
+        Dimension wanted = grownOnly(content, packedFor);
         if (!wanted.equals(packedFor)) {
             packedFor = wanted;
             frame.pack();
+            if (content.width < wanted.width) {
+                frame.setSize(frame.getWidth() + wanted.width - content.width, frame.getHeight());
+            }
         }
     }
 

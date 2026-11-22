@@ -339,4 +339,41 @@ class HistoryFormatsTest {
 
         assertEquals("{\"plays\":[{\"at\":1795300000,\"artist\":\"Sanah\",\"title\":\"Szampan\"}],\"sentAt\":1795300100}", json);
     }
+
+    /**
+     * The folders a DJ program is most likely in are looked through first (Music, Documents, OneDrive, then AppData), the whole
+     * profile last: a profile with many folders must not use up the look before Music is reached.
+     */
+    @Test
+    void theLook_startsWithMusicAndDocuments_theProfileLast() {
+        Platform windows = new Platform(Path.of("C:\\Users\\dj"), Map.of("LOCALAPPDATA", "C:\\Users\\dj\\AppData\\Local",
+                "APPDATA", "C:\\Users\\dj\\AppData\\Roaming", "OneDrive", "C:\\Users\\dj\\OneDrive"), true,
+                Map.of("music", Path.of("D:\\Muzyka"), "documents", Path.of("C:\\Users\\dj\\Documents")));
+        assertEquals(List.of(Path.of("D:\\Muzyka"), Path.of("C:\\Users\\dj\\Documents"), Path.of("C:\\Users\\dj\\OneDrive"),
+                Path.of("C:\\Users\\dj\\AppData\\Local"), Path.of("C:\\Users\\dj\\AppData\\Roaming"), Path.of("C:\\Users\\dj")),
+                windows.lookIn());
+    }
+
+    /**
+     * A root looked through on its own (Music) is not looked through again inside the profile, and folders no DJ program writes
+     * its history in — hidden ones (.cache, .git), node_modules, Windows' app packages, macOS' caches — are skipped: the folders
+     * seen go to the places worth seeing.
+     */
+    @Test
+    void theLook_skipsTheOtherRoots_andFoldersNoHistoryIsIn(@TempDir Path home) throws Exception {
+        Path music = home.resolve("Music");
+        for (int i = 0; i < 30; i++) {
+            Files.createDirectories(music.resolve("album" + i));
+        }
+        for (String heavy : List.of(".cache", "node_modules", "Packages", "Caches")) {
+            Files.createDirectories(home.resolve(heavy).resolve("x").resolve("VirtualDJ").resolve("History"));
+        }
+        Path virtualDj = home.resolve("Dane").resolve("VirtualDJ").resolve("History");
+        Files.createDirectories(virtualDj);
+
+        Platform.Found found = Platform.look(List.of(music, home));
+
+        assertEquals(List.of(virtualDj), found.virtualDjFolders(), "none of the skipped folders");
+        assertEquals(31 + 4, found.folders(), "Music once (itself and 30), then the profile: itself, Dane, VirtualDJ, History");
+    }
 }

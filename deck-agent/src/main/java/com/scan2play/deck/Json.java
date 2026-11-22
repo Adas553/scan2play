@@ -36,12 +36,25 @@ final class Json {
      * The songs as the server takes them: {@code {"plays":[{"at":…,"artist":"…","title":"…"}],"sentAt":…}} — {@code sentAt} this
      * computer's clock as it sends, so the server can correct the songs' times if the clock is off.
      */
+    /**
+     * The longest artist or title the server takes (DeviceApiController.DECK_FIELD_MAX): it refuses a whole call with a longer one,
+     * so one broken tag would lose the call's other songs. Cut here instead, never inside a character of two UTF-16 units.
+     */
+    static final int FIELD_MAX = 500;
+
+    private static String cut(String field) {
+        if (field.length() <= FIELD_MAX) {
+            return field;
+        }
+        return field.substring(0, Character.isHighSurrogate(field.charAt(FIELD_MAX - 1)) ? FIELD_MAX - 1 : FIELD_MAX);
+    }
+
     static String plays(List<Played> songs, Instant sentAt) {
         StringBuilder out = new StringBuilder("{\"plays\":[");
         for (int i = 0; i < songs.size(); i++) {
             Played song = songs.get(i);
             out.append(i == 0 ? "" : ",").append("{\"at\":").append(song.at() == null ? "null" : song.at().getEpochSecond())
-                    .append(",\"artist\":").append(quote(song.artist())).append(",\"title\":").append(quote(song.title())).append('}');
+                    .append(",\"artist\":").append(quote(cut(song.artist()))).append(",\"title\":").append(quote(cut(song.title()))).append('}');
         }
         return out.append("],\"sentAt\":").append(sentAt.getEpochSecond()).append('}').toString();
     }

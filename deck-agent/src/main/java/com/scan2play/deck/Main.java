@@ -40,7 +40,6 @@ public final class Main {
         String version = String.valueOf(Main.class.getPackage().getImplementationVersion());
         Settings settings = Settings.forThisUser();
         ServerClient client = new ServerClient(version);
-        List<HistorySource> sources = Platform.current().sources();
         ScheduledExecutorService looks = Executors.newSingleThreadScheduledExecutor(task -> {
             Thread thread = new Thread(task, "zagrane-samo");
             thread.setDaemon(true);
@@ -59,6 +58,9 @@ public final class Main {
             }
             System.exit(1);
         }
+        // only now, a copy that will run: the usual places at once, Windows' answer and the look through the folders in the
+        // background (seconds) — the window is up meanwhile, and a second copy is refused before any of it
+        List<HistorySource> sources = Platform.withoutAsking().sources();
         if (inConsole) {
             console(args, settings, client, sources, looks);
             return;
@@ -99,6 +101,14 @@ public final class Main {
         });
         window[0].show();
         looks.scheduleWithFixedDelay(agent::tick, 0, LOOK_EVERY_SECONDS, TimeUnit.SECONDS);
+        findTheRest(agent);
+    }
+
+    /** Windows' answer (PowerShell) and the look through the folders, on a thread of their own; their places read from then on. */
+    private static void findTheRest(Agent agent) {
+        Thread finder = new Thread(() -> agent.useSources(Platform.current().sources()), "zagrane-szukanie");
+        finder.setDaemon(true);
+        finder.start();
     }
 
     /** Scan2Play's look: FlatLaf's dark theme in the app's colours (app.css), round corners as the panel's buttons and fields. */
@@ -176,6 +186,7 @@ public final class Main {
             }
         });
         looks.scheduleWithFixedDelay(agent::tick, 0, LOOK_EVERY_SECONDS, TimeUnit.SECONDS);
+        findTheRest(agent);
         try {
             Thread.currentThread().join();
         } catch (InterruptedException e) {

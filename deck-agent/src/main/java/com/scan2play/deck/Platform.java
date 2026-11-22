@@ -32,10 +32,12 @@ final class Platform {
     private final Map<String, Path> known;
     /** What {@link #look} found at the start beside the usual places. */
     private final Found found;
+    /** False for {@link #withoutAsking}: VirtualDJ's HomeFolder not asked of the registry (up to 3 s). */
+    private boolean askRegistry = true;
 
     /** The histories found by looking through the user's folders: added to the usual places, never instead of them. */
-    record Found(List<Path> virtualDjFolders, List<Path> seratoSessionFolders, List<Path> serato4Databases) {
-        static final Found NONE = new Found(List.of(), List.of(), List.of());
+    record Found(List<Path> virtualDjFolders, List<Path> seratoSessionFolders, List<Path> serato4Databases, int folders) {
+        static final Found NONE = new Found(List.of(), List.of(), List.of(), 0);
     }
 
     /** How deep a look goes below each of its folders, and how many folders it sees at most: seconds, never the whole disk. */
@@ -58,6 +60,17 @@ final class Platform {
         this.found = found;
     }
 
+    /**
+     * The usual places at once, without asking Windows (PowerShell, the registry) or looking through the folders: what the program
+     * reads while {@link #current} works, in the background, for seconds.
+     */
+    static Platform withoutAsking() {
+        boolean windows = System.getProperty("os.name", "").toLowerCase(Locale.ROOT).contains("win");
+        Platform quick = new Platform(Path.of(System.getProperty("user.home")), System.getenv(), windows);
+        quick.askRegistry = false;
+        return quick;
+    }
+
     static Platform current() {
         boolean windows = System.getProperty("os.name", "").toLowerCase(Locale.ROOT).contains("win");
         Path home = Path.of(System.getProperty("user.home"));
@@ -78,15 +91,29 @@ final class Platform {
                 new Serato4Database(List.of(folder.resolve("master.sqlite"), folder.resolve("Library").resolve("master.sqlite"))));
     }
 
-    /** Where {@link #look} looks: the user's own folders — the profile, AppData (both), Music, Documents, OneDrive. */
+    /**
+     * Where {@link #look} looks, the likeliest first — Music, Documents, OneDrive, AppData (both) — and the whole profile last: the
+     * look's folders are shared by all, and a profile with many folders must not use them up before Music is reached.
+     */
     List<Path> lookIn() {
-        List<Path> roots = new ArrayList<>(List.of(home));
-        folder("LOCALAPPDATA").ifPresent(roots::add);
-        folder("APPDATA").ifPresent(roots::add);
+        List<Path> roots = new ArrayList<>();
         Optional.ofNullable(known.get("music")).ifPresent(roots::add);
         Optional.ofNullable(known.get("documents")).ifPresent(roots::add);
         oneDrive().ifPresent(roots::add);
+        folder("LOCALAPPDATA").ifPresent(roots::add);
+        folder("APPDATA").ifPresent(roots::add);
+        roots.add(home);
         return roots.stream().distinct().toList();
+    }
+
+    /**
+     * Folders no DJ program writes its history in, skipped by the look: hidden ones (.cache, .git, .m2), node_modules, Windows' app
+     * packages (AppData\Local\Packages), macOS' Caches and Containers, the recycle bin — they hold most of a profile's folders.
+     */
+    private static final Set<String> NO_HISTORY_IN = Set.of("node_modules", "packages", "caches", "containers", "$recycle.bin");
+
+    private static boolean noHistoryIn(String name) {
+        return name.startsWith(".") || NO_HISTORY_IN.contains(name.toLowerCase(Locale.ROOT));
     }
 
     /**
@@ -113,10 +140,14 @@ final class Platform {
                 Files.walkFileTree(root, EnumSet.noneOf(FileVisitOption.class), LOOK_DEPTH, new SimpleFileVisitor<>() {
                     @Override
                     public FileVisitResult preVisitDirectory(Path folder, BasicFileAttributes attributes) {
+                        String name = folder.getFileName() == null ? "" : folder.getFileName().toString();
+                        // another root (Music inside the profile) is looked through on its own: once is enough
+                        if (!folder.equals(root) && (roots.contains(folder) || noHistoryIn(name))) {
+                            return FileVisitResult.SKIP_SUBTREE;
+                        }
                         if (++seen[0] > maxFolders) {
                             return FileVisitResult.TERMINATE;
                         }
-                        String name = folder.getFileName() == null ? "" : folder.getFileName().toString();
                         if (name.equalsIgnoreCase("Serato") && Files.isRegularFile(folder.resolve("Library").resolve("master.sqlite"))) {
                             databases.add(folder.resolve("Library").resolve("master.sqlite"));
                         } else if (name.equalsIgnoreCase("_Serato_") && Files.isDirectory(folder.resolve("History").resolve("Sessions"))) {
@@ -144,7 +175,7 @@ final class Platform {
                 break;
             }
         }
-        return new Found(List.copyOf(virtualDj), List.copyOf(sessions), List.copyOf(databases));
+        return new Found(List.copyOf(virtualDj), List.copyOf(sessions), List.copyOf(databases), seen[0]);
     }
 
     /** Every program's history this computer may have; which of them is there is the source's own question (present()). */
@@ -270,7 +301,7 @@ final class Platform {
 
     /** VirtualDJ's own setting of where its folder is (HKCU\Software\VirtualDJ, HomeFolder), on Windows, when PowerShell said nothing. */
     private Optional<Path> registryHomeFolder() {
-        if (!windows) {
+        if (!windows || !askRegistry) {
             return Optional.empty();
         }
         try {

@@ -52,4 +52,23 @@ class WindowTest {
         assertEquals("Anuluj", javax.swing.UIManager.getString("FileChooser.cancelButtonText"));
         assertEquals("Anuluj", javax.swing.UIManager.getString("OptionPane.cancelButtonText"));
     }
+
+    /**
+     * The window is packed to its content, and the status line's width differs by state (no server, no Pro): with a venue's Wi-Fi
+     * coming and going the window would change its width every few seconds. It grows when needed and never narrows; its height
+     * follows the content (the rows of the songs).
+     */
+    @Test
+    void theWindow_growsButNeverNarrows() {
+        java.awt.Dimension before = new java.awt.Dimension(620, 365);
+        assertEquals(new java.awt.Dimension(620, 419), Window.grownOnly(new java.awt.Dimension(492, 419), before));
+        assertEquals(new java.awt.Dimension(700, 300), Window.grownOnly(new java.awt.Dimension(700, 300), before));
+        assertEquals(new java.awt.Dimension(492, 419), Window.grownOnly(new java.awt.Dimension(492, 419), null), "the first pack");
+    }
+
+    /** Before the first song, the window says when one marks itself — for Serato too, not only VirtualDJ's 45 seconds. */
+    @Test
+    void nothingMarkedYet_speaksOfBothPrograms() {
+        assertEquals(true, Window.NOTHING_MARKED.contains("VirtualDJ") && Window.NOTHING_MARKED.contains("Serato"), Window.NOTHING_MARKED);
+    }
 }

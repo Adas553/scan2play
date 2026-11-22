@@ -38,7 +38,8 @@ final class Agent {
                   ServerClient.Outcome last) {
     }
 
-    private final List<HistorySource> sources;
+    /** The places read: first the usual ones, then also what the look through the folders found ({@link #useSources}). */
+    private volatile List<HistorySource> sources;
     private final ServerClient client;
     private final Settings settings;
     private final Clock clock;
@@ -172,6 +173,15 @@ final class Agent {
      */
     void useFolder(java.nio.file.Path folder) {
         picked = folder == null ? List.of() : Platform.sourcesIn(folder);
+    }
+
+    /**
+     * The places to read from the next look on: Main starts with the usual ones (no waiting for PowerShell and the look through the
+     * folders, which take seconds) and hands over the whole list once they are done. A history read already, found again, sends
+     * nothing twice (the songs seen are the program's and the song's, not the source's).
+     */
+    void useSources(List<HistorySource> all) {
+        sources = List.copyOf(all);
     }
 
     /** The songs read and not sent yet (the tests). */

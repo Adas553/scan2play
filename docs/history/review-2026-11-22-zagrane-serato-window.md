@@ -41,7 +41,7 @@ u właściciela (5 minut): w Serato DJ Lite 5.1 załadować piosenkę na deck **
 dopiero, gdy w tej samej sesji pojawi się następna (czyli tę grano przed kolejną) albo po N minutach w historii; (b) albo tylko komunikat
 w karcie. Decyzja po próbie.
 
-### P4 — ryzyko (otwarte, propozycja): przegląd folderów i PowerShell przed blokadą i oknem
+### P4 — ryzyko (poprawione w drugiej turze): przegląd folderów i PowerShell przed blokadą i oknem
 
 `Main.java:43` (`Platform.current()`: PowerShell do 10 s + `Platform.look`) przed `onlyCopy()` (`Main.java:54`) i przed oknem.
 Scenariusz: DJ klika dwa razy „Scan2Play Zagrane”; przez kilka sekund nic nie widać, klika znowu; druga kopia też uruchamia PowerShell
@@ -50,7 +50,7 @@ na Windows z zimnym dyskiem i NTFS spodziewam się kilku sekund (niezmierzone). 
 przegląd w tle (`Agent` dostaje znalezione źródła później, jak `useFolder`). Nie zrobione: zmiana kolejności startu bez dobrego testu i
 bez Windows — do zrobienia z próbą na Windows.
 
-### P5 — ryzyko (otwarte, propozycja): wspólny limit 30 000 folderów zużywa profil, zanim dojdzie do Muzyki
+### P5 — ryzyko (poprawione w drugiej turze): wspólny limit 30 000 folderów zużywa profil, zanim dojdzie do Muzyki
 
 `Platform.java:260–268` (`lookIn`: profil, LOCALAPPDATA, APPDATA, Muzyka, Dokumenty, OneDrive) i `look`. Profil jest przeglądany pierwszy
 i na 4 poziomy obejmuje też `AppData` (który potem jest przeglądany drugi raz jako własny korzeń); `AppData\Local\Packages` ma setki
@@ -82,7 +82,7 @@ trzyma historię.”, „Połączono — brak historii VirtualDJ i Serato”, �
 „Wybierz” — tak samo na polskim Windows. Teraz `Window.polishDialogs()` (wołane w `Main.theme()`): „Szukaj w:”, „Nazwa folderu:”,
 „Pliki typu:”, „Anuluj”… (`program-09-okno-wyboru-folderu.png`). Test `WindowTest.theFolderChooser_speaksPolish` (czerwony przed).
 
-### P9 — drobiazg (otwarte, pytanie): szerokość okna skacze ze stanem
+### P9 — drobiazg (poprawione w drugiej turze): szerokość okna skacze ze stanem
 
 `Window.repack()`. Szerokość zależy od linii stanu: 492 px („Działa”), 531 (brak historii), 589 (brak serwera), 620 (bez Pro).
 Scenariusz: słabe Wi-Fi na sali — stan przełącza się „Działa” ↔ „Brak połączenia”, okno co kilkadziesiąt sekund zmienia szerokość.
@@ -103,13 +103,13 @@ Pozostałe nowe testy #301 (`serato5_…`, `aFolderThePickedDj…`, `aHistoryTha
 `theMarkedSongs_theLastFive…`) — czerwone po cofnięciu poprawki. Niezłapane i zostawione: kolejność sesji `start_time DESC, id DESC`
 vs samo `id` (w praktyce zgodne).
 
-### P11 — drobiazg (otwarte, sprzed #301): jedno za długie pole gubi całą paczkę 20 piosenek
+### P11 — drobiazg (poprawione w drugiej turze, sprzed #301): jedno za długie pole gubi całą paczkę 20 piosenek
 
 `ServerClient.java:62` (400 traktowane jak „przyjęte”) i `DeviceApiController.validPlays` (pole > 500 znaków → 400). Scenariusz: jedna
 piosenka z tytułem ponad 500 znaków (zepsuty tag) w paczce → serwer odrzuca całość, program ją porzuca — 19 innych piosenek nie oznacza
 próśb. Rzadkie. **Propozycja:** program ucina pola do 500 znaków w `Json.plays`.
 
-### P12 — drobiazg (pytanie): teksty karty i okna o Serato
+### P12 — drobiazg (poprawione w drugiej turze): teksty karty i okna o Serato
 
 Karta: „historię VirtualDJ i Serato (także Serato 4)” — program czyta teraz też Serato 5.1; nawias można usunąć. Okno, „OZNACZONE”
 puste: „z VirtualDJ około 45 sekund po puszczeniu” — także wtedy, gdy czytane jest tylko Serato (dla Serato czas nieznany do P3).
@@ -157,13 +157,30 @@ puste: „z VirtualDJ około 45 sekund po puszczeniu” — także wtedy, gdy cz
 Sprawdzenia (w kopii, TMPDIR=/tmp/s2p): `check.py unit` 1530/1530, `browser` 470/470, `audit` 148 stron × 3 szerokości bez przewijania w bok i błędów (te same 4 stare małe cele, żaden z karty; panel bez zmian w poprawkach); program `verify` 42/42
 (było 35). `it` nie uruchamiane: bez zmian SQL aplikacji i migracji.
 
+## Druga tura (właściciel: „P4, P5, P9, P11 i P12 zrób jak uważasz”)
+
+Każda z testem widzianym najpierw na czerwono:
+- **P4:** najpierw blokada drugiej kopii, potem okno z miejscami zwykłymi (`Platform.withoutAsking()`: bez PowerShella, rejestru i
+  przeglądu), a PowerShell i przegląd w tle (`Main.findTheRest`, wątek „zagrane-szukanie”); znalezione miejsca czytane od następnego
+  spojrzenia (`Agent.useSources`, lista `volatile`). Okno pod Xvfb po 1,3 s. Test `AgentTest.theSourcesFoundAfterTheStart_areRead_withoutSendingASongTwice`.
+- **P5:** kolejność Muzyka, Dokumenty, OneDrive, LOCALAPPDATA, APPDATA, profil na końcu; korzeń przeglądany osobno nie jest przeglądany
+  drugi raz w profilu; pomijane foldery ukryte (`.cache`, `.git`, `.m2`), `node_modules`, `Packages`, `Caches`, `Containers`,
+  `$Recycle.Bin`. `Found.folders` mówi, ile folderów obejrzano. Testy `theLook_startsWithMusicAndDocuments_theProfileLast`,
+  `theLook_skipsTheOtherRoots_andFoldersNoHistoryIsIn`.
+- **P9:** okno nigdy się nie zwęża (`Window.grownOnly`; wysokość idzie za treścią). Pod Xvfb: brak serwera 586 px → serwer wraca → 589 px
+  (wcześniej spadało do 492; `program-10-po-powrocie-serwera.png`). Test `WindowTest.theWindow_growsButNeverNarrows`.
+- **P11:** `Json.plays` ucina wykonawcę i tytuł do 500 znaków (nie w środku znaku z dwóch jednostek UTF-16). Test
+  `ServerClientTest.aFieldLongerThanTheServerTakes_isCut_notTheWholeCallLost`.
+- **P12:** karta bez „(także Serato 4)” (pl, en; `DashboardPageRenderTest`); okno przed pierwszą piosenką: „…oznaczy się sama, gdy
+  VirtualDJ albo Serato zapisze ją w historii (VirtualDJ: około 45 s po puszczeniu).” (`WindowTest.nothingMarkedYet_speaksOfBothPrograms`).
+
+Program `verify` 48/48; `check.py unit -t DashboardPageRenderTest` 34/34 (czerwony bez zmiany tekstu).
+
 ## Pytania do właściciela
 
 1. P3: próba w Serato DJ Lite 5.1 — czy piosenka tylko załadowana (niepuszczona) trafia do historii? Od tego zależy, czy Serato 5 może
    oznaczać sam.
-2. P9: okno programu o stałej szerokości (nie skacze przy zmianie stanu)?
-3. P12: usunąć „(także Serato 4)” z karty?
-4. P4 / P5: przegląd folderów w tle i mądrzejsza kolejność — zrobić przy najbliższej próbie na Windows?
+2. (P4, P5, P9, P12 — zrobione w drugiej turze.)
 
 ## Zrzuty ekranu
 

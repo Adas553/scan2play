@@ -342,4 +342,27 @@ class AgentTest {
         assertTrue(server.calls.isEmpty());
         assertEquals(false, shown.get().paired());
     }
+
+    /**
+     * The look through the folders and Windows' answer (PowerShell) take seconds: they run after the window is shown, and the
+     * histories they find are read from then on. A song the first places sent already is not sent again by the same history found
+     * twice; a song only the new places have is sent.
+     */
+    @Test
+    void theSourcesFoundAfterTheStart_areRead_withoutSendingASongTwice(@TempDir Path dir) throws Exception {
+        source.played(START.plusSeconds(5), "Sanah", "Szampan");
+        Agent agent = agent(paired(dir));
+        now.set(START.plusSeconds(6));
+        agent.tick();
+
+        FakeSource found = new FakeSource();
+        found.played(START.plusSeconds(5), "Sanah", "Szampan");
+        found.played(START.plusSeconds(8), "Kult", "Arahja");
+        agent.useSources(List.of(source, found));
+        now.set(START.plusSeconds(9));
+        agent.tick();
+
+        assertEquals(List.of(new Played(START.plusSeconds(5), "Sanah", "Szampan"), new Played(START.plusSeconds(8), "Kult", "Arahja")),
+                server.calls.stream().flatMap(List::stream).toList());
+    }
 }

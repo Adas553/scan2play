@@ -120,11 +120,11 @@ does not hide tonight's file), Serato 2/3's newest `.session` (`Music/_Serato_/H
 and Serato 4 / 5's `master.sqlite` (read-only; `%LOCALAPPDATA%\Serato\Library` — Serato DJ Lite 5.1 on the owner's Windows —
 or `%APPDATA%\Serato\Library`, the one written last; `~/Library/Application Support/Serato/Library`) when they changed; the query made
 from the columns the tables have (Serato 5.1 dropped some of 4's; the newest session's songs, "played" only where the column is); a
-history there that cannot be read is said in the window ("Serato (master.sqlite — nie da się odczytać)"); and at the start a short
-look through the user's folders (the profile, AppData, Music, Documents, OneDrive; 4 levels, at most 30 000 folders, no links
-followed) for a "Serato" with `Library/master.sqlite`, a "_Serato_" with `History/Sessions`, a "VirtualDJ" with `History` in places
+history there that cannot be read is said in the window ("Serato (master.sqlite — nie da się odczytać)"); and, in the background after the window is up (the usual places are read at once), a short
+look through the user's folders (Music, Documents, OneDrive, AppData, the profile last; 4 levels, at most 30 000 folders in all, no
+links followed, a root not looked through twice, hidden folders, `node_modules`, `Packages`, `Caches`, `Containers` skipped) for a "Serato" with `Library/master.sqlite`, a "_Serato_" with `History/Sessions`, a "VirtualDJ" with `History` in places
 no reader names; sends each new song once (≤ 20 a call, the set before the program started minus 10 minutes not), calls once a minute with
-nothing (alive) and at once after a new pairing (a party without Pro said at once); a 401 = "Odłącz" in the panel: the token
+nothing (alive); an artist or title cut at 500 characters (the server refuses a whole call with a longer one) and at once after a new pairing (a party without Pro said at once); a 401 = "Odłącz" in the panel: the token
 forgotten, the window asks for a new code; "Odłącz ten komputer" in the window tells the server (`/api/device/unpair`: the computer
 leaves the panel's list) and forgets the token here even offline. On Windows it asks PowerShell once at the start where the Music and
 Documents are and where VirtualDJ's `HomeFolder` points (UTF-8: a user name with a Polish letter whole; OneDrive, Polish folder names)
@@ -137,7 +137,7 @@ button "Wskaż folder historii…" (a quiet link "Inny folder historii…" when 
 settings and read beside the usual places (`Platform.sourcesIn`: VirtualDJ's `.m3u`, Serato's `.session`, `master.sqlite`, in it or
 right under it; "Nie czytaj go" forgets it); "OZNACZONE OD URUCHOMIENIA · 12" — the last 5 songs marked with their times, newest
 first, never a night's whole list (empty: when a song marks itself; a song or a folder longer than 60 characters cut with "…", whole
-in its tooltip, so the window never grows past the screen); "Odłącz ten komputer"; a tray icon ("Pokaż", "Zakończ"). One
+in its tooltip, so the window never grows past the screen; the window never narrows when the status line changes); "Odłącz ten komputer"; a tray icon ("Pokaż", "Zakończ"). One
 copy per user: a second start finds `~/.scan2play/zagrane.lock` locked (`SingleInstance`, `FileChannel.tryLock`; the system drops the
 lock when the program ends) and says "Program już działa…" (a window, or a line and exit 1 in the console). `~/.scan2play/zagrane.properties` keeps the server, the token and the folder picked. Without a screen: `--pair <code> [--server …]`, then
 `--console`. Tests: `sh mvnw -f deck-agent/pom.xml -B -ntp verify` (`HistoryFormatsTest`, `AgentTest`, `SingleInstanceTest`, `WindowTest`). Packages:
