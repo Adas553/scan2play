@@ -53,7 +53,8 @@ uploaded again: "Wgraj kolekcję jeszcze raz…", `LibraryDetailsMigrationIT`). 
 (`party_code` FK to `dj_library` ON DELETE CASCADE, `title_key` ≤ 200, `artists` ≤ 200, `swapped` — V43), PK of the three — the
 queue's lookup, its titles at once (`title_key = ANY(?)`). Matched by the keys alone (`util/LibraryKey`): the title without a version in
 brackets or after a dash with a version's word ("- Original Mix",
-"- 2011 Remaster", "- Live") and without "feat. X", one word's two spellings made one on the key (V60, `LibraryKey.SPELLINGS`: "ing"
+"- 2011 Remaster", "- Live", and the producer: "- Prod. by X", "- Produced by X" — V79 cut the keys saved before the same way, from
+`title_name`) and without "feat. X", one word's two spellings made one on the key (V60, `LibraryKey.SPELLINGS`: "ing"
 is "in" — "Livin'" and "Living" —, "number" is "no"; V60 changed the keys saved before the same way); the artists a sorted set (split at "," "&" "x" "and" "i" "feat." "vs" …, no
 leading "The"). Beside the key, only shown (V57, `DjLibraryParser.Track`, all null when the file does not say it): `artist_name` and
 `title_name` as the file writes them (one row per key: of a song's versions the shortest title, "One More Time" before "One More Time

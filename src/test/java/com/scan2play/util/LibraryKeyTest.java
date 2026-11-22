@@ -36,6 +36,12 @@ class LibraryKeyTest {
             "Avicii - Levels                                 | Avicii - Levels - Original Mix",
             "Queen - Don't Stop Me Now                       | Queen - Don't Stop Me Now - 2011 Remaster",
             "Lady Pank - Mniej niż zero - Live               | Lady Pank - Mniej niż zero",
+            // the producer named in the title (V79), after a dash or in brackets
+            "Bebeshito – Toketeo                             | Bebeshito, Dj Honda, DJ Jerry - Toketeo - Prod. by Dj Honda x DJ Jerry",
+            "Bebeshito - Toketeo                             | Bebeshito - Toketeo - Prod by Dj Honda",
+            "Bebeshito - Toketeo                             | Bebeshito - Toketeo - Produced by Dj Honda",
+            "Bebeshito - Toketeo                             | Bebeshito - Toketeo (Prod. by Dj Honda x DJ Jerry)",
+            "Bebeshito - Toketeo                             | Bebeshito - Toketeo [prod. DJ Jerry]",
             // one word's two spellings (V60, LibraryKey.SPELLINGS)
             "Bon Jovi - Living on a Prayer                   | Bon Jovi - Livin' On A Prayer",
             "Bee Gees - Stayin' Alive                        | Bee Gees - Staying Alive",
@@ -116,6 +122,21 @@ class LibraryKeyTest {
         assertThat(mark("Ed Sheeran - Perfect", "Ed Sheeran - Perfect Symphony")).isEqualTo(LibraryMark.MISSING);
         assertThat(mark("Queen - Bohemian Rhapsody", "Queen - Bohemian Rhapsody")).isEqualTo(LibraryMark.HAVE);
         assertThat(mark("Ed Sheeran - Sing", "Nine Inch Nails - Sin")).as("a title of 3 letters alone is never \"?\"").isEqualTo(LibraryMark.MISSING);
+    }
+
+    /**
+     * A producer after a dash is a version: cut as "- Original Mix" is (V79 cuts the keys saved before the same way). A title whose
+     * own words merely start with "prod" ("Prodigy", "Production Line") keeps them.
+     */
+    @Test
+    @DisplayName("\"- Prod. by X\" is cut from the title; a word that only starts with \"prod\" is not")
+    void producer() {
+        assertThat(LibraryKey.of("Bebeshito, Dj Honda, DJ Jerry", "Toketeo - Prod. by Dj Honda x DJ Jerry").title()).isEqualTo("toketeo");
+        assertThat(LibraryKey.of("X - Song - Prod.by Y").title()).isEqualTo("song");
+        assertThat(LibraryKey.of("X - Song - Prodigy Tribute").title()).isEqualTo("songprodigytribute");
+        assertThat(LibraryKey.of("X - Song - Production Line").title()).isEqualTo("songproductionline");
+        assertThat(LibraryKey.of("X - Song - Prod. Bylina").title()).as("\"by\" only as a word").isEqualTo("songprodbylina");
+        assertThat(LibraryKey.of("X - Prod by Y").title()).as("a title of the producer alone stays").isEqualTo("prodbyy");
     }
 
     @Test

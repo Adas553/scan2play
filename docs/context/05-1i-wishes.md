@@ -16,7 +16,8 @@ pass it (`WishServiceIT`). Deleted `KEPT_DAYS_AFTER` = 7 days after its date, or
 04:50 Polish time), with the party, or by "Usuń wydarzenie" (any plan); its code follows "Zmień kod imprezy" (ON UPDATE CASCADE).
 
 **A wish** (`guest_wish`): one row per song of the event — `wish_key` "title|artists" by `LibraryKey` when it was written "Artist -
-Title" (the same song typed two ways, "Wilki – Baśka" and "wilki - baska (Radio Edit)", is one row), else `?` and its words
+Title" (the same song typed two ways, "Wilki – Baśka" and "wilki - baska (Radio Edit)", is one row; a change of `LibraryKey` — V60,
+V79 — leaves the keys saved before: a wish written before it and the same after it may be two rows), else `?` and its words
 (`SongNames.comparable`): such a line is listed apart, "Do sprawdzenia" — a title alone or a line of the lyrics, the DJ reads it;
 `song_name` as the first guest wrote it (≤ 150, `SongNames.tidy`), `wishes` how many wrote it (`INSERT … ON CONFLICT DO UPDATE`).
 
