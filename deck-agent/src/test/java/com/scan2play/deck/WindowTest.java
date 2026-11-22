@@ -14,4 +14,61 @@ class WindowTest {
         assertEquals("Wpisz kod z panelu.", Window.beforeSending("   "));
         assertNull(Window.beforeSending("123456"), "a code typed goes to the server");
     }
+
+    /**
+     * A song's name as long as a guest's request may be (a remix's whole title) would widen the window past the screen, "Odłącz ten
+     * komputer" and the time with it: cut, with "…", the whole name in its tooltip. A short one as it is.
+     */
+    @Test
+    void aLongSongName_isCut_soTheWindowStaysOnTheScreen() {
+        String long_ = "Zespół Pieśni i Tańca Mazowsze feat. Chór Filharmonii Narodowej - Cyganeczka Zosia (wersja rozszerzona, extended mix)";
+        String cut = Window.shortened(long_);
+        assertEquals(Window.LONGEST_LINE, cut.length());
+        assertEquals(long_.substring(0, Window.LONGEST_LINE - 1) + "…", cut);
+        assertEquals("Sanah - Szampan", Window.shortened("Sanah - Szampan"));
+        assertEquals("a".repeat(Window.LONGEST_LINE), Window.shortened("a".repeat(Window.LONGEST_LINE)), "exactly as long: whole");
+    }
+
+    /** The texts speak without a person, as the app's (no "nie widzę", "czekam"): the program is not someone. */
+    @Test
+    void theTexts_areImpersonal() {
+        Agent.Status nothingRead = new Agent.Status(true, java.util.List.of(), java.time.Instant.EPOCH, java.util.List.of(), 0,
+                ServerClient.Outcome.OK);
+        for (String text : java.util.List.of(Window.line(nothingRead).text(), Window.NO_HISTORY, Window.NOT_IN_FOLDER)) {
+            assertNull(java.util.regex.Pattern.compile("(?iU)\\b(widzę|czekam|mogę|szukam)\\b").matcher(text).results().findFirst()
+                    .map(java.util.regex.MatchResult::group).orElse(null), text);
+        }
+    }
+
+    /**
+     * Java has no Polish texts of its own dialogs: the folder chooser ("Wskaż folder historii…") said "Look In", "Folder name",
+     * "Cancel" beside the program's "Wybierz", on a Polish Windows too. Its texts are given in Polish.
+     */
+    @Test
+    void theFolderChooser_speaksPolish() {
+        Window.polishDialogs();
+        assertEquals("Szukaj w:", javax.swing.UIManager.getString("FileChooser.lookInLabelText"));
+        assertEquals("Nazwa folderu:", javax.swing.UIManager.getString("FileChooser.folderNameLabelText"));
+        assertEquals("Anuluj", javax.swing.UIManager.getString("FileChooser.cancelButtonText"));
+        assertEquals("Anuluj", javax.swing.UIManager.getString("OptionPane.cancelButtonText"));
+    }
+
+    /**
+     * The window is packed to its content, and the status line's width differs by state (no server, no Pro): with a venue's Wi-Fi
+     * coming and going the window would change its width every few seconds. It grows when needed and never narrows; its height
+     * follows the content (the rows of the songs).
+     */
+    @Test
+    void theWindow_growsButNeverNarrows() {
+        java.awt.Dimension before = new java.awt.Dimension(620, 365);
+        assertEquals(new java.awt.Dimension(620, 419), Window.grownOnly(new java.awt.Dimension(492, 419), before));
+        assertEquals(new java.awt.Dimension(700, 300), Window.grownOnly(new java.awt.Dimension(700, 300), before));
+        assertEquals(new java.awt.Dimension(492, 419), Window.grownOnly(new java.awt.Dimension(492, 419), null), "the first pack");
+    }
+
+    /** Before the first song, the window says when one marks itself — Serato's few seconds and VirtualDJ's 45. */
+    @Test
+    void nothingMarkedYet_speaksOfBothPrograms() {
+        assertEquals(true, Window.NOTHING_MARKED.contains("VirtualDJ") && Window.NOTHING_MARKED.contains("Serato"), Window.NOTHING_MARKED);
+    }
 }

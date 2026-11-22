@@ -25,14 +25,21 @@ final class Agent {
     static final int MAX_WAITING = 200;
     static final Duration EARLIER_SET = Duration.ofMinutes(10);
     static final Duration ALIVE_EVERY = Duration.ofMinutes(1);
-    /** The window's line of songs marked: the last few since the start, enough to see the program works. */
-    static final int MARKED_SHOWN = 3;
 
-    /** What the window shows. */
-    record Status(boolean paired, List<String> reading, Instant checkedAt, List<String> marked, ServerClient.Outcome last) {
+    /** The window's list of songs marked: the last few, newest first — a night of 100 songs is not a list of 100. */
+    static final int MARKED_SHOWN = 5;
+
+    /** A song the server marked played, and when the program heard so. */
+    record Marked(Instant at, String song) {
     }
 
-    private final List<HistorySource> sources;
+    /** What the window shows: {@code marked} the last {@value #MARKED_SHOWN}, newest first, {@code markedCount} all since the start. */
+    record Status(boolean paired, List<String> reading, Instant checkedAt, List<Marked> marked, int markedCount,
+                  ServerClient.Outcome last) {
+    }
+
+    /** The places read: first the usual ones, then also what the look through the folders found ({@link #useSources}). */
+    private volatile List<HistorySource> sources;
     private final ServerClient client;
     private final Settings settings;
     private final Clock clock;
@@ -45,7 +52,13 @@ final class Agent {
     private Instant lastCall = Instant.EPOCH;
     /** The token of the last call: a new pairing is asked about at once, its answer not mixed with the old token's. */
     private String lastToken;
-    private List<String> lastMarked = List.of();
+    private List<Marked> lastMarked = List.of();
+    private int markedCount;
+    /**
+     * The sources of the folder the DJ picked ({@link #useFolder}), read beside the usual ones. Volatile, not under the lock: the
+     * window sets it from its own thread and must not wait for a look's call to the server.
+     */
+    private volatile List<HistorySource> picked = List.of();
     private ServerClient.Outcome lastOutcome;
 
     Agent(List<HistorySource> sources, ServerClient client, Settings settings, Clock clock, Consumer<Status> window) {
@@ -60,7 +73,9 @@ final class Agent {
     synchronized void tick() {
         Instant now = clock.instant();
         List<String> reading = new ArrayList<>();
-        for (HistorySource source : sources) {
+        List<HistorySource> all = new ArrayList<>(sources);
+        all.addAll(picked);
+        for (HistorySource source : all) {
             if (!source.present()) {
                 continue;
             }
@@ -75,6 +90,9 @@ final class Agent {
                 }
             } catch (IOException | RuntimeException e) {
                 versions.remove(source);   // a file being written, a database busy: read again at the next look
+                // said, not left out: a history there that cannot be read (a program's new format) would look like no history at all
+                String file = source.reading();
+                reading.add(source.program() + " (" + (file.isEmpty() ? "" : file + " — ") + "nie da się odczytać)");
             }
         }
         String token = settings.token();
@@ -86,7 +104,7 @@ final class Agent {
         if (token != null && (!waiting.isEmpty() || Duration.between(lastCall, now).compareTo(ALIVE_EVERY) >= 0)) {
             send(token, now);
         }
-        window.accept(new Status(settings.token() != null, reading, now, lastMarked, lastOutcome));
+        window.accept(new Status(settings.token() != null, reading.stream().distinct().toList(), now, lastMarked, markedCount, lastOutcome));
     }
 
     private void read(HistorySource source, List<Played> songs) {
@@ -117,9 +135,13 @@ final class Agent {
             case OK -> {
                 waiting.subList(0, batch.size()).clear();
                 if (!answer.marked().isEmpty()) {
-                    List<String> all = new ArrayList<>(lastMarked);
-                    all.addAll(answer.marked());
-                    lastMarked = List.copyOf(all.subList(Math.max(0, all.size() - MARKED_SHOWN), all.size()));
+                    List<Marked> newest = new ArrayList<>();
+                    for (int i = answer.marked().size() - 1; i >= 0; i--) {
+                        newest.add(new Marked(now, answer.marked().get(i)));
+                    }
+                    newest.addAll(lastMarked);
+                    lastMarked = List.copyOf(newest.subList(0, Math.min(MARKED_SHOWN, newest.size())));
+                    markedCount += answer.marked().size();
                 }
             }
             case DISCONNECTED -> {
@@ -143,6 +165,23 @@ final class Agent {
             client.unpair(settings.server(), token);
         }
         settings.disconnected();
+    }
+
+    /**
+     * "Wskaż folder historii…": the folder the DJ picked is read from the next look on, beside the usual places (null: none). A song
+     * of it already sent is not sent again; the first read of a new folder is a first read (the set before the program not sent).
+     */
+    void useFolder(java.nio.file.Path folder) {
+        picked = folder == null ? List.of() : Platform.sourcesIn(folder);
+    }
+
+    /**
+     * The places to read from the next look on: Main starts with the usual ones (no waiting for PowerShell and the look through the
+     * folders, which take seconds) and hands over the whole list once they are done. A history read already, found again, sends
+     * nothing twice (the songs seen are the program's and the song's, not the source's).
+     */
+    void useSources(List<HistorySource> all) {
+        sources = List.copyOf(all);
     }
 
     /** The songs read and not sent yet (the tests). */

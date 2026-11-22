@@ -34,7 +34,8 @@
                 + Math.round(b.bottom) + ' of ' + w + ' × ' + h + ')', b.left >= 0 && b.top >= 0 && b.right <= w + 0.5 && b.bottom <= h + 0.5);
             t.check(id + ': in the middle (±2 px)', Math.abs((b.left + b.right) / 2 - w / 2) <= 2 && Math.abs((b.top + b.bottom) / 2 - h / 2) <= 2);
         }
-        t.step(id + ': wide (a computer\'s screen) or upright', dialog.classList.contains('s2p-picture-wide'), id !== 'guidePicture2');
+        t.step(id + ': wide (a computer\'s screen) or upright', dialog.classList.contains('s2p-picture-wide'),
+            id !== 'guidePicture2' && id !== 'guidePicture4');
         const x = dialog.querySelector('.btn-close');
         t.check(id + ': "✕" 44 px to tap, on the screen', box(x).width >= 44 - 0.5 && box(x).height >= 44 - 0.5 && box(x).right <= w);
 
@@ -42,8 +43,8 @@
         t.step(id + ': closed, no page load, the page where it was', [dialog.open, loads, window.scrollY], [false, [], scrolled]);
     }
 
-    /** The three pictures, each closed another way: a tap on the picture, "✕", the backdrop (a click on the dialog itself). */
-    async function allThree(t) {
+    /** The four pictures, each closed one way: a tap on the picture, "✕", the backdrop (a click on the dialog itself). */
+    async function allFour(t) {
         t.check('the dialog is there, closed', !!document.getElementById('guidePictureDialog')
             && !document.getElementById('guidePictureDialog').open);
         await tapAndClose(t, 'guidePicture1', function (dialog) { dialog.querySelector('img').click(); });
@@ -56,7 +57,7 @@
         title: 'the guide\'s pictures on a phone: a tap shows one big on the same page — the upright one whole in the middle, a computer\'s screen twice the screen\'s width to slide along; a tap on it, on the backdrop or "✕" closes it, the page where it was',
         page: 'guide-pl',
         viewport: '390,844',
-        run: allThree
+        run: allFour
     });
 
     S2P.scenario({
@@ -64,6 +65,6 @@
         title: 'the guide\'s pictures on a computer: the same, the phone\'s upright picture as high as the screen allows',
         page: 'guide-pl',
         viewport: '1280,800',
-        run: allThree
+        run: allFour
     });
 })();

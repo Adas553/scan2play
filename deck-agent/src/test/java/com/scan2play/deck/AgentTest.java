@@ -25,12 +25,18 @@ class AgentTest {
     private static final class FakeSource implements HistorySource {
         final List<Played> songs = new ArrayList<>();
         int version;
+        boolean unreadable;
 
         @Override public String program() { return "VirtualDJ"; }
         @Override public boolean present() { return true; }
         @Override public String version() { return String.valueOf(version); }
         @Override public String reading() { return "2026-11-21.m3u"; }
-        @Override public List<Played> songs() { return List.copyOf(songs); }
+        @Override public List<Played> songs() throws java.io.IOException {
+            if (unreadable) {
+                throw new java.io.IOException("no such table: history_entry");
+            }
+            return List.copyOf(songs);
+        }
 
         void played(Instant at, String artist, String title) {
             songs.add(new Played(at, artist, title));
@@ -72,12 +78,15 @@ class AgentTest {
     private final AtomicReference<Agent.Status> shown = new AtomicReference<>();
 
     private Agent agent(Settings settings) {
-        Clock clock = new Clock() {
+        return new Agent(List.of(source), server, settings, clock(), shown::set);
+    }
+
+    private Clock clock() {
+        return new Clock() {
             @Override public ZoneOffset getZone() { return ZoneOffset.UTC; }
             @Override public Clock withZone(java.time.ZoneId zone) { return this; }
             @Override public Instant instant() { return now.get(); }
         };
-        return new Agent(List.of(source), server, settings, clock, shown::set);
     }
 
     private static Settings paired(Path dir) throws Exception {
@@ -105,27 +114,126 @@ class AgentTest {
 
         assertEquals(2, server.calls.size(), "nothing new, nothing sent (and the minute's call not due yet)");
         assertEquals(List.of(new Played(START.plusSeconds(200), "Sanah", "Szampan")), server.calls.get(1));
-        assertEquals(List.of("Sanah - Szampan"), shown.get().marked());
+        assertEquals(List.of("Sanah - Szampan"), shown.get().marked().stream().map(Agent.Marked::song).toList());
         assertEquals(List.of("VirtualDJ (2026-11-21.m3u)"), shown.get().reading());
     }
 
-    /** The window lists the last songs marked since the start, not only the last call's: a call usually marks one song. */
+    /**
+     * A night of 100 songs is not a list of 100 in the window: the last five, each with the time it was marked, newest first, and how
+     * many were marked since the start. A call that marks nothing leaves them.
+     */
     @Test
-    void theMarkedSongs_add_upToTheLastThree(@TempDir Path dir) throws Exception {
+    void theMarkedSongs_theLastFiveWithTheirTimes_andHowManyInAll(@TempDir Path dir) throws Exception {
         Agent agent = agent(paired(dir));
         agent.tick();
-        String[] songs = {"Sanah - Szampan", "Dawid Podsiadło - Małomiasteczkowy", "Kult - Arahja", "Perfect - Autobiografia"};
-        for (int i = 0; i < songs.length; i++) {
-            source.played(START.plusSeconds(10L * (i + 1)), "A" + i, "T" + i);
-            server.marked = List.of(songs[i]);
-            now.set(START.plusSeconds(10L * (i + 1) + 1));
+        for (int i = 1; i <= 7; i++) {
+            source.played(START.plusSeconds(10L * i), "A" + i, "T" + i);
+            server.marked = List.of("Wykonawca " + i + " - Tytuł " + i);
+            now.set(START.plusSeconds(10L * i + 1));
             agent.tick();
         }
         server.marked = List.of();
         now.set(START.plusSeconds(200));
-        agent.tick();   // the minute's call marks nothing: the list stays
+        agent.tick();
 
-        assertEquals(List.of(songs[1], songs[2], songs[3]), shown.get().marked());
+        assertEquals(7, shown.get().markedCount());
+        assertEquals(List.of(new Agent.Marked(START.plusSeconds(71), "Wykonawca 7 - Tytuł 7"),
+                new Agent.Marked(START.plusSeconds(61), "Wykonawca 6 - Tytuł 6"), new Agent.Marked(START.plusSeconds(51), "Wykonawca 5 - Tytuł 5"),
+                new Agent.Marked(START.plusSeconds(41), "Wykonawca 4 - Tytuł 4"), new Agent.Marked(START.plusSeconds(31), "Wykonawca 3 - Tytuł 3")),
+                shown.get().marked());
+    }
+
+    /** "Wskaż folder historii…": a folder the DJ picked is read beside the usual places, and given up for another. */
+    @Test
+    void aFolderThePickedDj_isReadBesideTheUsualPlaces(@TempDir Path dir) throws Exception {
+        Path picked = dir.resolve("D").resolve("Muzyka").resolve("VirtualDJ").resolve("History");
+        java.nio.file.Files.createDirectories(picked);
+        Agent agent = agent(paired(dir));
+        agent.useFolder(picked.getParent());
+        java.nio.file.Files.writeString(picked.resolve("dzisiaj.m3u"), "#EXTVDJ:<lastplaytime>" + START.plusSeconds(5).getEpochSecond()
+                + "</lastplaytime><artist>Sanah</artist><title>Szampan</title>\n");
+        now.set(START.plusSeconds(6));
+        agent.tick();
+
+        assertTrue(shown.get().reading().contains("VirtualDJ (dzisiaj.m3u)"), "read: " + shown.get().reading());
+        assertTrue(server.calls.stream().flatMap(List::stream).anyMatch(song -> song.title().equals("Szampan")), "sent");
+
+        agent.useFolder(null);
+        now.set(START.plusSeconds(9));
+        agent.tick();
+        assertEquals(List.of("VirtualDJ (2026-11-21.m3u)"), shown.get().reading(), "the fake source alone: the picked folder given up");
+    }
+
+    /**
+     * The folder picked is also one of the usual places (or one the look found): the same history read twice, by two sources — each
+     * song still goes to the server once.
+     */
+    @Test
+    void aFolderPicked_thatIsAlsoAUsualPlace_sendsEachSongOnce(@TempDir Path dir) throws Exception {
+        Path history = dir.resolve("VirtualDJ").resolve("History");
+        java.nio.file.Files.createDirectories(history);
+        Agent agent = new Agent(List.of(new VirtualDjHistory(List.of(history))), server, paired(dir), clock(), shown::set);
+        agent.useFolder(history.getParent());
+        agent.tick();
+        java.nio.file.Files.writeString(history.resolve("dzisiaj.m3u"), "#EXTVDJ:<lastplaytime>" + START.plusSeconds(5).getEpochSecond()
+                + "</lastplaytime><artist>Sanah</artist><title>Szampan</title>\n");
+        now.set(START.plusSeconds(6));
+        agent.tick();
+        now.set(START.plusSeconds(9));
+        agent.tick();
+
+        assertEquals(List.of(new Played(START.plusSeconds(5), "Sanah", "Szampan")), server.calls.stream().flatMap(List::stream).toList());
+        assertEquals(List.of("VirtualDJ (dzisiaj.m3u)"), shown.get().reading(), "one line, not two");
+    }
+
+    /**
+     * "Wskaż folder historii…" and "Nie czytaj go" run in the window's thread: they must not wait for a look whose call to the server
+     * hangs (a venue's Wi-Fi, up to the call's 25 s) — the window would freeze that long.
+     */
+    @Test
+    void pickingAFolder_doesNotWaitForASlowServer(@TempDir Path dir) throws Exception {
+        java.util.concurrent.CountDownLatch inCall = new java.util.concurrent.CountDownLatch(1);
+        java.util.concurrent.CountDownLatch release = new java.util.concurrent.CountDownLatch(1);
+        ServerClient slow = new ServerClient("test") {
+            @Override
+            Answer plays(String server, String token, List<Played> songs) {
+                inCall.countDown();
+                try {
+                    release.await(30, java.util.concurrent.TimeUnit.SECONDS);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+                return new Answer(ServerClient.Outcome.FAILED, token, List.of());
+            }
+        };
+        Agent agent = new Agent(List.of(source), slow, paired(dir), clock(), shown::set);
+        Thread look = new Thread(agent::tick);
+        look.start();
+        try {
+            assertTrue(inCall.await(5, java.util.concurrent.TimeUnit.SECONDS), "the look is in its call");
+            Thread pick = new Thread(() -> agent.useFolder(dir));
+            pick.start();
+            pick.join(2000);
+            assertTrue(!pick.isAlive(), "the folder taken at once, while the call still hangs");
+        } finally {
+            release.countDown();
+            look.join(5000);
+        }
+    }
+
+    /** A history there but not readable (a new format of the program) is said in the window, not left out as if there were none. */
+    @Test
+    void aHistoryThatCannotBeRead_isSaid(@TempDir Path dir) throws Exception {
+        source.unreadable = true;
+        source.version = 1;
+        Agent agent = agent(paired(dir));
+        agent.tick();
+        assertEquals(List.of("VirtualDJ (2026-11-21.m3u — nie da się odczytać)"), shown.get().reading());
+
+        source.unreadable = false;
+        now.set(START.plusSeconds(3));
+        agent.tick();
+        assertEquals(List.of("VirtualDJ (2026-11-21.m3u)"), shown.get().reading(), "read again at the next look");
     }
 
     @Test
@@ -233,5 +341,28 @@ class AgentTest {
 
         assertTrue(server.calls.isEmpty());
         assertEquals(false, shown.get().paired());
+    }
+
+    /**
+     * The look through the folders and Windows' answer (PowerShell) take seconds: they run after the window is shown, and the
+     * histories they find are read from then on. A song the first places sent already is not sent again by the same history found
+     * twice; a song only the new places have is sent.
+     */
+    @Test
+    void theSourcesFoundAfterTheStart_areRead_withoutSendingASongTwice(@TempDir Path dir) throws Exception {
+        source.played(START.plusSeconds(5), "Sanah", "Szampan");
+        Agent agent = agent(paired(dir));
+        now.set(START.plusSeconds(6));
+        agent.tick();
+
+        FakeSource found = new FakeSource();
+        found.played(START.plusSeconds(5), "Sanah", "Szampan");
+        found.played(START.plusSeconds(8), "Kult", "Arahja");
+        agent.useSources(List.of(source, found));
+        now.set(START.plusSeconds(9));
+        agent.tick();
+
+        assertEquals(List.of(new Played(START.plusSeconds(5), "Sanah", "Szampan"), new Played(START.plusSeconds(8), "Kult", "Arahja")),
+                server.calls.stream().flatMap(List::stream).toList());
     }
 }

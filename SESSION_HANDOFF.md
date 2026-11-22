@@ -72,15 +72,17 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
   read, a look on a phone (the hosts' page, the panel's card), then PRs to `dev` / into the branches' PRs to `main`; on Railway
   `TRENDS_EXCLUDE_PARTIES` = the owner's test parties' codes (optional).
 - **2026-11-21 — "Zagrane samo" merged (#297 `main`, #298 `dev`), V78; tried on the owner's Windows 11 (VirtualDJ 8.5) — works**
-  (`docs/history/review-2026-11-21-play-history.md`, "Próby na prawdziwych komputerach"). `claude/gallant-ritchie-rl80ux`, pushed, no
-  PR, no migration: a second copy of the program refused, the window's fixes, variant E parked (the card: the program only;
-  `/dj/dashboard/plays` gone), the card rebuilt (framed, three steps; paired: its row and the button green). Waits: the owner's read, PRs; after the merge "Run workflow" of "Program DJ-a (deck-agent)" from `main`.
-  Untried: a Mac (P20, P27), a Polish user name (P23), the history in OneDrive (P24).
-- **2026-11-22 — the library key without "- Prod. by X" (V79, moves rows): `claude/peaceful-bardeen-pu9g7y`, PRs #305 (`main`)
-  and #306 (`dev`), not merged** — `claude/jovial-hodgkin-40e080` (#303 / #304, replaced: close them after the merge) + its review
-  (`docs/history/review-2026-11-22-library-key-producer.md`) and the fixes P1–P7 (V79 rewritten in place: never another song's key,
-  1.7 s for 25 000 producers). Waits for the owner: the merge; the nightly copy is enough (the owner: no DJ since). After the deploy:
-  Flyway at 79, the start's time in the log.
+  (`docs/history/review-2026-11-21-play-history.md`, "Próby na prawdziwych komputerach"). `claude/gallant-ritchie-rl80ux`:
+  #299 merged; its rest (Serato 5.1, the look through the folders, the new window) was PRs #301 (`main`) / #302 (`dev`).
+- **2026-11-22 — #301 / #302's branch (`claude/gallant-ritchie-rl80ux`) = its review (`review-2026-11-22-zagrane-serato-window.md`) + P3**
+  (Serato 5.1: a song goes once `asset.dj_play_count` rose). **`claude/youthful-heisenberg-3whpcr` = it + P3's review**
+  (`review-2026-11-22-p3-serato-play-count.md`: P1–P7 fixed — a play given to the song's newest load, kept for the session; P8 and
+  4 checks on Serato open); the guide's "Zagrane samo" (`#deck`, its 4th picture `program.webp`). **Tried on Windows: P1, P3, P8,
+  VirtualDJ work** ("Próba po review P3" there). Merged into `claude/peaceful-bardeen-pu9g7y` (from `main` after #305) with PRs #307
+  (`main`) and #308 (`dev`), which replace #301 / #302 (close them after the merge). Waits for the owner: the merge; after it "Run
+  workflow" of "Program DJ-a (deck-agent)" from `main`. Untried: Mac, P23, P24.
+- **2026-11-22 — the library key without "- Prod. by X" merged (#305 `main` = `7f0c87c`, #306 `dev`), V79 (moves rows)**, review
+  `review-2026-11-22-library-key-producer.md`; #303 / #304 to close. Held back by the deploy window: deploy by hand; then Flyway at 79.
 - **Waits for the owner (from #269):** after the first commit the deploy window holds back (Fri–Sun 18:00–6:00): does Railway
   deploy it on the workflow's re-run? UptimeRobot is set up (the owner, 2026-11-17; `docs/monitoring.md`).
 - **Waits for the owner (the wishes, #263):** the three older Polish texts with "DJ" and a masculine verb (`guest.vote.gone`,

@@ -67,4 +67,16 @@ class ServerClientTest {
         String server = answering(403, "<html>Just a moment...</html>");   // Cloudflare's challenge
         assertEquals(ServerClient.Outcome.FAILED, new ServerClient("test").plays(server, "tok", List.of()).outcome());
     }
+
+    /**
+     * The server takes at most 500 characters an artist or a title and refuses the whole call otherwise (400), which the program
+     * drops: one broken tag would lose the other songs of its call. Longer is cut here, the rest of the call goes through.
+     */
+    @Test
+    void aFieldLongerThanTheServerTakes_isCut_notTheWholeCallLost() {
+        String json = Json.plays(List.of(new Played(null, "A".repeat(700), "T".repeat(501))), java.time.Instant.EPOCH);
+        assertEquals(true, json.contains("\"" + "A".repeat(Json.FIELD_MAX) + "\""), json.length() + " characters");
+        assertEquals(false, json.contains("A".repeat(Json.FIELD_MAX + 1)));
+        assertEquals(false, json.contains("T".repeat(Json.FIELD_MAX + 1)));
+    }
 }

@@ -88,8 +88,8 @@ of the program). **No computer paired:** three numbered steps (`.s2p-deck-steps`
 nowsze)", "Mac (Intel)" (the GitHub release `zagrane` of `deck-agent.yml`, no account needed); 2. "Rozpakuj plik zip i uruchom" with
 "Pierwsze uruchomienie" folded (what SmartScreen — "System Windows ochronił ten komputer" — and Gatekeeper ask; a Windows that gives
 no "Uruchom mimo to", Smart App Control, runs no unsigned program: "napisz do nas przez „Pomoc i kontakt”"); 3. "Połącz go z tą
-imprezą:" and "Połącz komputer" (`POST /dj/devices/code`, QUEUE): a 6-digit code valid 10 minutes ("123 456"), gone once the program
-took it. **One or more paired:** their rows only ("✓ DESKTOP-1AB2 — Windows · ostatnio 21:43 · Odłącz"), the steps behind "Połącz
+imprezą:" and "Połącz komputer" (`POST /dj/devices/code`, QUEUE): a 6-digit code valid 10 minutes ("123 456", large, with a "Kopiuj"
+of the digits — dj-nav.js's `data-copy-text`, as the party link's), gone once the program took it. **One or more paired:** their rows only ("✓ DESKTOP-1AB2 — Windows · ostatnio 21:43 · Odłącz"), the steps behind "Połącz
 kolejny komputer" (and shown while a code waits). Last, small: what reaches Scan2Play (artist, title, time; nothing kept). The
 party's computers: `GET /dj/devices` (name, last seen; 403 without Pro); "Odłącz"
 (`POST /dj/devices/remove`, any plan; a program without Pro is taken away by its own "Odłącz ten komputer", `POST /api/device/unpair`).
@@ -106,7 +106,8 @@ a code per address and 1000 wrong codes in all per 10 minutes (reaching it: one 
 memory); `last_seen_at` written once a minute at most. Browser scenarios `deck-reader-program-only`, `deck-connected-on-load`, `deck-computers*`;
 `DeckHistoryServiceTest`, `DjDeviceIT` (PostgreSQL), `DeviceApiControllerTest`, `DeviceApiWebTest` (the real security: no login, no
 CSRF, no session for `/api/device/*`; `/dj/devices` needs the login). The other programs (rekordbox, Traktor, djay — not read):
-`docs/ideas.md` item 18 and `tools/spike/dj_history_spike.py`.
+`docs/ideas.md` item 18 and `tools/spike/dj_history_spike.py`. The guide (`guide*.html`) has its own section, `#deck` ("Zagrane samo": the button, the three steps, once for
+good, the speed by program, when a request marks, the window, the privacy), linked from its row of "Zagrane"; `GuidePageRenderTest`.
 
 **Parked: the panel reading the history folder itself** (variant E of `docs/ideas.md` item 18 — "Wskaż folder historii" in Chrome and
 Edge, `showDirectoryPicker`, the tab kept open, `POST /dj/dashboard/plays`). Removed 2026-11-21 after the program worked on the owner's
@@ -117,17 +118,35 @@ Windows 11: two ways in one card were too much for a DJ to choose from. Back onl
 every 3 s it reads VirtualDJ's newest `.m3u` of all its folders (the registry's `HomeFolder`, `%LOCALAPPDATA%\VirtualDJ\History`, the
 Documents', OneDrive's `Documents` — on macOS `~/Library/Application Support/VirtualDJ` and the Documents'; an old install's folder
 does not hide tonight's file), Serato 2/3's newest `.session` (`Music/_Serato_/History/Sessions`, on Windows also under OneDrive)
-and Serato 4's `master.sqlite` (read-only; `%APPDATA%\Serato\Library`, `~/Library/Application Support/Serato/Library`) when they
-changed; sends each new song once (≤ 20 a call, the set before the program started minus 10 minutes not), calls once a minute with
-nothing (alive) and at once after a new pairing (a party without Pro said at once); a 401 = "Odłącz" in the panel: the token
+and Serato 4 / 5's `master.sqlite` (read-only; `%LOCALAPPDATA%\Serato\Library` — Serato DJ Lite 5.1 on the owner's Windows —
+or `%APPDATA%\Serato\Library`, the one written last; `~/Library/Application Support/Serato/Library`) when they changed; the query made
+from the columns the tables have (the newest session's songs, `played = 1` where the column is). Serato 5.1 writes a row when a song
+is *loaded* on a deck, already `played = 1`: there a row counts only once its song's library count (`asset.dj_play_count`, raised a few
+seconds after Play, never by a load) has risen since the session was first read (the library's counts read once a session) — each
+rise given to the song's newest row not given one (the load just played; an earlier load is a preview, its time "before the request"),
+remembered for the session (a row that falls out of the 2000 read keeps its play); a count that fell (reset by the DJ) counts on from
+there; a song only loaded marks nothing, a song played marks its request within seconds; songs played before the program's first read
+of the session are not sent (no "10 minutes before" for Serato 5); a new session (Serato restarted, its songs renumbered) takes the counts again; a
+history there that cannot be read is said in the window ("Serato (master.sqlite — nie da się odczytać)"); and, in the background after the window is up (the usual places are read at once), a short
+look through the user's folders (Music, Documents, OneDrive, AppData, the profile last; 4 levels, at most 30 000 folders in all, no
+links followed, a root not looked through twice, hidden folders, `node_modules`, `Packages`, `Caches`, `Containers` skipped) for a "Serato" with `Library/master.sqlite`, a "_Serato_" with `History/Sessions`, a "VirtualDJ" with `History` in places
+no reader names; sends each new song once (≤ 20 a call, the set before the program started minus 10 minutes not), calls once a minute with
+nothing (alive); an artist or title cut at 500 characters (the server refuses a whole call with a longer one) and at once after a new pairing (a party without Pro said at once); a 401 = "Odłącz" in the panel: the token
 forgotten, the window asks for a new code; "Odłącz ten komputer" in the window tells the server (`/api/device/unpair`: the computer
 leaves the panel's list) and forgets the token here even offline. On Windows it asks PowerShell once at the start where the Music and
 Documents are and where VirtualDJ's `HomeFolder` points (UTF-8: a user name with a Polish letter whole; OneDrive, Polish folder names)
-— extra folders beside the usual ones, nothing when PowerShell is missing. On macOS the Dock icon shows the window closed into the menu bar. The window: the code and the server
-(`https://www.scan2play.com.pl`, changeable — `dev.` for a try; an empty code: "Wpisz kod z panelu."), then what it reads, when it
-last looked and the last three songs marked since the start ("jeszcze nic" before the first); a tray icon ("Pokaż", "Zakończ"). One
+— extra folders beside the usual ones, nothing when PowerShell is missing. On macOS the Dock icon shows the window closed into the menu bar. The window (`Window`, FlatLaf's dark theme in the app's colours, the Scan2Play mark drawn from `logo-small.svg` — the window's,
+the taskbar's and the tray's icon): unpaired, "Połącz ten komputer z imprezą", the code's large box and "Połącz" (an empty code:
+"Wpisz kod z panelu."), the server behind "Zmień serwer" (`https://www.scan2play.com.pl`; `dev.` for a try); paired, a status line
+with a dot ("Działa — połączono z imprezą" green; amber/red: no server, too many calls, no Pro, no history seen) and "sprawdzone
+23:53:52"; "CZYTA" — each history read ("✓ VirtualDJ (2026-11-21.m3u)", red "nie da się odczytać"), or "Brak historii VirtualDJ i Serato…" with the
+button "Wskaż folder historii…" (a quiet link "Inny folder historii…" when something is read): a folder the DJ picks is kept in the
+settings and read beside the usual places (`Platform.sourcesIn`: VirtualDJ's `.m3u`, Serato's `.session`, `master.sqlite`, in it or
+right under it; "Nie czytaj go" forgets it); "OZNACZONE OD URUCHOMIENIA · 12" — the last 5 songs marked with their times, newest
+first, never a night's whole list (empty: when a song marks itself; a song or a folder longer than 60 characters cut with "…", whole
+in its tooltip, so the window never grows past the screen; the window never narrows when the status line changes); "Odłącz ten komputer"; a tray icon ("Pokaż", "Zakończ"). One
 copy per user: a second start finds `~/.scan2play/zagrane.lock` locked (`SingleInstance`, `FileChannel.tryLock`; the system drops the
-lock when the program ends) and says "Program już działa…" (a window, or a line and exit 1 in the console). `~/.scan2play/zagrane.properties` keeps the server and the token. Without a screen: `--pair <code> [--server …]`, then
+lock when the program ends) and says "Program już działa…" (a window, or a line and exit 1 in the console). `~/.scan2play/zagrane.properties` keeps the server, the token and the folder picked. Without a screen: `--pair <code> [--server …]`, then
 `--console`. Tests: `sh mvnw -f deck-agent/pom.xml -B -ntp verify` (`HistoryFormatsTest`, `AgentTest`, `SingleInstanceTest`, `WindowTest`). Packages:
 `.github/workflows/deck-agent.yml`, by hand ("Run workflow"): a jpackage app folder with its own Java for Windows and macOS, zipped,
 **not signed** (SmartScreen's "Uruchom mimo to"; macOS's "Open Anyway" once; the Mac bundle only signed ad hoc, which Apple's chips need
