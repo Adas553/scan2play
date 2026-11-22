@@ -78,8 +78,8 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
   (Serato 5.1: a song goes once `asset.dj_play_count` rose). **`claude/youthful-heisenberg-3whpcr` = it + P3's review**
   (`review-2026-11-22-p3-serato-play-count.md`: P1–P7 fixed — a play given to the song's newest load, kept for the session; P8 and
   4 checks on Serato open); the guide's "Zagrane samo" (`#deck`, its 4th picture `program.webp`). **Tried on Windows: P1, P3, P8,
-  VirtualDJ work** ("Próba po review P3" there). Merged into `claude/peaceful-bardeen-pu9g7y` (from `main` after #305) with new PRs
-  to `main` and `dev`, which replace #301 / #302 (close them after the merge). Waits for the owner: the merge; after it "Run
+  VirtualDJ work** ("Próba po review P3" there). Merged into `claude/peaceful-bardeen-pu9g7y` (from `main` after #305) with PRs #307
+  (`main`) and #308 (`dev`), which replace #301 / #302 (close them after the merge). Waits for the owner: the merge; after it "Run
   workflow" of "Program DJ-a (deck-agent)" from `main`. Untried: Mac, P23, P24.
 - **2026-11-22 — the library key without "- Prod. by X" merged (#305 `main` = `7f0c87c`, #306 `dev`), V79 (moves rows)**, review
   `review-2026-11-22-library-key-producer.md`; #303 / #304 to close. Held back by the deploy window: deploy by hand; then Flyway at 79.
