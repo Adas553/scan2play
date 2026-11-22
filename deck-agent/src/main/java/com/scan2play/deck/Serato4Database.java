@@ -12,6 +12,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import org.sqlite.SQLiteConfig;
 
@@ -86,10 +87,22 @@ final class Serato4Database implements HistorySource {
         return current == null ? List.of() : read(current, counted);
     }
 
+    /**
+     * One session's plays: the library's counts when it was first read, and the rows given its rises since. Kept between reads, so
+     * a play stays with its row — also once the row falls out of the {@value #MAX_SONGS} read.
+     */
     private static final class PlayCounts {
         private Path database;
         private Long session;
         private final Map<Long, Long> atStart = new HashMap<>();
+        /** Per song (asset id), how many of its rises were given to a row. */
+        private final Map<Long, Long> risesGiven = new HashMap<>();
+        /** The history rows (history_entry.id) that played. */
+        private final Set<Long> playedRows = new HashSet<>();
+    }
+
+    /** A history row as read: its song, and with the library's play count its song's id and count (null without, or no such song). */
+    private record Row(long id, Played song, Long asset, Long plays) {
     }
 
     /** A database read without remembering anything (the tests of the tables without play counts). */
@@ -110,51 +123,73 @@ final class Serato4Database implements HistorySource {
             if (byPlayCount) {
                 startCounting(statement, database, newestSession(statement, entry, session), counted);
             }
-            List<Played> songs = new ArrayList<>();
-            Map<Long, Long> playsGiven = new HashMap<>();
-            try (ResultSet rows = statement.executeQuery(query(entry, session, byPlayCount))) {
-                while (rows.next()) {
-                    long start = rows.getLong(3);
-                    Played song = new Played(rows.wasNull() ? null : Played.fromEpoch(start), rows.getString(1), rows.getString(2));
-                    if (song.isEmpty() || byPlayCount && !played(rows, counted, playsGiven)) {
-                        continue;
+            List<Row> rows = new ArrayList<>();
+            try (ResultSet result = statement.executeQuery(query(entry, session, byPlayCount))) {
+                while (result.next()) {
+                    long start = result.getLong(4);
+                    Played song = new Played(result.wasNull() ? null : Played.fromEpoch(start), result.getString(2), result.getString(3));
+                    if (!song.isEmpty()) {
+                        rows.add(new Row(result.getLong(1), song, longOrNull(result, 5), longOrNull(result, 6)));
                     }
-                    songs.add(song);
                 }
             }
-            return songs;
+            if (byPlayCount) {
+                givePlays(rows, counted);
+                rows.removeIf(row -> !counted.playedRows.contains(row.id()));
+            }
+            return rows.stream().map(Row::song).toList();
         } catch (SQLException e) {
             throw new IOException("Serato: " + e.getMessage(), e);
         }
     }
 
+    private static Long longOrNull(ResultSet result, int column) throws SQLException {
+        long value = result.getLong(column);
+        return result.wasNull() ? null : value;
+    }
+
     /**
      * Serato 5.x writes a history row when a song is loaded on a deck, already with played = 1 (seen in DJ Lite 5.1): a song the DJ
      * only previewed or loaded by mistake would mark a guest's request as played. Its library's count (asset.dj_play_count) rises
-     * only on Play, so a row is a play when its song's count has risen since the session was first read — each rise given to one
-     * row, the earliest first (a song played twice, two rows). A song played in the seconds before that first read is missed: never
-     * a song that did not play.
+     * only on Play, a few seconds after it, so a rise since the session was first read is a play — given to the song's newest row
+     * not given one yet: the load just played, read seconds later (an earlier row of it is a preview, whose time would read as
+     * "before the request"). A song played in the seconds before that first read is missed: never a song that did not play. A
+     * count that fell (the DJ reset it) counts on from there.
      */
-    private static boolean played(ResultSet row, PlayCounts counted, Map<Long, Long> playsGiven) throws SQLException {
-        long asset = row.getLong(4);
-        if (row.wasNull()) {
-            return false;
+    private static void givePlays(List<Row> rows, PlayCounts counted) {
+        Map<Long, Long> counts = new HashMap<>();
+        for (Row row : rows) {
+            if (row.asset() != null && row.plays() != null) {
+                counts.put(row.asset(), row.plays());
+            }
         }
-        long count = row.getLong(5);
-        long given = playsGiven.getOrDefault(asset, 0L);
-        if (count - counted.atStart.getOrDefault(asset, 0L) <= given) {
-            return false;
-        }
-        playsGiven.put(asset, given + 1);
-        return true;
+        counts.forEach((asset, count) -> {
+            long given = counted.risesGiven.getOrDefault(asset, 0L);
+            long rises = count - counted.atStart.getOrDefault(asset, 0L);
+            if (rises < given) {
+                counted.atStart.put(asset, count - given);
+                rises = given;
+            }
+            long left = rises - given;
+            for (int i = rows.size() - 1; i >= 0 && left > 0; i--) {
+                Row row = rows.get(i);
+                if (asset.equals(row.asset()) && counted.playedRows.add(row.id())) {
+                    left--;
+                }
+            }
+            // a rise with no row left for it (two Plays of one load) is spent, not kept for the song's next load
+            counted.risesGiven.put(asset, rises);
+        });
     }
 
     /** The library's counts as the session starts being read; again for another session (Serato restarted renumbers its songs). */
     private static void startCounting(Statement statement, Path database, Long session, PlayCounts counted) throws SQLException {
-        if (database.equals(counted.database) && java.util.Objects.equals(session, counted.session)) {
+        if (database.equals(counted.database) && Objects.equals(session, counted.session)) {
             return;
         }
         counted.atStart.clear();
+        counted.risesGiven.clear();
+        counted.playedRows.clear();
         try (ResultSet rows = statement.executeQuery("SELECT id, dj_play_count FROM asset WHERE dj_play_count > 0")) {
             while (rows.next()) {
                 counted.atStart.put(rows.getLong(1), rows.getLong(2));
@@ -204,7 +239,7 @@ final class Serato4Database implements HistorySource {
         String newest = "SELECT h.id, h.artist, h.name, " + time + " AS at" + counts + " FROM history_entry h"
                 + (byPlayCount ? " LEFT JOIN asset a ON a.id = h.asset_id" : "")
                 + (where.isEmpty() ? "" : " WHERE " + String.join(" AND ", where)) + " ORDER BY h.id DESC LIMIT " + MAX_SONGS;
-        return "SELECT artist, name, at, asset_id, plays FROM (" + newest + ") ORDER BY at, id";
+        return "SELECT id, artist, name, at, asset_id, plays FROM (" + newest + ") ORDER BY at, id";
     }
 
     private static Set<String> columns(Statement statement, String table) throws SQLException {

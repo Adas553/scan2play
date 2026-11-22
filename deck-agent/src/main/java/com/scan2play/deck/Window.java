@@ -87,10 +87,6 @@ final class Window {
     }
 
     /**
-     * The texts of Java's own dialogs in Polish — the folder chooser, the message of a second copy: Java has none of its own, and an
-     * English "Look In" / "Cancel" beside the program's "Wybierz" looks unfinished. Set after the theme, which may set its own.
-     */
-    /**
      * "Oznaczone" before the first song: when a song marks itself, for either program — Serato's library counts a play a few seconds
      * after Play ({@link Serato4Database}), VirtualDJ writes its history after ~45 s.
      */
@@ -105,6 +101,10 @@ final class Window {
         return before == null ? wanted : new Dimension(Math.max(wanted.width, before.width), wanted.height);
     }
 
+    /**
+     * The texts of Java's own dialogs in Polish — the folder chooser, the message of a second copy: Java has none of its own, and an
+     * English "Look In" / "Cancel" beside the program's "Wybierz" looks unfinished. Set after the theme, which may set its own.
+     */
     static void polishDialogs() {
         String[][] texts = {
                 {"FileChooser.lookInLabelText", "Szukaj w:"}, {"FileChooser.folderNameLabelText", "Nazwa folderu:"},

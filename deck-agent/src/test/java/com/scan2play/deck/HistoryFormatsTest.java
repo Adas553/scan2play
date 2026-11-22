@@ -189,15 +189,8 @@ class HistoryFormatsTest {
     @Test
     void serato5_aSongOnlyLoaded_isNotSent_aSongPlayedIs_byTheLibrarysPlayCount(@TempDir Path dir) throws Exception {
         Path database = dir.resolve("master.sqlite");
-        sql(database, "CREATE TABLE asset (id INTEGER PRIMARY KEY AUTOINCREMENT, artist TEXT NOT NULL DEFAULT '', name TEXT NOT NULL DEFAULT '',"
-                        + " dj_play_count INTEGER, dj_recently_played INTEGER NOT NULL DEFAULT 0)",
-                "CREATE TABLE history_session (id INTEGER PRIMARY KEY AUTOINCREMENT, start_time INTEGER NOT NULL, end_time INTEGER,"
-                        + " notes TEXT, name TEXT)",
-                "CREATE TABLE history_entry (id INTEGER PRIMARY KEY AUTOINCREMENT, location_id INTEGER, portable_id TEXT NOT NULL DEFAULT '',"
-                        + " file_name TEXT, artist TEXT NOT NULL DEFAULT '', name TEXT NOT NULL DEFAULT '', dj_play_count INTEGER,"
-                        + " session_id INTEGER NOT NULL DEFAULT -1, asset_id INTEGER DEFAULT -1, start_time INTEGER NOT NULL,"
-                        + " end_time INTEGER DEFAULT -1, played INTEGER NOT NULL DEFAULT 0, deck TEXT NOT NULL DEFAULT '')",
-                "INSERT INTO asset (id, artist, name, dj_play_count) VALUES (1, 'Sanah', 'Szampan', 4), (2, 'Preview', 'Tylko załadowana', 0)",
+        serato5Tables(database);
+        sql(database, "INSERT INTO asset (id, artist, name, dj_play_count) VALUES (1, 'Sanah', 'Szampan', 4), (2, 'Preview', 'Tylko załadowana', 0)",
                 "INSERT INTO history_session (id, start_time) VALUES (1, " + (NIGHT - 60) + ")",
                 "INSERT INTO history_entry (session_id, asset_id, artist, name, start_time, played, deck) VALUES"
                         + " (1, 1, 'Sanah', 'Szampan', " + NIGHT + ", 1, '1'), (1, 2, 'Preview', 'Tylko załadowana', " + (NIGHT + 30) + ", 1, '2')");
@@ -230,6 +223,90 @@ class HistoryFormatsTest {
 
         sql(database, "UPDATE asset SET dj_play_count = 7 WHERE id = 10");
         assertEquals(List.of(new Played(Instant.ofEpochSecond(NIGHT + 1100), "Sanah", "Szampan")), serato.songs(), "and now played");
+    }
+
+    /**
+     * A song preloaded (or previewed) before a guest asked for it, then loaded again and played: the play is the new load — its
+     * time is the play's, not the preview's, which the server would take as "before the request" and not mark it.
+     */
+    @Test
+    void serato5_aPlay_isTheNewestLoadOfTheSong_notAnEarlierPreview(@TempDir Path dir) throws Exception {
+        Path database = dir.resolve("master.sqlite");
+        serato5Tables(database);
+        sql(database, "INSERT INTO asset (id, artist, name, dj_play_count) VALUES (1, 'Sanah', 'Szampan', 4)",
+                "INSERT INTO history_session (id, start_time) VALUES (1, " + (NIGHT - 60) + ")",
+                "INSERT INTO history_entry (session_id, asset_id, artist, name, start_time, played, deck) VALUES"
+                        + " (1, 1, 'Sanah', 'Szampan', " + NIGHT + ", 1, '2')");
+        Serato4Database serato = new Serato4Database(List.of(database));
+        serato.version();
+        assertEquals(List.of(), serato.songs(), "previewed on deck 2");
+
+        sql(database, "INSERT INTO history_entry (session_id, asset_id, artist, name, start_time, played, deck) VALUES"
+                        + " (1, 1, 'Sanah', 'Szampan', " + (NIGHT + 600) + ", 1, '1')",
+                "UPDATE asset SET dj_play_count = 5 WHERE id = 1");
+        assertEquals(List.of(new Played(Instant.ofEpochSecond(NIGHT + 600), "Sanah", "Szampan")), serato.songs(),
+                "played ten minutes later");
+    }
+
+    /**
+     * A play already sent stays given to its row when the row falls out of the last {@value Serato4Database#MAX_SONGS} read: a
+     * later load of the same song, never played, is not taken for it (it would go as a new song and mark a new request).
+     */
+    @Test
+    void serato5_aPlayOutOfTheLastSongsRead_isNotGivenToALaterLoad(@TempDir Path dir) throws Exception {
+        Path database = dir.resolve("master.sqlite");
+        serato5Tables(database);
+        sql(database, "INSERT INTO asset (id, artist, name, dj_play_count) VALUES (1, 'Sanah', 'Szampan', 0), (2, 'Inna', 'Piosenka', 0)",
+                "INSERT INTO history_session (id, start_time) VALUES (1, " + (NIGHT - 60) + ")",
+                "INSERT INTO history_entry (session_id, asset_id, artist, name, start_time, played, deck) VALUES"
+                        + " (1, 1, 'Sanah', 'Szampan', " + NIGHT + ", 1, '1')");
+        Serato4Database serato = new Serato4Database(List.of(database));
+        serato.version();
+        assertEquals(List.of(), serato.songs());
+        sql(database, "UPDATE asset SET dj_play_count = 1 WHERE id = 1");
+        assertEquals(List.of(new Played(Instant.ofEpochSecond(NIGHT), "Sanah", "Szampan")), serato.songs());
+
+        sql(database, "WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < " + Serato4Database.MAX_SONGS + ")"
+                        + " INSERT INTO history_entry (session_id, asset_id, artist, name, start_time, played, deck)"
+                        + " SELECT 1, 2, 'Inna', 'Piosenka', " + NIGHT + " + i, 1, '2' FROM n",
+                "INSERT INTO history_entry (session_id, asset_id, artist, name, start_time, played, deck) VALUES"
+                        + " (1, 1, 'Sanah', 'Szampan', " + (NIGHT + 90_000) + ", 1, '1')");
+        assertEquals(List.of(), serato.songs(), "Szampan only loaded again");
+    }
+
+    /**
+     * The DJ resets a song's count in Serato (it falls): the plays after it count from there, not only once it passes the old count.
+     * The fall is seen when the song is loaded (its row read before Play raises the count).
+     */
+    @Test
+    void serato5_aCountReset_theNextPlayStillGoes(@TempDir Path dir) throws Exception {
+        Path database = dir.resolve("master.sqlite");
+        serato5Tables(database);
+        sql(database, "INSERT INTO asset (id, artist, name, dj_play_count) VALUES (1, 'Sanah', 'Szampan', 4)",
+                "INSERT INTO history_session (id, start_time) VALUES (1, " + (NIGHT - 60) + ")");
+        Serato4Database serato = new Serato4Database(List.of(database));
+        serato.version();
+        assertEquals(List.of(), serato.songs());
+        sql(database, "UPDATE asset SET dj_play_count = 0 WHERE id = 1");
+        assertEquals(List.of(), serato.songs(), "count reset");
+
+        sql(database, "INSERT INTO history_entry (session_id, asset_id, artist, name, start_time, played, deck) VALUES"
+                + " (1, 1, 'Sanah', 'Szampan', " + NIGHT + ", 1, '1')");
+        assertEquals(List.of(), serato.songs(), "loaded");
+        sql(database, "UPDATE asset SET dj_play_count = 1 WHERE id = 1");
+        assertEquals(List.of(new Played(Instant.ofEpochSecond(NIGHT), "Sanah", "Szampan")), serato.songs(), "played after the reset");
+    }
+
+    /** Serato DJ Lite 5.1's tables, the columns read and a few beside them (as on the owner's Windows). */
+    private static void serato5Tables(Path database) throws Exception {
+        sql(database, "CREATE TABLE asset (id INTEGER PRIMARY KEY AUTOINCREMENT, artist TEXT NOT NULL DEFAULT '', name TEXT NOT NULL DEFAULT '',"
+                        + " dj_play_count INTEGER, dj_recently_played INTEGER NOT NULL DEFAULT 0)",
+                "CREATE TABLE history_session (id INTEGER PRIMARY KEY AUTOINCREMENT, start_time INTEGER NOT NULL, end_time INTEGER,"
+                        + " notes TEXT, name TEXT)",
+                "CREATE TABLE history_entry (id INTEGER PRIMARY KEY AUTOINCREMENT, location_id INTEGER, portable_id TEXT NOT NULL DEFAULT '',"
+                        + " file_name TEXT, artist TEXT NOT NULL DEFAULT '', name TEXT NOT NULL DEFAULT '', dj_play_count INTEGER,"
+                        + " session_id INTEGER NOT NULL DEFAULT -1, asset_id INTEGER DEFAULT -1, start_time INTEGER NOT NULL,"
+                        + " end_time INTEGER DEFAULT -1, played INTEGER NOT NULL DEFAULT 0, deck TEXT NOT NULL DEFAULT '')");
     }
 
     private static void sql(Path database, String... statements) throws Exception {

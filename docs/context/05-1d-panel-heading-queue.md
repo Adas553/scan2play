@@ -121,8 +121,11 @@ and Serato 4 / 5's `master.sqlite` (read-only; `%LOCALAPPDATA%\Serato\Library` �
 or `%APPDATA%\Serato\Library`, the one written last; `~/Library/Application Support/Serato/Library`) when they changed; the query made
 from the columns the tables have (the newest session's songs, `played = 1` where the column is). Serato 5.1 writes a row when a song
 is *loaded* on a deck, already `played = 1`: there a row counts only once its song's library count (`asset.dj_play_count`, raised a few
-seconds after Play, never by a load) has risen since the session was first read — a song only loaded marks nothing, a song played
-marks its request within seconds; a new session (Serato restarted, its songs renumbered) takes the counts again; a
+seconds after Play, never by a load) has risen since the session was first read (the library's counts read once a session) — each
+rise given to the song's newest row not given one (the load just played; an earlier load is a preview, its time "before the request"),
+remembered for the session (a row that falls out of the 2000 read keeps its play); a count that fell (reset by the DJ) counts on from
+there; a song only loaded marks nothing, a song played marks its request within seconds; songs played before the program's first read
+of the session are not sent (no "10 minutes before" for Serato 5); a new session (Serato restarted, its songs renumbered) takes the counts again; a
 history there that cannot be read is said in the window ("Serato (master.sqlite — nie da się odczytać)"); and, in the background after the window is up (the usual places are read at once), a short
 look through the user's folders (Music, Documents, OneDrive, AppData, the profile last; 4 levels, at most 30 000 folders in all, no
 links followed, a root not looked through twice, hidden folders, `node_modules`, `Packages`, `Caches`, `Containers` skipped) for a "Serato" with `Library/master.sqlite`, a "_Serato_" with `History/Sessions`, a "VirtualDJ" with `History` in places
