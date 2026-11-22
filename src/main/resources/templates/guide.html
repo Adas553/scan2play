@@ -28,6 +28,7 @@
     <nav class="s2p-chips mb-4" id="guideJump" aria-label="Go to">
         <a href="#start">Getting started</a>
         <a href="#party">During the party</a>
+        <a href="#deck">Played by itself</a>
         <a href="#phone">On a phone</a>
         <a href="#after">After the party</a>
         <a href="#staff">Staff</a>
@@ -91,7 +92,8 @@
             waits counts as a vote. Sort by "Votes" to have the most wanted on top.</p></div>
         <div class="s2p-guide-row">
             <span class="btn btn-sm btn-action s2p-btn-played" aria-hidden="true">▶ Played</span>
-            <p>When you play the song. It leaves the queue for the history, and the AI won't let it through again.</p>
+            <p>When you play the song. It leaves the queue for the history, and the AI won't let it through again. With the program
+                <a href="#deck">“Played by itself”</a> it happens without a click.</p>
         </div>
         <div class="s2p-guide-row">
             <span class="btn btn-sm btn-outline-light s2p-btn-skip" aria-hidden="true">⏭ Skip</span>
@@ -157,6 +159,56 @@
             3 requests a minute and 20 👍 per 10 minutes. Your limit per guest counts for each person on their own. "New link" turns the old tablet
             off (e.g. when someone learned the link), "Turn off" takes the link away. Requests from the kiosk carry "🖥 kiosk" in the
             queue and the history, and the evening summary counts them as "From the kiosk" (in the CSV too).</p></div>
+    </section>
+
+    <section id="deck">
+        <h2>Played, from your DJ software</h2>
+        <div class="s2p-guide-row s2p-guide-text"><p>No need to click “Played”: a small program on the computer you play from reads
+            VirtualDJ’s or Serato’s history in the background and marks the queue’s songs played by itself. The panel need not be open.
+            The Pro plan, Windows or Mac.</p></div>
+        <div class="s2p-guide-row">
+            <span class="btn btn-sm btn-outline-light" aria-hidden="true">🎧 From DJ software</span>
+            <p>The button above the queue on a computer (beside “+ Add a song”) opens a card with three steps.</p>
+        </div>
+        <div class="s2p-guide-row">
+            <span class="s2p-guide-row-name" aria-hidden="true">How to connect</span>
+            <ol>
+                <li><strong>Download the program</strong>: Windows, Mac M1 and later or Mac Intel.</li>
+                <li><strong>Unpack the zip and start “Scan2Play Zagrane”.</strong> The first time Windows or macOS asks whether to run
+                    it — the card says what to click.</li>
+                <li><strong>“Connect a computer”</strong> in the card: type the 6-digit code (valid 10 minutes) into the program’s window
+                    and click “Połącz”.</li>
+            </ol>
+        </div>
+        <div class="s2p-guide-row">
+            <span class="s2p-guide-row-name" aria-hidden="true">Once for good</span>
+            <p>It stays connected: at the next party just start the program (also after a new party code). You can connect
+                up to 3 computers, e.g. a laptop and a spare. “Disconnect” in the card or “Odłącz ten komputer” in the program ends it.</p>
+        </div>
+        <div class="s2p-guide-row">
+            <span class="s2p-guide-row-name" aria-hidden="true">At the party</span>
+            <p>Start the program before the first song and play as usual. When you play a song a guest asked for, the request goes to
+                the history as played by itself: from Serato within a few seconds, from VirtualDJ about 45 seconds after it starts
+                (VirtualDJ waits that long before writing it to its history). A song only loaded on a deck does not count.</p>
+        </div>
+        <div class="s2p-guide-row">
+            <span class="s2p-guide-row-name" aria-hidden="true">When it marks</span>
+            <p>When the song in your DJ software has the request’s artist and title (as “✓ Have” in your library) and started after the
+                request. A file without tags, a title written differently? Click “Played” yourself — the button works as always.</p>
+        </div>
+        <div class="s2p-guide-row">
+            <span class="s2p-guide-row-name" aria-hidden="true">The program’s window</span>
+            <p>It says whether it works, which history it reads (“Czyta”) and which of the queue’s songs it marked (“Oznaczone”). Closed,
+                it hides by the clock (on a Mac in the menu bar) and keeps working. It does not see the history? “Wskaż folder historii…”
+                (pick the history folder).</p>
+        </div>
+        <div class="s2p-guide-row">
+            <span class="s2p-guide-row-name" aria-hidden="true">Privacy</span>
+            <p>The program only reads the history and changes nothing in VirtualDJ or Serato. The files stay on the computer:
+                only the artist, title and time of the songs reach Scan2Play, and none of it is kept.</p>
+        </div>
+        <div class="s2p-guide-row s2p-guide-text"><p>It reads VirtualDJ and Serato DJ (Pro and Lite). With rekordbox, Traktor and djay you
+            click “Played” as before.</p></div>
     </section>
 
     <section id="phone">

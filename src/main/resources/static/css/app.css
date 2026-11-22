@@ -1416,6 +1416,8 @@ th[data-sort].sort-desc::after {
 .s2p-guide-row:not(.s2p-guide-text) > :first-child { justify-self: start; pointer-events: none; }
 .s2p-guide-row p { margin: 0; color: var(--s2p-text); max-width: 62ch; }
 .s2p-guide-text { grid-template-columns: minmax(0, 1fr); }
+.s2p-guide-row ol { margin: 0; padding-left: 1.25rem; color: var(--s2p-text); max-width: 62ch; }
+.s2p-guide-row ol > li + li { margin-top: 0.35rem; }
 .s2p-guide-row-name { font-weight: 600; color: var(--s2p-light); padding-top: 0.15rem; }
 /* a button named inside a sentence: a picture as tall as the line, not a 44 px target (it is not one) */
 .s2p-guide-inline { pointer-events: none; vertical-align: baseline; display: inline-block !important; min-height: 0 !important;

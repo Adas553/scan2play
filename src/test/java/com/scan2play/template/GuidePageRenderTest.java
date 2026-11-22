@@ -94,11 +94,12 @@ class GuidePageRenderTest {
                 ">Podgląd<", ">Obsługa kolejki<", ">Współorganizator<", ">Własne<",
                 ">▶ Zagrane<", ">⏭ Pomiń<", ">⚠ Sprawdź<", ">⭐ Życzenie gospodarzy<", ">↩ Przywróć<", "TAK! albo NIE", "„PRZEKAZANE”")
                 .doesNotContain("para młoda", "Barman", "??");
-        List<String> sections = List.of("id=\"start\"", "id=\"party\"", "id=\"phone\"", "id=\"after\"", "id=\"staff\"", "id=\"guests\"");
+        List<String> sections = List.of("id=\"start\"", "id=\"party\"", "id=\"deck\"", "id=\"phone\"", "id=\"after\"", "id=\"staff\"",
+                "id=\"guests\"");
         for (int i = 1; i < sections.size(); i++) {
             assertThat(html.indexOf(sections.get(i - 1))).as(sections.get(i)).isPositive().isLessThan(html.indexOf(sections.get(i)));
         }
-        assertThat(html).as("every jump has its section").contains("href=\"#start\"", "href=\"#party\"", "href=\"#phone\"",
+        assertThat(html).as("every jump has its section").contains("href=\"#start\"", "href=\"#party\"", "href=\"#deck\"", "href=\"#phone\"",
                 "href=\"#after\"", "href=\"#staff\"", "href=\"#guests\"");
         // the guide's own text; after it only the dialog of a tapped picture, whose "✕" is a real button
         assertThat(html.substring(0, html.indexOf("<dialog"))).as("the pictures of buttons are not controls: no <button> and no form")
@@ -116,6 +117,15 @@ class GuidePageRenderTest {
                 "Nowy link", "🖥 kiosk", "Z kiosku");
         assertThat(html.substring(html.indexOf("Współorganizator"), html.indexOf("Własne"))).as("a co-organiser has the kiosk (V56)")
                 .contains("kiosk dla gości");
+        String deck = section(html, "deck");
+        assertThat(deck).as("the program \"Zagrane samo\" (V78): the panel's button, the three steps, once for good, the speed by"
+                + " program, a song only loaded not counted, the program's window, what reaches Scan2Play, the programs not read").contains(
+                ">Zagrane samo z programu DJ-a</h2>", ">🎧 Z programu DJ-a<", "Pro", "Windows", "Mac", "„Scan2Play Zagrane”",
+                "„Połącz komputer”", "6-cyfrowy kod", "Połączenie zostaje", "do 3 komputerów", "„Odłącz ten komputer”",
+                "z Serato po kilku sekundach", "z VirtualDJ po około 45 sekundach", "tylko załadowana", "„Oznaczone”",
+                "„Wskaż folder historii…”", "tylko wykonawca, tytuł i godzina", "Traktor", "„Zagrane”");
+        assertThat(html.substring(html.indexOf("s2p-btn-played"), html.indexOf("s2p-btn-skip"))).as("the row of \"Zagrane\" points to it")
+                .contains("href=\"#deck\"");
         assertThePictures(html, "pl");
         DashboardPageRenderTest.assertNothingInline(html);
         write("guide-pl.html", html);
@@ -140,6 +150,13 @@ class GuidePageRenderTest {
         assertThat(html).contains("lang=\"en\"", ">How Scan2Play works</h1>", "the AI turned down are in the history",
                 "the people you play for", "contact@scan2play.com.pl", ">▶ Played<", ">↩ Restore<", ">← Home<",
                 "id=\"start\"", "id=\"guests\"").doesNotContain("??");
+        assertThat(html.indexOf("id=\"deck\"")).as("the program, as in Polish").isGreaterThan(html.indexOf("id=\"party\""))
+                .isLessThan(html.indexOf("id=\"phone\""));
+        assertThat(section(html, "deck")).contains(">Played, from your DJ software</h2>", ">🎧 From DJ software<", "Pro",
+                "“Scan2Play Zagrane”", "“Connect a computer”", "6-digit code", "stays connected", "up to 3 computers",
+                "from Serato within a few seconds", "from VirtualDJ about 45 seconds", "only loaded", "only the artist, title and time",
+                "Traktor");
+        assertThat(html.substring(html.indexOf("s2p-btn-played"), html.indexOf("s2p-btn-skip"))).contains("href=\"#deck\"");
         String kiosk = html.substring(html.indexOf("id=\"guideKiosk\""), html.indexOf("</section>", html.indexOf("id=\"guideKiosk\"")));
         assertThat(kiosk).as("the kiosk, as in Polish").contains("not logged in", "Guided Access", "screen pinning",
                 "3 requests a minute", "20 👍 per 10 minutes", "New link", "🖥 kiosk", "From the kiosk");
@@ -147,6 +164,12 @@ class GuidePageRenderTest {
         assertThat(render(Locale.GERMAN, ANONYMOUS)).contains("lang=\"en\"", ">How Scan2Play works</h1>");
         assertThePictures(html, "en");
         write("guide-en.html", html);
+    }
+
+    private static String section(String html, String id) {
+        int start = html.indexOf("<section id=\"" + id + "\"");
+        assertThat(start).as("section " + id).isPositive();
+        return html.substring(start, html.indexOf("</section>", start));
     }
 
     /**

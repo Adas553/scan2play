@@ -106,7 +106,8 @@ a code per address and 1000 wrong codes in all per 10 minutes (reaching it: one 
 memory); `last_seen_at` written once a minute at most. Browser scenarios `deck-reader-program-only`, `deck-connected-on-load`, `deck-computers*`;
 `DeckHistoryServiceTest`, `DjDeviceIT` (PostgreSQL), `DeviceApiControllerTest`, `DeviceApiWebTest` (the real security: no login, no
 CSRF, no session for `/api/device/*`; `/dj/devices` needs the login). The other programs (rekordbox, Traktor, djay — not read):
-`docs/ideas.md` item 18 and `tools/spike/dj_history_spike.py`.
+`docs/ideas.md` item 18 and `tools/spike/dj_history_spike.py`. The guide (`guide*.html`) has its own section, `#deck` ("Zagrane samo": the button, the three steps, once for
+good, the speed by program, when a request marks, the window, the privacy), linked from its row of "Zagrane"; `GuidePageRenderTest`.
 
 **Parked: the panel reading the history folder itself** (variant E of `docs/ideas.md` item 18 — "Wskaż folder historii" in Chrome and
 Edge, `showDirectoryPicker`, the tab kept open, `POST /dj/dashboard/plays`). Removed 2026-11-21 after the program worked on the owner's
