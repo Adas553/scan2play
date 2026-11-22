@@ -179,9 +179,10 @@ class GuidePageRenderTest {
      * shows it whole in the middle of the screen — guide-pictures.js —; without the script the link opens the file).
      */
     private static void assertThePictures(String html, String lang) {
-        List<String> files = List.of("landing/dashboard-" + lang, "guide/phone-" + lang, "guide/summary-" + lang);
-        List<String> sections = List.of("party", "phone", "after");
-        for (int n = 1; n <= 3; n++) {
+        // the program's window is one picture for both languages: the program speaks only Polish
+        List<String> files = List.of("landing/dashboard-" + lang, "guide/phone-" + lang, "guide/summary-" + lang, "guide/program");
+        List<String> sections = List.of("party", "phone", "after", "deck");
+        for (int n = 1; n <= files.size(); n++) {
             int at = html.indexOf("id=\"guidePicture" + n + "\"");
             assertThat(at).as("picture %d", n).isPositive();
             String figure = html.substring(at, html.indexOf("</figure>", at));
@@ -203,21 +204,33 @@ class GuidePageRenderTest {
         assertThat(html).as("the phone's picture is upright").contains("s2p-guide-picture s2p-guide-picture-tall\" id=\"guidePicture2\"");
         assertThat(html.indexOf("id=\"guidePicture3\"")).as("the summary's picture under its row")
                 .isGreaterThan(html.indexOf(lang.equals("pl") ? ">Podsumowanie wieczoru</span>" : ">Evening summary</span>"));
+        assertThat(html).as("the program's window no wider than itself").contains(
+                "s2p-guide-picture s2p-guide-picture-window\" id=\"guidePicture4\"");
+        assertThat(html.indexOf("id=\"guidePicture4\"")).as("the program's window under its row")
+                .isGreaterThan(html.indexOf(lang.equals("pl") ? ">Okno programu</span>" : ">The program’s window</span>"));
     }
 
     /**
-     * A WebP's width and height, from its header (the extended format Chrome writes: "VP8X", each less one in 24 bits): the page's
-     * width / height must be the file's, or the place kept for it has another shape than the picture after screenshots.py made it again.
+     * A WebP's width and height, from its header: the page's width / height must be the file's, or the place kept for it has another
+     * shape than the picture after it was made again. The extended format Chrome writes for screenshots.py ("VP8X", each less one in
+     * 24 bits) or the simple lossy one of the program's window, a screenshot of Windows ("VP8 ", 14 bits each after the frame's start).
      */
     private static int[] webpSize(Path file) {
         try {
             byte[] head = Arrays.copyOf(Files.readAllBytes(file), 30);
-            assertThat(new String(head, 0, 4, StandardCharsets.US_ASCII) + new String(head, 8, 8, StandardCharsets.US_ASCII))
-                    .as("%s: a WebP of screenshots.py", file).isEqualTo("RIFFWEBPVP8X");
+            String format = new String(head, 0, 4, StandardCharsets.US_ASCII) + new String(head, 8, 8, StandardCharsets.US_ASCII);
+            if (format.equals("RIFFWEBPVP8 ")) {
+                return new int[]{twoBytes(head, 26) & 0x3fff, twoBytes(head, 28) & 0x3fff};
+            }
+            assertThat(format).as("%s: a WebP", file).isEqualTo("RIFFWEBPVP8X");
             return new int[]{1 + threeBytes(head, 24), 1 + threeBytes(head, 27)};
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
+    }
+
+    private static int twoBytes(byte[] bytes, int at) {
+        return (bytes[at] & 0xff) | (bytes[at + 1] & 0xff) << 8;
     }
 
     private static int threeBytes(byte[] bytes, int at) {

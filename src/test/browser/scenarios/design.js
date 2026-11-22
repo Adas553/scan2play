@@ -139,8 +139,8 @@
         run: async function (t) {
             t.check('nothing wider than the screen', document.documentElement.scrollWidth <= document.documentElement.clientWidth);
             const jumps = Array.from(document.querySelectorAll('#guideJump a'));
-            t.step('six jumps, each to its section', jumps.map(function (a) { return !!document.querySelector(a.getAttribute('href')); }),
-                [true, true, true, true, true, true]);
+            t.step('seven jumps, each to its section', jumps.map(function (a) { return !!document.querySelector(a.getAttribute('href')); }),
+                [true, true, true, true, true, true, true]);
             t.step('every jump whole on the screen', jumps.filter(function (a) {
                 const box = a.getBoundingClientRect();
                 return box.left < 0 || box.right > document.documentElement.clientWidth;

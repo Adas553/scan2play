@@ -77,8 +77,9 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
 - **2026-11-22 — #301 / #302's branch (`claude/gallant-ritchie-rl80ux`) = its review (`review-2026-11-22-zagrane-serato-window.md`) + P3**
   (Serato 5.1: a song goes once `asset.dj_play_count` rose). **`claude/youthful-heisenberg-3whpcr` = it + P3's review**
   (`review-2026-11-22-p3-serato-play-count.md`: P1–P7 fixed — a play given to the song's newest load, kept for the session; P8 and
-  4 checks on Serato open); the guide's section "Zagrane samo" (`#deck`). Next: the trial on Windows —
-  `docs/history/prompt-2026-11-22-test-zagrane-serato.md`. Then this branch into #301 / #302, the merge. Untried: a Mac, P23, P24.
+  4 checks on Serato open); the guide's "Zagrane samo" (`#deck`). **Tried on Windows: P1, P3, P8, VirtualDJ work** ("Próba po review
+  P3" there). Uncommitted: the guide's 4th picture (`program.webp`) + tests. Waits for the owner: commit, into #301 / #302, merge.
+  Apart: "Toketeo - Prod. by …" never matches (`LibraryKey` lacks "prod"; a migration of saved keys). Untried: Mac, P23, P24.
 - **Waits for the owner (from #269):** after the first commit the deploy window holds back (Fri–Sun 18:00–6:00): does Railway
   deploy it on the workflow's re-run? UptimeRobot is set up (the owner, 2026-11-17; `docs/monitoring.md`).
 - **Waits for the owner (the wishes, #263):** the three older Polish texts with "DJ" and a masculine verb (`guest.vote.gone`,

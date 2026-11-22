@@ -110,3 +110,49 @@ utraty stanu przy dodaniu piosenki w trakcie seta — nie robię bez potrzeby.
 5. Próba P1 na Windows: załadować piosenkę z prośby bez Play, odłożyć, po minucie załadować i puścić — prośba ma się oznaczyć.
 6. Serato 4: jeśli jego baza też ma `history_entry.asset_id` i `asset.dj_play_count`, liczy się już po liczniku (oprócz `played = 1`).
    Wiadomo, jak Serato 4 podnosi licznik? Bez komputera z Serato 4 nie sprawdzone.
+
+## Próba po review P3 (2026-11-22)
+
+Windows 11 właściciela, Serato DJ Lite 5.1, VirtualDJ 8.5. Program z tej gałęzi (`91c3cdf`): „Run workflow” nie widział gałęzi na
+liście, więc jar zbudowany w kopii repo (`mvnw -f deck-agent/pom.xml verify` — zielone) i podmieniony w kopii folderu programu z
+poprzedniego „Run workflow” (ta sama Java i `.exe`); wersja potwierdzona klasą `Serato4Database$Row`, której nie ma w starszych.
+Program połączony z imprezą na `dev.scan2play.com.pl` (kod serwera bez zmian na tej gałęzi — poprawki P1–P7 są w programie). Baza
+Serato czytana tylko w kopii (`master.sqlite` + `-wal`), tylko do odczytu, bez kolumn ze ścieżkami.
+
+1. **P1 — zrobione, działa.** „El Zorro – Somos Hermanos”: załadowana bez Play i zdjęta, potem prośba gościa, po minucie załadowana
+   i puszczona o 19:45 — „ZAGRANE” w panelu od razu po Play, w „Oznaczone” 19:45 (czas puszczenia, nie przesłuchania).
+2. **Tylko załadowana / dwa razy — zrobione, działa.** „Maykel Blanco y su Salsa Mayor – La Cafetera”: załadowana dwa razy bez Play —
+   prośba zostaje w kolejce; Play — oznaczona (19:50); druga prośba (dodana przez DJ-a) i drugie Play — oznaczona (19:51), w
+   „Oznaczone” dwie linie. **Znalezisko poza P3:** „Bebeshito – Toketeo” nie oznacza się — w Serato tytuł „Toketeo - Prod. by Dj
+   Honda x DJ Jerry”, a `LibraryKey.VERSION_AFTER_DASH` (`LibraryKey.java:46-48`) ucina po myślniku tylko słowa wersji (mix, edit,
+   remix…), bez „Prod.”; klucz „toketeo prod by…” ≠ „toketeo” (ten sam klucz daje w kolejce „✗ Nie masz”). Poprawka (`prod` w tej
+   liście) zmienia klucze zapisane w bibliotekach — potrzebna migracja przeliczająca je, jak V60; osobna gałąź, nie zrobione.
+   Instrukcja już to obejmuje („inaczej zapisany tytuł? Kliknij „Zagrane””).
+3. **P8 — zrobione, ryzyko się nie zdarza.** Serato zamknięte o 19:54:13, otwarte, piosenka załadowana bez Play: `history_session`
+   ma nową sesję 7 (od 19:55:17, `end_time = -1`; sesja 6 zamknięta 19:54:13), z jednym wierszem z `asset_id`; `PRAGMA
+   table_info(asset)`: `id` z `pk = 1`. Potem „Roly Maden – Mírala”: prośba, Play — oznaczona raz (19:56); w „Oznaczone” nic sprzed
+   restartu drugi raz. Restart Serato = nowa sesja, więc stan liczników na (bazę, sesję) wystarcza — odcisk biblioteki niepotrzebny.
+4. **P3 — zrobione, działa.** Serato DJ Lite pozwala zmienić licznik ręcznie: kolumna **PLAYS** w bibliotece, edycja komórki.
+   Mírala: licznik 1 skasowany do 0, nowa prośba, Play — oznaczona (20:01, druga linia Mírala); w kopii bazy `dj_play_count = 1`.
+   Bez poprawki P3 (1 − 0 = 1 rozdany już wzrost) prośba zostałaby w kolejce.
+5. **VirtualDJ — zrobione, bez zmian.** „Tirso Duarte – Pa' Cali”: Play 20:03, oznaczona ok. 20:04 (≈ 45 s).
+6. **Instrukcja `#deck` — zrobione, w porządku.** Tekst zgadza się z oknem („Czyta”, „Oznaczone”, „Wskaż folder historii…” gdy nic,
+   „Inny folder historii…” gdy coś, „Odłącz ten komputer”, czasy Serato / VirtualDJ) i z kartą panelu (`dashboard.computer.*`: trzy
+   kroki, Windows / Mac M1 / Mac Intel, „Połącz komputer”, „Odłącz”). 1280 px i 390 px: bez przewijania w bok (drobiazg: „6-cyfrowy”
+   łamie się po myślniku na telefonie). Przy okazji `guide-page-phone` (scenariusz przeglądarki) liczył 6 skoków — po sekcji `#deck`
+   jest 7; poprawione.
+7. **Zrzuty okna — zrobione.** PowerShell z `PrintWindow` (`PW_RENDERFULLCONTENT`), proces DPI-aware, przycięte do ramki DWM;
+   druga kopia programu z `-Duser.home` w katalogu tymczasowym (ustawienia i blokada właściciela nietknięte), zmyślona impreza na
+   `localhost`, zmyślona historia VirtualDJ (ABBA, Michael Jackson, Queen, Daft Punk) w tym katalogu — oznaczone naprawdę przez
+   serwer. Wiersz „Serwer:” chowa się po połączeniu: w zrzutach ani adresu, ani nazwy komputera, użytkownika, ścieżek.
+   `review-2026-11-22-shots/program-12-windows-przed-polaczeniem.png` (a, 525 × 356) i `program-13-windows-polaczony.png` (b,
+   525 × 533). Do instrukcji (b): `static/images/guide/program.webp` (WebP q85, 525 × 533, 24 KB), **jeden plik dla obu
+   języków** (program mówi tylko po polsku); `#guidePicture4` w `#deck` po „Okno programu” / „The program’s window”,
+   `.s2p-guide-picture-window` (nie szerszy niż 525 px). `GuidePageRenderTest` obejmuje czwarty obrazek (czerwony przed: brak
+   `guidePicture4`; `webpSize` czyta też prosty WebP „VP8 ”), scenariusze `guide-pictures-*` stukają też w czwarty. Wyniki w kopii
+   repo: `check.py unit -t GuidePageRenderTest` 3/3, `audit -t guide` 2 strony × 3 szerokości OK, `browser` (`guide-pictures-phone`,
+   `guide-pictures-computer`, `guide-page-phone`) 3/3.
+
+**Pytania z tego review:** 1 — zostaje w dokumencie (bez zmian). 2 — tak, kolumna PLAYS; P3 sprawdzone (punkt 4). 3 — zrobione
+wcześniej. 4 — zamknięte: nowa sesja, `asset.id` `pk = 1` (punkt 3). 5 — zamknięte: P1 działa (punkt 1). 6 — otwarte (brak
+Serato 4).
