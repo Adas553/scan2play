@@ -66,6 +66,16 @@
 
             document.getElementById('deviceConnect').click();
             await t.waitFor(function () { return code().indexOf('123 456') >= 0; }, 'the code', 3000);
+            const copy = document.querySelector('#deviceCode button[data-copy-text]');
+            t.step('the code bold, a "Kopiuj" beside it as the party link\'s (the digits alone, the program takes them so)',
+                [!!document.querySelector('#deviceCode .s2p-device-code'), !!copy && copy.classList.contains('btn-outline-secondary'),
+                    copy && copy.getAttribute('data-copy-text'), copy && copy.textContent.trim()], [true, true, '123456', 'Kopiuj']);
+            const written = [];
+            Object.defineProperty(navigator, 'clipboard', { configurable: true, value: {
+                writeText: function (text) { written.push(text); return Promise.resolve(); } } });
+            copy.click();
+            await t.sleep(100);
+            t.step('a tap copies it and says so for a moment', [written, copy.textContent.trim()], [['123456'], 'Skopiowano']);
             const asked = (await t.stand.requests('POST /dj/devices/code'))[0].q;
             t.step('the code asked for the party, with the CSRF token', [asked.partyCode, !!asked['X-CSRF-TOKEN']],
                 [document.getElementById('partyCode').value, true]);

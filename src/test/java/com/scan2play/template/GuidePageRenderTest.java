@@ -94,11 +94,12 @@ class GuidePageRenderTest {
                 ">Podgląd<", ">Obsługa kolejki<", ">Współorganizator<", ">Własne<",
                 ">▶ Zagrane<", ">⏭ Pomiń<", ">⚠ Sprawdź<", ">⭐ Życzenie gospodarzy<", ">↩ Przywróć<", "TAK! albo NIE", "„PRZEKAZANE”")
                 .doesNotContain("para młoda", "Barman", "??");
-        List<String> sections = List.of("id=\"start\"", "id=\"party\"", "id=\"phone\"", "id=\"after\"", "id=\"staff\"", "id=\"guests\"");
+        List<String> sections = List.of("id=\"start\"", "id=\"party\"", "id=\"deck\"", "id=\"phone\"", "id=\"after\"", "id=\"staff\"",
+                "id=\"guests\"");
         for (int i = 1; i < sections.size(); i++) {
             assertThat(html.indexOf(sections.get(i - 1))).as(sections.get(i)).isPositive().isLessThan(html.indexOf(sections.get(i)));
         }
-        assertThat(html).as("every jump has its section").contains("href=\"#start\"", "href=\"#party\"", "href=\"#phone\"",
+        assertThat(html).as("every jump has its section").contains("href=\"#start\"", "href=\"#party\"", "href=\"#deck\"", "href=\"#phone\"",
                 "href=\"#after\"", "href=\"#staff\"", "href=\"#guests\"");
         // the guide's own text; after it only the dialog of a tapped picture, whose "✕" is a real button
         assertThat(html.substring(0, html.indexOf("<dialog"))).as("the pictures of buttons are not controls: no <button> and no form")
@@ -116,6 +117,15 @@ class GuidePageRenderTest {
                 "Nowy link", "🖥 kiosk", "Z kiosku");
         assertThat(html.substring(html.indexOf("Współorganizator"), html.indexOf("Własne"))).as("a co-organiser has the kiosk (V56)")
                 .contains("kiosk dla gości");
+        String deck = section(html, "deck");
+        assertThat(deck).as("the program \"Zagrane samo\" (V78): the panel's button, the three steps, once for good, the speed by"
+                + " program, a song only loaded not counted, the program's window, what reaches Scan2Play, the programs not read").contains(
+                ">Zagrane samo z programu DJ-a</h2>", ">🎧 Z programu DJ-a<", "Pro", "Windows", "Mac", "„Scan2Play Zagrane”",
+                "„Połącz komputer”", "6-cyfrowy kod", "Połączenie zostaje", "do 3 komputerów", "„Odłącz ten komputer”",
+                "z Serato po kilku sekundach", "z VirtualDJ po około 45 sekundach", "tylko załadowana", "„Oznaczone”",
+                "„Wskaż folder historii…”", "tylko wykonawca, tytuł i godzina", "Traktor", "„Zagrane”");
+        assertThat(html.substring(html.indexOf("s2p-btn-played"), html.indexOf("s2p-btn-skip"))).as("the row of \"Zagrane\" points to it")
+                .contains("href=\"#deck\"");
         assertThePictures(html, "pl");
         DashboardPageRenderTest.assertNothingInline(html);
         write("guide-pl.html", html);
@@ -140,6 +150,13 @@ class GuidePageRenderTest {
         assertThat(html).contains("lang=\"en\"", ">How Scan2Play works</h1>", "the AI turned down are in the history",
                 "the people you play for", "contact@scan2play.com.pl", ">▶ Played<", ">↩ Restore<", ">← Home<",
                 "id=\"start\"", "id=\"guests\"").doesNotContain("??");
+        assertThat(html.indexOf("id=\"deck\"")).as("the program, as in Polish").isGreaterThan(html.indexOf("id=\"party\""))
+                .isLessThan(html.indexOf("id=\"phone\""));
+        assertThat(section(html, "deck")).contains(">Played, from your DJ software</h2>", ">🎧 From DJ software<", "Pro",
+                "“Scan2Play Zagrane”", "“Connect a computer”", "6-digit code", "stays connected", "up to 3 computers",
+                "from Serato within a few seconds", "from VirtualDJ about 45 seconds", "only loaded", "only the artist, title and time",
+                "Traktor");
+        assertThat(html.substring(html.indexOf("s2p-btn-played"), html.indexOf("s2p-btn-skip"))).contains("href=\"#deck\"");
         String kiosk = html.substring(html.indexOf("id=\"guideKiosk\""), html.indexOf("</section>", html.indexOf("id=\"guideKiosk\"")));
         assertThat(kiosk).as("the kiosk, as in Polish").contains("not logged in", "Guided Access", "screen pinning",
                 "3 requests a minute", "20 👍 per 10 minutes", "New link", "🖥 kiosk", "From the kiosk");
@@ -149,6 +166,12 @@ class GuidePageRenderTest {
         write("guide-en.html", html);
     }
 
+    private static String section(String html, String id) {
+        int start = html.indexOf("<section id=\"" + id + "\"");
+        assertThat(start).as("section " + id).isPositive();
+        return html.substring(start, html.indexOf("</section>", start));
+    }
+
     /**
      * The three pictures in the page's language, each in its section — the panel on a computer (the landing page's picture) during the
      * party, the panel on a phone, the evening summary after the party, by its row —, its file there (a missing one would be a broken
@@ -156,9 +179,10 @@ class GuidePageRenderTest {
      * shows it whole in the middle of the screen — guide-pictures.js —; without the script the link opens the file).
      */
     private static void assertThePictures(String html, String lang) {
-        List<String> files = List.of("landing/dashboard-" + lang, "guide/phone-" + lang, "guide/summary-" + lang);
-        List<String> sections = List.of("party", "phone", "after");
-        for (int n = 1; n <= 3; n++) {
+        // the program's window is one picture for both languages: the program speaks only Polish
+        List<String> files = List.of("landing/dashboard-" + lang, "guide/phone-" + lang, "guide/summary-" + lang, "guide/program");
+        List<String> sections = List.of("party", "phone", "after", "deck");
+        for (int n = 1; n <= files.size(); n++) {
             int at = html.indexOf("id=\"guidePicture" + n + "\"");
             assertThat(at).as("picture %d", n).isPositive();
             String figure = html.substring(at, html.indexOf("</figure>", at));
@@ -180,21 +204,33 @@ class GuidePageRenderTest {
         assertThat(html).as("the phone's picture is upright").contains("s2p-guide-picture s2p-guide-picture-tall\" id=\"guidePicture2\"");
         assertThat(html.indexOf("id=\"guidePicture3\"")).as("the summary's picture under its row")
                 .isGreaterThan(html.indexOf(lang.equals("pl") ? ">Podsumowanie wieczoru</span>" : ">Evening summary</span>"));
+        assertThat(html).as("the program's window no wider than itself").contains(
+                "s2p-guide-picture s2p-guide-picture-window\" id=\"guidePicture4\"");
+        assertThat(html.indexOf("id=\"guidePicture4\"")).as("the program's window under its row")
+                .isGreaterThan(html.indexOf(lang.equals("pl") ? ">Okno programu</span>" : ">The program’s window</span>"));
     }
 
     /**
-     * A WebP's width and height, from its header (the extended format Chrome writes: "VP8X", each less one in 24 bits): the page's
-     * width / height must be the file's, or the place kept for it has another shape than the picture after screenshots.py made it again.
+     * A WebP's width and height, from its header: the page's width / height must be the file's, or the place kept for it has another
+     * shape than the picture after it was made again. The extended format Chrome writes for screenshots.py ("VP8X", each less one in
+     * 24 bits) or the simple lossy one of the program's window, a screenshot of Windows ("VP8 ", 14 bits each after the frame's start).
      */
     private static int[] webpSize(Path file) {
         try {
             byte[] head = Arrays.copyOf(Files.readAllBytes(file), 30);
-            assertThat(new String(head, 0, 4, StandardCharsets.US_ASCII) + new String(head, 8, 8, StandardCharsets.US_ASCII))
-                    .as("%s: a WebP of screenshots.py", file).isEqualTo("RIFFWEBPVP8X");
+            String format = new String(head, 0, 4, StandardCharsets.US_ASCII) + new String(head, 8, 8, StandardCharsets.US_ASCII);
+            if (format.equals("RIFFWEBPVP8 ")) {
+                return new int[]{twoBytes(head, 26) & 0x3fff, twoBytes(head, 28) & 0x3fff};
+            }
+            assertThat(format).as("%s: a WebP", file).isEqualTo("RIFFWEBPVP8X");
             return new int[]{1 + threeBytes(head, 24), 1 + threeBytes(head, 27)};
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
+    }
+
+    private static int twoBytes(byte[] bytes, int at) {
+        return (bytes[at] & 0xff) | (bytes[at + 1] & 0xff) << 8;
     }
 
     private static int threeBytes(byte[] bytes, int at) {

@@ -49,4 +49,17 @@ class SettingsTest {
         settings.disconnected();
         assertNull(new Settings(file).token());
     }
+
+    /** The folder the DJ picked in the window: kept with the rest, forgotten when "none" is saved; the token untouched by either. */
+    @Test
+    void theFolderPicked_isKept_andForgotten(@TempDir Path home) throws IOException {
+        Path file = home.resolve(".scan2play").resolve("zagrane.properties");
+        Settings settings = new Settings(file);
+        settings.paired("https://www.scan2play.com.pl", "tok");
+        settings.folder(Path.of("D:\\Muzyka\\VirtualDJ"));
+        assertEquals(Path.of("D:\\Muzyka\\VirtualDJ"), new Settings(file).folder());
+        assertEquals("tok", new Settings(file).token());
+        settings.folder(null);
+        assertNull(new Settings(file).folder());
+    }
 }

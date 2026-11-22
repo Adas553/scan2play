@@ -828,6 +828,8 @@ th[data-sort].sort-desc::after {
 .s2p-deck-steps summary  { cursor: pointer; }
 /* a computer paired: its row, the tick green */
 .s2p-deck-device-ok      { color: var(--s2p-green); font-weight: 700; }
+/* the pairing code: read off the screen and typed in the program — large digits, apart */
+.s2p-device-code         { font-size: 1.1em; letter-spacing: 0.08em; font-variant-numeric: tabular-nums; }
 @media (max-width: 575.98px) {
     #queueList .s2p-list-tools { flex: 1 1 100%; flex-wrap: wrap; }
     #queueList .s2p-list-tools .s2p-list-search { flex: 1 1 8rem; max-width: none !important; }
@@ -1414,6 +1416,8 @@ th[data-sort].sort-desc::after {
 .s2p-guide-row:not(.s2p-guide-text) > :first-child { justify-self: start; pointer-events: none; }
 .s2p-guide-row p { margin: 0; color: var(--s2p-text); max-width: 62ch; }
 .s2p-guide-text { grid-template-columns: minmax(0, 1fr); }
+.s2p-guide-row ol { margin: 0; padding-left: 1.25rem; color: var(--s2p-text); max-width: 62ch; }
+.s2p-guide-row ol > li + li { margin-top: 0.35rem; }
 .s2p-guide-row-name { font-weight: 600; color: var(--s2p-light); padding-top: 0.15rem; }
 /* a button named inside a sentence: a picture as tall as the line, not a 44 px target (it is not one) */
 .s2p-guide-inline { pointer-events: none; vertical-align: baseline; display: inline-block !important; min-height: 0 !important;
@@ -1429,6 +1433,8 @@ th[data-sort].sort-desc::after {
 .s2p-guide-picture a:focus-visible { outline: 2px solid var(--s2p-cyan); outline-offset: 2px; }
 .s2p-guide-picture img { display: block; width: 100%; height: auto; border: 1px solid var(--s2p-border); border-radius: var(--s2p-radius-card); }
 .s2p-guide-picture-tall a { max-width: 16rem; }
+/* the program's window: no bigger than its screenshot (525 px), or its text would be drawn larger than on the DJ's screen */
+.s2p-guide-picture-window a { max-width: 525px; }
 /* a guide's picture tapped (guide-pictures.js): whole, in the middle of the screen, over a dark backdrop; a tap anywhere closes it */
 .s2p-picture-dialog { padding: 0; border: 0; background: transparent; max-width: 100vw; max-height: 100dvh; overflow: visible; cursor: zoom-out; }
 .s2p-picture-dialog::backdrop { background: var(--s2p-black-85); }

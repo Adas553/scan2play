@@ -1,4 +1,4 @@
-// The guide's pictures (templates/guide*.html, #guidePicture1–3): a tap shows the picture whole in the middle of the screen, over a
+// The guide's pictures (templates/guide*.html, #guidePicture1–4): a tap shows the picture whole in the middle of the screen, over a
 // dark backdrop, on the same page — a tap anywhere, "✕" or Esc closes it and the page is where it was. Without the script the link
 // opens the picture's file itself (the browser's own view, left at the top, back with "Wstecz").
 (function () {

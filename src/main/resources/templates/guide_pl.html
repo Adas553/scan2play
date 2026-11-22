@@ -14,9 +14,11 @@
      https://claude.ai/artifact/SdMaijjMmaECKtNjwH2vjc). Public (LegalController.guide), one file per language as the legal pages.
      In the order of a party. The buttons and badges in it are the app's own classes — pictures of them, not controls (spans, no
      focus), so they never go stale as screenshots would. Keep it true to the app: a feature that changes changes here too.
-     The three pictures (#guidePicture1–3: the panel on a computer — the landing page's own —, on a phone, the evening summary) are
+     The pictures #guidePicture1–3 (the panel on a computer — the landing page's own —, on a phone, the evening summary) are
      screenshots of a made-up party that src/test/browser/screenshots.py makes of the render tests' pages: when one of those screens
-     changes, run it again (--only guide for the guide's two of its own). A tap shows it whole in the middle of the screen
+     changes, run it again (--only guide for the guide's two of its own). #guidePicture4, the DJ program's window (one file for both
+     languages: the program speaks only Polish), is a screenshot of the real program on Windows, connected to a made-up party: when
+     the window changes, take it again by hand (deck-agent's Window.java). A tap shows it whole in the middle of the screen
      (guide-pictures.js, #guidePictureDialog): on a phone the computer's screen is small; without the script the link opens the file. */-->
 <body class="page-dj">
 <div class="container mt-3 mt-md-5 p-3 p-md-4 s2p-mw-800 s2p-guide">
@@ -35,6 +37,7 @@
     <nav class="s2p-chips mb-4" id="guideJump" aria-label="Przejdź do">
         <a href="#start">Na start</a>
         <a href="#party">W trakcie imprezy</a>
+        <a href="#deck">Zagrane samo</a>
         <a href="#phone">Na telefonie</a>
         <a href="#after">Po imprezie</a>
         <a href="#staff">Obsługa</a>
@@ -98,7 +101,8 @@
             liczy się to jako głos. Posortuj po „Głosy”, żeby najbardziej chciane były na górze.</p></div>
         <div class="s2p-guide-row">
             <span class="btn btn-sm btn-action s2p-btn-played" aria-hidden="true">▶ Zagrane</span>
-            <p>Gdy puścisz piosenkę. Znika z kolejki i trafia do historii, a AI nie przepuści jej drugi raz.</p>
+            <p>Gdy puścisz piosenkę. Znika z kolejki i trafia do historii, a AI nie przepuści jej drugi raz. Z programem
+                <a href="#deck">„Zagrane samo”</a> dzieje się to bez klikania.</p>
         </div>
         <div class="s2p-guide-row">
             <span class="btn btn-sm btn-outline-light s2p-btn-skip" aria-hidden="true">⏭ Pomiń</span>
@@ -164,6 +168,62 @@
             3 prośby na minutę i 20 👍 na 10 minut. Twój limit na gościa liczy się dla każdej osoby osobno. „Nowy link” wyłącza stary tablet
             (np. gdy ktoś poznał link), „Wyłącz” zabiera link całkiem. Prośby z kiosku mają w kolejce i w historii znak „🖥 kiosk”,
             a podsumowanie wieczoru liczy je jako „Z kiosku” (także w CSV).</p></div>
+    </section>
+
+    <section id="deck">
+        <h2>Zagrane samo z programu DJ-a</h2>
+        <div class="s2p-guide-row s2p-guide-text"><p>Nie musisz klikać „Zagrane”: mały program na komputerze, na którym grasz, czyta w tle
+            historię VirtualDJ albo Serato i sam oznacza piosenki z kolejki jako zagrane. Panel nie musi być wtedy otwarty. Plan Pro,
+            Windows albo Mac.</p></div>
+        <div class="s2p-guide-row">
+            <span class="btn btn-sm btn-outline-light" aria-hidden="true">🎧 Z programu DJ-a</span>
+            <p>Przycisk nad kolejką na komputerze (obok „+ Dodaj piosenkę”) otwiera kartę z trzema krokami.</p>
+        </div>
+        <div class="s2p-guide-row">
+            <span class="s2p-guide-row-name" aria-hidden="true">Jak połączyć</span>
+            <ol>
+                <li><strong>Pobierz program</strong>: Windows, Mac M1 i nowsze albo Mac Intel.</li>
+                <li><strong>Rozpakuj zip i uruchom „Scan2Play Zagrane”.</strong> Za pierwszym razem Windows albo macOS zapyta, czy go
+                    uruchomić — karta mówi, co kliknąć.</li>
+                <li><strong>„Połącz komputer”</strong> w karcie: przepisz 6-cyfrowy kod (ważny 10 minut) do okna programu i kliknij
+                    „Połącz”.</li>
+            </ol>
+        </div>
+        <div class="s2p-guide-row">
+            <span class="s2p-guide-row-name" aria-hidden="true">Raz na zawsze</span>
+            <p>Połączenie zostaje: na kolejnej imprezie wystarczy włączyć program (także po nowym kodzie imprezy). Możesz połączyć
+                do 3 komputerów, np. laptop i zapasowy. „Odłącz” w karcie albo „Odłącz ten komputer” w programie kończy połączenie.</p>
+        </div>
+        <div class="s2p-guide-row">
+            <span class="s2p-guide-row-name" aria-hidden="true">Na imprezie</span>
+            <p>Włącz program przed pierwszą piosenką i graj jak zwykle. Gdy puścisz piosenkę, o którą prosił gość, prośba sama trafi do
+                historii jako zagrana: z Serato po kilku sekundach, z VirtualDJ po około 45 sekundach (tyle VirtualDJ czeka, zanim zapisze
+                piosenkę w historii). Piosenka tylko załadowana na deck się nie liczy.</p>
+        </div>
+        <div class="s2p-guide-row">
+            <span class="s2p-guide-row-name" aria-hidden="true">Kiedy się oznaczy</span>
+            <p>Gdy piosenka w programie DJ-skim ma tego samego wykonawcę i tytuł co prośba (tak jak „✓ Masz” przy bibliotece) i zaczęła
+                grać po prośbie. Plik bez tagów albo inaczej zapisany tytuł? Kliknij „Zagrane” sam — przycisk działa jak zawsze.</p>
+        </div>
+        <div class="s2p-guide-row">
+            <span class="s2p-guide-row-name" aria-hidden="true">Okno programu</span>
+            <p>Mówi, czy program działa, którą historię czyta („Czyta”) i jakie piosenki z kolejki już oznaczył („Oznaczone”). Zamknięte
+                chowa się obok zegara (na Macu do paska menu), a program pracuje dalej. Nie widzi historii? „Wskaż folder historii…”.</p>
+        </div>
+        <figure class="s2p-guide-picture s2p-guide-picture-window" id="guidePicture4">
+            <a href="/images/guide/program.webp">
+                <img src="/images/guide/program.webp" width="525" height="533" loading="lazy" decoding="async"
+                     alt="Okno programu Scan2Play Zagrane: „Działa — połączono z imprezą”, czyta VirtualDJ i Serato, oznaczone cztery piosenki z godzinami">
+            </a>
+            <figcaption>Okno programu na Windows, połączone z imprezą.</figcaption>
+        </figure>
+        <div class="s2p-guide-row">
+            <span class="s2p-guide-row-name" aria-hidden="true">Prywatność</span>
+            <p>Program tylko czyta historię, niczego w VirtualDJ ani Serato nie zmienia. Pliki zostają na komputerze: do Scan2Play trafiają
+                tylko wykonawca, tytuł i godzina piosenek, nic z nich nie jest zapisywane.</p>
+        </div>
+        <div class="s2p-guide-row s2p-guide-text"><p>Czyta VirtualDJ i Serato DJ (Pro i Lite). Z rekordboksem, Traktorem i djay klikasz
+            „Zagrane” jak dotąd.</p></div>
     </section>
 
     <section id="phone">
