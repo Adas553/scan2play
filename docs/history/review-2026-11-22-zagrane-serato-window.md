@@ -154,7 +154,7 @@ puste: „z VirtualDJ około 45 sekund po puszczeniu” — także wtedy, gdy cz
 4. P8: `Window.polishDialogs()` — polskie teksty okna wyboru folderu i okien komunikatów.
 5. P10: testy wzmocnione i dodane (głębokość, nowsza z dwóch baz, jedno wysłanie, linki, limit; `Platform.look(roots, max)`).
 
-Sprawdzenia (w kopii, TMPDIR=/tmp/s2p): `check.py unit` 1530/1530, `browser` 470/470, `audit` — AUDIT_RESULT; program `verify` 42/42
+Sprawdzenia (w kopii, TMPDIR=/tmp/s2p): `check.py unit` 1530/1530, `browser` 470/470, `audit` 148 stron × 3 szerokości bez przewijania w bok i błędów (te same 4 stare małe cele, żaden z karty; panel bez zmian w poprawkach); program `verify` 42/42
 (było 35). `it` nie uruchamiane: bez zmian SQL aplikacji i migracji.
 
 ## Pytania do właściciela
