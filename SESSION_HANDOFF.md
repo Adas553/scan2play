@@ -80,9 +80,9 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
   4 checks on Serato open); the guide's "Zagrane samo" (`#deck`, its 4th picture `program.webp`). **Tried on Windows: P1, P3, P8,
   VirtualDJ work** ("Próba po review P3" there). Merged into `claude/peaceful-bardeen-pu9g7y` (from `main` after #305) with PRs #307
   (`main`) and #308 (`dev`), which replace #301 / #302 (close them after the merge). Merged (#307 `main` = `e2d96d1`, #308 `dev`), deployed 21:33 UTC
-  (started in 5.2 s, no WARN, 0 × 5xx); "Program DJ-a" run from `main`; #301 / #302 to close. Untried: Mac, P23, P24.
+  (started in 5.2 s, no WARN, 0 × 5xx); "Program DJ-a" run from `main`; #301 / #302 closed. Untried: Mac, P23, P24.
 - **2026-11-22 — the library key without "- Prod. by X" merged (#305 `main` = `7f0c87c`, #306 `dev`), V79 (moves rows)**, review
-  `review-2026-11-22-library-key-producer.md`; #303 / #304 to close. Deployed by hand 2026-11-22 20:55 UTC: V79 in 0.048 s, Flyway at 79.
+  `review-2026-11-22-library-key-producer.md`; #303 / #304 closed. Deployed by hand 2026-11-22 20:55 UTC: V79 in 0.048 s, Flyway at 79.
 - **Waits for the owner (from #269):** after the first commit the deploy window holds back (Fri–Sun 18:00–6:00): does Railway
   deploy it on the workflow's re-run? UptimeRobot is set up (the owner, 2026-11-17; `docs/monitoring.md`).
 - **Waits for the owner (the wishes, #263):** the three older Polish texts with "DJ" and a masculine verb (`guest.vote.gone`,
