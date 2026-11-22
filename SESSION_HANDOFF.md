@@ -76,10 +76,11 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
   PR, no migration: a second copy of the program refused, the window's fixes, variant E parked (the card: the program only;
   `/dj/dashboard/plays` gone), the card rebuilt (framed, three steps; paired: its row and the button green). Waits: the owner's read, PRs; after the merge "Run workflow" of "Program DJ-a (deck-agent)" from `main`.
   Untried: a Mac (P20, P27), a Polish user name (P23), the history in OneDrive (P24).
-- **2026-11-22 — the library key without "- Prod. by X" (V79, moves rows): PRs #303 (`main`) / #304 (`dev`) from
-  `claude/jovial-hodgkin-40e080`; its review (`docs/history/review-2026-11-22-library-key-producer.md`) and the fixes P1–P7 on
-  `claude/peaceful-bardeen-pu9g7y` (V79 rewritten in place: never another song's key, 1.7 s for 25 000 producers).** Waits for the
-  owner: this branch into #303 / #304 (or PRs from it instead), the PRs' text; the nightly copy is enough (the owner: no DJ since).
+- **2026-11-22 — the library key without "- Prod. by X" (V79, moves rows): `claude/peaceful-bardeen-pu9g7y`, PRs #305 (`main`)
+  and #306 (`dev`), not merged** — `claude/jovial-hodgkin-40e080` (#303 / #304, replaced: close them after the merge) + its review
+  (`docs/history/review-2026-11-22-library-key-producer.md`) and the fixes P1–P7 (V79 rewritten in place: never another song's key,
+  1.7 s for 25 000 producers). Waits for the owner: the merge; the nightly copy is enough (the owner: no DJ since). After the deploy:
+  Flyway at 79, the start's time in the log.
 - **Waits for the owner (from #269):** after the first commit the deploy window holds back (Fri–Sun 18:00–6:00): does Railway
   deploy it on the workflow's re-run? UptimeRobot is set up (the owner, 2026-11-17; `docs/monitoring.md`).
 - **Waits for the owner (the wishes, #263):** the three older Polish texts with "DJ" and a masculine verb (`guest.vote.gone`,
