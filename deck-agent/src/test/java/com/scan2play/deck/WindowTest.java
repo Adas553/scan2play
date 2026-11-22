@@ -66,7 +66,7 @@ class WindowTest {
         assertEquals(new java.awt.Dimension(492, 419), Window.grownOnly(new java.awt.Dimension(492, 419), null), "the first pack");
     }
 
-    /** Before the first song, the window says when one marks itself — for Serato too, not only VirtualDJ's 45 seconds. */
+    /** Before the first song, the window says when one marks itself — Serato's few seconds and VirtualDJ's 45. */
     @Test
     void nothingMarkedYet_speaksOfBothPrograms() {
         assertEquals(true, Window.NOTHING_MARKED.contains("VirtualDJ") && Window.NOTHING_MARKED.contains("Serato"), Window.NOTHING_MARKED);

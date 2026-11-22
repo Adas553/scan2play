@@ -75,8 +75,9 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
   (`docs/history/review-2026-11-21-play-history.md`, "Próby na prawdziwych komputerach"). `claude/gallant-ritchie-rl80ux`, pushed, no
   #299 merged; its rest (Serato 5.1, the look through the folders, the new window) is PRs #301 (`main`) / #302 (`dev`).
 - **2026-11-22 — `claude/friendly-maxwell-k4qu8h` = #301's branch + its review** (`docs/history/review-2026-11-22-zagrane-serato-window.md`:
-  merge after its fixes P1, P2, P4, P5, P7–P12). Waits: the owner's try of P3 on Windows (Serato 5.1: a song only loaded marked?
-  — the program from "Run workflow" on this branch, against the local app), then this branch into #301 / #302; after the merge "Run workflow" of "Program DJ-a (deck-agent)". Untried: a Mac (P20, P27), P23, P24.
+  merge after its fixes P1, P2, P4, P5, P7–P12). **`claude/loving-maxwell-sl8pkl` = it + P3**, tried on the owner's Windows (Serato
+  DJ Lite 5.1 writes a row with `played = 1` on a load; a song now goes only when `asset.dj_play_count` rose — the review's "Próba
+  Serato 5.1 na Windows"). Waits: this branch into #301 / #302; after the merge "Run workflow". Untried: a Mac (P20, P27), P23, P24.
 - **Waits for the owner (from #269):** after the first commit the deploy window holds back (Fri–Sun 18:00–6:00): does Railway
   deploy it on the workflow's re-run? UptimeRobot is set up (the owner, 2026-11-17; `docs/monitoring.md`).
 - **Waits for the owner (the wishes, #263):** the three older Polish texts with "DJ" and a masculine verb (`guest.vote.gone`,

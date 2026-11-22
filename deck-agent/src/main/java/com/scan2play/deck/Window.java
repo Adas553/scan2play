@@ -90,9 +90,12 @@ final class Window {
      * The texts of Java's own dialogs in Polish — the folder chooser, the message of a second copy: Java has none of its own, and an
      * English "Look In" / "Cancel" beside the program's "Wybierz" looks unfinished. Set after the theme, which may set its own.
      */
-    /** "Oznaczone" before the first song: when a song marks itself, for either program (VirtualDJ writes after ~45 s). */
-    static final String NOTHING_MARKED = "<html>Jeszcze nic. Piosenka z kolejki oznaczy się sama, gdy VirtualDJ<br>"
-            + "albo Serato zapisze ją w historii (VirtualDJ: około 45 s po puszczeniu).</html>";
+    /**
+     * "Oznaczone" before the first song: when a song marks itself, for either program — Serato's library counts a play a few seconds
+     * after Play ({@link Serato4Database}), VirtualDJ writes its history after ~45 s.
+     */
+    static final String NOTHING_MARKED = "<html>Jeszcze nic. Piosenka z kolejki oznaczy się sama po puszczeniu:<br>"
+            + "z Serato po kilku sekundach, z VirtualDJ po około 45 s.</html>";
 
     /**
      * The size a pack asks for: the content's height, but never narrower than before — the status line's width differs by state,

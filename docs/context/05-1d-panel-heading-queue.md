@@ -119,7 +119,10 @@ Documents', OneDrive's `Documents` — on macOS `~/Library/Application Support/V
 does not hide tonight's file), Serato 2/3's newest `.session` (`Music/_Serato_/History/Sessions`, on Windows also under OneDrive)
 and Serato 4 / 5's `master.sqlite` (read-only; `%LOCALAPPDATA%\Serato\Library` — Serato DJ Lite 5.1 on the owner's Windows —
 or `%APPDATA%\Serato\Library`, the one written last; `~/Library/Application Support/Serato/Library`) when they changed; the query made
-from the columns the tables have (Serato 5.1 dropped some of 4's; the newest session's songs, "played" only where the column is); a
+from the columns the tables have (the newest session's songs, `played = 1` where the column is). Serato 5.1 writes a row when a song
+is *loaded* on a deck, already `played = 1`: there a row counts only once its song's library count (`asset.dj_play_count`, raised a few
+seconds after Play, never by a load) has risen since the session was first read — a song only loaded marks nothing, a song played
+marks its request within seconds; a new session (Serato restarted, its songs renumbered) takes the counts again; a
 history there that cannot be read is said in the window ("Serato (master.sqlite — nie da się odczytać)"); and, in the background after the window is up (the usual places are read at once), a short
 look through the user's folders (Music, Documents, OneDrive, AppData, the profile last; 4 levels, at most 30 000 folders in all, no
 links followed, a root not looked through twice, hidden folders, `node_modules`, `Packages`, `Caches`, `Containers` skipped) for a "Serato" with `Library/master.sqlite`, a "_Serato_" with `History/Sessions`, a "VirtualDJ" with `History` in places

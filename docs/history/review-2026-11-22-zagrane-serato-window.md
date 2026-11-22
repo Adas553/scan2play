@@ -30,7 +30,7 @@ klika „Wskaż folder historii…” i wybiera folder → okno nie reaguje (nie
 `picked` jest `volatile`, `useFolder` bez zamka (pętla czyta listę raz na początku). Test `AgentTest.pickingAFolder_doesNotWaitForASlowServer`
 (serwer, który wisi; czerwony przed).
 
-### P3 — ryzyko (otwarte, pytanie do właściciela): Serato 5.1 bez `played` — piosenka załadowana, nie zagrana
+### P3 — błąd (poprawione po próbie u właściciela, „Próba Serato 5.1 na Windows”): Serato 5.1 — piosenka załadowana, nie zagrana
 
 `Serato4Database.java:308` (`played = 1` tylko gdy kolumna jest; w 5.1 jej nie ma). To P30 z poprzedniego review, teraz ostrzej: w
 Serato 4 `played = 0` odsiewało piosenki tylko załadowane; w 5.1 nie ma czym odsiać. Scenariusz: gość prosi o „Szampan”, DJ ładuje go na
@@ -176,11 +176,45 @@ Każda z testem widzianym najpierw na czerwono:
 
 Program `verify` 48/48; `check.py unit -t DashboardPageRenderTest` 34/34 (czerwony bez zmiany tekstu).
 
+## Próba Serato 5.1 na Windows (2026-11-22, właściciel)
+
+Windows 11, Serato DJ Lite 5.1, aplikacja z IntelliJ (`localhost:8080`, `PLANS_ENFORCE=false`), program z „Run workflow”. Baza czytana
+tylko w kopii (`master.sqlite` + `-wal`), tylko do odczytu, bez kolumn ze ścieżkami.
+
+- **Start (P4):** okno od razu; po kilku sekundach „CZYTA: ✓ VirtualDJ (2026-11-21.m3u), ✓ Serato (master.sqlite)”.
+- **P3 potwierdzone (program z `friendly-maxwell`):** prośba „Los 4 & Yomil – Blin Blin”, piosenka załadowana na deck bez Play →
+  w kilka sekund „ZAGRANE” w panelu i w „OZNACZONE” (fałszywe trafienie). Przy prośbie o piosenkę puszczoną — też w kilka sekund.
+- **Co jest w bazie:** wbrew założeniu przeglądu `history_entry` w 5.1 **ma** `played`, `end_time`, `deck` (`PRAGMA table_info`: 73 kolumny,
+  m.in. `asset_id`, `session_id`, `start_time`, `end_time`, `played`, `deck`, `dj_play_count`, `needs_processing`). Wiersz powstaje
+  **przy załadowaniu** na deck, od razu z `played = 1`; `end_time` ustawiany, gdy na ten sam deck wjeżdża następna piosenka albo przy
+  zamknięciu Serato; `played` zostaje 1 także dla piosenki zdjętej z decka niepuszczonej i po zamknięciu Serato (sprawdzone na
+  4 wierszach: 1 grana 12 min, 3 tylko załadowane — nie do odróżnienia; `history_entry.dj_play_count` zawsze 0). Plików `.session`
+  (`Music/_Serato_/History/Sessions`) Serato 5.1 nie pisze.
+- **Co odróżnia:** licznik biblioteki `asset.dj_play_count` (przez `history_entry.asset_id`): grana 1, trzy tylko załadowane 0. Rośnie
+  ok. 3 s po Play (załadowana 17:46:57, licznik 1 o 17:47:00), **nie** przy załadowaniu (ta sama piosenka załadowana trzeci raz na
+  deck 2: zostaje 2; po Play — 3, kilka sekund później). Po restarcie Serato biblioteka ma nowe `asset.id` (11 397 → 7 539 wierszy),
+  stare wiersze historii tracą `asset_id` (NULL), liczniki zostają.
+- **Restart Serato (nowa sesja) i restart programu:** nic nie oznaczyło się drugi raz; „OZNACZONE” po restarcie programu puste.
+- **Po poprawce (`b939477`, program z `loving-maxwell`):** „Asere Dime Que Bola” załadowana bez Play — licznik 0, prośba zostaje w
+  kolejce; Play (licznik 1 o 18:27:42) — prośba „ZAGRANE” prawie od razu.
+- **Wygląd (punkt 4):** druga kopia odmówiona („Program już działa — kliknij jego ikonę w zasobniku (obok zegara) i wybierz „Pokaż”.”);
+  „Inny folder historii…” — okno wyboru po polsku („Szukaj w”, „Nazwa folderu”, „Pliki typu”), Anuluj nic nie zmienia; bez internetu
+  „Brak połączenia z serwerem — kolejna próba za chwilę”, po powrocie „Działa”, szerokość okna bez zmian (P9). Długa nazwa z „…” (P1) na
+  Windows niesprawdzona (brak tak długiego tytułu) — tylko `WindowTest`.
+
+**Decyzja i poprawka P3** (właściciel: „ok, zrób”): `Serato4Database` — gdy baza ma `history_entry.asset_id` i `asset.dj_play_count`,
+przy pierwszym odczycie sesji zapamiętuje liczniki biblioteki (`asset` z licznikiem > 0; nowa sesja albo inna baza → od nowa); wiersz
+najnowszej sesji idzie dopiero, gdy licznik jego piosenki wzrósł od tego stanu, każdy wzrost dla jednego wiersza (najwcześniejszego) —
+ta sama piosenka zagrana dwa razy idzie dwa razy, załadowana trzy razy i zagrana raz — raz. Koszt: piosenka puszczona w tych kilku
+sekundach, zanim program pierwszy raz zobaczy sesję, nie oznaczy się (pominięcie zamiast fałszywego trafienia). Bez licznika
+(Serato 4: `played = 0` odsiewa) jak dotąd. Test `HistoryFormatsTest.serato5_aSongOnlyLoaded_isNotSent_aSongPlayedIs_byTheLibrarysPlayCount`
+(tabele jak u właściciela; czerwony przed: obie załadowane piosenki szły od razu); stary test bez `played` przemianowany na
+`serato_withFewerColumns_…`. Okno przed pierwszą piosenką: „…oznaczy się sama po puszczeniu: z Serato po kilku sekundach, z VirtualDJ po
+około 45 s.” Program `verify` 49/49 (2 pominięte, jak przedtem).
+
 ## Pytania do właściciela
 
-1. P3: próba w Serato DJ Lite 5.1 — czy piosenka tylko załadowana (niepuszczona) trafia do historii? Od tego zależy, czy Serato 5 może
-   oznaczać sam.
-2. (P4, P5, P9, P12 — zrobione w drugiej turze.)
+1. (P3 — rozstrzygnięte próbą, poprawione; P4, P5, P9, P12 — zrobione w drugiej turze.)
 
 ## Zrzuty ekranu
 
@@ -192,5 +226,5 @@ Program `verify` 48/48; `check.py unit -t DashboardPageRenderTest` 34/34 (czerwo
 
 ## Czego nie dało się sprawdzić
 
-Windows i Mac (czcionki, okno wyboru folderu systemu, junctiony, OneDrive „na żądanie”, czas przeglądu na zimnym dysku NTFS, antywirus),
-prawdziwa baza Serato 5.1 z danymi (P3).
+Mac (całość). Na Windows (po „Próbie Serato 5.1 na Windows”, gdzie sprawdzone czcionki, okno wyboru, Serato 5.1) dalej niesprawdzone:
+junctiony, OneDrive „na żądanie”, czas przeglądu na zimnym dysku NTFS, antywirus, długa nazwa z „…”.
