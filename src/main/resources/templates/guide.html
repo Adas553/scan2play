@@ -236,7 +236,7 @@
     <section id="deck">
         <h2>Played, from your DJ software</h2>
         <div class="s2p-guide-row s2p-guide-text"><p>No need to click “Played”: a small program on the computer you play from reads
-            VirtualDJ’s or Serato’s history in the background and marks the queue’s songs played by itself. The panel need not be open.
+            VirtualDJ’s or Serato’s history (or what Spotify and TIDAL play) in the background and marks the queue’s songs played by itself. The panel need not be open.
             The Pro plan, Windows or Mac.</p></div>
         <div class="s2p-guide-row">
             <span class="btn btn-sm btn-outline-light" aria-hidden="true">🎧 From DJ software</span>
@@ -256,9 +256,10 @@
             <span class="s2p-guide-row-name" aria-hidden="true">At the party</span>
             <p>Start the program before the first song and play as usual. When you play a song a guest asked for, the request goes to
                 the history as played by itself: from Serato within a few seconds, from VirtualDJ about 45 seconds after it starts
-                (VirtualDJ waits that long before writing it to its history). A song only loaded on a deck does not count.</p>
+                (VirtualDJ waits that long before writing it to its history), from Spotify and TIDAL after 30 seconds of playing. A song only loaded on a deck does not count.</p>
         </div>
-        <div class="s2p-guide-row s2p-guide-text"><p>It reads VirtualDJ and Serato DJ (Pro and Lite). With rekordbox, Traktor and djay you
+        <div class="s2p-guide-row s2p-guide-text"><p>It reads VirtualDJ, Serato DJ (Pro and Lite) and the Spotify and TIDAL apps on the computer (TIDAL on Windows only; on a Mac,
+            TIDAL inside VirtualDJ or Serato goes to their history). With rekordbox, Traktor and djay you
             click “Played” as before.</p></div>
         <details class="s2p-guide-more" id="guideDeckMore">
             <summary>Connection, the program's window and privacy</summary>
@@ -276,8 +277,18 @@
             <div class="s2p-guide-row">
                 <span class="s2p-guide-row-name" aria-hidden="true">The program’s window</span>
                 <p>It says whether it works, which history it reads (“Czyta”) and which of the queue’s songs it marked (“Oznaczone”). Closed,
-                    it hides by the clock (on a Mac in the menu bar) and keeps working. It does not see the history? “Wskaż folder historii…”
-                    (pick the history folder).</p>
+                    it hides by the clock (on a Mac in the menu bar) and keeps working. It does not see the history, because VirtualDJ or
+                    Serato keeps it in an unusual place (e.g. an external drive)? “Wskaż folder historii…” (pick the history folder; when it
+                    reads something already: “VirtualDJ albo Serato nie na liście? Wskaż ich folder…”) and choose that program’s folder:
+                    “VirtualDJ” or “_Serato_” (Serato 4/5: “Serato\Library”, on a Mac “Serato/Library”). One folder at a time; the usual
+                    places are read anyway.</p>
+            </div>
+            <div class="s2p-guide-row">
+                <span class="s2p-guide-row-name" aria-hidden="true">Spotify and TIDAL</span>
+                <p>On Windows Spotify or TIDAL just has to play: the program asks Windows what it plays (what Windows shows by its own media controls).
+                    On a Mac (Spotify only), the first time, macOS asks whether “Scan2Play Zagrane” may control Spotify — allow it: the
+                    program only reads what plays (“brak zgody macOS”, no consent, in the program’s window: System Settings › Privacy &amp;
+                    Security › Automation). No Spotify or TIDAL login.</p>
             </div>
             <figure class="s2p-guide-picture s2p-guide-picture-window" id="guidePicture4">
                 <a href="/images/guide/program.webp">
@@ -288,8 +299,9 @@
             </figure>
             <div class="s2p-guide-row">
                 <span class="s2p-guide-row-name" aria-hidden="true">Privacy</span>
-                <p>The program only reads the history and changes nothing in VirtualDJ or Serato. The files stay on the computer:
-                    only the artist, title and time of the songs reach Scan2Play, and none of it is kept.</p>
+                <p>The program only reads the history (and, from Spotify and TIDAL, what plays now) and changes nothing in VirtualDJ,
+                    Serato, Spotify or TIDAL. The files stay on the computer: only the artist, title and time of the songs reach Scan2Play, and none of it is
+                    kept.</p>
             </div>
             </div>
         </details>

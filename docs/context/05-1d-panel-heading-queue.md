@@ -138,17 +138,54 @@ Documents are and where VirtualDJ's `HomeFolder` points (UTF-8: a user name with
 — extra folders beside the usual ones, nothing when PowerShell is missing. On macOS the Dock icon shows the window closed into the menu bar. The window (`Window`, FlatLaf's dark theme in the app's colours, the Scan2Play mark drawn from `logo-small.svg` — the window's,
 the taskbar's and the tray's icon): unpaired, "Połącz ten komputer z imprezą", the code's large box and "Połącz" (an empty code:
 "Wpisz kod z panelu."), the server behind "Zmień serwer" (`https://www.scan2play.com.pl`; `dev.` for a try); paired, a status line
-with a dot ("Działa — połączono z imprezą" green; amber/red: no server, too many calls, no Pro, no history seen) and "sprawdzone
-23:53:52"; "CZYTA" — each history read ("✓ VirtualDJ (2026-11-21.m3u)", red "nie da się odczytać"), or "Brak historii VirtualDJ i Serato…" with the
-button "Wskaż folder historii…" (a quiet link "Inny folder historii…" when something is read): a folder the DJ picks is kept in the
+with a dot ("Działa — połączono z imprezą" green; amber/red: no server, too many calls, no Pro, nothing to read — "Połączono — nic do
+odczytu", short: the status line sets the window's width for good) and "sprawdzone
+23:53:52"; "CZYTA" — each history read ("✓ VirtualDJ (2026-11-21.m3u)", red "nie da się odczytać", amber "!" for Spotify heard not — below), or
+"Brak historii VirtualDJ i Serato, Spotify i Tidal zamknięte…" (on a Mac "Spotify zamknięty": only this system's apps named, also in
+"Oznaczone"'s "ze Spotify i Tidala po 30 s" — `NowPlaying.appsFor`) with the button "Wskaż folder historii…" (a quiet link "VirtualDJ albo Serato nie
+na liście? Wskaż ich folder…" when something is read — naming the two, so a rekordbox DJ with Spotify open is not invited to pick a
+folder that holds nothing read; its tooltip: a history in an unusual place, which folder): a folder the DJ picks is kept in the
 settings and read beside the usual places (`Platform.sourcesIn`: VirtualDJ's `.m3u`, Serato's `.session`, `master.sqlite`, in it or
 right under it; "Nie czytaj go" forgets it); "OZNACZONE OD URUCHOMIENIA · 12" — the last 5 songs marked with their times, newest
-first, never a night's whole list (empty: when a song marks itself; a song or a folder longer than 60 characters cut with "…", whole
-in its tooltip, so the window never grows past the screen; the window never narrows when the status line changes); "Odłącz ten komputer"; a tray icon ("Pokaż", "Zakończ"). One
+first, never a night's whole list (empty: when a song marks itself; a song, a folder or a line of "CZYTA" — Spotify's song — longer
+than 60 characters cut with "…", whole in its tooltip, so the window never grows past the screen; the window never narrows when the status line changes); "Odłącz ten komputer"; a tray icon ("Pokaż", "Zakończ"). One
 copy per user: a second start finds `~/.scan2play/zagrane.lock` locked (`SingleInstance`, `FileChannel.tryLock`; the system drops the
 lock when the program ends) and says "Program już działa…" (a window, or a line and exit 1 in the console). `~/.scan2play/zagrane.properties` keeps the server, the token and the folder picked. Without a screen: `--pair <code> [--server …]`, then
-`--console`. Tests: `sh mvnw -f deck-agent/pom.xml -B -ntp verify` (`HistoryFormatsTest`, `AgentTest`, `SingleInstanceTest`, `WindowTest`). Packages:
+`--console`. Tests: `sh mvnw -f deck-agent/pom.xml -B -ntp verify` (`HistoryFormatsTest`, `AgentTest`, `SingleInstanceTest`, `WindowTest`, `NowPlayingTest`, `WindowsMediaTest`). Packages:
 `.github/workflows/deck-agent.yml`, by hand ("Run workflow"): a jpackage app folder with its own Java for Windows and macOS, zipped,
 **not signed** (SmartScreen's "Uruchom mimo to"; macOS's "Open Anyway" once; the Mac bundle only signed ad hoc, which Apple's chips need
 to run it at all); the three builds have a read-only token, the job `release` (from `main` only) uploads all three together once each
 was built, and a "Run workflow" is never cancelled by a later push.
+
+**Spotify and TIDAL in the program** (`NowPlaying`, `WindowsMedia`, `docs/ideas.md` item 20; tried on the owner's Windows — Spotify, and
+TIDAL read by the media sessions; a Mac not yet): the music apps write no history and their Web APIs are closed to an app
+like this one, so the song playing now is asked of the desktop app at each look, one source per app ("Spotify", "Tidal" in the window —
+Polish writes it so, "ze Spotify i Tidala"; the English pages keep "TIDAL").
+On Windows by Windows' own media sessions (the system's media controls: `GlobalSystemMediaTransportControlsSessionManager`, WinRT,
+Windows 10 1809 and later) — each app's session, found by its id containing "spotify" or "tidal" (the Store's Spotify too), with its
+state and the artist and title apart: playing, its song; paused, nothing; an ad ("Advertisement", the artist "Spotify") nothing.
+Spotify with no session (media sessions not reachable, a Spotify that reports none) by the title of its window ("Artist - Title";
+"Spotify Premium" / "Spotify Free" paused). One Windows PowerShell 5.1 (`-EncodedCommand`) for both apps, started when a `Spotify.exe`
+or `TIDAL.exe` runs (checked every 10 s by `ProcessHandle`; a PowerShell that dies within 30 s is started again after 1, 2, 4 … at most
+10 minutes), writing every 2 s the apps running, the apps' sessions (only theirs are asked for a song: a browser's video, a call stay
+unread — the privacy policy) and Spotify's window title in UTF-8 and ending by itself with the apps or the program (it checks the
+program's PID: ~2 s after the program is killed); an answer older than 8 s is none once the PowerShell has ended, older than 30 s
+while it lives (a slow round is not the app closed nor a pause of the song counted). The package job on Windows runs the real script
+in Windows PowerShell 5.1 first (`WindowsMediaTest.theScript_runsInWindowsPowerShell`, skipped on Linux). On macOS only
+Spotify (TIDAL has no AppleScript and macOS' own "Now Playing" is closed to other programs — TIDAL inside VirtualDJ or Serato is in
+their history), by AppleScript (`osascript` at each look while `Spotify.app` runs,
+looked for every 10 s; macOS asks the DJ once whether the program may control Spotify — the bundle's `NSAppleEventsUsageDescription`,
+added by the workflow; the ad-hoc signature changes with each build, so macOS may ask again after an update — to see on a Mac; an
+ad, `spotify:ad`, none). A song heard 30 s (`PLAYED_AFTER`; a pause stops the count, another song starts it anew, a gap over 10 s
+between looks adds 10 s) is a played one from the time it was first heard. A pause over 2 minutes (`LONG_PAUSE`, the server's slack
+for a request after a song's start) makes the same song a new one from when it plays again — a song paused for another program's set
+and played on keeps no old start, and played again later is a second play; another song clicked for a few seconds and back is one
+play. It goes as any history's song (the server unchanged). The window's "CZYTA": "Spotify (gra: …)" while a song plays, "Spotify
+(nic nie gra)" paused; amber "!" when Spotify may play but is not heard, what to do in the tooltip — "okno schowane — nie widać, co
+gra" (Windows: no media session and no window title — Spotify closed to the tray; minimised is fine) and "brak zgody macOS — nie widać, co gra" (`osascript`'s
+-1743, the DJ's "Nie pozwalaj"); the panel's card ("Pierwsze uruchomienie") and the guide say only the Mac's question: on Windows
+the apps just have to play (the media sessions do not need the window; Spotify by default quits when its window is closed). Named for the DJs only where the
+program is explained — the panel's card, the guide's `#deck`, the privacy policy (PL / EN; "bez logowania do Spotify") — never in
+"Nowości", the news e-mail or the landing pages: Spotify's terms forbid playing it in public, so it is a quiet possibility, not a
+selling point (`docs/ideas.md` item 20); TIDAL named beside it the same way. A window's title is the app's own, unofficial way and may
+change: on Windows it is only the fallback of the media sessions.

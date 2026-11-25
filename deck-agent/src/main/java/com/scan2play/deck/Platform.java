@@ -180,8 +180,19 @@ final class Platform {
 
     /** Every program's history this computer may have; which of them is there is the source's own question (present()). */
     List<HistorySource> sources() {
-        return List.of(new VirtualDjHistory(virtualDjFolders()), new SeratoSessions(seratoSessionFolders()),
-                new Serato4Database(serato4Databases()));
+        List<HistorySource> sources = new ArrayList<>(List.of(new VirtualDjHistory(virtualDjFolders()),
+                new SeratoSessions(seratoSessionFolders()), new Serato4Database(serato4Databases())));
+        sources.addAll(MusicApps.ON_THIS_COMPUTER);
+        return List.copyOf(sources);
+    }
+
+    /**
+     * The music apps (Spotify, TIDAL), one of each for the program's life (the usual places and the look's whole list both hold
+     * them): each counts the song playing now and, on Windows, they share one PowerShell — new ones would count from zero and start
+     * another PowerShell.
+     */
+    private static final class MusicApps {
+        static final List<NowPlaying> ON_THIS_COMPUTER = NowPlaying.onThisComputer();
     }
 
     List<Path> virtualDjFolders() {
