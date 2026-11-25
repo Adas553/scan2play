@@ -631,7 +631,7 @@ class SettingsPageRenderTest {
         String card = html.substring(html.indexOf("id=\"newsEmailsCard\""), html.indexOf("</details>", html.indexOf("id=\"newsEmailsCard\"")));
         assertThat(card).contains("data-saves-in-place", ">Nowości mailem<", "s2p-fold-state-empty", ">Wyłączone<",
                 "action=\"/dj/dashboard/news-emails\"", "data-in-place", "name=\"partyCode\" value=\"" + PARTY + "\"",
-                "tylko o nowych funkcjach, bez reklam").containsPattern(
+                "tylko o nowych funkcjach, bez reklam", "href=\"/privacy#dataUse\"", ">Zasady: Polityka prywatności, pkt 3<").containsPattern(
                 "id=\"newsEmailsToggle\" name=\"on\" value=\"true\"\\s+data-auto-submit>").doesNotContain("checked");
     }
 

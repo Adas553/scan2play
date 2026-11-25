@@ -636,7 +636,8 @@
                               th:text="${newsEmails} ? #{settings.morning.on} : #{settings.morning.off}">Off</span>
                     </summary>
                     <div class="s2p-fold-body">
-                    <p class="s2p-card-help mb-3" th:text="#{settings.news.help}">Only about new things in Scan2Play.</p>
+                    <p class="s2p-card-help mb-3"><span th:text="#{settings.news.help}">Only about new things in Scan2Play.</span>
+                        <a href="/privacy#dataUse" class="text-secondary" id="newsEmailsSettingsPolicy" th:text="#{dashboard.news.emails.policy}">Rules: Privacy Policy, section 3</a></p>
                     <form th:action="@{/dj/dashboard/news-emails}" method="POST" class="m-0" id="newsEmailsForm" data-in-place>
                         <input type="hidden" name="partyCode" th:value="${partyCode}">
                         <div class="form-check form-switch m-0 s2p-switch-row">

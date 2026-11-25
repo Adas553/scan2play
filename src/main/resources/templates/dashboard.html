@@ -275,7 +275,8 @@
         </ul>
         <div th:unless="${newsEmails}" class="s2p-news-emails" id="newsEmailsAsk">
             <button type="button" id="newsEmailsOn" class="btn btn-outline-light" th:text="#{dashboard.news.emails}">E-mail me what's new</button>
-            <p class="small text-secondary mb-0" th:text="#{dashboard.news.emails.help}">Only about new things in Scan2Play.</p>
+            <p class="small text-secondary mb-0"><span th:text="#{dashboard.news.emails.help}">Only about new things in Scan2Play.</span>
+                <a href="/privacy#dataUse" class="text-secondary" id="newsEmailsPolicy" th:text="#{dashboard.news.emails.policy}">Rules: Privacy Policy, section 3</a></p>
         </div>
         <p class="small mb-0" id="newsEmailsDone" role="status" hidden th:text="#{dashboard.news.emails.done}">✓ Saved.</p>
     </section>

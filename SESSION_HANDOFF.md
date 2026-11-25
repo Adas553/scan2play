@@ -100,8 +100,9 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
 - **2026-11-25 — its review (`docs/history/review-2026-11-25-news.md`) on the same branch:** P1–P10 fixed (a full e-mail queue no longer
   leaves "Wysyłka trwa" until a restart; "jednym kliknięciem" → the link asks first; the admin page and the closed card tested — two
   mutations had survived; "Wyślij do N" ≤ 200; the e-mail's text part). P3 as the owner chose: a DJ logged in while a news is there gets
-  no e-mail of it (`markNewsKnown`) — **news 1's e-mail has nobody to go to**, the e-mail starts with news 2. Waits for the owner: P11
-  (the policy's "reklamy innych firm", "sam"), P12 (a link to the policy beside the consent), then the merge.
+  no e-mail of it (`markNewsKnown`) — **news 1's e-mail has nobody to go to**, the e-mail starts with news 2. P11, P12 done as
+  recommended (the policy: "nigdy w innych celach reklamowych", no "sam"; "Zasady: Polityka prywatności, pkt 3" at the consent). Waits
+  for the owner: the merge.
 - **Waits for the owner (from #269):** after the first commit the deploy window holds back (Fri–Sun 18:00–6:00): does Railway
   deploy it on the workflow's re-run? UptimeRobot is set up (the owner, 2026-11-17; `docs/monitoring.md`).
 - **Waits for the owner (the wishes, #263):** the three older Polish texts with "DJ" and a masculine verb (`guest.vote.gone`,

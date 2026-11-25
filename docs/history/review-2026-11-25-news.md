@@ -16,7 +16,7 @@ Znalazłem jeden prawdziwy błąd (P1: przy pełnej kolejce maili strona admina 
 restartu), dwie nieścisłości tekstu, które DJ odczuje (P2 „jednym kliknięciem” — link najpierw pyta; P3 tekst po zgodzie na karcie
 obiecuje maile „gdy dodamy coś nowego”, a pierwszy przyszedłby o tym, co DJ właśnie czyta), dwie luki w testach, których mutacje
 przeżyły (P4, P5), i drobiazgi. P1–P10 poprawione (P3 tak, jak zdecydował właściciel), każda zmiana zachowania z testem widzianym
-najpierw na czerwono. P11, P12 to decyzje właściciela (tekst prawny) — czekają, z rekomendacją. P13–P18 to ocena bez zmian.
+najpierw na czerwono. P11, P12 (a) zrobione tak, jak rekomendowałem (właściciel). P13–P18 to ocena bez zmian.
 
 Testy przed poprawkami (ta gałąź, kontener): unit 1549/1549, IT 226/226, browser — patrz „Testy”.
 
@@ -120,15 +120,19 @@ reszta maila).
 „1400 px until "Nowości mailem" (V80) added a line…” — historia w kodzie (AGENTS.md). Teraz mówi, dlaczego granica jest taka: każda
 zwinięta karta to jedna linia ~50 px.
 
-### P11 — Polityka prywatności: „nigdy w celach reklamowych innych firm” — **decyzja właściciela (tekst prawny)**
+### P11 — Polityka prywatności: „nigdy w celach reklamowych innych firm” — **zrobione (właściciel: „jak rekomendujesz”)**
 
 `privacy_pl.html:43`, `privacy.html:43` (pkt 2). Było „nigdy w celach reklamowych ani do newslettera”, jest „nigdy w celach
 reklamowych innych firm”. Nowe zdanie czyta się, jakby adres mógł służyć **własnej** reklamie bez zgody — a tak nie jest (mail z
 nowościami jest tylko za zgodą, pkt 3). **Rekomendacja:** „…a o nowościach w Scan2Play — tylko gdy to włączy (pkt 3); nigdy w innych
 celach reklamowych”. Przy okazji „gdy sam to włączy” / „gdy sam włączy” (pkt 2, 3) — rodzaj męski; bezosobowo: „gdy właściciel to
-włączy”. Nie poprawione bez zgody: to tekst prawny.
+włączy”.
 
-### P12 — Zgoda na karcie bez odnośnika do zasad; dowód zgody — **decyzja właściciela (prawo; to nie jest porada prawna)**
+Zrobione: PL pkt 2 „…tylko gdy właściciel to włączy (pkt 3); nigdy w innych celach reklamowych;”, pkt 3 „gdy właściciel włączy
+„Nowości mailem””; EN pkt 2 „…only once the owner switches that on (section 3); never for any other advertising;”. Test
+`PrivacyNewsConsentTest` (czerwony przed zmianą).
+
+### P12 — Zgoda na karcie bez odnośnika do zasad; dowód zgody — **(a) zrobione, (b) zostaje (właściciel: „jak rekomendujesz”; to nie jest porada prawna)**
 
 Mail z nowościami o własnym produkcie to w praktyce marketing bezpośredni: w Polsce od 10.11.2024 wymaga uprzedniej zgody abonenta na
 mail (Prawo komunikacji elektronicznej, art. 398), a zgoda RODO (art. 6 ust. 1 lit. a, art. 7) ma być dobrowolna, konkretna, świadoma i
@@ -140,6 +144,10 @@ miejscu zgody, nie tylko w polityce; (b) `news_emails_at` trzyma tylko ostatnią
 padła — dla wykazania zgody (art. 7 ust. 1) wystarczyłaby linia logu, ale logi Railway nie są trzymane długo; tańsze: zostawić, bo
 zgoda dotyczy tylko maili o nowościach, a wycofanie jest natychmiastowe. **Rekomendacja:** (a) tak, (b) zostawić. Warto, żeby
 ostateczne słowa przejrzał prawnik.
+
+Zrobione (a): pod przyciskiem zgody na karcie i w opisie karty „Nowości mailem” w Ustawieniach link „Zasady: Polityka prywatności,
+pkt 3” → `/privacy#dataUse` (nagłówek pkt 3 dostał `id="dataUse"` w PL i EN; `/privacy` wybiera język sam). Testy renderu karty i
+Ustawień (czerwone przed zmianą); scenariusze `news-*` i Ustawień zielone, audyt bez przewijania w bok.
 
 ### P13 — Wyścig: zgoda wycofana w trakcie wysyłki — **ocena, bez zmian**
 
@@ -203,3 +211,7 @@ Zrzuty (`page_audit.py --shots`, 320 / 390 / 1280 px): karta „Nowości” nad 
 na całą szerokość na telefonie, opis pod nim; strona wypisu jak strona porannego podsumowania („Tak, wyłącz”); strona admina czytelna
 na 390 px („Wyślij do 200”, „Reszta (50)”). Mail wyrenderowany do HTML i obejrzany w jasnym motywie (390 i 1280 px): jedna kolumna,
 bez przewijania w bok, „Jak to działa” już nie łamie się na dwie linie.
+
+P11, P12 (po decyzji właściciela): unit **1560/1560**; browser `news-*`, `settings-folded*`, `settings-staff-groups`,
+`settings-page-touch-targets`, `dashboard-touch-targets`, `phone-width-360` 12/12; audit `dashboard-news`, `settings*`, `privacy`,
+`stats-news` bez przewijania w bok i błędów.

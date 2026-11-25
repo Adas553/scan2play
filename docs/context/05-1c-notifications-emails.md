@@ -75,7 +75,8 @@ before the news's day (`PanelNews.SINCE`; `created_at` null counts as before), u
 never beside the welcome card, never the staff's or the demo's. "✕" → `POST /dj/dashboard/news-dismiss` (closed on the server, as the
 welcome; `js/dashboard/news.js`). **The news e-mail only with the organiser's consent** (the privacy policy, section 3): "Wysyłaj mi
 nowości mailem" on the card (while it is off) and the switch "Nowości mailem" in "Ustawienia imprezy" (group "Ty jako DJ", after
-"Poranne podsumowanie", any plan, off by default) → `POST /dj/dashboard/news-emails`; `news_emails` with its time `news_emails_at` (the
+"Poranne podsumowanie", any plan, off by default; both with "Zasady: Polityka prywatności, pkt 3" → `/privacy#dataUse`) →
+`POST /dj/dashboard/news-emails`; `news_emails` with its time `news_emails_at` (the
 proof of the consent) are written only by `PartySettingsRepository.setNewsEmails` — a save of the settings never puts an old value back.
 Only to whom it is news: the owner's panel opened, or the consent given, while a news is there marks it had (`news_sent`,
 `markNewsKnown`, once a news) — the e-mail goes to those who said yes earlier and have not logged in since (news 1: nobody).

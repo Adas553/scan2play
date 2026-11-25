@@ -323,7 +323,8 @@ class DashboardPageRenderTest {
                 "href=\"/jak-to-dziala#deck\"", "href=\"/jak-to-dziala#guidePolls\"", "href=\"/jak-to-dziala#guidePlan\"",
                 ">🎧 Zagrane samo.<", ">🗳 Pytanie do gości.<", ">📋 Plan imprezy.<",
                 "id=\"newsEmailsAsk\"", "id=\"newsEmailsOn\"", ">Wysyłaj mi nowości mailem<", "id=\"newsEmailsDone\"",
-                "Wyłączysz to w każdej chwili w Ustawieniach imprezy albo linkiem w mailu.");
+                "Wyłączysz to w każdej chwili w Ustawieniach imprezy albo linkiem w mailu.",
+                "id=\"newsEmailsPolicy\"", "href=\"/privacy#dataUse\"", ">Zasady: Polityka prywatności, pkt 3<");
         assertThat(html.indexOf("id=\"newsCard\"")).as("above the queue").isLessThan(html.indexOf("id=\"queueList\""));
         String card = html.substring(html.indexOf("id=\"newsCard\""), html.indexOf("id=\"queueList\""));
         assertThat(card).as("an outline: the view's one action stays \"Drukuj\"").doesNotContain("btn-action");
