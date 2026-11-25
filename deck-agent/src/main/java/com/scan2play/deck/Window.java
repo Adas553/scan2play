@@ -69,7 +69,8 @@ final class Window {
     /** The quiet link when something is read: for a DJ program that is not in "CZYTA", with its tooltip. */
     static final String OTHER_FOLDER = "Twojego programu DJ-a nie ma na liście? Wskaż jego folder…";
     static final String OTHER_FOLDER_TIP = "<html>Tylko gdy VirtualDJ albo Serato trzyma historię w nietypowym miejscu<br>"
-            + "(np. na dysku zewnętrznym) — wtedy wskaż ten folder.</html>";
+            + "(np. na dysku zewnętrznym). Wskaż folder tego programu: „VirtualDJ” albo „_Serato_”<br>"
+            + "(Serato 4/5: „Serato\\Library”).</html>";
     /** The folder picked holds no history the program reads. */
     static final String NOT_IN_FOLDER = "<html>W tym folderze nie ma historii — VirtualDJ: …\\VirtualDJ\\History,<br>"
             + "Serato: …\\_Serato_\\History\\Sessions albo …\\Serato\\Library.</html>";
