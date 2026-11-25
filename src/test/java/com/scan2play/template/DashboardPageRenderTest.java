@@ -1131,8 +1131,9 @@ class DashboardPageRenderTest {
                         "napisz do nas przez „Pomoc i kontakt”", "potwierdź hasłem",
                         "Program nie widzi historii VirtualDJ albo Serato? W jego oknie: „Wskaż folder historii…”",
                         "„VirtualDJ albo Serato nie na liście?”");
-        assertThat(card).as("Spotify: the window open on Windows (not by the clock), the Mac's question about controlling it allowed")
-                .contains("okno Spotify musi być otwarte", "nie schowane obok zegara", "może sterować Spotify — pozwól");
+        assertThat(card).as("Spotify and Tidal: on Windows only playing (Windows' media sessions, no window needed); the Mac's "
+                        + "question about controlling Spotify allowed")
+                .contains("na Windows wystarczy, że grają", "może sterować Spotify — pozwól").doesNotContain("musi być otwarte");
     }
 
     /** "Podsumowanie wieczoru" (V35): to an organiser without Pro, the way to /pro with "PRO"; to the staff of such a party, nothing. */

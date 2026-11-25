@@ -177,7 +177,8 @@ and played on keeps no old start, and played again later is a second play; anoth
 play. It goes as any history's song (the server unchanged). The window's "CZYTA": "Spotify (gra: …)" while a song plays, "Spotify
 (nic nie gra)" paused; amber "!" when Spotify may play but is not heard, what to do in the tooltip — "okno schowane — nie widać, co
 gra" (Windows: no media session and no window title — Spotify closed to the tray; minimised is fine) and "brak zgody macOS — nie widać, co gra" (`osascript`'s
--1743, the DJ's "Nie pozwalaj"); the panel's card ("Pierwsze uruchomienie") and the guide say both. Named for the DJs only where the
+-1743, the DJ's "Nie pozwalaj"); the panel's card ("Pierwsze uruchomienie") and the guide say only the Mac's question: on Windows
+the apps just have to play (the media sessions do not need the window; Spotify by default quits when its window is closed). Named for the DJs only where the
 program is explained — the panel's card, the guide's `#deck`, the privacy policy (PL / EN; "bez logowania do Spotify") — never in
 "Nowości", the news e-mail or the landing pages: Spotify's terms forbid playing it in public, so it is a quiet possibility, not a
 selling point (`docs/ideas.md` item 20); TIDAL named beside it the same way. A window's title is the app's own, unofficial way and may

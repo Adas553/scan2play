@@ -400,7 +400,8 @@ piece of work or when a task names an item. A finished item stays here until its
    Mac (no AppleScript, macOS' "Now Playing" closed). Deezer or Apple Music would be a name in `WindowsMedia.APPS` each — not added
    untried. **Tried (the owner, 2026-11-25, Windows, a build of the branch):** Spotify works; "TIDAL (gra: Belly Gang Kushington -
    WTF GOIN (feat. 21 Sava…)" — TIDAL has no window-title fallback, so the media sessions' script works; TIDAL Free plays 29-second
-   previews only, so no TIDAL song reached the 30 s (the counting is Spotify's, tried). **To try:** Spotify closed to the tray — if
-   still heard, Spotify's "window must be open" can go from the panel's card and the guide. **Asked the same day, not
+   previews only, so no TIDAL song reached the 30 s (the counting is Spotify's, tried). Spotify by default quits when its window is
+   closed (no tray); "the window must be open" taken out of the panel's card and the guide (the owner): the media sessions need no
+   window, the program's own "okno schowane" stays for a Spotify heard by neither. **Asked the same day, not
    built:** adding the guests' songs to VirtualDJ / Serato by the program — VirtualDJ a playlist `Scan2Play.m3u` (whether it reloads
    by itself is to try) or a plugin; Serato has no API and reads its crates at the start (at most a crate after a restart).
