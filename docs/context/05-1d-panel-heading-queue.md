@@ -155,8 +155,8 @@ lock when the program ends) and says "Program już działa…" (a window, or a l
 to run it at all); the three builds have a read-only token, the job `release` (from `main` only) uploads all three together once each
 was built, and a "Run workflow" is never cancelled by a later push.
 
-**Spotify and TIDAL in the program** (`NowPlaying`, `WindowsMedia`, `docs/ideas.md` item 20; Spotify by its window's title tried on the
-owner's Windows; the media sessions, TIDAL and a Mac not yet): the music apps write no history and their Web APIs are closed to an app
+**Spotify and TIDAL in the program** (`NowPlaying`, `WindowsMedia`, `docs/ideas.md` item 20; tried on the owner's Windows — Spotify, and
+TIDAL read by the media sessions; a Mac not yet): the music apps write no history and their Web APIs are closed to an app
 like this one, so the song playing now is asked of the desktop app at each look, one source per app ("Spotify", "TIDAL" in the window).
 On Windows by Windows' own media sessions (the system's media controls: `GlobalSystemMediaTransportControlsSessionManager`, WinRT,
 Windows 10 1809 and later) — each app's session, found by its id containing "spotify" or "tidal" (the Store's Spotify too), with its
