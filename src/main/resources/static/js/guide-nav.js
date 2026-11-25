@@ -8,17 +8,24 @@
     const row = nav.querySelector('.s2p-chips') || nav;
     const links = Array.from(nav.querySelectorAll('a[href^="#"]'));
     const sections = links.map(function (a) { return document.getElementById(a.getAttribute('href').slice(1)); });
-    // a chip tapped wins while its section is still on the screen: a short last section cannot reach the top of the screen, and the
-    // one above it would be marked instead
+    // a chip tapped stays marked until the reader scrolls by themselves (a wheel, a touch, a key): a jump that ends
+    // at the page's end (a short section near it, a tall screen) would mark the last section instead, and a smooth jump would
+    // flicker through every section on its way
     let chosen = null;
+    // the jumps slide smoothly (app.css) only once the reader has touched the page: the browser's own jump to a link's place (#deck
+    // from the panel) is made while the page loads — after its load event in Chrome — and lands there at once, not after a slide
+    // through the whole page
+    const root = document.documentElement;
+    ['wheel', 'pointerdown', 'keydown'].forEach(function (type) {
+        window.addEventListener(type, function () {
+            chosen = null;
+            if (!root.classList.contains('s2p-guide-smooth')) root.classList.add('s2p-guide-smooth');
+        }, {passive: true});
+    });
 
     function current() {
+        if (chosen) return chosen;
         const line = nav.getBoundingClientRect().bottom + 24;
-        if (chosen) {
-            const top = chosen.getBoundingClientRect().top;
-            if (top >= 0 && top < window.innerHeight * 0.6) return chosen;
-            chosen = null;
-        }
         let found = null;
         sections.forEach(function (section) {
             if (section && section.getBoundingClientRect().top <= line) found = section;

@@ -87,8 +87,11 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
   a section "Przed imprezą" (the wishes, the plan moved there), "🗳 Pytanie do gości" in "W trakcie imprezy", the settings' four
   groups, "Poranne podsumowanie", the guest's side (the question, the theme, "Zarezerwuj tego DJ-a"). Then its format (the owner:
   one page, as recommended): the jumps stuck to the top (`guide-nav.js` marks the section read), "W skrócie" (five steps, links),
-  the rarer details under "Więcej" (`<details>`). Waits for the owner: the review in a new session, a look on a phone, the merge. `kiosk-full-fits-820x1180` is red here on
-  `main` too (this container's fonts?), not by this change.
+  the rarer details under "Więcej" (`<details>`). `kiosk-full-fits-820x1180` is red here on `main` too (this container's fonts?).
+- **2026-11-25 — its review (`docs/history/review-2026-11-25-guide-format.md`) on the same branch:** P1–P8 fixed (a link `#deck`
+  lands at once — Bootstrap's smooth scroll off until the first touch; the chip tapped stays marked; the focus not under the bar,
+  `scroll-padding-top`; `role="list"`; three sentences; Section 6), 7 new scenarios seen red first. Waits for the owner: P9–P12
+  (the row's fade, "W skrócie" on a phone, two rows on a computer, the bar's height measured), a look on a phone, the merge.
 - **Waits for the owner (from #269):** after the first commit the deploy window holds back (Fri–Sun 18:00–6:00): does Railway
   deploy it on the workflow's re-run? UptimeRobot is set up (the owner, 2026-11-17; `docs/monitoring.md`).
 - **Waits for the owner (the wishes, #263):** the three older Polish texts with "DJ" and a masculine verb (`guest.vote.gone`,

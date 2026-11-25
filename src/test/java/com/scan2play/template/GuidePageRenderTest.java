@@ -201,6 +201,8 @@ class GuidePageRenderTest {
         assertThat(html.indexOf("<section id=\"short\"")).as("\"W skrócie\" under the bar, before the first section")
                 .isGreaterThan(html.indexOf("id=\"guideJump\"")).isLessThan(html.indexOf("<section id=\"start\""));
         String steps = section(html, "short");
+        assertThat(steps).as("a list for a screen reader too: Safari drops the role of a list drawn without its markers")
+                .contains("<ol class=\"s2p-guide-steps\" role=\"list\">");
         List<String> targets = new ArrayList<>();
         Matcher link = Pattern.compile("<li><a href=\"#([^\"]+)\"><strong>").matcher(steps);
         while (link.find()) {

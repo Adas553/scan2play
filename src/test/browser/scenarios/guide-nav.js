@@ -15,6 +15,18 @@
         }, label + ': the page stops scrolling');
     }
 
+    /** A tap as a finger makes it: the pointer down first (the page's smooth jumps start with the reader's first touch), then the click. */
+    function tap(el) {
+        el.dispatchEvent(new PointerEvent('pointerdown', {bubbles: true}));
+        el.click();
+    }
+
+    /** The reader's own scroll (a wheel's, as a finger's or a key's would be): the place read is marked again, not the chip tapped. */
+    function byHand(top) {
+        window.dispatchEvent(new WheelEvent('wheel', {deltaY: top - window.scrollY}));
+        window.scrollTo({top: top, behavior: 'instant'});
+    }
+
     function marked() {
         return Array.from(document.querySelectorAll('#guideJump a[aria-current]')).map(function (a) {
             return a.getAttribute('href') + '=' + a.getAttribute('aria-current');
@@ -33,7 +45,7 @@
 
         // a jump from the bar: the section's heading right under the bar, the bar stuck at the top, that section marked
         for (const id of ['after', 'party', 'guests']) {
-            nav.querySelector('a[href="#' + id + '"]').click();
+            tap(nav.querySelector('a[href="#' + id + '"]'));
             await settled(t, '#' + id);
             const heading = document.querySelector('#' + id + ' h2');
             const bar = box(nav);
@@ -47,13 +59,13 @@
         }
 
         // reading on: scrolled by hand into a section, that section marked
-        window.scrollTo({top: window.scrollY + box(document.getElementById('staff')).top - box(nav).bottom - 4, behavior: 'instant'});
+        byHand(window.scrollY + box(document.getElementById('staff')).top - box(nav).bottom - 4);
         await t.waitFor(function () { return marked()[0] === '#staff=location'; }, 'scrolled into #staff: marked');
-        window.scrollTo({top: 0, behavior: 'instant'});
+        byHand(0);
         await t.waitFor(function () { return marked().length === 0; }, 'at the top, above the sections: nothing marked');
 
         // "W skrócie": a step leads to its place
-        document.querySelector('#short a[href="#guidePrint"]').click();
+        tap(document.querySelector('#short a[href="#guidePrint"]'));
         await settled(t, '#guidePrint');
         t.check('"W skrócie" → the print\'s row, under the bar', box(document.getElementById('guidePrint')).top >= box(nav).bottom - 0.5
             && box(document.getElementById('guidePrint')).top <= box(nav).bottom + 48);
@@ -81,5 +93,96 @@
         page: 'guide-pl',
         viewport: '1280,800',
         run: run
+    });
+
+    // A screen taller than the page's last sections: a jump to "Obsługa" ends at the page's end, where the last section is marked by
+    // default — the chip tapped stays marked; once the reader scrolls by themselves, the place read is marked again
+    S2P.scenario({
+        name: 'guide-nav-chosen-tall',
+        title: 'the guide on a tall screen: a jump that ends at the page\'s end marks the chip tapped, not the last section; scrolling by hand marks the place read',
+        page: 'guide-pl',
+        viewport: '1280,1800',
+        run: async function (t) {
+            const nav = document.getElementById('guideJump');
+            tap(nav.querySelector('a[href="#staff"]'));
+            await settled(t, '#staff');
+            const end = document.documentElement.scrollHeight - window.innerHeight;
+            t.check('the jump ended at the page\'s end (' + Math.round(window.scrollY) + ' of ' + Math.round(end) + ')', window.scrollY >= end - 2);
+            await t.sleep(100);
+            t.step('the chip tapped stays marked', marked(), ['#staff=location']);
+            // the reader's own scroll up (the wheel, as a finger's or a key's would): the place read again
+            byHand(window.scrollY + box(document.getElementById('after')).top - box(nav).bottom - 4);
+            await t.waitFor(function () { return marked()[0] === '#after=location'; }, 'scrolled by hand into #after: marked');
+        }
+    });
+
+    /** Entered by a link into a place (the panel's "Zagrane samo", a link someone sent): there at once, not scrolled down to. */
+    async function entered(t, id, sectionId) {
+        const nav = document.getElementById('guideJump');
+        const target = document.getElementById(id);
+        // the browser's own jump may come just after the load event (Chrome): watched frame by frame until the page stays put
+        const places = [];
+        let same = 0;
+        await t.waitFor(function () {
+            const y = Math.round(window.scrollY);
+            same = places[places.length - 1] === y ? same + 1 : 0;
+            if (!same) places.push(y);
+            return same >= 10;
+        }, 'the page stays put');
+        t.check('there at once, not slid down to (' + places.length + ' places: ' + places.slice(0, 4).join(', ') + ' …)', places.length <= 2);
+        t.check(id + ' under the bar, not behind it (' + Math.round(box(target).top) + ' vs ' + Math.round(box(nav).bottom) + ')',
+            box(target).top >= box(nav).bottom - 0.5 && box(target).top <= box(nav).bottom + 48);
+        await t.waitFor(function () { return marked()[0] === '#' + sectionId + '=location'; }, '#' + sectionId + ' marked in the bar');
+    }
+
+    S2P.scenario({
+        name: 'guide-nav-entry-phone',
+        title: 'the guide entered as /jak-to-dziala#deck on a phone: the section there at once, under the bar, marked',
+        page: 'guide-pl',
+        viewport: '390,844',
+        hash: '#deck',
+        run: function (t) { return entered(t, 'deck', 'deck'); }
+    });
+
+    S2P.scenario({
+        name: 'guide-nav-entry-fold',
+        title: 'the guide entered as /jak-to-dziala#guidePicture4 (in a folded "Więcej"): the fold open, the picture there at once, its section marked',
+        page: 'guide-en',
+        viewport: '1280,800',
+        hash: '#guidePicture4',
+        run: async function (t) {
+            t.check('its fold open', document.getElementById('guideDeckMore').open);
+            await entered(t, 'guidePicture4', 'deck');
+        }
+    });
+
+    // Tabbing back up the page: what gets the focus is shown under the bar, not behind it (WCAG 2.4.11), as a jump's place is
+    async function focusShown(t) {
+        const nav = document.getElementById('guideJump');
+        for (const selector of ['#guidePollsMore > summary', '#short a[href="#after"]', '#guideKioskMore > summary']) {
+            const el = document.querySelector(selector);
+            // its top just above the screen, as after Shift+Tab from the line under it
+            window.scrollTo({top: window.scrollY + box(el).top + 10, behavior: 'instant'});
+            el.focus();
+            await settled(t, selector);
+            t.check(selector + ' focused: under the bar (' + Math.round(box(el).top) + ' vs ' + Math.round(box(nav).bottom) + ')',
+                document.activeElement === el && box(el).top >= box(nav).bottom - 0.5);
+        }
+    }
+
+    S2P.scenario({
+        name: 'guide-nav-focus-phone',
+        title: 'the guide on a phone: a control focused above the screen comes into sight under the bar, not behind it',
+        page: 'guide-pl',
+        viewport: '390,844',
+        run: focusShown
+    });
+
+    S2P.scenario({
+        name: 'guide-nav-focus-computer',
+        title: 'the guide on a computer: the same under the bar\'s two rows',
+        page: 'guide-en',
+        viewport: '1024,768',
+        run: focusShown
     });
 })();
