@@ -54,6 +54,9 @@ panel's welcome card, null = shown; the parties of before closed by the migratio
 `updatable = false`: when the welcome e-mail went — written only by the claim and its release; the parties of before count as welcomed),
 `emailLanguage` (V64: "pl" / "en", the panel's language kept with the address — the e-mails' language), `morningSummary` (V64: the switch
 "Poranne podsumowanie", on by default), `emailToken` (V64, made by the database for every row: the secret of "Nie wysyłaj mi tego", `gen_random_uuid()` — 122 random bits),
+`newsSeen` (V80: the number of the panel news the organiser closed, `PanelNews`), `newsEmails` / `newsEmailsAt` / `newsSent` (V80,
+`insertable` / `updatable = false`, written only by `PartySettingsRepository`'s statements: "Nowości mailem" — the consent to the
+news e-mails, off by default, with its time; the news e-mailed — the send's claim),
 `nextOpenAt` / `nextCloseAt` (V55, timestamptz, null = none: when the party opens / closes by itself — "Godziny imprezy", 5.1; never one
 that would change nothing; a weekly plan, later, would write its next moment into them after each one),
 `kioskToken` (V56, ≤ 32, UNIQUE, null = no kiosk: the secret of the venue's kiosk link `/k/{token}` — 128 random bits, as the hosts'

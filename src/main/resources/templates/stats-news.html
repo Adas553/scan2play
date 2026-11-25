@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<!--/* The news e-mail by hand (AdminNewsController, NewsEmailService, V80): the news now, how many organisers said yes and how many
+     of them have had it, a try to the owner's own address, and the send. Only the owner sees it (scan2play.admin-id), so it is Polish
+     only, its words written in. The e-mail's own page is not shown here: its inline styles are the site's CSP's to refuse — the try
+     shows it as a DJ sees it; here its words. */-->
+<html xmlns:th="http://www.thymeleaf.org" lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="dark">
+    <meta name="robots" content="noindex">
+    <title>Nowości — Scan2Play</title>
+    <link href="/webjars/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/css/app.css" th:href="@{/css/app.css}" rel="stylesheet">
+</head>
+<body class="page-report">
+<div class="container py-4">
+    <h1 class="h4 text-light-custom mb-1" th:text="'Nowości nr ' + ${number}">Nowości nr 1</h1>
+    <p class="text-secondary-bright mb-3">
+        Tylko do DJ-ów, którzy włączyli „Nowości mailem” (w panelu albo w Ustawieniach imprezy) i od tych nowości nie otworzyli panelu.
+        <a href="/dj/stats" class="text-secondary-bright">Statystyki</a>
+    </p>
+    <p class="text-light-custom mb-3" id="newsCounts">
+        Zgody: <b th:text="${counts.yes()}">3</b> · znają je (mail albo panel): <b th:text="${counts.had()}">2</b>
+        · czeka: <b th:text="${counts.due()}">1</b>
+    </p>
+    <p th:if="${done == 'try'}" class="alert alert-success py-2" id="newsTrySent">Próba wysłana na Twój adres.</p>
+    <p th:if="${done == 'try-failed'}" class="alert alert-danger py-2" id="newsTryFailed">Próba nie wyszła — brak adresu (ADMIN_EMAIL), klucza Brevo albo Brevo jej nie przyjęło.</p>
+    <p th:if="${done == 'sending'}" class="alert alert-success py-2" id="newsSending">Wysyłam. Odśwież stronę za chwilę: „czeka” spadnie.</p>
+    <p th:if="${done == 'not-sent'}" class="alert alert-danger py-2" id="newsNotSent">Nie wysłane: brak klucza Brevo albo wysyłka już trwa.</p>
+    <p th:if="${sending}" class="text-secondary-bright" id="newsSendingNow">Wysyłka trwa…</p>
+
+    <div class="d-flex flex-wrap gap-2 mb-3" th:if="${canSend}">
+        <form th:action="@{/dj/stats/news/try}" method="post" class="m-0">
+            <input type="hidden" name="lang" value="pl">
+            <button type="submit" class="btn btn-outline-light" id="newsTryPl">Wyślij próbę do mnie (PL)</button>
+        </form>
+        <form th:action="@{/dj/stats/news/try}" method="post" class="m-0">
+            <input type="hidden" name="lang" value="en">
+            <button type="submit" class="btn btn-outline-light" id="newsTryEn">Wyślij próbę do mnie (EN)</button>
+        </form>
+    </div>
+    <form th:action="@{/dj/stats/news/send}" method="post" class="mb-4" id="newsSendForm" th:if="${canSend && !sending && counts.due() > 0}">
+        <div class="form-check mb-2">
+            <input class="form-check-input" type="checkbox" id="newsChecked" required>
+            <label class="form-check-label text-light-custom" for="newsChecked">Próba sprawdzona, wysyłam</label>
+        </div>
+        <button type="submit" class="btn btn-action px-4" id="newsSend" th:text="'Wyślij do ' + ${counts.nextSend()}">Wyślij do 1</button>
+        <p class="small text-secondary-bright mt-2 mb-0" id="newsSendRest" th:if="${counts.due() > counts.nextSend()}"
+           th:text="'Reszta (' + ${counts.due() - counts.nextSend()} + ') następnego dnia: Brevo za darmo wysyła 300 maili dziennie.'">Reszta następnego dnia.</p>
+    </form>
+    <p th:unless="${canSend}" class="text-secondary-bright" id="newsCannotSend">Wysyłka niemożliwa: brak klucza Brevo.</p>
+
+    <h2 class="h6 text-light-custom">Treść (PL)</h2>
+    <pre class="s2p-news-text text-light-custom mb-4" id="newsTextPl" th:text="${textPl}">…</pre>
+    <h2 class="h6 text-light-custom">Treść (EN)</h2>
+    <pre class="s2p-news-text text-light-custom mb-4" id="newsTextEn" th:text="${textEn}">…</pre>
+</div>
+</body>
+</html>

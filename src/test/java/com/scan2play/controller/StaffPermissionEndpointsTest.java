@@ -244,6 +244,9 @@ class StaffPermissionEndpointsTest {
                 Arguments.of(post("/dj/dashboard/party-code").param("partyCode", PUB)),
                 // "Poranne podsumowanie" (V64): the organiser's own e-mail
                 Arguments.of(post("/dj/dashboard/morning-summary").param("partyCode", PUB).param("on", "false")),
+                // "Nowości" (V80): the organiser's card and their own consent to the news e-mails
+                Arguments.of(post("/dj/dashboard/news-dismiss").param("partyCode", PUB)),
+                Arguments.of(post("/dj/dashboard/news-emails").param("partyCode", PUB).param("on", "true")),
                 // the staff and its invitations (V32, V33, V34)
                 Arguments.of(get("/dj/staff").param("party", PUB)),
                 Arguments.of(post("/dj/staff/permissions").param("partyCode", PUB).param("id", "7").param("role", "VIEWER")),

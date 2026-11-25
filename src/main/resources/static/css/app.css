@@ -1240,6 +1240,15 @@ th[data-sort].sort-desc::after {
     .s2p-welcome-ways > .btn-outline-light { width: 100%; }
 }
 .page-dj:has(#welcomeCard:not([hidden])) :is(#queueEmptyGuide, #installHint) { display: none !important; }
+/* "Nowości" (V80): the welcome's card, its three lines a list; the offer of the e-mails under them, its button the card's width on a phone */
+.s2p-news-list { margin: 0.25rem 0 0.5rem; padding-left: 0; list-style: none; display: flex; flex-direction: column; gap: 0.375rem; }
+.s2p-news-list a { margin-left: 0.25rem; }
+.s2p-news-emails { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.75rem; }
+@media (max-width: 400px) {
+    .s2p-news-emails > .btn { width: 100%; }
+}
+/* the owner's page of the news e-mail (stats-news.html): its words as they go, wrapped */
+.s2p-news-text { white-space: pre-wrap; font-family: inherit; font-size: 0.9rem; }
 
 /* a state that needs attention in a folded card's line (a limit near, no places left) */
 .s2p-row-warn { color: var(--s2p-warning); font-weight: 600; }

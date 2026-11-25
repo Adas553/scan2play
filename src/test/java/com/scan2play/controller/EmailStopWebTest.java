@@ -97,6 +97,34 @@ class EmailStopWebTest {
         noSession(result);
     }
 
+    /**
+     * The news e-mail's link (V80, {@code what=news}): asks about the news, not the morning summary; its answer and the mail program's
+     * one click — the link's own address, with {@code what=news} — switch the news e-mails off, without a token or a session, and leave
+     * the morning summary as it is.
+     */
+    @Test
+    void theNewsLink_asksAboutTheNews_andItsOneClick_switchesOnlyTheNewsOff() throws Exception {
+        when(partySettingsRepository.findByEmailToken(TOKEN)).thenReturn(Optional.of(PartySettingsEntity.builder().partyCode("ABC12")
+                .ownerId("o").morningSummary(true).newsEmails(true).build()));
+
+        MvcResult asked = mockMvc.perform(get("/email/stop/" + TOKEN).param("lang", "pl").param("what", "news"))
+                .andExpect(status().isOk()).andReturn();
+        String page = asked.getResponse().getContentAsString(StandardCharsets.UTF_8);
+        assertThat(page).contains("Nie wysyłać Ci nowości?", "Tak, wyłącz", "href=\"/dj/settings#newsEmailsCard\"")
+                .doesNotContain("poranne podsumowanie", "_csrf", "action=");
+        verify(partySettingsCommandService, never()).setNewsEmails(anyString(), org.mockito.ArgumentMatchers.anyBoolean());
+        noSession(asked);
+        write("email-stop-news.html", page);
+
+        MvcResult clicked = mockMvc.perform(post("/email/stop/" + TOKEN).param("lang", "pl").param("what", "news")
+                        .contentType("application/x-www-form-urlencoded").content("List-Unsubscribe=One-Click"))
+                .andExpect(status().isOk()).andReturn();
+        assertThat(clicked.getResponse().getContentAsString(StandardCharsets.UTF_8)).contains("Gotowe — bez maili o nowościach");
+        verify(partySettingsCommandService).setNewsEmails("ABC12", false);
+        verify(partySettingsCommandService, never()).updateSettings(any(), any());
+        noSession(clicked);
+    }
+
     @Test
     void anUnknownSecret_isA404_eitherWay() throws Exception {
         mockMvc.perform(get("/email/stop/ffffffffffffffffffffffffffffffff")).andExpect(status().isNotFound());

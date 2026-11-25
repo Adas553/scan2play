@@ -132,7 +132,7 @@ class AutomaticEmailsTest {
         assertThat(polish.to()).isEqualTo("ola@example.com");
         assertThat(polish.subject()).isEqualTo("Scan2Play — dzięki za założenie konta");
         assertThat(polish.html()).contains("Cześć Ola,", "dzięki za założenie konta w Scan2Play!", "Twoja odpowiedź trafi prosto do nas.",
-                "href=\"https://www.scan2play.com.pl/jak-to-dziala\"", "nie wysyłamy reklam ani newslettera");
+                "href=\"https://www.scan2play.com.pl/jak-to-dziala\"", "nie wysyłamy reklam, a o nowościach piszemy tylko wtedy");
         assertThat(polish.html()).as("sent automatically: it does not say a person wrote it").doesNotContain("osobiście");
         // sent once: nothing to stop — its "Nie wysyłaj mi tego" switched the morning summary off, a thing the welcome never names
         assertThat(polish.html()).doesNotContain("Nie wysyłaj mi tego", "/email/stop/");
@@ -143,7 +143,7 @@ class AutomaticEmailsTest {
         noName.setOwnerName(null);
         Email english = service.email(noName);
         assertThat(english.subject()).isEqualTo("Scan2Play — thanks for signing up");
-        assertThat(english.html()).doesNotContain("personally").contains("Hi!", "Your reply comes straight to us.", "href=\"https://www.scan2play.com.pl/how-it-works\"", "no ads, no newsletter")
+        assertThat(english.html()).doesNotContain("personally").contains("Hi!", "Your reply comes straight to us.", "href=\"https://www.scan2play.com.pl/how-it-works\"", "no ads, and news only if you switch it on")
                 .doesNotContain("Don't send me this", "/email/stop/");
         assertThat(english.stopUrl()).isNull();
     }

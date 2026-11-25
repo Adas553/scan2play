@@ -215,6 +215,47 @@ class DjDashboardControllerOwnerContactTest {
         assertThat(again.getWelcomeDismissedAt()).as("closed meanwhile in another tab: the first time stays").isEqualTo(earlier);
     }
 
+    /**
+     * The organiser's panel opened while the news is there (V80): it is known, so no e-mail of it — once a news, not once a load; the
+     * staff's panel marks nothing (the e-mail is the organiser's).
+     */
+    @Test
+    void theOrganisersPanel_marksTheNewsKnown_once_theStaffsDoesNot() {
+        OAuth2AuthenticationToken who = ola("ola@gmail.com", true);
+        openPanel(party().ownerEmail("ola@gmail.com").ownerName("Ola Kowalska").build(), true, who);
+        verify(commands).markNewsKnown("WED01", com.scan2play.model.PanelNews.NUMBER);
+
+        org.mockito.Mockito.clearInvocations(commands);
+        openPanel(party().ownerEmail("ola@gmail.com").ownerName("Ola Kowalska").newsSent(com.scan2play.model.PanelNews.NUMBER).build(),
+                true, who);
+        openPanel(party().build(), false, who);
+        verify(commands, never()).markNewsKnown(any(), org.mockito.ArgumentMatchers.anyInt());
+    }
+
+    /** "✕" on "Nowości" (V80): the news now closed for good, on every device; closed already — nothing written. */
+    @Test
+    void closingTheNews_keepsItsNumber_once() {
+        PartySettingsEntity before = party().newsSeen(0).build();
+        OAuth2AuthenticationToken who = ola("ola@gmail.com", true);
+        when(sessionHelper.requireOwner(eq("WED01"), eq(who), any())).thenReturn(before);
+
+        assertThat(controller.dismissNews("WED01", who, new MockHttpSession()).getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+
+        assertThat(written(before).getNewsSeen()).isEqualTo(com.scan2play.model.PanelNews.NUMBER);
+        assertThat(com.scan2play.model.PanelNews.shows(written(before))).as("the card gone on the next panel").isFalse();
+    }
+
+    @Test
+    void closingTheNewsAgain_writesNothing() {
+        OAuth2AuthenticationToken who = ola("ola@gmail.com", true);
+        when(sessionHelper.requireOwner(eq("WED01"), eq(who), any()))
+                .thenReturn(party().newsSeen(com.scan2play.model.PanelNews.NUMBER).build());
+
+        controller.dismissNews("WED01", who, new MockHttpSession());
+
+        verify(commands, never()).updateSettings(any(), any());
+    }
+
     @Test
     void closingTheWelcomeAgain_writesNothing() {
         OAuth2AuthenticationToken who = ola("ola@gmail.com", true);
