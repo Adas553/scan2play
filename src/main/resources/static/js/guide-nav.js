@@ -57,11 +57,20 @@
         }
     }
 
+    // a phone's one row: faded at the side where more chips are, as it has no scroll bar to show that it slides
+    function edges() {
+        const max = row.scrollWidth - row.clientWidth;
+        const start = max > 1 && row.scrollLeft > 1;
+        const end = max > 1 && row.scrollLeft < max - 1;
+        if (row.classList.contains('s2p-guide-more-start') !== start) row.classList.toggle('s2p-guide-more-start', start);
+        if (row.classList.contains('s2p-guide-more-end') !== end) row.classList.toggle('s2p-guide-more-end', end);
+    }
+
     let queued = false;
     function later() {
         if (queued) return;
         queued = true;
-        requestAnimationFrame(function () { queued = false; mark(); });
+        requestAnimationFrame(function () { queued = false; mark(); edges(); });
     }
 
     links.forEach(function (a, i) {
@@ -69,6 +78,14 @@
     });
     window.addEventListener('scroll', later, {passive: true});
     window.addEventListener('resize', later);
+    row.addEventListener('scroll', later, {passive: true});
+    // the bar's own height, measured, is where a jump puts a heading (app.css --s2p-guide-jump-h): a third row (a longer name, text
+    // made larger) would hide it behind the bar; 12 px of air under it
+    if (window.ResizeObserver) {
+        new ResizeObserver(function () {
+            root.style.setProperty('--s2p-guide-jump-h', (nav.offsetHeight + 12) + 'px');
+        }).observe(nav);
+    }
 
     // a link into a fold (#guidePicture4, a jump from the panel): the fold opened, then the place shown under the bar
     function openTo() {
@@ -84,4 +101,5 @@
     window.addEventListener('hashchange', openTo);
     openTo();
     mark();
+    edges();
 })();

@@ -10,7 +10,8 @@ bez Javy (poza testem renderu).
 Zmiana jest dobra: treść zgadza się z kodem co do liczb i nazw przycisków (tabela niżej), PL i EN mówią to samo, menu przykleja się i
 skacze dobrze we wszystkich mierzonych szerokościach w obu językach, strona bez JavaScriptu działa. Znalazłem dwa prawdziwe błędy
 skryptu/CSS (P1, P2) i jeden dostępności (P3) — wszystkie trzy poprawione ze scenariuszami widzianymi najpierw na czerwono. P4–P8 to
-drobne poprawki (dostępność, trzy zdania treści, dokumentacja, opcja harnessu). P9–P12 to decyzje wyglądu — pytania z rekomendacją.
+drobne poprawki (dostępność, trzy zdania treści, dokumentacja, opcja harnessu). P9–P12 to decyzje wyglądu, zadane jako pytania z
+rekomendacją; właściciel: „P9 i P10 zrób jak rekomendujesz, P11 zostaw, P12 zrób jak uważasz” — P9, P10, P12 zrobione.
 P13–P20 to ocena bez zmian (Ctrl+F, bez JS, ruch, wydajność, testy, CSS, drobiazgi).
 
 Testy z zadania przed poprawkami: unit `GuidePageRenderTest`, `DashboardPageRenderTest` 37/37; browser `guide-nav-phone`,
@@ -130,31 +131,48 @@ zwinięte — rozwiniesz je przyciskiem ze strzałką ▸.” / „The rarer thi
 `src/test/browser/harness.js:131–140`, `README.md:84`: opcja scenariusza `hash: '#deck'` — strona ładowana od razu z tym adresem,
 więc sprawdzany jest skok samej przeglądarki przy ładowaniu (P1).
 
-### P9 — Rząd menu na telefonie nie zdradza, że da się go przesunąć — **pytanie**
+### P9 — Rząd menu na telefonie nie zdradza, że da się go przesunąć — **zrobione (decyzja właściciela)**
 
 `app.css:1441`. Na 390 px widać 2½ przycisku, rząd urywa się 16 px przed krawędzią ekranu (padding karty), w połowie słowa („W trakcie
 imprez”), bez paska przewijania. Ucięte słowo to jakaś wskazówka, ale słaba. **Rekomendacja:** rząd do krawędzi ekranu (ujemny margines
 + `scroll-padding-inline`) i zanikanie na prawej krawędzi (`mask-image` z gradientem), gdy jest co przewinąć — tak jak listy kiosku
 (`kiosk-list-short-no-fade`). Bez strzałek.
 
-### P10 — „W skrócie” na telefonie zajmuje 1½ ekranu — **pytanie**
+Zrobione: rząd ma teraz szerokość paska od krawędzi do krawędzi ekranu, a jego pierwszy przycisk zaczyna się tam, gdzie tekst strony
+(`padding-inline` i `scroll-padding-inline` rzędu zamiast paddingu paska, `app.css`, sekcja „the jumps”). `guide-nav.js` (`edges()`)
+daje rzędowi klasy `s2p-guide-more-start` / `-end`, a maska (`mask-image`, gradient na `var(--s2p-black)`) wygasza 2,5 rem po tej
+stronie, gdzie są kolejne przyciski. Bez skryptu rząd tylko sięga krawędzi ekranu. Scenariusz `guide-nav-row-fades` był czerwony
+przed zmianą (rząd 16…374 z 390, bez klas), po zmianie jest zielony.
+
+### P10 — „W skrócie” na telefonie zajmuje 1½ ekranu — **zrobione (decyzja właściciela)**
 
 Na 390 × 844 karta ma ~650 px (pięć kroków po 2–4 linie opisu); pierwsza sekcja zaczyna się dopiero na drugim ekranie. **Rekomendacja:**
 na telefonie (< 576 px) opisy kroków skrócone do jednej linii (`-webkit-line-clamp: 1`) albo ukryte — same tytuły dają ~5 × 52 px;
 alternatywa: krótsze opisy w obu językach (np. krok 1 „Google albo e-mail; klimat i opis w „Impreza i kod QR”.”).
 
-### P11 — Na komputerze menu ma dwa rzędy (95 px przyklejone) — **pytanie**
+Zrobione: poniżej 576 px opis kroku ma jedną linię i kończy się „…” (`white-space: nowrap; text-overflow: ellipsis`). Cały tekst
+zostaje na stronie dla czytnika ekranu, a pełny opis jest też w sekcji, do której prowadzi krok. Odstępy kroków są ciaśniejsze
+(`padding-block: 0.4rem`), a notka pod krokami skrócona do jednej linii („Rzadsze szczegóły są niżej zwinięte pod ▸.” / „The rarer
+details are folded below, under ▸.”). Wysokość karty przy 390 × 844: PL 710 → 420 px, EN 396 px; przy 320 px PL 513, EN 489 px (tytuły
+łamią się na dwie linie). Scenariusz `guide-short-phone` sprawdza jedną linię opisu, kartę do 55 % ekranu i pełny tekst w DOM. Był
+czerwony przed zmianą, po zmianie jest zielony. Do rozważenia: obcięty opis kroku 1 to „Kontem Google albo e-mailem. W…”. Gdyby miał
+mówić o klimacie, trzeba by przestawić zdania.
+
+### P11 — Na komputerze menu ma dwa rzędy (95 px przyklejone) — **zostaje (decyzja właściciela)**
 
 Kolumna ma 800 px, osiem przycisków nie mieści się w jednym rzędzie w żadnym języku. Dwa rzędy zabierają ~12 % wysokości ekranu 800 px
 przez całe czytanie. **Rekomendacja:** zostawić — rezerwa 104 px wystarcza w obu językach (zmierzone wyżej); jeśli ma być jeden rząd,
 to krótsze nazwy (np. „Start”, „Przed”, „W trakcie”, „Zagrane samo”, „Telefon”, „Po”, „Obsługa”, „Goście”), nie mniejsza czcionka.
 
-### P12 — `--s2p-guide-jump-h` to stała ręczna — **uwaga, propozycja**
+### P12 — `--s2p-guide-jump-h` to stała ręczna — **zrobione (właściciel: „jak uważasz”)**
 
 `app.css:1416`, `app.css:1449`. Działa dziś (61 / 95 px menu przy 80 / 104 px rezerwy), ale trzeci rząd (powiększony sam tekst,
 dziewiąty przycisk, dłuższa nazwa w EN) schowa nagłówek pod menu. **Propozycja:** `guide-nav.js` mierzy pasek (`ResizeObserver`) i
-ustawia zmienną; CSS zostaje domyślny dla strony bez skryptu. Nie zrobione: dziś nic nie jest zepsute, a scenariusze nawigacji sprawdzają
-nagłówek pod menu w obu układach.
+ustawia zmienną; CSS zostaje domyślny dla strony bez skryptu.
+
+Zrobione: `ResizeObserver` w `guide-nav.js` ustawia `--s2p-guide-jump-h` na `html` jako wysokość paska + 12 px. Stałe w CSS zostają
+dla strony bez skryptu. Scenariusz `guide-nav-taller-bar` powiększa przyciski paska do 147 px i skacze do `#deck` i `#staff`. Przed
+zmianą był czerwony (nagłówek na 97 px pod paskiem sięgającym 147 px), po zmianie jest zielony.
 
 ### P13 — Ctrl+F w zwiniętym „Więcej” — **ocena, bez zmian**
 
@@ -214,4 +232,6 @@ rozważenia razem dla całej strony, nie w tej zmianie.
 
 ## Testy po poprawkach
 
-Uzupełnione przy commicie (patrz SESSION_HANDOFF.md).
+Po P1–P8: unit 1536/1536; browser 476/477 — jedyny czerwony `kiosk-full-fits-820x1180`, znany, czerwony też na `main` w kontenerze
+chmurowym; audit `guide` 2 strony × 3 szerokości OK. Po P9, P10, P12: unit `GuidePageRenderTest`, `DashboardPageRenderTest`,
+`AppCssColoursTest` 38/38; 13 scenariuszy przewodnika plus `one-accent` i `one-font` 15/15; audit `guide` OK.

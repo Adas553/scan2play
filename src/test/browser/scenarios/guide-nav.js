@@ -185,4 +185,71 @@
         viewport: '1024,768',
         run: focusShown
     });
+    // A phone's row of jumps: as wide as the screen, and it shows that it slides — faded at the side where more chips are
+    S2P.scenario({
+        name: 'guide-nav-row-fades',
+        title: 'the guide on a phone: the row of jumps reaches the screen\'s edges and fades where more chips are — at the right at first, at the left at the end',
+        page: 'guide-pl',
+        viewport: '390,844',
+        run: async function (t) {
+            const nav = document.getElementById('guideJump');
+            const row = nav.querySelector('.s2p-chips');
+            const w = document.documentElement.clientWidth;
+            const fades = function () {
+                return ['s2p-guide-more-start', 's2p-guide-more-end'].filter(function (c) { return row.classList.contains(c); });
+            };
+            t.check('the row from the screen\'s left edge to its right (' + Math.round(box(row).left) + '…' + Math.round(box(row).right)
+                + ' of ' + w + ')', Math.abs(box(row).left) <= 0.5 && Math.abs(box(row).right - w) <= 0.5);
+            t.check('… its first chip where the page\'s text starts (' + Math.round(box(row.firstElementChild).left) + ')',
+                Math.abs(box(row.firstElementChild).left - box(document.querySelector('.s2p-guide h1')).left) <= 1);
+            t.step('at first: faded at the right only', fades(), ['s2p-guide-more-end']);
+            t.check('… the mask drawn', getComputedStyle(row).maskImage !== 'none' || getComputedStyle(row).webkitMaskImage !== 'none');
+            tap(nav.querySelector('a[href="#staff"]'));
+            await settled(t, '#staff');
+            await t.waitFor(function () { return fades().length === 2; }, 'in the middle of the row: faded at both sides');
+            tap(nav.querySelector('a[href="#guests"]'));
+            await settled(t, '#guests');
+            await t.waitFor(function () { return fades().join() === 's2p-guide-more-start'; }, 'at the row\'s end: faded at the left only');
+            t.check('still no sideways scrolling of the page', document.documentElement.scrollWidth <= w);
+        }
+    });
+
+    // "W skrócie" on a phone: a step's line of what it is stays one line, so the five steps fit in about half a screen (it was one and
+    // a half: 710 px of 844)
+    S2P.scenario({
+        name: 'guide-short-phone',
+        title: 'the guide on a phone: "W skrócie" — each step\'s description on one line, the card in about half the screen, the whole text still in the page',
+        page: 'guide-pl',
+        viewport: '390,844',
+        run: async function (t) {
+            const spans = Array.from(document.querySelectorAll('#short .s2p-guide-steps span'));
+            t.step('every description one line', spans.filter(function (s) {
+                return box(s).height > parseFloat(getComputedStyle(s).lineHeight) * 1.5;
+            }).map(function (s) { return s.textContent.trim().slice(0, 30); }), []);
+            const card = box(document.getElementById('short'));
+            t.check('the card in about half the screen (' + Math.round(card.height) + ' px)', card.height <= window.innerHeight * 0.55);
+            t.check('the full text still there for a screen reader', spans[0].textContent.indexOf('według nich AI ocenia prośby') > 0);
+        }
+    });
+
+    // The bar taller than the page reserved for it (a third row: a longer name, text made larger): a jump still puts the heading
+    // under it — the bar's own height is measured
+    S2P.scenario({
+        name: 'guide-nav-taller-bar',
+        title: 'the guide with its bar grown taller: a jump still puts the section\'s heading under the bar, not behind it',
+        page: 'guide-en',
+        viewport: '390,844',
+        run: async function (t) {
+            const nav = document.getElementById('guideJump');
+            nav.querySelectorAll('a').forEach(function (a) { a.style.minHeight = '130px'; });
+            await t.sleep(100);
+            for (const id of ['deck', 'staff']) {
+                tap(nav.querySelector('a[href="#' + id + '"]'));
+                await settled(t, '#' + id);
+                const heading = box(document.querySelector('#' + id + ' h2'));
+                t.check('#' + id + ': its heading under the ' + Math.round(box(nav).height) + ' px bar (' + Math.round(heading.top)
+                    + ' vs ' + Math.round(box(nav).bottom) + ')', heading.top >= box(nav).bottom && heading.top <= box(nav).bottom + 48);
+            }
+        }
+    });
 })();
