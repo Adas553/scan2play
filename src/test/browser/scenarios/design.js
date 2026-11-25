@@ -133,20 +133,22 @@
     // The guide (the owner, 2026-10-12): public, in the order of a party; the app's buttons as pictures, never controls.
     S2P.scenario({
         name: 'guide-page-phone',
-        title: 'the guide "Jak działa Scan2Play" on a phone: the jumps whole on the screen and 44 px high, nothing wider than the screen, the pictures of buttons cannot be tapped or focused',
+        title: 'the guide "Jak działa Scan2Play" on a phone: the jumps in one row slid sideways (the page never) and 44 px high, the steps of "W skrócie" 44 px too, nothing wider than the screen, the pictures of buttons cannot be tapped or focused',
         page: 'guide-pl',
         viewport: '390,844',
         run: async function (t) {
             t.check('nothing wider than the screen', document.documentElement.scrollWidth <= document.documentElement.clientWidth);
             const jumps = Array.from(document.querySelectorAll('#guideJump a'));
-            t.step('seven jumps, each to its section', jumps.map(function (a) { return !!document.querySelector(a.getAttribute('href')); }),
-                [true, true, true, true, true, true, true]);
-            t.step('every jump whole on the screen', jumps.filter(function (a) {
-                const box = a.getBoundingClientRect();
-                return box.left < 0 || box.right > document.documentElement.clientWidth;
+            t.step('eight jumps, each to its section', jumps.map(function (a) { return !!document.querySelector(a.getAttribute('href')); }),
+                [true, true, true, true, true, true, true, true]);
+            const row = document.querySelector('#guideJump .s2p-chips');
+            t.step('the jumps in one row', jumps.filter(function (a) {
+                return a.getBoundingClientRect().top !== jumps[0].getBoundingClientRect().top;
             }).map(function (a) { return a.textContent.trim(); }), []);
-            t.step('the jumps and the way back at least 44 px high', tooSmall(document.getElementById('guideJump'))
-                .concat(tooSmall(document.getElementById('guideBack').parentElement)), []);
+            t.check('… slid sideways in the bar, not the page', row.scrollWidth > row.clientWidth
+                && row.getBoundingClientRect().right <= document.documentElement.clientWidth);
+            t.step('the jumps, the steps of "W skrócie" and the way back at least 44 px high', tooSmall(document.getElementById('guideJump'))
+                .concat(tooSmall(document.getElementById('short'))).concat(tooSmall(document.getElementById('guideBack').parentElement)), []);
             const pictures = Array.from(document.querySelectorAll('.s2p-guide-row:not(.s2p-guide-text) > :first-child, .s2p-guide-inline'));
             t.step('the pictures: spans, not focusable, not tappable', pictures.filter(function (el) {
                 return el.tagName !== 'SPAN' || el.tabIndex >= 0 || getComputedStyle(el).pointerEvents !== 'none';

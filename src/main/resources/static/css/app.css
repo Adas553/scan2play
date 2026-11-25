@@ -1407,23 +1407,105 @@ th[data-sort].sort-desc::after {
 .s2p-faq a { color: var(--s2p-action); }   /* as the landing page's questions' links, not Bootstrap's blue */
 
 /* The guide "Jak działa Scan2Play" (guide.html, 2026-10-12): a section per moment of a party, each line the app's own button or badge
-   beside what it does — pictures of them (spans), not controls; one column on a phone. */
+   beside what it does — pictures of them (spans), not controls; one column on a phone. One page, not a tab per section: read once
+   from the top, searched with Ctrl+F, linked to by its anchors (#deck from the panel). So that it stays easy to read as it grows:
+   the jumps stay at the top, "W skrócie" gives the five steps, and the rarer details are folded (.s2p-guide-more). */
 .s2p-guide-lede { color: var(--s2p-text); max-width: 66ch; }
-.s2p-guide section { border-top: 1px solid var(--s2p-border); padding-top: 1rem; margin-top: 1.25rem; scroll-margin-top: 1rem;
-                     display: grid; gap: 0.85rem; }
+/* the jump bar's height and a little air: where a jump, a link from the panel or a focused control is put — under the bar, not behind
+   it. On the page's scroller (html), so it holds for every place and for the focus (WCAG 2.4.11), not only for elements with an id.
+   guide-nav.js sets it from the bar's measured height (a third row, text made larger); these are for a page without the script. */
+.s2p-guide-page { --s2p-guide-jump-h: 5rem; scroll-padding-top: var(--s2p-guide-jump-h); }
+.s2p-guide section { border-top: 1px solid var(--s2p-border); padding-top: 1rem; margin-top: 1.25rem; display: grid; gap: 0.85rem; }
 .s2p-guide section h2 { font-size: 1.2rem; font-weight: 700; color: var(--s2p-light); margin: 0; }
 .s2p-guide-row { display: grid; grid-template-columns: 11rem minmax(0, 1fr); gap: 0.35rem 1rem; align-items: start; }
 .s2p-guide-row:not(.s2p-guide-text) > :first-child { justify-self: start; pointer-events: none; }
 .s2p-guide-row p { margin: 0; color: var(--s2p-text); max-width: 62ch; }
 .s2p-guide-text { grid-template-columns: minmax(0, 1fr); }
-.s2p-guide-row ol { margin: 0; padding-left: 1.25rem; color: var(--s2p-text); max-width: 62ch; }
-.s2p-guide-row ol > li + li { margin-top: 0.35rem; }
+.s2p-guide-row ol, .s2p-guide-row ul { margin: 0; padding-left: 1.25rem; color: var(--s2p-text); max-width: 62ch; }
+.s2p-guide-row ol > li + li, .s2p-guide-row ul > li + li { margin-top: 0.35rem; }
 .s2p-guide-row-name { font-weight: 600; color: var(--s2p-light); padding-top: 0.15rem; }
 /* a button named inside a sentence: a picture as tall as the line, not a 44 px target (it is not one) */
 .s2p-guide-inline { pointer-events: none; vertical-align: baseline; display: inline-block !important; min-height: 0 !important;
                     padding: 0 0.4rem; line-height: 1.5; }
 @media (max-width: 575.98px) {
     .s2p-guide-row { grid-template-columns: minmax(0, 1fr); }
+}
+/* Bootstrap's reboot makes the scrolling smooth (unless the reader asks for less motion) — here only once the reader has touched the
+   page (guide-nav.js adds the class): a link from the panel (#deck) lands there at once, not after a slide through the whole page.
+   Without the script the jumps are instant. */
+.s2p-guide-page:not(.s2p-guide-smooth) { scroll-behavior: auto; }
+/* the jumps: stuck to the top of the screen while the page scrolls, on the card's own colour, over its full width (the container's
+   padding taken back). On a phone (or a touch screen) one row slid sideways, 44 px to tap, from the screen's edge to its edge (its
+   first chip where the text starts) and faded at the side where more chips are (guide-nav.js: .s2p-guide-more-start / -end) — no
+   scroll bar shows that it slides. With a mouse from 768 px wrapped and lower. The section being read is marked (guide-nav.js:
+   aria-current) and kept in sight in the row. */
+.s2p-guide-jump { --s2p-guide-jump-pad: 1rem; position: sticky; top: 0; z-index: 10; margin: 1rem calc(-1 * var(--s2p-guide-jump-pad)) 0;
+                  padding: 0.5rem 0; background: var(--s2p-bg-card); border-bottom: 1px solid var(--s2p-border); }
+.s2p-guide-jump .s2p-chips { --s2p-guide-fade-start: 0px; --s2p-guide-fade-end: 0px; flex-wrap: nowrap; overflow-x: auto;
+                             scrollbar-width: none; overscroll-behavior-x: contain; padding-inline: var(--s2p-guide-jump-pad);
+                             scroll-padding-inline: var(--s2p-guide-jump-pad);
+                             -webkit-mask-image: linear-gradient(to right, transparent, var(--s2p-black) var(--s2p-guide-fade-start),
+                                 var(--s2p-black) calc(100% - var(--s2p-guide-fade-end)), transparent);
+                             mask-image: linear-gradient(to right, transparent, var(--s2p-black) var(--s2p-guide-fade-start),
+                                 var(--s2p-black) calc(100% - var(--s2p-guide-fade-end)), transparent); }
+.s2p-guide-jump .s2p-chips.s2p-guide-more-start { --s2p-guide-fade-start: 2.5rem; }
+.s2p-guide-jump .s2p-chips.s2p-guide-more-end { --s2p-guide-fade-end: 2.5rem; }
+.s2p-guide-jump .s2p-chips::-webkit-scrollbar { display: none; }
+.s2p-guide-jump .s2p-chips a[aria-current] { border-color: var(--s2p-action); color: var(--s2p-white); background: var(--s2p-action-12); }
+.s2p-guide-jump .s2p-chips a:focus-visible { outline: 2px solid var(--s2p-cyan); outline-offset: -2px; }
+@media (min-width: 768px) {
+    .s2p-guide-jump { --s2p-guide-jump-pad: 1.5rem; }
+}
+@media (min-width: 768px) and (pointer: fine) {
+    .s2p-guide-page { --s2p-guide-jump-h: 6.5rem; }
+    .s2p-guide-jump { padding-block: 0.6rem; }
+    .s2p-guide-jump .s2p-chips { flex-wrap: wrap; gap: 0.4rem; }
+    .s2p-guide-jump .s2p-chips a { min-height: 34px; padding: 0.25rem 0.8rem; font-size: 0.875rem; }
+}
+/* "W skrócie": the party in five steps, each a link to its section — a number in the logo's cyan, the step, one line of what it is */
+.s2p-guide .s2p-guide-short { margin-top: 1rem; padding: 1rem; border: 1px solid var(--s2p-border); border-radius: var(--s2p-radius-card);
+                              background: var(--s2p-bg-elevated); gap: 0.5rem; }
+.s2p-guide-steps { list-style: none; counter-reset: s2p-step; margin: 0; padding: 0; display: grid; gap: 0.15rem; }
+.s2p-guide-steps li { counter-increment: s2p-step; }
+.s2p-guide-steps a { display: grid; grid-template-columns: 2rem minmax(0, 1fr) auto; column-gap: 0.75rem; row-gap: 0.1rem;
+                     align-items: center; min-height: 44px; padding: 0.55rem 0.5rem; border-radius: var(--s2p-radius);
+                     color: var(--s2p-text); text-decoration: none; }
+.s2p-guide-steps a::before { content: counter(s2p-step); grid-column: 1; grid-row: 1 / span 2; align-self: start; display: grid;
+                             place-items: center; width: 2rem; height: 2rem; border-radius: 50%; font-weight: 700;
+                             color: var(--s2p-action); background: var(--s2p-action-12); border: 1px solid var(--s2p-action-28); }
+.s2p-guide-steps a::after { content: "›"; content: "›" / ""; grid-column: 3; grid-row: 1 / span 2; color: var(--s2p-text-muted); font-size: 1.35rem; line-height: 1; }
+.s2p-guide-steps strong { grid-column: 2; color: var(--s2p-light); font-weight: 600; }
+.s2p-guide-steps span { grid-column: 2; color: var(--s2p-text-muted); font-size: 0.9rem; }
+.s2p-guide-steps a:hover { background: var(--s2p-white-05); }
+.s2p-guide-steps a:hover strong, .s2p-guide-steps a:hover::after { color: var(--s2p-white); }
+.s2p-guide-steps a:focus-visible { outline: 2px solid var(--s2p-cyan); outline-offset: 0; }
+/* on a phone each step's line of what it is stays one line (cut with "…"; the whole text stays in the page, for a screen reader
+   and in the section the step leads to): the five steps in half a screen, not one and a half */
+@media (max-width: 575.98px) {
+    .s2p-guide-steps span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .s2p-guide-steps a { padding-block: 0.4rem; row-gap: 0; }
+}
+.s2p-guide-short-note { margin: 0; padding-inline: 0.5rem; color: var(--s2p-text-muted); font-size: 0.875rem; }
+/* "Więcej": the rarer details folded — a quiet button (it is a control: 44 px), "▸" turning when open; what it holds hangs under a
+   cyan rule. A fold of a section's rows stands in the rows' text column, as "more of the above"; inside a row, under its text. */
+.s2p-guide-more > summary { list-style: none; cursor: pointer; display: inline-flex; align-items: center; gap: 0.5rem; min-height: 44px;
+                            padding: 0.35rem 0.9rem 0.35rem 0.75rem; border: 1px solid var(--s2p-border); border-radius: var(--s2p-radius);
+                            color: var(--s2p-text-dim); font-size: 0.9rem; font-weight: 600; }
+.s2p-guide-more > summary::-webkit-details-marker { display: none; }
+.s2p-guide-more > summary::before { content: "▸"; content: "▸" / ""; color: var(--s2p-action); }
+.s2p-guide-more[open] > summary::before { transform: rotate(90deg); }
+.s2p-guide-more > summary:hover { border-color: var(--s2p-border-strong); color: var(--s2p-white); }
+.s2p-guide-more > summary:focus-visible { outline: 2px solid var(--s2p-cyan); outline-offset: 2px; }
+.s2p-guide-more-body { display: grid; gap: 0.85rem; margin-top: 0.85rem; padding-left: 1rem; border-left: 2px solid var(--s2p-action-28); }
+.s2p-guide-row .s2p-guide-more { margin-top: 0.5rem; }
+.s2p-guide-row .s2p-guide-more > :not(summary) { margin-top: 0.6rem; padding-left: 1rem; border-left: 2px solid var(--s2p-action-28); }
+/* folded, a row's name stands over its text: the fold is as narrow as the text column */
+.s2p-guide-more-body .s2p-guide-row { grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 576px) {
+    .s2p-guide section > .s2p-guide-more { margin-left: 12rem; }
+}
+@media (prefers-reduced-motion: no-preference) {
+    .s2p-guide-more > summary::before { transition: transform 0.15s ease; }
 }
 /* the guide's pictures: as wide as the column, their place kept before they load (width / height); the phone's upright and narrow.
    No margin: the section's grid gap spaces them as its rows. The link (the picture whole, to zoom into) is a block as big as the
