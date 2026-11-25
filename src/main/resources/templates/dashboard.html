@@ -255,6 +255,31 @@
         </div>
     </section>
 
+    <!--/* "Nowości" (V80, PanelNews): what is new, above the queue, to the organiser of an account older than the news, until they close
+         it — "✕", closed on the server (news.js → /dj/dashboard/news-dismiss), as the welcome. Each line links its part of the guide.
+         Without the organiser's consent to the news e-mails it offers them (news.js → /dj/dashboard/news-emails, on): the one way an
+         address gets them, besides the switch in "Ustawienia imprezy". Never with the welcome, never the staff's or the demo's. */-->
+    <section th:if="${news == true}" id="newsCard" class="s2p-welcome s2p-news mb-3" aria-labelledby="newsTitle">
+        <h2 id="newsTitle" class="s2p-welcome-title" th:text="#{dashboard.news.title}">What's new in Scan2Play</h2>
+        <button type="button" class="btn-close btn-close-white" data-news-close th:attr="aria-label=#{dashboard.news.close}"></button>
+        <ul class="s2p-news-list">
+            <li><b th:text="#{dashboard.news.deck.name}">🎧 Played by itself</b> <span th:text="#{dashboard.news.deck.text}">…</span>
+                <a th:href="#{help.guide.href} + '#deck'" href="/how-it-works#deck" class="text-nowrap" id="newsDeck"
+                   th:text="#{dashboard.news.more}">How →</a></li>
+            <li><b th:text="#{dashboard.news.polls.name}">🗳 A question for the guests</b> <span th:text="#{dashboard.news.polls.text}">…</span>
+                <a th:href="#{help.guide.href} + '#guidePolls'" href="/how-it-works#guidePolls" class="text-nowrap" id="newsPolls"
+                   th:text="#{dashboard.news.more}">How →</a></li>
+            <li><b th:text="#{dashboard.news.plan.name}">📋 The party plan</b> <span th:text="#{dashboard.news.plan.text}">…</span>
+                <a th:href="#{help.guide.href} + '#guidePlan'" href="/how-it-works#guidePlan" class="text-nowrap" id="newsPlan"
+                   th:text="#{dashboard.news.more}">How →</a></li>
+        </ul>
+        <div th:unless="${newsEmails}" class="s2p-news-emails" id="newsEmailsAsk">
+            <button type="button" id="newsEmailsOn" class="btn btn-outline-light" th:text="#{dashboard.news.emails}">E-mail me what's new</button>
+            <p class="small text-secondary mb-0" th:text="#{dashboard.news.emails.help}">Only about new things in Scan2Play.</p>
+        </div>
+        <p class="small mb-0" id="newsEmailsDone" role="status" hidden th:text="#{dashboard.news.emails.done}">✓ Saved.</p>
+    </section>
+
     <!--/* "Plan imprezy" on the night (V77, variant B, Pro, whoever may see the events — WISHES): tonight's event's plan above the
          queue — the next moment counted down to its time (data-at: the moment in Polish time, by the server, so a device in another
          zone counts right), the whole plan folded under it, each moment ticked off with ✓ (by its name and time, data-key: a plan

@@ -53,7 +53,8 @@ public class StatsController {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
         Instant since = Instant.now().minus(Duration.ofDays(NEW_DAYS));
-        return "The daily report (by e-mail at 9:10; see it or send it now): /dj/stats/report\n\n"
+        return "The daily report (by e-mail at 9:10; see it or send it now): /dj/stats/report\n"
+                + "The news e-mail (to the organisers who said yes): /dj/stats/news\n\n"
                 + render(siteCounter.lastDays(DAYS)) + "\n" + renderNew(partySettingsRepository.newOrganisers(since, Limit.of(NEW_MAX)))
                 + "\n" + renderEmails(mailer.isOn(), mailer.status());
     }

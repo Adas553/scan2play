@@ -3,6 +3,7 @@ package com.scan2play.controller;
 import com.scan2play.entity.PartySettingsEntity;
 import com.scan2play.entity.SongRequestEntity;
 import com.scan2play.model.HistoryFilter;
+import com.scan2play.model.PanelNews;
 import com.scan2play.model.PosterFont;
 import com.scan2play.model.PosterTheme;
 import com.scan2play.model.StaffPermission;
@@ -199,7 +200,10 @@ public class DjDashboardController {
 
         model.addAttribute(PARTY_CODE, partyCode);
         model.addAttribute(IS_ACTIVE, settings.isActive());
-        model.addAttribute(WELCOME, owner && settings.getWelcomeDismissedAt() == null);
+        boolean welcome = owner && settings.getWelcomeDismissedAt() == null;
+        model.addAttribute(WELCOME, welcome);
+        // "Nowości" (V80): what is new, to the organiser of an account older than it, until closed — never beside the welcome
+        model.addAttribute(NEWS, owner && !welcome && PanelNews.shows(settings));
 
         // --- Who works on it (V30, V32): the owner everything, the staff what the owner gave them; the panels to switch between ---
         model.addAttribute(IS_OWNER, owner);
@@ -312,6 +316,7 @@ public class DjDashboardController {
         model.addAttribute(GUEST_THEME, settings.getGuestTheme());   // "Motyw dla gości" (V59)
         model.addAttribute(GUEST_THEMES, com.scan2play.model.GuestTheme.values());
         model.addAttribute(MORNING_SUMMARY, settings.isMorningSummary());   // "Poranne podsumowanie" (V64), the organiser's card
+        model.addAttribute(NEWS_EMAILS, settings.isNewsEmails());   // "Nowości mailem" (V80), the organiser's card
         // --- The hosts' lists (V29) and the link that lets them fill the lists ---
         model.addAttribute(HOST_BLOCKED, settings.getHostBlocked());
         model.addAttribute(HOST_WANTED, settings.getHostWanted());
@@ -451,6 +456,20 @@ public class DjDashboardController {
                     s.setWelcomeDismissedAt(Instant.now());
                 }
             });
+        }
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * "✕" on the panel's card "Nowości" (V80): this news closed for good, on every device of the organiser's. The organiser's alone,
+     * as the card; a second close changes nothing.
+     */
+    @PostMapping("/dashboard/news-dismiss")
+    public ResponseEntity<Void> dismissNews(@RequestParam String partyCode, OAuth2AuthenticationToken authentication,
+                                            HttpSession session) {
+        PartySettingsEntity settings = sessionHelper.requireOwner(partyCode, authentication, session);
+        if (settings.getNewsSeen() < PanelNews.NUMBER) {
+            partySettingsCommandService.updateSettings(partyCode, s -> s.setNewsSeen(Math.max(s.getNewsSeen(), PanelNews.NUMBER)));
         }
         return ResponseEntity.noContent().build();
     }

@@ -223,6 +223,26 @@ public class PartySettingsEntity {
     @Column(nullable = false)
     private boolean morningSummary = true;
 
+    /** The number of the latest panel news ({@code PanelNews.NUMBER}) the organiser closed (V80); 0 = none. */
+    @Column(nullable = false)
+    private int newsSeen;
+
+    /**
+     * "Nowości mailem" (V80): the organiser's consent to the e-mails of what is new — off until they switch it on. This, its time and
+     * {@link #newsSent} are written only by {@code PartySettingsRepository}'s statements: a save of the settings never puts an old
+     * value back.
+     */
+    @Column(insertable = false, updatable = false)
+    private boolean newsEmails;
+
+    /** When "Nowości mailem" was last switched on or off (V80): the proof of the consent; null = never. */
+    @Column(insertable = false, updatable = false)
+    private Instant newsEmailsAt;
+
+    /** The number of the latest news e-mailed to the organiser (V80); 0 = none. */
+    @Column(insertable = false, updatable = false)
+    private int newsSent;
+
     /**
      * The secret of "Nie wysyłaj mi tego" in the e-mails (V64, made by the database for every row): a random UUID without its dashes,
      * 32 hex digits holding 122 random bits (V64's comment says 128 — the version and variant take six).

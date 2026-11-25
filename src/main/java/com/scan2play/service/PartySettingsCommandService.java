@@ -120,6 +120,30 @@ public class PartySettingsCommandService {
         evictAfterCommit(partyCode);
     }
 
+    /** "Nowości mailem" (V80) on or off, with its time — the proof of the consent ({@link PartySettingsRepository#setNewsEmails}). */
+    @Transactional
+    public void setNewsEmails(String partyCode, boolean on) {
+        partySettingsRepository.setNewsEmails(partyCode, on, Instant.now());
+        evictAfterCommit(partyCode);
+    }
+
+    /** The news {@code number}'s e-mail claimed for the organiser ({@link PartySettingsRepository#claimNews}): true for the one sender. */
+    @Transactional
+    public boolean claimNews(String partyCode, int number) {
+        boolean claimed = partySettingsRepository.claimNews(partyCode, number) == 1;
+        if (claimed) {
+            evictAfterCommit(partyCode);
+        }
+        return claimed;
+    }
+
+    /** A claimed news e-mail given back: its send failed. */
+    @Transactional
+    public void releaseNews(String partyCode, int number) {
+        partySettingsRepository.releaseNews(partyCode, number);
+        evictAfterCommit(partyCode);
+    }
+
     /** A party the plan opened ({@code active}) or closed. */
     public record ScheduleChange(String partyCode, boolean active) {
     }

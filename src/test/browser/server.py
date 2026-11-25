@@ -110,6 +110,8 @@ def default_state():
         'guestThemeAnswer': 'settings-guest-theme-answer',
         # "Poranne podsumowanie" (V64): the rendered card the real server answers the switch with
         'morningAnswer': 'settings-morning-answer',
+        # "Nowości mailem" (V80): the rendered card the real server answers the switch with
+        'newsAnswer': 'settings-news-answer',
         # what "Podpowiedzi gości" sent in the background is answered with (V58): the settings page its redirect leads to
         'libraryHintsAnswer': 'settings-library-hints-answer',
         # The poll's own answer (V32): e.g. 403 — the organiser took the person's access away (the page loads itself again)
@@ -436,7 +438,7 @@ class Handler(BaseHTTPRequestHandler):
             return self._json({})
         fields = self._fields(query, body, self.headers.get('Content-Type'))
         if path in ('/dj/library', '/dj/library/delete', '/dj/logo', '/dj/logo/delete', '/dj/qr-print/settings',
-                    '/dj/dashboard/welcome-dismiss'):   # a fetch() with the CSRF token in its header
+                    '/dj/dashboard/welcome-dismiss', '/dj/dashboard/news-dismiss'):   # a fetch() with the CSRF token in its header
             fields['X-CSRF-TOKEN'] = self.headers.get('X-CSRF-TOKEN')
         if path.startswith('/p/') and (path.endswith('/vote') or '/poll/' in path):   # a 👍, an answer to the DJ's question (V74)
             fields['X-Requested-With'] = self.headers.get('X-Requested-With')
@@ -449,7 +451,7 @@ class Handler(BaseHTTPRequestHandler):
         if path in ('/dj/devices/code', '/dj/devices/remove'):   # "Połącz komputer", "Odłącz" (V78), by fetch
             fields['X-CSRF-TOKEN'] = self.headers.get('X-CSRF-TOKEN')
         if path in ('/dj/dashboard/schedule', '/dj/dashboard/guest-theme', '/dj/dashboard/morning-summary',
-                    '/dj/library/hints'):   # by fetch (V55, V59, V64, V58)
+                    '/dj/library/hints', '/dj/dashboard/news-emails'):   # by fetch (V55, V59, V64, V58, V80)
             fields['X-Requested-With'] = self.headers.get('X-Requested-With')
             fields['X-CSRF-TOKEN'] = self.headers.get('X-CSRF-TOKEN')
         self._note('POST', path, fields)
@@ -533,6 +535,11 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(204)
         if path == '/dj/dashboard/welcome-dismiss':   # the welcome card closed for good (V48): nothing to say
             return self._send(204)
+        if path == '/dj/dashboard/news-dismiss':      # the news card closed for good (V80): nothing to say
+            return self._send(204)
+        if path == '/dj/dashboard/news-emails':       # "Nowości mailem" (V80): the card alone, as the real server answers a fetch
+            with open(os.path.join(stand.rendered, state['newsAnswer'] + '.html'), encoding='utf-8') as f:
+                return self._send(200, f.read(), 'text/html; charset=utf-8')
         if path == '/dj/dashboard/kiosk-link':        # the kiosk's link (V56): the card alone, as the real server answers a fetch
             with open(os.path.join(stand.rendered, state['kioskLinkAnswer'] + '.html'), encoding='utf-8') as f:
                 return self._send(200, f.read(), 'text/html; charset=utf-8')

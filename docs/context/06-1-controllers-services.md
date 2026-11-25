@@ -89,4 +89,5 @@
 | `AdminReportService` / `LogTally` | the owner's daily report by e-mail when the owner's schedule says (V66, Section 5.1c), once a day by `email_status.admin_report_day` (V65); `LogTally` counts the log's ERROR and WARN lines by kind (an appender on the root logger, in memory) |
 | `SongTrendsService` | "Trendy próśb": the songs of every party's last 30 days counted by parties, with the thresholds (3 parties a song, 10 a list) — for now in the owner's report only (Section 5.1c) |
 | `MorningSummaryEmailService` | the morning e-mail of a busy evening (Pro, ≥ 5 guests' requests, the switch on), at 10:00 (and 12:00 for the failed), once an evening (Section 5.1) |
+| `NewsEmailService` / `PanelNews` / `AdminNewsController` | "Nowości" (V80): the news now (its number and day) and whether a panel shows its card; the news e-mail to the organisers who said yes, by hand from `/dj/stats/news`, once a news by `news_sent`'s claim (Section 5.1, `05-1c-notifications-emails.md`) |
 

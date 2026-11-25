@@ -6,8 +6,8 @@ Google-verified address, in the panel's language, from `Scan2Play <contact@scan2
 `scan2playcontact@gmail.com`. The accounts of before V64 got it by hand or not at all — they are never sent it. `/dj/stats` lists the
 organisers new in the last 7 days and whether the e-mails go.
 
-What the privacy policy promises, so the message keeps it: the address is used to write about the account and help — no advertising,
-no newsletter. Never twice unasked; a reply is a conversation, not a campaign. It is sent automatically, so it does not pretend to be
+What the privacy policy promises, so the message keeps it: the address is used to write about the account and help — no advertising;
+the news only to whoever switched "Nowości mailem" on (V80, `docs/news.md`). Never twice unasked; a reply is a conversation, not a campaign. It is sent automatically, so it does not pretend to be
 written by a person ("we", no "I write personally", no signature of a person): it ends "Scan2Play". `{imię}` / `{name}` is the first word of the name from Google; none — "Cześć!" / "Hi!".
 No "Nie wysyłaj mi tego" and no `List-Unsubscribe`: the welcome goes once, and that link switches off the morning summary, which
 the welcome never names (it is the morning e-mail's).
@@ -28,7 +28,8 @@ the welcome never names (it is the morning e-mail's).
 > Udanej imprezy!
 > Scan2Play
 >
-> PS Twój adres mamy tylko po to, żeby napisać w sprawie konta — nie wysyłamy reklam ani newslettera.
+> PS Twój adres mamy tylko po to, żeby napisać w sprawie konta — nie wysyłamy reklam, a o nowościach piszemy tylko wtedy, gdy włączysz
+> to w panelu.
 
 ## English
 
@@ -46,4 +47,4 @@ the welcome never names (it is the morning e-mail's).
 > Have a great party!
 > Scan2Play
 >
-> P.S. We keep your address only to write to you about your account — no ads, no newsletter.
+> P.S. We keep your address only to write to you about your account — no ads, and news only if you switch it on in the panel.

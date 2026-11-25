@@ -69,6 +69,22 @@ make a session), and so does the mail program's own "Unsubscribe" (`List-Unsubsc
 `POST` switches the morning summary off (`email-stopped.html` says where to switch it on again). `EmailStopWebTest`. The welcome has
 neither the link nor `List-Unsubscribe`: it goes once, and the link switches off a summary it never names. "Once": `AutomaticEmailsIT`.
 
+**"Nowości"** (V80, `PanelNews`, the steps of a new news: `docs/news.md`): **the panel's card** above the queue — "Nowości w
+Scan2Play", its lines each linking its part of the guide (`#deck`, `#guidePolls`, `#guidePlan`) — to the organiser of an account made
+before the news's day (`PanelNews.SINCE`; `created_at` null counts as before), until they close it (`news_seen` < `PanelNews.NUMBER`);
+never beside the welcome card, never the staff's or the demo's. "✕" → `POST /dj/dashboard/news-dismiss` (closed on the server, as the
+welcome; `js/dashboard/news.js`). **The news e-mail only with the organiser's consent** (the privacy policy, section 3): "Wysyłaj mi
+nowości mailem" on the card (while it is off) and the switch "Nowości mailem" in "Ustawienia imprezy" (group "Ty jako DJ", after
+"Poranne podsumowanie", any plan, off by default) → `POST /dj/dashboard/news-emails`; `news_emails` with its time `news_emails_at` (the
+proof of the consent) are written only by `PartySettingsRepository.setNewsEmails` — a save of the settings never puts an old value back;
+whoever says yes gets the news now by the next send too.
+The site's owner sends it by hand on `/dj/stats/news` (the counts, the words in PL and EN, "Wyślij próbę do mnie" to `ADMIN_EMAIL`,
+"Wyślij do N" behind a ticked box) — `NewsEmailService`, on the e-mails' thread, one send at a time, at most 200 a send (Brevo's free
+plan: 300 a day); "once a news" is `news_sent`'s claim (one `UPDATE`, only while the consent holds), a failed send gives it back. The
+e-mail (`templates/email/news_*.html`, the organiser's panel language) has "Nie wysyłaj mi nowości" = `/email/stop/{email_token}?what=news`
+(the morning summary's page with `news`: asks, its `POST` and the mail program's `List-Unsubscribe` switch the news e-mails off, the
+morning summary left). Tests: `NewsEmailServiceTest`, `NewsEmailsIT`, `EmailStopControllerTest`, browser `news-*`.
+
 **When the AI cannot be asked** (an error, a timeout), the request goes on to the DJ unchecked — accepted, the guest's words, the note
 `ai.unavailable.to_dj`, `requestKind` `unchecked`; the guest sees "PRZEKAZANE".
 

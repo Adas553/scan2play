@@ -122,4 +122,41 @@ public interface PartySettingsRepository extends JpaRepository<PartySettingsEnti
     @Query(value = "SELECT party_code FROM party_settings WHERE welcome_sent_at IS NULL AND created_at >= :since"
             + " AND owner_email IS NOT NULL ORDER BY created_at LIMIT :limit", nativeQuery = true)
     List<String> welcomesDue(@Param("since") Instant since, @Param("limit") int limit);
+
+    /**
+     * "Nowości mailem" (V80) switched on or off at {@code now} — the time is the proof of the consent. The news they have had stays as
+     * it is: whoever says yes gets the news now by the next send too, as they asked. The caller empties the cache.
+     */
+    @Transactional
+    @Modifying
+    @Query(value = "UPDATE party_settings SET news_emails = :on, news_emails_at = :now WHERE party_code = :partyCode",
+            nativeQuery = true)
+    int setNewsEmails(@Param("partyCode") String partyCode, @Param("on") boolean on, @Param("now") Instant now);
+
+    /** The organisers the news {@code number} is due to: said yes, have an address, have not had it — at most {@code limit}. */
+    @Query(value = "SELECT party_code FROM party_settings WHERE news_emails AND news_sent < :number AND owner_email IS NOT NULL"
+            + " ORDER BY party_code LIMIT :limit", nativeQuery = true)
+    List<String> newsDue(@Param("number") int number, @Param("limit") int limit);
+
+    /** How many organisers said yes to the news e-mails, and how many of them have had the news {@code number}: [yes, had]. */
+    @Query(value = "SELECT count(*), count(*) FILTER (WHERE news_sent >= :number) FROM party_settings"
+            + " WHERE news_emails AND owner_email IS NOT NULL", nativeQuery = true)
+    List<Object[]> newsCounts(@Param("number") int number);
+
+    /**
+     * The news {@code number}'s e-mail claimed for one organiser: one statement, so of two sends at once one gets 1 and sends. Only
+     * while they still say yes — switched off meanwhile, nothing goes.
+     */
+    @Transactional
+    @Modifying
+    @Query(value = "UPDATE party_settings SET news_sent = :number WHERE party_code = :partyCode AND news_emails"
+            + " AND news_sent < :number AND owner_email IS NOT NULL", nativeQuery = true)
+    int claimNews(@Param("partyCode") String partyCode, @Param("number") int number);
+
+    /** A claimed news e-mail given back (its send failed): due again, to the next send. */
+    @Transactional
+    @Modifying
+    @Query(value = "UPDATE party_settings SET news_sent = :number - 1 WHERE party_code = :partyCode AND news_sent = :number",
+            nativeQuery = true)
+    int releaseNews(@Param("partyCode") String partyCode, @Param("number") int number);
 }

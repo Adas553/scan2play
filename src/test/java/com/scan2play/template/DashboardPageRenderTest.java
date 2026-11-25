@@ -302,7 +302,47 @@ class DashboardPageRenderTest {
                 .instagramUrl("https://www.instagram.com/dj.koko/").tipUrl("https://buycoffee.to/djkoko")
                 .hostWanted("Hej sokoły").hostToken("AbC_123-xyzAbC_123-xyz").hostTokenMadeAt(java.time.Instant.now())
                 .staffToken("Inv_123-xyzInv_123-xyz").staffTokenMadeAt(java.time.Instant.now())
-                .welcomeDismissedAt(java.time.Instant.now()).build();   // a returning organiser: no welcome card (V48)
+                .welcomeDismissedAt(java.time.Instant.now())   // a returning organiser: no welcome card (V48)
+                .newsSeen(com.scan2play.model.PanelNews.NUMBER).build();   // and the news closed (V80)
+    }
+
+    /**
+     * An organiser of an account older than the news (V80): the card "Nowości" above the queue — its three lines, each with its part
+     * of the guide, "✕" closed on the server, and the offer of the news e-mails while they are off. Never with the welcome, never to
+     * the staff, never to an account made since. {@code dashboard-news.html} for {@code scenarios/news.js}.
+     */
+    @Test
+    void anOrganiserOfBefore_seesTheNewsAboveTheQueue() throws IOException {
+        PartySettingsEntity party = party();
+        party.setNewsSeen(0);
+
+        String html = renderDashboard(party, List.of(song(1, "Wilki - Baśka")), PL);
+
+        assertWhatTheScriptsNeed(html);
+        assertThat(html).contains("id=\"newsCard\"", ">Nowości w Scan2Play<", "data-news-close", "aria-label=\"Zamknij nowości\"",
+                "href=\"/jak-to-dziala#deck\"", "href=\"/jak-to-dziala#guidePolls\"", "href=\"/jak-to-dziala#guidePlan\"",
+                ">🎧 Zagrane samo.<", ">🗳 Pytanie do gości.<", ">📋 Plan imprezy.<",
+                "id=\"newsEmailsAsk\"", "id=\"newsEmailsOn\"", ">Wysyłaj mi nowości mailem<", "id=\"newsEmailsDone\"");
+        assertThat(html.indexOf("id=\"newsCard\"")).as("above the queue").isLessThan(html.indexOf("id=\"queueList\""));
+        String card = html.substring(html.indexOf("id=\"newsCard\""), html.indexOf("id=\"queueList\""));
+        assertThat(card).as("an outline: the view's one action stays \"Drukuj\"").doesNotContain("btn-action");
+        write("dashboard-news.html", html);
+
+        String en = renderDashboard(party, List.of(), Locale.ENGLISH);
+        assertThat(en).contains(">What&#39;s new in Scan2Play<", "href=\"/how-it-works#deck\"", ">E-mail me what&#39;s new<");
+
+        party.setNewsEmails(true);
+        assertThat(renderDashboard(party, List.of(), PL)).as("the e-mails on already: not offered").contains("id=\"newsCard\"")
+                .doesNotContain("id=\"newsEmailsAsk\"");
+        PartySettingsEntity newAccount = party();
+        newAccount.setNewsSeen(0);
+        newAccount.setCreatedAt(com.scan2play.model.PanelNews.SINCE);
+        assertThat(renderDashboard(newAccount, List.of(), PL)).as("an account made since: not news to it").doesNotContain("id=\"newsCard\"");
+        PartySettingsEntity welcomed = party();
+        welcomed.setNewsSeen(0);
+        welcomed.setWelcomeDismissedAt(null);
+        assertThat(renderDashboard(welcomed, List.of(), PL)).as("the welcome first").contains("id=\"welcomeCard\"")
+                .doesNotContain("id=\"newsCard\"");
     }
 
     /**
@@ -392,6 +432,7 @@ class DashboardPageRenderTest {
     void aReturningOrganiser_andTheStaff_areNotWelcomed() {
         assertThat(renderDashboard(party(), List.of(), PL)).doesNotContain("id=\"welcomeCard\"", "Napisz do nas<");
         assertThat(renderStaffPanel(StaffRole.QUEUE, List.of())).doesNotContain("id=\"welcomeCard\"");
+        assertThat(renderStaffPanel(StaffRole.QUEUE, List.of())).as("the news is the organiser's (V80)").doesNotContain("id=\"newsCard\"");
     }
 
     /** A waiting request with its "🔍 Podejrzyj" link: YouTube's search results for the song's name. */

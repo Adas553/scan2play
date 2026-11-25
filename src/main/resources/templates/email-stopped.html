@@ -1,5 +1,6 @@
 <!DOCTYPE html>
-<!--/* "Nie wysyłaj mi tego" of the morning summary's e-mail (V64, EmailStopController): the morning summaries are off — after "Tak,
+<!--/* "Nie wysyłaj mi tego" of the morning summary's e-mail (V64, EmailStopController) — and, with ${news},
+     of the news e-mail (V80): the morning summaries are off — after "Tak,
      wyłącz" of email-stop.html or the mail program's one click, no login; also the link of summaries already off. Turned on again in
      "Ustawienia imprezy" (the link leads there through the login). */-->
 <html xmlns:th="http://www.thymeleaf.org" lang="en" th:lang="#{html.lang}">
@@ -16,11 +17,11 @@
     <div class="row justify-content-center">
         <div class="col-12 col-md-8 col-lg-6">
             <div class="card p-4 p-sm-5">
-                <h1 class="mb-3 fw-bold text-light-custom h2" id="emailStoppedTitle" th:text="#{email.stopped.title}">Done — no more morning summaries</h1>
-                <p class="lead text-secondary-bright" th:text="#{email.stopped.text}">We will not e-mail you the evening's summary any more.</p>
+                <h1 class="mb-3 fw-bold text-light-custom h2" id="emailStoppedTitle" th:text="${news == true} ? #{email.news_stopped.title} : #{email.stopped.title}">Done — no more morning summaries</h1>
+                <p class="lead text-secondary-bright" th:text="${news == true} ? #{email.news_stopped.text} : #{email.stopped.text}">We will not e-mail you the evening's summary any more.</p>
                 <p class="text-secondary-bright mt-3 mb-0">
-                    <span th:text="#{email.stopped.again}">Changed your mind? Switch it on again in</span>
-                    <a href="/dj/settings#morningSummaryCard" class="text-secondary-bright" th:text="#{email.stopped.settings}">Party settings</a>.
+                    <span th:text="${news == true} ? #{email.news_stopped.again} : #{email.stopped.again}">Changed your mind? Switch it on again in</span>
+                    <a href="/dj/settings#morningSummaryCard" th:href="${news == true} ? '/dj/settings#newsEmailsCard' : '/dj/settings#morningSummaryCard'" class="text-secondary-bright" th:text="#{email.stopped.settings}">Party settings</a>.
                 </p>
             </div>
         </div>
