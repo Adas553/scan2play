@@ -92,9 +92,12 @@ jobs:
 
       # Apple's chips run no code without a signature: an ad-hoc one ("-", no developer's name, no Apple account) keeps the bundle
       # whole, so Gatekeeper offers "Open Anyway" instead of saying the app is damaged. It is no signature for Gatekeeper.
+      # NSAppleEventsUsageDescription: the program asks Spotify by AppleScript what plays (SpotifyNowPlaying); without the key macOS
+      # may refuse the Apple events without asking the DJ. Before the signature, which covers Info.plist.
       - name: Zip (macOS)
         if: runner.os == 'macOS'
         run: |
+          plutil -insert NSAppleEventsUsageDescription -string "Odczyt piosenki, która gra w Spotify — do oznaczania próśb jako zagrane." "out/Scan2Play Zagrane.app/Contents/Info.plist"
           codesign --force --deep --sign - "out/Scan2Play Zagrane.app"
           ditto -c -k --keepParent "out/Scan2Play Zagrane.app" "Scan2Play-Zagrane-${{ matrix.zip }}.zip"
 

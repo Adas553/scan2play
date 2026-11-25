@@ -103,6 +103,10 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
   no e-mail of it (`markNewsKnown`) — **news 1's e-mail has nobody to go to**, the e-mail starts with news 2. P11, P12 done as
   recommended (the policy: "nigdy w innych celach reklamowych", no "sam"; "Zasady: Polityka prywatności, pkt 3" at the consent). Waits
   for the owner: the merge.
+- **2026-11-25 — `claude/gracious-bell-iap7ms` (from `main` = `0316624`), pushed, no PR, no migration:** "Zagrane samo" for Spotify, a
+  try in `deck-agent` (`SpotifyNowPlaying`, `docs/ideas.md` item 20): Windows — Spotify's window title by one PowerShell; macOS —
+  AppleScript (the workflow adds `NSAppleEventsUsageDescription`); a song heard 30 s is played. The server unchanged; deck-agent's
+  tests 61/61. Waits for the owner: a build ("Run workflow" from this branch) and a try with Spotify on Windows and a Mac.
 - **Waits for the owner (from #269):** after the first commit the deploy window holds back (Fri–Sun 18:00–6:00): does Railway
   deploy it on the workflow's re-run? UptimeRobot is set up (the owner, 2026-11-17; `docs/monitoring.md`).
 - **Waits for the owner (the wishes, #263):** the three older Polish texts with "DJ" and a masculine verb (`guest.vote.gone`,

@@ -147,8 +147,19 @@ first, never a night's whole list (empty: when a song marks itself; a song or a 
 in its tooltip, so the window never grows past the screen; the window never narrows when the status line changes); "Odłącz ten komputer"; a tray icon ("Pokaż", "Zakończ"). One
 copy per user: a second start finds `~/.scan2play/zagrane.lock` locked (`SingleInstance`, `FileChannel.tryLock`; the system drops the
 lock when the program ends) and says "Program już działa…" (a window, or a line and exit 1 in the console). `~/.scan2play/zagrane.properties` keeps the server, the token and the folder picked. Without a screen: `--pair <code> [--server …]`, then
-`--console`. Tests: `sh mvnw -f deck-agent/pom.xml -B -ntp verify` (`HistoryFormatsTest`, `AgentTest`, `SingleInstanceTest`, `WindowTest`). Packages:
+`--console`. Tests: `sh mvnw -f deck-agent/pom.xml -B -ntp verify` (`HistoryFormatsTest`, `AgentTest`, `SingleInstanceTest`, `WindowTest`, `SpotifyNowPlayingTest`). Packages:
 `.github/workflows/deck-agent.yml`, by hand ("Run workflow"): a jpackage app folder with its own Java for Windows and macOS, zipped,
 **not signed** (SmartScreen's "Uruchom mimo to"; macOS's "Open Anyway" once; the Mac bundle only signed ad hoc, which Apple's chips need
 to run it at all); the three builds have a read-only token, the job `release` (from `main` only) uploads all three together once each
 was built, and a "Run workflow" is never cancelled by a later push.
+
+**Spotify in the program** (`SpotifyNowPlaying`, `docs/ideas.md` item 20; a try, not on a real computer yet): Spotify writes no
+history and its Web API is closed to an app like this one, so the song playing now is asked of Spotify's desktop app at each look — on
+Windows the title of its window ("Artist - Title" while it plays; "Spotify Premium" / "Spotify Free" paused; an ad none), by one
+PowerShell started when a `Spotify.exe` runs (checked every 10 s by `ProcessHandle`), writing the title every 2 s in UTF-8 and ending
+by itself with Spotify or the program; on macOS by AppleScript (`osascript`, only while `Spotify.app` runs; macOS asks the DJ once
+whether the program may control Spotify — the bundle's `NSAppleEventsUsageDescription`, added by the workflow; an ad, `spotify:ad`,
+none). A song heard 30 s (`PLAYED_AFTER`; a pause stops the count, another song starts it anew, a gap over 10 s between looks adds
+10 s) is a played one from the time it was first heard; the same song straight after again is not a second play. It goes as any
+history's song (the server unchanged); the window's "CZYTA" shows "Spotify (gra: …)" while Spotify runs. Its limits: Spotify closed
+to the tray on Windows has no window title — nothing heard; the window's title is Spotify's own, unofficial way and may change.

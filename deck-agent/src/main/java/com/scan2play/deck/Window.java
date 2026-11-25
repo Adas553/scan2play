@@ -64,8 +64,8 @@ final class Window {
     static final Color RED = new Color(0xea868f);
 
     /** Read: no history of either program anywhere it is looked for. */
-    static final String NO_HISTORY = "<html>Brak historii VirtualDJ i Serato. Zagraj w programie DJ-a jedną piosenkę<br>"
-            + "albo wskaż folder, w którym trzyma historię.</html>";
+    static final String NO_HISTORY = "<html>Brak historii VirtualDJ i Serato, Spotify wyłączony. Zagraj w programie DJ-a jedną<br>"
+            + "piosenkę albo wskaż folder, w którym trzyma historię.</html>";
     /** The folder picked holds no history the program reads. */
     static final String NOT_IN_FOLDER = "<html>W tym folderze nie ma historii — VirtualDJ: …\\VirtualDJ\\History,<br>"
             + "Serato: …\\_Serato_\\History\\Sessions albo …\\Serato\\Library.</html>";
@@ -87,11 +87,12 @@ final class Window {
     }
 
     /**
-     * "Oznaczone" before the first song: when a song marks itself, for either program — Serato's library counts a play a few seconds
-     * after Play ({@link Serato4Database}), VirtualDJ writes its history after ~45 s.
+     * "Oznaczone" before the first song: when a song marks itself, for each program — Serato's library counts a play a few seconds
+     * after Play ({@link Serato4Database}), VirtualDJ writes its history after ~45 s, Spotify's song counts after
+     * {@link SpotifyNowPlaying#PLAYED_AFTER}.
      */
     static final String NOTHING_MARKED = "<html>Jeszcze nic. Piosenka z kolejki oznaczy się sama po puszczeniu:<br>"
-            + "z Serato po kilku sekundach, z VirtualDJ po około 45 s.</html>";
+            + "z Serato po kilku sekundach, z VirtualDJ po około 45 s, ze Spotify po 30 s.</html>";
 
     /**
      * The size a pack asks for: the content's height, but never narrower than before — the status line's width differs by state,
@@ -357,7 +358,7 @@ final class Window {
             return new Line("„Zagrane samo” działa w planie Pro — ta impreza go nie ma", AMBER);
         }
         if (status.reading().isEmpty()) {
-            return new Line("Połączono — brak historii VirtualDJ i Serato", AMBER);
+            return new Line("Połączono — brak historii VirtualDJ i Serato, Spotify wyłączony", AMBER);
         }
         return new Line("Działa — połączono z imprezą", GREEN);
     }

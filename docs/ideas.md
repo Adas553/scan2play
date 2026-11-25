@@ -382,3 +382,14 @@ piece of work or when a task names an item. A finished item stays here until its
    the Mac bundle is signed ad hoc, the program takes the newest history file of all folders (OneDrive's too); the program's "Odłącz ten komputer" removes it from
    the panel too (`/api/device/unpair`, any plan), Windows' known folders asked by PowerShell, the help for a Windows without "Uruchom
    mimo to" (the owner: "jak uważasz").
+
+20. **"Zagrane samo" for Spotify — a try in `deck-agent` (the owner, 2026-11-25: "zrób próbę ze Spotify w deck-agent")**. Spotify's
+   Web API (`recently-played`) is not the way: an app in development mode only for a few accounts added by hand, the full access
+   since 2025 only for registered businesses with ~250 000 monthly users, the DJ's Spotify login and tokens kept by us, and Spotify's
+   terms forbid playing it in public. Instead the program asks Spotify's desktop app what plays now — Windows: its window's title,
+   macOS: AppleScript — and a song heard 30 s is a played one (`SpotifyNowPlaying`; details `docs/context/05-1d-panel-heading-queue.md`).
+   The server unchanged. **To try:** a real Windows and a Mac with Spotify (the title on a Polish Windows, macOS's question about
+   controlling Spotify, an ad, a pause, Spotify closed to the tray). **Open:** the panel's card and the guide name VirtualDJ and Serato
+   only — Spotify there once it works; the Windows media sessions (Tidal, a browser too) if DJs ask. **Asked the same day, not
+   built:** adding the guests' songs to VirtualDJ / Serato by the program — VirtualDJ a playlist `Scan2Play.m3u` (whether it reloads
+   by itself is to try) or a plugin; Serato has no API and reads its crates at the start (at most a crate after a restart).
