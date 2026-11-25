@@ -6,7 +6,7 @@
     <!-- a dark page already: a browser's own dark mode (Samsung Internet) must not darken it again — it greyed our logo -->
     <meta name="color-scheme" content="dark">
     <title>How Scan2Play works</title>
-    <th:block th:replace="~{fragments/components :: seo('/jak-to-dziala', 'How Scan2Play works', 'A guide for DJs: the QR code, the guests\' request queue, the AI, the history, the party\'s staff.')}"></th:block>
+    <th:block th:replace="~{fragments/components :: seo('/jak-to-dziala', 'How Scan2Play works', 'A guide for DJs: the QR code, the guests\' request queue, the AI, questions for the guests, wishes and the party plan, the history, the party\'s staff.')}"></th:block>
     <link href="/webjars/bootstrap/css/bootstrap.min.css" rel="stylesheet">
     <link href="/css/app.css" th:href="@{/css/app.css}" rel="stylesheet">
 </head>
@@ -27,6 +27,7 @@
 
     <nav class="s2p-chips mb-4" id="guideJump" aria-label="Go to">
         <a href="#start">Getting started</a>
+        <a href="#before">Before the party</a>
         <a href="#party">During the party</a>
         <a href="#deck">Played by itself</a>
         <a href="#phone">On a phone</a>
@@ -60,17 +61,39 @@
         </div>
         <div class="s2p-guide-row">
             <span class="s2p-guide-row-name" aria-hidden="true">Settings</span>
-            <p>The rarer settings are on the <strong>Settings</strong> tab (beside "DJ Panel" and "History"), each folded to one line:
-                <strong>The hosts' list</strong> (🚫 do not play, ⭐ must play; the people you play for can fill it in themselves through
-                their own link), <strong>Profiles, contact and tips</strong> (Instagram, an e-mail and a phone for bookings, a tip link), <strong>Your logo</strong> (your guests see it
-                instead of Scan2Play's), <strong>Guest limits</strong> (2 requests per guest, then a 3-minute wait, by default),
-                <strong>Your library</strong> (at each request you see "✓ In library", "? Similar" or "✗ Not in library", and the button
-                "Hide" hides the ones you don't have), <strong>Staff</strong>, <strong>This device</strong> and <strong>Party code</strong>
-                (a new QR code when the old one should stop working).</p>
+            <div>
+            <p>The rarer settings are on the <strong>Settings</strong> tab (beside "DJ Panel" and "History"), in four groups, each
+                folded to one line with its state beside the name:</p>
+            <ul>
+                <li><strong>The party:</strong> Party hours, Guest limits (2 requests per guest, then a 3-minute wait, by default),
+                    The hosts' list (🚫 do not play, ⭐ must play; the people you play for can fill it in themselves through their
+                    own link) and Guest kiosk.</li>
+                <li><strong>For the guests:</strong> Guest theme, Wishes and party plan, Question for the guests.</li>
+                <li><strong>You as the DJ:</strong> Profiles, contact and tips (Instagram, an e-mail and a phone for bookings, a tip
+                    link), Your logo (your guests see it instead of Scan2Play's), Your library (at each request you see "✓ In library",
+                    "? Similar" or "✗ Not in library", and the button "Hide" hides the ones you don't have) and Morning summary.</li>
+                <li><strong>Access:</strong> Staff, This device and Party code (a new QR code when the old one should stop working).</li>
+            </ul>
+            </div>
+        </div>
+    </section>
+
+    <section id="before">
+        <h2>Before the party</h2>
+        <div class="s2p-guide-row s2p-guide-text"><p>A wedding, an 18th, a company party: before you play, you can gather the guests'
+            wishes and agree the evening's plan with the hosts. Both are in Party settings → For the guests → <strong>Wishes and party
+            plan</strong> (Pro), at an event with a name and a date (e.g. "Anna and Jake's wedding", 14 June).</p></div>
+        <div class="s2p-guide-row" id="guideWishes">
+            <span class="btn btn-sm btn-outline-secondary" aria-hidden="true">Print invitations</span>
+            <p><strong>Wishes before the party:</strong> "Create the guests' link" gives the event's link — send it with the invitation
+                or print its QR code on cards for the invitations. Each guest writes up to 5 songs; nobody sees anyone else's. You see
+                them counted, the most wished first, with "✓ In library" from your library, and move the ones you pick to the hosts'
+                "⭐ Must play". Lines without an artist are listed apart, "To check". You collect wishes for up to 5 events at once; a
+                week after the party they are deleted by themselves.</p>
         </div>
         <div class="s2p-guide-row" id="guidePlan">
             <span class="btn btn-sm btn-outline-secondary" aria-hidden="true">📋 Party plan</span>
-            <p>Settings → Wishes and party plan (Pro): every event has a <strong>party plan</strong> — the evening’s moments (the
+            <p>Every event has a <strong>party plan</strong> — the evening’s moments (the
                 couple’s entrance, the first dance, the cake…) with a time, a song and notes, and the event’s “don’t play” and “must
                 play” lists. Start from a template (wedding, 18th, birthday, company party) and send the hosts their link: they fill in
                 the plan themselves, without an account, and you see the changes at once. On the day, “Use the lists at the party” turns
@@ -139,6 +162,18 @@
             <span class="btn btn-sm btn-outline-warning fw-semibold" aria-hidden="true">End Party</span>
             <p>Guests can't send requests, and the queue stays. "Resume the party" opens it again, e.g. after a break.</p>
         </div>
+        <div class="s2p-guide-row" id="guidePolls">
+            <span class="btn btn-sm btn-outline-secondary" aria-hidden="true">🗳 Question for the guests</span>
+            <p>The button by the QR code in the panel (or Party settings → For the guests; Pro): ask the room a question of your own,
+                e.g. "Disco polo: yes or no?", with 2–4 answers (left empty they are "Yes" and "No"). Guests see it on their phones above
+                the request field — also while you have paused the requests — and on the TV screen. Each votes once and may change their
+                mind, and you see the results live.</p>
+        </div>
+        <div class="s2p-guide-row s2p-guide-text"><p>"Ask now" or "Save for later", e.g. a few questions ready before the party. One
+            question is asked at a time: a new one ends the one before, and it ends by itself after 12 hours. Guests see the results
+            right after voting or — when you pick "Only when I show them", e.g. for a game — only after "👀 Show the results". "On the
+            TV: Question / Songs" picks what the screen shows. A question saved for later is changed by "Edit"; one already asked by
+            "Correct as a new one" (the old one stays with its votes).</p></div>
         <div class="s2p-guide-row" id="guideHours">
             <span class="btn btn-sm btn-outline-secondary" aria-hidden="true">⏰ Party hours</span>
             <p>Party settings → Party hours: the party opens and closes by itself at the times you pick (Polish time), e.g. "today 20:00"
@@ -250,6 +285,9 @@
             </a>
             <figcaption>The evening summary after a wedding.</figcaption>
         </figure>
+        <div class="s2p-guide-row s2p-guide-text" id="guideMorning"><p><strong>Morning summary:</strong> the morning after an evening
+            with at least 5 guests' requests, at 10:00 Polish time, you get the evening's numbers and its top 3 by e-mail. You switch it
+            on in Party settings → You as the DJ (Pro).</p></div>
         <div class="s2p-guide-row">
             <span class="btn btn-sm btn-outline-danger" aria-hidden="true">Clear the history</span>
             <p>Deletes the played and rejected requests with the guests' words. The AI then no longer knows what has played.</p>
@@ -271,7 +309,8 @@
         </div>
         <div class="s2p-guide-row">
             <span class="s2p-guide-row-name" aria-hidden="true">Co-organiser</span>
-            <p>The same, and the party's settings too: the vibe, the hosts' list, the guest limits and the guest kiosk.</p>
+            <p>The same, and the party's settings too: the vibe, the hosts' list, the guest limits, the guest kiosk, the wishes and
+                party plan, and the questions for the guests.</p>
         </div>
         <div class="s2p-guide-row">
             <span class="s2p-guide-row-name" aria-hidden="true">Custom</span>
@@ -288,6 +327,14 @@
             keep you from being flooded with requests.</p></div>
         <div class="s2p-guide-row s2p-guide-text"><p>When you switch on <strong>dedications</strong>, a guest can add one to a request,
             "💌 Add a dedication" (up to 100 characters, e.g. "For Anna on her 18th"). Only you see it, under the song in the queue.</p></div>
+        <div class="s2p-guide-row s2p-guide-text"><p>When you ask a <strong>question</strong>, they see it above the request field, a
+            button for each answer. Once they vote it folds to one line ("🗳 … · Yours: No"), the results inside — or "The DJ will show
+            the results." and "↻ Check the results" while you keep them hidden.</p></div>
+        <div class="s2p-guide-row s2p-guide-text"><p>The <strong>guest theme</strong> (Party settings → For the guests) changes the look
+            of the guest page, the kiosk and the TV screen: Classic, Wedding, Christmas, Confetti or Scary for Halloween.</p></div>
+        <div class="s2p-guide-row s2p-guide-text"><p>When you give an e-mail or a phone for bookings (Profiles, contact and tips), guests
+            see "Book this DJ" under an accepted request and after the party, and write or call you directly. Scan2Play never sees that
+            message.</p></div>
         <div class="s2p-guide-row s2p-guide-text"><p>When you upload <strong>your logo</strong> (PNG, JPEG or WebP, up to 2 MB), your guests
             see it at the top of the party page, and Scan2Play steps down to a small "Powered by Scan2Play" at the bottom. The logo is on
             the poster, the cards, the TV screen and the evening summary too. We trim the picture's empty margins ourselves.</p></div>

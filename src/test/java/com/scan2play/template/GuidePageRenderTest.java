@@ -94,12 +94,12 @@ class GuidePageRenderTest {
                 ">Podgląd<", ">Obsługa kolejki<", ">Współorganizator<", ">Własne<",
                 ">▶ Zagrane<", ">⏭ Pomiń<", ">⚠ Sprawdź<", ">⭐ Życzenie gospodarzy<", ">↩ Przywróć<", "TAK! albo NIE", "„PRZEKAZANE”")
                 .doesNotContain("para młoda", "Barman", "??");
-        List<String> sections = List.of("id=\"start\"", "id=\"party\"", "id=\"deck\"", "id=\"phone\"", "id=\"after\"", "id=\"staff\"",
+        List<String> sections = List.of("id=\"start\"", "id=\"before\"", "id=\"party\"", "id=\"deck\"", "id=\"phone\"", "id=\"after\"", "id=\"staff\"",
                 "id=\"guests\"");
         for (int i = 1; i < sections.size(); i++) {
             assertThat(html.indexOf(sections.get(i - 1))).as(sections.get(i)).isPositive().isLessThan(html.indexOf(sections.get(i)));
         }
-        assertThat(html).as("every jump has its section").contains("href=\"#start\"", "href=\"#party\"", "href=\"#deck\"", "href=\"#phone\"",
+        assertThat(html).as("every jump has its section").contains("href=\"#start\"", "href=\"#before\"", "href=\"#party\"", "href=\"#deck\"", "href=\"#phone\"",
                 "href=\"#after\"", "href=\"#staff\"", "href=\"#guests\"");
         // the guide's own text; after it only the dialog of a tapped picture, whose "✕" is a real button
         assertThat(html.substring(0, html.indexOf("<dialog"))).as("the pictures of buttons are not controls: no <button> and no form")
@@ -108,15 +108,28 @@ class GuidePageRenderTest {
         assertThat(html).as("the party's hours (V55), in the party's section").contains("id=\"guideHours\"", "Godziny imprezy", "Prośby od 20:00");
         assertThat(html.indexOf("id=\"guideHours\"")).isGreaterThan(html.indexOf("id=\"party\"")).isLessThan(html.indexOf("id=\"phone\""));
         assertThat(html).as("the venue's kiosk (V56)").contains("id=\"guideKiosk\"", "Kiosk dla gości", "Następny gość");
-        assertThat(html).as("the party plan (V77), at the end of the first section").contains("id=\"guidePlan\"", ">📋 Plan imprezy<",
-                "Użyj list na imprezie");
-        assertThat(html.indexOf("id=\"guidePlan\"")).isGreaterThan(html.indexOf("id=\"start\"")).isLessThan(html.indexOf("id=\"party\""));
+        assertThat(section(html, "start")).as("the settings in their four groups").contains("<strong>Impreza:</strong>",
+                "<strong>Dla gości:</strong>", "<strong>Ty jako DJ:</strong>", "<strong>Dostęp:</strong>", "Pytanie do gości",
+                "Motyw dla gości", "Poranne podsumowanie");
+        String before = section(html, "before");
+        assertThat(before).as("before the party: the guests' wishes (V68) and the party plan (V77)").contains(">Przed imprezą</h2>",
+                "id=\"guideWishes\"", ">Drukuj zaproszenia<", "„Utwórz link dla gości”", "do 5 piosenek", "„⭐ Koniecznie zagrać”",
+                "„Do sprawdzenia”", "id=\"guidePlan\"", ">📋 Plan imprezy<", "Użyj list na imprezie", "„📋 z planu”");
+        String polls = html.substring(html.indexOf("id=\"guidePolls\""), html.indexOf("id=\"guideHours\""));
+        assertThat(html.indexOf("id=\"guidePolls\"")).as("the question for the guests (V74–V76), in the party's section")
+                .isGreaterThan(html.indexOf("id=\"party\"")).isLessThan(html.indexOf("id=\"guideHours\""));
+        assertThat(polls).contains(">🗳 Pytanie do gości<", "Pro", "2–4 odpowiedziami", "„Tak” i „Nie”", "wstrzymasz prośby",
+                "ekranie TV", "„Zapisz na później”", "po 12 godzinach", "„Dopiero gdy je pokażę”", "„👀 Pokaż wyniki”", "„Edytuj”",
+                "„Popraw jako nowe”");
+        assertThat(section(html, "after")).as("the morning e-mail").contains("id=\"guideMorning\"", "Poranne podsumowanie", "o 10:00");
+        assertThat(section(html, "guests")).as("the guest's side of the question, the theme, the booking contact").contains(
+                "„Wyniki pokaże DJ.”", "„↻ Sprawdź wyniki”", "Motyw dla gości", "„Straszny”", "„Zarezerwuj tego DJ-a”");
         String kiosk = html.substring(html.indexOf("id=\"guideKiosk\""), html.indexOf("</section>", html.indexOf("id=\"guideKiosk\"")));
         assertThat(kiosk).as("the kiosk: set up on a tablet logged out, kept in the kiosk, its limits, a new link, its marks").contains(
                 "nie jesteś zalogowany", "Dostęp nadzorowany", "przypinanie ekranu", "3 prośby na minutę", "20 👍 na 10 minut",
                 "Nowy link", "🖥 kiosk", "Z kiosku");
         assertThat(html.substring(html.indexOf("Współorganizator"), html.indexOf("Własne"))).as("a co-organiser has the kiosk (V56)")
-                .contains("kiosk dla gości");
+                .contains("kiosk dla gości", "pytania do gości");
         String deck = section(html, "deck");
         assertThat(deck).as("the program \"Zagrane samo\" (V78): the panel's button, the three steps, once for good, the speed by"
                 + " program, a song only loaded not counted, the program's window, what reaches Scan2Play, the programs not read").contains(
@@ -150,6 +163,12 @@ class GuidePageRenderTest {
         assertThat(html).contains("lang=\"en\"", ">How Scan2Play works</h1>", "the AI turned down are in the history",
                 "the people you play for", "contact@scan2play.com.pl", ">▶ Played<", ">↩ Restore<", ">← Home<",
                 "id=\"start\"", "id=\"guests\"").doesNotContain("??");
+        assertThat(html.indexOf("id=\"before\"")).as("before the party, as in Polish").isGreaterThan(html.indexOf("id=\"start\""))
+                .isLessThan(html.indexOf("id=\"party\""));
+        assertThat(section(html, "before")).contains(">Before the party</h2>", ">Print invitations<", "up to 5 songs", ">📋 Party plan<");
+        assertThat(html.indexOf("id=\"guidePolls\"")).isGreaterThan(html.indexOf("id=\"party\"")).isLessThan(html.indexOf("id=\"guideHours\""));
+        assertThat(html).contains(">🗳 Question for the guests<", "\"Only when I show them\"",
+                "id=\"guideMorning\"", "<strong>For the guests:</strong>", "\"Book this DJ\"");
         assertThat(html.indexOf("id=\"deck\"")).as("the program, as in Polish").isGreaterThan(html.indexOf("id=\"party\""))
                 .isLessThan(html.indexOf("id=\"phone\""));
         assertThat(section(html, "deck")).contains(">Played, from your DJ software</h2>", ">🎧 From DJ software<", "Pro",
@@ -160,7 +179,7 @@ class GuidePageRenderTest {
         String kiosk = html.substring(html.indexOf("id=\"guideKiosk\""), html.indexOf("</section>", html.indexOf("id=\"guideKiosk\"")));
         assertThat(kiosk).as("the kiosk, as in Polish").contains("not logged in", "Guided Access", "screen pinning",
                 "3 requests a minute", "20 👍 per 10 minutes", "New link", "🖥 kiosk", "From the kiosk");
-        assertThat(html.substring(html.indexOf("Co-organiser"), html.indexOf("Custom"))).contains("guest kiosk");
+        assertThat(html.substring(html.indexOf("Co-organiser"), html.indexOf("Custom"))).contains("guest kiosk", "questions for the guests");
         assertThat(render(Locale.GERMAN, ANONYMOUS)).contains("lang=\"en\"", ">How Scan2Play works</h1>");
         assertThePictures(html, "en");
         write("guide-en.html", html);

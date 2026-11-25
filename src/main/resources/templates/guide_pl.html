@@ -6,7 +6,7 @@
     <!-- a dark page already: a browser's own dark mode (Samsung Internet) must not darken it again — it greyed our logo -->
     <meta name="color-scheme" content="dark">
     <title>Jak działa Scan2Play</title>
-    <th:block th:replace="~{fragments/components :: seo('/jak-to-dziala', 'Jak działa Scan2Play', 'Instrukcja dla DJ-ów: kod QR, kolejka próśb gości, AI, historia, obsługa imprezy.')}"></th:block>
+    <th:block th:replace="~{fragments/components :: seo('/jak-to-dziala', 'Jak działa Scan2Play', 'Instrukcja dla DJ-ów: kod QR, kolejka próśb gości, AI, pytania do gości, życzenia i plan imprezy, historia, obsługa imprezy.')}"></th:block>
     <link href="/webjars/bootstrap/css/bootstrap.min.css" rel="stylesheet">
     <link href="/css/app.css" th:href="@{/css/app.css}" rel="stylesheet">
 </head>
@@ -36,6 +36,7 @@
 
     <nav class="s2p-chips mb-4" id="guideJump" aria-label="Przejdź do">
         <a href="#start">Na start</a>
+        <a href="#before">Przed imprezą</a>
         <a href="#party">W trakcie imprezy</a>
         <a href="#deck">Zagrane samo</a>
         <a href="#phone">Na telefonie</a>
@@ -69,17 +70,39 @@
         </div>
         <div class="s2p-guide-row">
             <span class="s2p-guide-row-name" aria-hidden="true">Ustawienia</span>
-            <p>Rzadsze ustawienia są w zakładce <strong>Ustawienia</strong> (obok „Panel DJ-a” i „Historia”), każde zwinięte do jednej
-                linii: <strong>Lista gospodarzy</strong> (🚫 nie grać, ⭐ koniecznie zagrać; osoby, dla których grasz, mogą ją wypełnić same
-                przez swój link), <strong>Profile, kontakt i napiwki</strong> (Instagram, e-mail i telefon do rezerwacji, link do napiwków), <strong>Twoje logo</strong> (goście
-                zobaczą je zamiast logo Scan2Play), <strong>Limity gości</strong> (domyślnie 2 prośby na gościa, potem 3 minuty przerwy),
-                <strong>Twoja biblioteka</strong> (przy każdej prośbie zobaczysz „✓ Masz”, „? Podobny” albo „✗ Nie masz”, a przyciskiem
-                „Ukryj” schowasz te, których nie masz), <strong>Obsługa</strong>, <strong>To urządzenie</strong> i <strong>Kod
-                imprezy</strong> (nowy kod QR, gdy stary ma przestać działać).</p>
+            <div>
+            <p>Rzadsze ustawienia są w zakładce <strong>Ustawienia</strong> (obok „Panel DJ-a” i „Historia”), w czterech grupach, każde
+                zwinięte do jednej linii ze stanem obok nazwy:</p>
+            <ul>
+                <li><strong>Impreza:</strong> Godziny imprezy, Limity gości (domyślnie 2 prośby na gościa, potem 3 minuty przerwy),
+                    Lista gospodarzy (🚫 nie grać, ⭐ koniecznie zagrać; osoby, dla których grasz, mogą ją wypełnić same przez swój
+                    link) i Kiosk dla gości.</li>
+                <li><strong>Dla gości:</strong> Motyw dla gości, Życzenia i plan imprezy, Pytanie do gości.</li>
+                <li><strong>Ty jako DJ:</strong> Profile, kontakt i napiwki (Instagram, e-mail i telefon do rezerwacji, link do napiwków),
+                    Twoje logo (goście zobaczą je zamiast logo Scan2Play), Twoja biblioteka (przy każdej prośbie zobaczysz „✓ Masz”,
+                    „? Podobny” albo „✗ Nie masz”, a przyciskiem „Ukryj” schowasz te, których nie masz) i Poranne podsumowanie.</li>
+                <li><strong>Dostęp:</strong> Obsługa, To urządzenie i Kod imprezy (nowy kod QR, gdy stary ma przestać działać).</li>
+            </ul>
+            </div>
+        </div>
+    </section>
+
+    <section id="before">
+        <h2>Przed imprezą</h2>
+        <div class="s2p-guide-row s2p-guide-text"><p>Wesele, osiemnastka, impreza firmowa: zanim zagrasz, możesz zebrać życzenia gości
+            i ustalić z gospodarzami plan wieczoru. Oba są w Ustawieniach imprezy → Dla gości → <strong>Życzenia i plan imprezy</strong> (Pro),
+            przy wydarzeniu z nazwą i datą (np. „Wesele Ani i Kuby”, 14 czerwca).</p></div>
+        <div class="s2p-guide-row" id="guideWishes">
+            <span class="btn btn-sm btn-outline-secondary" aria-hidden="true">Drukuj zaproszenia</span>
+            <p><strong>Życzenia przed imprezą:</strong> „Utwórz link dla gości” daje link wydarzenia — wyślij go z zaproszeniem albo
+                wydrukuj jego kod QR na kartach do zaproszeń. Każdy gość wpisuje do 5 piosenek; nikt nie widzi cudzych. Ty widzisz je
+                zliczone, najczęstsze na górze, z „✓ Masz” z biblioteki, a wybrane przenosisz do „⭐ Koniecznie zagrać” gospodarzy.
+                Wpisy bez wykonawcy są osobno, „Do sprawdzenia”. Naraz zbierasz życzenia na 5 wydarzeń; tydzień po imprezie
+                znikają same.</p>
         </div>
         <div class="s2p-guide-row" id="guidePlan">
             <span class="btn btn-sm btn-outline-secondary" aria-hidden="true">📋 Plan imprezy</span>
-            <p>Ustawienia → Życzenia i plan imprezy (Pro): przy każdym wydarzeniu jest <strong>plan imprezy</strong> — momenty wieczoru
+            <p>Przy każdym wydarzeniu jest <strong>plan imprezy</strong> — momenty wieczoru
                 (wejście pary, pierwszy taniec, tort…) z godziną, utworem i uwagami oraz listy „nie grać” i „koniecznie zagrać” tego
                 wydarzenia. Zacznij od szablonu (wesele, osiemnastka, urodziny, firmowa) i wyślij gospodarzom ich link: wypełnią plan
                 sami, bez konta, a Ty widzisz zmiany od razu. W dniu imprezy „Użyj list na imprezie” włącza listy wydarzenia,
@@ -148,6 +171,17 @@
             <span class="btn btn-sm btn-outline-warning fw-semibold" aria-hidden="true">Zakończ imprezę</span>
             <p>Goście nie mogą wysyłać próśb, a kolejka zostaje. „Wznów imprezę” otwiera ją znowu, np. po przerwie.</p>
         </div>
+        <div class="s2p-guide-row" id="guidePolls">
+            <span class="btn btn-sm btn-outline-secondary" aria-hidden="true">🗳 Pytanie do gości</span>
+            <p>Przycisk przy kodzie QR w panelu (albo Ustawienia imprezy → Dla gości; Pro): zadaj sali własne pytanie, np. „Disco polo: tak czy
+                nie?”, z 2–4 odpowiedziami (puste pola to „Tak” i „Nie”). Goście widzą je na telefonach nad polem prośby — także gdy
+                wstrzymasz prośby — i na ekranie TV. Każdy głosuje raz i może zmienić zdanie, a Ty widzisz wyniki na żywo.</p>
+        </div>
+        <div class="s2p-guide-row s2p-guide-text"><p>„Zadaj teraz” albo „Zapisz na później”, np. kilka pytań przygotowanych przed
+            imprezą. Naraz zadane jest jedno pytanie: nowe kończy poprzednie, a samo kończy się po 12 godzinach. Wyniki goście widzą od
+            razu po głosie albo — gdy wybierzesz „Dopiero gdy je pokażę”, np. przy zabawie — dopiero po „👀 Pokaż wyniki”. „Na TV:
+            Pytanie / Piosenki” wybiera, co pokazuje ekran. Pytanie zapisane na później zmienisz przez „Edytuj”, a już zadane przez
+            „Popraw jako nowe” (stare zostaje ze swoimi głosami).</p></div>
         <div class="s2p-guide-row" id="guideHours">
             <span class="btn btn-sm btn-outline-secondary" aria-hidden="true">⏰ Godziny imprezy</span>
             <p>Ustawienia imprezy → Godziny imprezy: impreza sama otworzy się i zamknie o wybranej porze (czas polski), np. „dziś 20:00”
@@ -258,6 +292,8 @@
             </a>
             <figcaption>Podsumowanie wieczoru po weselu.</figcaption>
         </figure>
+        <div class="s2p-guide-row s2p-guide-text" id="guideMorning"><p><strong>Poranne podsumowanie:</strong> rano po wieczorze z co
+            najmniej 5 prośbami gości, o 10:00, dostajesz mailem liczby wieczoru i top 3. Włączasz je w Ustawieniach imprezy → Ty jako DJ (Pro).</p></div>
         <div class="s2p-guide-row">
             <span class="btn btn-sm btn-outline-danger" aria-hidden="true">Wyczyść historię</span>
             <p>Usuwa zagrane i odrzucone prośby razem ze słowami gości. Potem AI nie pamięta, co już grało.</p>
@@ -279,7 +315,8 @@
         </div>
         <div class="s2p-guide-row">
             <span class="s2p-guide-row-name" aria-hidden="true">Współorganizator</span>
-            <p>To samo, a do tego ustawienia imprezy: klimat, listę gospodarzy, limity gości i kiosk dla gości.</p>
+            <p>To samo, a do tego ustawienia imprezy: klimat, listę gospodarzy, limity gości, kiosk dla gości, życzenia i plan
+                imprezy oraz pytania do gości.</p>
         </div>
         <div class="s2p-guide-row">
             <span class="s2p-guide-row-name" aria-hidden="true">Własne</span>
@@ -296,6 +333,14 @@
             zasypaniem prośbami.</p></div>
         <div class="s2p-guide-row s2p-guide-text"><p>Gdy włączysz <strong>dedykacje</strong>, gość może dopisać do prośby „💌 Dodaj
             dedykację” (do 100 znaków, np. „Dla Ani z okazji 18-stki”). Widzisz ją tylko Ty, pod piosenką w kolejce.</p></div>
+        <div class="s2p-guide-row s2p-guide-text"><p>Gdy zadasz <strong>pytanie</strong>, widzą je nad polem prośby, z przyciskiem dla
+            każdej odpowiedzi. Po głosie pytanie zwija się do jednej linii („🗳 … · Twoja: Nie”), a w środku są wyniki —
+            albo „Wyniki pokaże DJ.” i „↻ Sprawdź wyniki”, gdy je na razie chowasz.</p></div>
+        <div class="s2p-guide-row s2p-guide-text"><p><strong>Motyw dla gości</strong> (Ustawienia imprezy → Dla gości) zmienia wygląd strony
+            gościa, kiosku i ekranu TV: klasyczny, weselny, świąteczny, „Konfetti” albo „Straszny” na Halloween.</p></div>
+        <div class="s2p-guide-row s2p-guide-text"><p>Gdy podasz e-mail albo telefon do rezerwacji (Profile, kontakt i napiwki), pod
+            przyjętą prośbą i po imprezie goście zobaczą „Zarezerwuj tego DJ-a” i napiszą albo zadzwonią prosto do Ciebie. Scan2Play tej
+            wiadomości nie widzi.</p></div>
         <div class="s2p-guide-row s2p-guide-text"><p>Jeśli wgrasz <strong>swoje logo</strong> (PNG, JPEG albo WebP, do 2 MB), goście widzą je
             na górze strony imprezy, a Scan2Play schodzi do małego „Działa na Scan2Play” na dole. Logo jest też na plakacie, kartach,
             ekranie TV i w podsumowaniu wieczoru. Puste marginesy obrazu przycinamy sami.</p></div>

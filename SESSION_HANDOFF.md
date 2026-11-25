@@ -83,6 +83,10 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
   workflow" of "Program DJ-a (deck-agent)" from `main`. Untried: Mac, P23, P24.
 - **2026-11-22 — the library key without "- Prod. by X" merged (#305 `main` = `7f0c87c`, #306 `dev`), V79 (moves rows)**, review
   `review-2026-11-22-library-key-producer.md`; #303 / #304 to close. Held back by the deploy window: deploy by hand; then Flyway at 79.
+- **2026-11-25 — `claude/sleepy-johnson-0z01t9` (from `main` = `e2d96d1`), pushed, no PR, no migration:** the guide (PL / EN) caught up:
+  a section "Przed imprezą" (the wishes, the plan moved there), "🗳 Pytanie do gości" in "W trakcie imprezy", the settings' four
+  groups, "Poranne podsumowanie", the guest's side (the question, the theme, "Zarezerwuj tego DJ-a"). Waits for the owner: the read;
+  the open question of the guide's format (one page vs one section at a time).
 - **Waits for the owner (from #269):** after the first commit the deploy window holds back (Fri–Sun 18:00–6:00): does Railway
   deploy it on the workflow's re-run? UptimeRobot is set up (the owner, 2026-11-17; `docs/monitoring.md`).
 - **Waits for the owner (the wishes, #263):** the three older Polish texts with "DJ" and a masculine verb (`guest.vote.gone`,
