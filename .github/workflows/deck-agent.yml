@@ -73,6 +73,13 @@ jobs:
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           cp "deck-agent/target/deck-agent-$VERSION.jar" deck-agent/target/app/
 
+      # Spotify's and Tidal's PowerShell (WindowsMedia) run for real in Windows PowerShell 5.1 before the package goes out: the
+      # job `test` runs on Linux, where that test is skipped
+      - name: Media sessions' script (Windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: sh mvnw -f deck-agent/pom.xml -B -ntp test -Dtest=WindowsMediaTest
+
       # An application folder with its own trimmed Java (no installer: nothing to install, unpack and run). The modules: Swing and
       # the tray, the HTTP client, SQLite's JDBC (Serato 4); jdk.crypto.ec for the TLS of www.scan2play.com.pl; jdk.accessibility
       # for the Java Access Bridge, without which a screen reader on Windows (NVDA, Narrator) reads nothing of the window.

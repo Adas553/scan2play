@@ -63,9 +63,19 @@ final class Window {
     static final Color AMBER = new Color(0xffc107);
     static final Color RED = new Color(0xea868f);
 
-    /** Read: no DJ program's history anywhere it is looked for, and no music app running. */
-    static final String NO_HISTORY = "<html>Brak historii VirtualDJ i Serato, Spotify i Tidal zamknięte. Zagraj w programie DJ-a jedną<br>"
-            + "piosenkę albo wskaż folder, w którym trzyma historię.</html>";
+    /** Read: no DJ program's history anywhere it is looked for, and none of this system's music apps running. */
+    static final String NO_HISTORY = noHistory(NowPlaying.appsOnThisComputer());
+
+    /** {@link #NO_HISTORY} for these music apps: a Mac's window names no Tidal, which is not read there. */
+    static String noHistory(List<String> apps) {
+        String closed = switch (apps.size()) {
+            case 0 -> "";
+            case 1 -> ", " + apps.getFirst() + " zamknięty";
+            default -> ", " + String.join(" i ", apps) + " zamknięte";
+        };
+        return "<html>Brak historii VirtualDJ i Serato" + closed + ".<br>"
+                + "Zagraj w programie DJ-a jedną piosenkę albo wskaż folder, w którym trzyma historię.</html>";
+    }
     /**
      * The quiet link when something is read, with its tooltip. It names the two programs: a DJ with rekordbox and Spotify open would
      * read "your program is not on the list" as an invitation to pick rekordbox's folder, which holds nothing the program reads.
@@ -81,7 +91,7 @@ final class Window {
      * A Spotify row that hears nothing though Spotify may play ({@link NowPlaying#HIDDEN}, {@link NowPlaying#NO_CONSENT}):
      * what to do, in the row's tooltip.
      */
-    static final String SPOTIFY_UNSEEN_TIP = "<html>Windows: otwórz okno Spotify (może być zminimalizowane, nie schowane obok zegara).<br>"
+    static final String SPOTIFY_UNSEEN_TIP = "<html>Windows: puść piosenkę w Spotify; jeśli dalej nic — otwórz okno Spotify.<br>"
             + "macOS: Ustawienia systemowe › Prywatność i ochrona › Automatyzacja › Scan2Play Zagrane › Spotify.</html>";
     /**
      * The longest song or folder shown whole: a guest's request may be a remix's whole title, and the window, packed to its content,
@@ -103,10 +113,24 @@ final class Window {
     /**
      * "Oznaczone" before the first song: when a song marks itself, for each program — Serato's library counts a play a few seconds
      * after Play ({@link Serato4Database}), VirtualDJ writes its history after ~45 s, a music app's song counts after
-     * {@link NowPlaying#PLAYED_AFTER}.
+     * {@link NowPlaying#PLAYED_AFTER} — only the apps of this system named.
      */
-    static final String NOTHING_MARKED = "<html>Jeszcze nic. Piosenka z kolejki oznaczy się sama po puszczeniu:<br>"
-            + "z Serato po kilku sekundach, z VirtualDJ po około 45 s, ze Spotify i Tidala po 30 s.</html>";
+    static final String NOTHING_MARKED = nothingMarked(NowPlaying.appsOnThisComputer());
+
+    static String nothingMarked(List<String> apps) {
+        String music = switch (apps.size()) {
+            case 0 -> "";
+            case 1 -> ", ze " + apps.getFirst() + " po 30 s";
+            default -> ", ze " + String.join(" i ", apps.subList(0, apps.size() - 1)) + " i " + genitive(apps.getLast()) + " po 30 s";
+        };
+        return "<html>Jeszcze nic. Piosenka z kolejki oznaczy się sama po puszczeniu:<br>"
+                + "z Serato po kilku sekundach, z VirtualDJ po około 45 s" + music + ".</html>";
+    }
+
+    /** "ze Spotify i Tidala": Spotify does not change, Tidal does. */
+    private static String genitive(String app) {
+        return app.equals("Tidal") ? "Tidala" : app;
+    }
 
     /**
      * The size a pack asks for: the content's height, but never narrower than before — the status line's width differs by state,
@@ -389,7 +413,8 @@ final class Window {
             return new Line("„Zagrane samo” działa w planie Pro — ta impreza go nie ma", AMBER);
         }
         if (status.reading().isEmpty()) {
-            return new Line("Połączono — brak historii VirtualDJ i Serato, Spotify i Tidal zamknięte", AMBER);
+            // short: the status line sets the window's width for good, the details are under "CZYTA"
+            return new Line("Połączono — nic do odczytu", AMBER);
         }
         return new Line("Działa — połączono z imprezą", GREEN);
     }

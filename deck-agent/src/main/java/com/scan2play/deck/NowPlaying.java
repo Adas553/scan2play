@@ -15,8 +15,8 @@ import java.util.concurrent.TimeUnit;
  * A music app as a history (docs/ideas.md item 20): Spotify and TIDAL write none and their Web APIs are closed to an app like ours, so
  * the song playing now is asked of the app itself at each look — on Windows by Windows' media sessions ({@link WindowsMedia}; Spotify
  * without one by its window's title), on macOS Spotify by AppleScript — and a song heard for {@link #PLAYED_AFTER} becomes a played
- * one, its start the time it was first heard. A short pause stops the count, it goes on when the same song plays again; another song, or the same one after a
- * pause over {@link #LONG_PAUSE}, starts it anew. The same song again with no other counted in between is one play: a DJ who clicked
+ * one, its start the time it was first heard. A short pause stops the count, it goes on when the same song plays again; another
+ * song, or the same one after a pause over {@link #LONG_PAUSE}, starts it anew. The same song again with no other counted in between is one play: a DJ who clicked
  * another song by mistake for a few seconds and went back.
  */
 final class NowPlaying implements HistorySource {
@@ -92,12 +92,23 @@ final class NowPlaying implements HistorySource {
      * TIDAL inside VirtualDJ or Serato is in their history); none elsewhere. Starts nothing yet.
      */
     static List<NowPlaying> forSystem(String osName, Clock clock) {
-        String os = osName.toLowerCase(Locale.ROOT);
-        if (os.contains("win")) {
-            WindowsMedia media = new WindowsMedia();
-            return WindowsMedia.APPS.stream().map(app -> new NowPlaying(app, media.player(app), clock)).toList();
+        List<String> apps = appsFor(osName);
+        if (apps.equals(WindowsMedia.APPS)) {
+            WindowsMedia media = new WindowsMedia(clock);
+            return apps.stream().map(app -> new NowPlaying(app, media.player(app), clock)).toList();
         }
-        return os.contains("mac") ? List.of(new NowPlaying("Spotify", new MacSpotify(), clock)) : List.of();
+        return apps.isEmpty() ? List.of() : List.of(new NowPlaying("Spotify", new MacSpotify(), clock));
+    }
+
+    /** The music apps' names read on a system, for the window's words too: on a Mac no "Tidal" the program does not read there. */
+    static List<String> appsFor(String osName) {
+        String os = osName.toLowerCase(Locale.ROOT);
+        return os.contains("win") ? WindowsMedia.APPS : os.contains("mac") ? List.of("Spotify") : List.of();
+    }
+
+    /** The music apps' names read on this computer. */
+    static List<String> appsOnThisComputer() {
+        return appsFor(System.getProperty("os.name", ""));
     }
 
     @Override

@@ -50,8 +50,8 @@ class WindowsMediaTest {
                 "W=Spotify Premium");
         assertEquals(song("Dawid Podsiadło", "Małomiasteczkowy"), WindowsMedia.heard(read, "Spotify").track(),
                 "the session, not the window's title");
-        assertNull(WindowsMedia.heard(read, "TIDAL").track());
-        assertEquals(NowPlaying.NOTHING, WindowsMedia.heard(read, "TIDAL").why());
+        assertNull(WindowsMedia.heard(read, "Tidal").track());
+        assertEquals(NowPlaying.NOTHING, WindowsMedia.heard(read, "Tidal").why());
     }
 
     @Test
@@ -70,7 +70,7 @@ class WindowsMediaTest {
     void spotifyWithoutASession_isReadByItsWindow_tidalIsNot() {
         WindowsMedia.Snapshot read = snapshot("P=spotify,tidal", "W=Sanah - Szampan");
         assertEquals(song("Sanah", "Szampan"), WindowsMedia.heard(read, "Spotify").track());
-        assertNull(WindowsMedia.heard(read, "TIDAL").track());
+        assertNull(WindowsMedia.heard(read, "Tidal").track());
         assertEquals(NowPlaying.HIDDEN, WindowsMedia.heard(snapshot("P=spotify", "W="), "Spotify").why(),
                 "no session and no window title: closed to the tray");
         WindowsMedia.Snapshot paused = snapshot("P=spotify", "S=Spotify.exe\tPaused\tSanah\tSzampan", "W=Sanah - Szampan");
@@ -81,8 +81,8 @@ class WindowsMediaTest {
     void anAd_orASessionWithoutATitle_isNoSong_norAnotherAppsSession() {
         assertNull(WindowsMedia.heard(snapshot("S=Spotify.exe\tPlaying\t\tAdvertisement"), "Spotify").track());
         assertNull(WindowsMedia.heard(snapshot("S=Spotify.exe\tPlaying\tSpotify\tAdvertisement"), "Spotify").track());
-        assertNull(WindowsMedia.heard(snapshot("S=TIDAL.exe\tPlaying\tKult\t"), "TIDAL").track());
-        assertNull(WindowsMedia.heard(snapshot("S=chrome.exe\tPlaying\tKult\tArahja"), "TIDAL").track(),
+        assertNull(WindowsMedia.heard(snapshot("S=TIDAL.exe\tPlaying\tKult\t"), "Tidal").track());
+        assertNull(WindowsMedia.heard(snapshot("S=chrome.exe\tPlaying\tKult\tArahja"), "Tidal").track(),
                 "a browser's session is not the app's");
     }
 
@@ -104,7 +104,48 @@ class WindowsMediaTest {
     void theScript_asksBothApps_endsWithThisProgram_andGoesEncoded() {
         String script = WindowsMedia.script(4242);
         assertTrue(script.contains("$parent = 4242"), script);
-        assertTrue(script.contains("$apps = 'Spotify','TIDAL'"), script);
+        assertTrue(script.contains("$apps = 'Spotify','Tidal'"), script);
+        // only the apps' sessions are asked for their song: a browser's video, a call stay unread (the privacy policy)
+        int filter = script.indexOf("-notmatch $only) { continue }");
+        assertTrue(script.contains("$only = 'spotify|tidal'") && filter > 0 && filter < script.indexOf("TryGetMediaPropertiesAsync"), script);
         assertEquals(script, new String(Base64.getDecoder().decode(WindowsMedia.encoded(script)), StandardCharsets.UTF_16LE));
+    }
+
+    @Test
+    void anAd_byItsArtistSpotify_isNoSong() {
+        assertNull(WindowsMedia.heard(snapshot("S=Spotify.exe\tPlaying\tSpotify\tPosłuchaj bez reklam"), "Spotify").track());
+    }
+
+    @Test
+    void tidalsSession_isFoundByItsNameAnywhereInItsId() {
+        assertEquals(song("Kult", "Arahja"),
+                WindowsMedia.heard(snapshot("S=com.squirrel.TIDAL.TIDAL\tPlaying\tKult\tArahja"), "Tidal").track());
+    }
+
+    @Test
+    void anOldAnswer_countsLongerWhileThePowerShellLives() {
+        WindowsMedia.Snapshot answer = snapshot("P=spotify");
+        assertEquals(answer, WindowsMedia.usable(answer, AT.plusSeconds(8), false));
+        assertNull(WindowsMedia.usable(answer, AT.plusSeconds(9), false), "the PowerShell ended: the apps closed");
+        assertEquals(answer, WindowsMedia.usable(answer, AT.plusSeconds(25), true), "a slow round is not the app closed");
+        assertNull(WindowsMedia.usable(answer, AT.plusSeconds(31), true), "a PowerShell that hangs: nothing heard");
+    }
+
+    /** The real script in Windows PowerShell 5.1 (the package job on Windows runs it): asked about PowerShell itself, it answers. */
+    @Test
+    @org.junit.jupiter.api.condition.EnabledOnOs(org.junit.jupiter.api.condition.OS.WINDOWS)
+    void theScript_runsInWindowsPowerShell() throws Exception {
+        Process shell = new ProcessBuilder("powershell", "-NoProfile", "-NonInteractive", "-EncodedCommand",
+                WindowsMedia.encoded(WindowsMedia.script(ProcessHandle.current().pid(), List.of("powershell"))))
+                .redirectErrorStream(true).start();
+        try (var reader = new java.io.BufferedReader(new java.io.InputStreamReader(shell.getInputStream(), StandardCharsets.UTF_8))) {
+            List<String> lines = new ArrayList<>();
+            for (String line; (line = reader.readLine()) != null && !line.replace("\uFEFF", "").startsWith("E="); ) {
+                lines.add(line);
+            }
+            assertTrue(WindowsMedia.parse(lines, AT).running().contains("powershell"), String.join("\n", lines));
+        } finally {
+            shell.destroyForcibly();
+        }
     }
 }

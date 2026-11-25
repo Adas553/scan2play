@@ -137,3 +137,29 @@ Mutacje `WindowsMedia` (`-Dtest=WindowsMediaTest,NowPlayingTest`):
   stąd słusznie bez „okno musi być otwarte” w karcie.
 - Teksty karty i przewodnika: „Tidal tylko na Windows”, Mac tylko Spotify z pytaniem macOS, „bez logowania” — PL / EN się zgadzają;
   `messages*.properties` tylko escape'y; TIDAL nie pojawia się w „Nowościach” ani na stronach reklamowych.
+
+## Poprawki (2026-11-25, ta sama gałąź; właściciel: „napraw to co możesz”)
+
+- **M1** skrypt pyta o utwór tylko sesje Spotify / Tidala (`$only = 'spotify|tidal'`, `-notmatch … { continue }` przed
+  `TryGetMediaPropertiesAsync`) — przeglądarka, rozmowa, inny odtwarzacz zostają nieczytane; polityka prywatności jest teraz dosłownie
+  prawdziwa. Test: filtr w skrypcie przed pytaniem o utwór.
+- **M2** `WindowsMedia.usable`: przy żywym PowerShellu ostatnia odpowiedź liczy się 30 s (`STALE_ALIVE`), po jego końcu 8 s (`STALE`);
+  `WindowsMedia` dostaje `Clock`. Test `anOldAnswer_countsLongerWhileThePowerShellLives`.
+- **M3** teksty okna z aplikacji tego systemu (`NowPlaying.appsFor`): Windows „Spotify i Tidal zamknięte”, „ze Spotify i Tidala po
+  30 s”; Mac „Spotify zamknięty”, „ze Spotify po 30 s”; `NO_HISTORY` łamany po pierwszym zdaniu. Linia stanu bez historii: „Połączono —
+  nic do odczytu” (krótsza od dawnej, okno nie poszerza się). Test `WindowTest.theMusicApps_namedAreThisSystems`.
+- **M4** nazwa w oknie „Tidal” (`WindowsMedia.APPS`; proces i sesja porównywane małymi literami — bez zmian w działaniu); strony EN
+  zostają „TIDAL”.
+- **M5** bez zmiany kodu: do sprawdzenia u właściciela historia ochrony Defendera po próbie. Krok w workflow (M6) uruchamia skrypt na
+  Windows przed wydaniem, więc blokada na czystym Windows wyszłaby tam.
+- **M6** testy: reklama po wykonawcy „Spotify”, id Tidala `com.squirrel.TIDAL.TIDAL`, stara odpowiedź (M2), filtr (M1);
+  `theScript_runsInWindowsPowerShell` (`@EnabledOnOs(WINDOWS)`) uruchamia prawdziwy skrypt (zapytany o sam PowerShell) i czyta jedną
+  odpowiedź — nowy krok „Media sessions' script (Windows)” w jobie `package` workflowu. Mutacje W4, W6, W7 i „bez filtra” czerwone.
+- **M7** przewodnik: „co odtwarza (to samo, co Windows pokazuje przy przyciskach multimediów)”; EN odpowiednio.
+- **M8** podpowiedź: „Windows: puść piosenkę w Spotify; jeśli dalej nic — otwórz okno Spotify.”
+- **M9** handoff: punkt na 4 linie; javadoc `NowPlaying` złamany; 05-1d (filtr, 30 s / 8 s, pisownia, test na Windows, linia stanu).
+  Zostaje: nowy `program.webp` (zrzut z Windows).
+
+Testy po poprawkach: `deck-agent` 87 (1 pominięty — test skryptu tylko na Windows); aplikacja unit 1560/1560; audyt `guide` OK. Zrzut
+okna (xvfb, `os.name` Windows): „Połączono — nic do odczytu”, „Spotify i Tidal zamknięte”, „Tidal (gra: …)”; Maca nie da się
+zasymulować (FlatLaf szuka Aqua) — pokrywa go test jednostkowy.

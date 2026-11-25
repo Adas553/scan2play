@@ -292,14 +292,14 @@ class NowPlayingTest {
 
     @Test
     void theAppsAsked_spotifyAndTidalOnWindows_spotifyOnAMac_noneElsewhere() {
-        assertEquals(List.of("Spotify", "TIDAL"), NowPlaying.forSystem("Windows 11", clock).stream().map(NowPlaying::program).toList());
+        assertEquals(List.of("Spotify", "Tidal"), NowPlaying.forSystem("Windows 11", clock).stream().map(NowPlaying::program).toList());
         assertEquals(List.of("Spotify"), NowPlaying.forSystem("Mac OS X", clock).stream().map(NowPlaying::program).toList());
         assertEquals(List.of(), NowPlaying.forSystem("Linux", clock));
     }
 
     @Test
     void eachApp_hasAVersionOfItsOwn() {
-        NowPlaying tidal = new NowPlaying("TIDAL", player, clock);
+        NowPlaying tidal = new NowPlaying("Tidal", player, clock);
         assertEquals("tidal:0", tidal.version());
     }
 

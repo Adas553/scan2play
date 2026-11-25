@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** The window's own answers, before anything goes to the server. */
 class WindowTest {
@@ -90,5 +91,20 @@ class WindowTest {
     @Test
     void nothingMarkedYet_speaksOfBothPrograms() {
         assertEquals(true, Window.NOTHING_MARKED.contains("VirtualDJ") && Window.NOTHING_MARKED.contains("Serato"), Window.NOTHING_MARKED);
+    }
+
+    /** A Mac reads no Tidal: its window does not say "Tidal zamknięte"; Windows names both. The status line stays short. */
+    @Test
+    void theMusicApps_namedAreThisSystems() {
+        assertTrue(Window.noHistory(NowPlaying.appsFor("Mac OS X")).contains("Spotify zamknięty"));
+        assertTrue(!Window.noHistory(NowPlaying.appsFor("Mac OS X")).contains("Tidal"));
+        assertTrue(Window.noHistory(NowPlaying.appsFor("Windows 11")).contains("Spotify i Tidal zamknięte"));
+        assertTrue(Window.nothingMarked(NowPlaying.appsFor("Windows 11")).contains("ze Spotify i Tidala po 30 s"));
+        assertTrue(!Window.nothingMarked(NowPlaying.appsFor("Mac OS X")).contains("Tidal"));
+        assertTrue(Window.nothingMarked(NowPlaying.appsFor("Mac OS X")).contains("ze Spotify po 30 s"));
+        Agent.Status nothingRead = new Agent.Status(true, java.util.List.of(), java.time.Instant.EPOCH, java.util.List.of(), 0,
+                ServerClient.Outcome.OK);
+        assertTrue(Window.line(nothingRead).text().length() <= "Połączono — brak historii VirtualDJ i Serato".length(),
+                "the status line sets the window's width for good");
     }
 }

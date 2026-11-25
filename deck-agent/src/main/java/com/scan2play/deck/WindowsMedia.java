@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -19,16 +20,26 @@ import java.util.Set;
  * every app, where a window's title is each app's own text. Asked by one PowerShell for as long as one of {@link #APPS} runs, every two
  * seconds, in UTF-8 (a song's Polish letters come whole) — not one PowerShell a look, which takes a second's CPU each on a DJ's
  * laptop; it ends by itself when the apps or this program do. Spotify's window title is read beside it, for a Windows whose media
- * sessions cannot be asked (before Windows 10 1809) or a Spotify that does not report one. A PowerShell that ends at once (blocked,
- * killed by an antivirus) is started again later and later, never every 10 s for a whole night.
+ * sessions cannot be asked (before Windows 10 1809) or a Spotify that does not report one. Only these apps' sessions are asked for
+ * their song: a video in a browser, a call, another player stay unread. A PowerShell that ends at once (blocked, killed by an
+ * antivirus) is started again later and later, never every 10 s for a whole night.
  */
 final class WindowsMedia {
 
-    /** The apps read, as the window names them; their processes are "&lt;name&gt;.exe" and their media sessions name them. */
-    static final List<String> APPS = List.of("Spotify", "TIDAL");
+    /**
+     * The apps read, as the window names them ("Tidal" as Polish writes it, "Tidala"); their processes are "&lt;name&gt;.exe" and their
+     * media sessions' ids hold the name, whatever the letters' case.
+     */
+    static final List<String> APPS = List.of("Spotify", "Tidal");
 
     private static final Duration CHECK_EVERY = Duration.ofSeconds(10);
+    /** An answer older than this is none — when the PowerShell has ended (an app closed): its apps are not running any more. */
     private static final Duration STALE = Duration.ofSeconds(8);
+    /**
+     * While the PowerShell lives, its last answer counts this long: a round slower than {@link #STALE} (a media session answering
+     * late) must not read as the app closed and as a pause of the song being counted.
+     */
+    private static final Duration STALE_ALIVE = Duration.ofSeconds(30);
     private static final Duration SHORT_LIFE = Duration.ofSeconds(30);
     private static final Duration LONGEST_WAIT = Duration.ofMinutes(10);
 
@@ -51,8 +62,10 @@ final class WindowsMedia {
     private Instant checkedAt = Instant.EPOCH;
     private Duration waitBeforeCheck = CHECK_EVERY;
     private volatile Snapshot last = Snapshot.NONE;
+    private final Clock clock;
 
-    WindowsMedia() {
+    WindowsMedia(Clock clock) {
+        this.clock = clock;
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             Process running = shell;
             if (running != null) {
@@ -80,8 +93,8 @@ final class WindowsMedia {
 
     /** The last answer while it is fresh, the PowerShell started when one of the apps runs; null when there is none. */
     private synchronized Snapshot fresh() {
+        Instant now = clock.instant();
         if (shell == null || !shell.isAlive()) {
-            Instant now = Instant.now();
             if (shell != null) {   // ended since the last look
                 waitBeforeCheck = nextWait(Duration.between(startedAt, now), waitBeforeCheck);
                 shell = null;
@@ -93,8 +106,12 @@ final class WindowsMedia {
                 }
             }
         }
-        Snapshot snapshot = last;
-        return Duration.between(snapshot.at(), Instant.now()).compareTo(STALE) > 0 ? null : snapshot;
+        return usable(last, now, shell != null && shell.isAlive());
+    }
+
+    /** The last answer if it still counts ({@link #STALE}, {@link #STALE_ALIVE} while the PowerShell lives); null when not. */
+    static Snapshot usable(Snapshot snapshot, Instant now, boolean alive) {
+        return Duration.between(snapshot.at(), now).compareTo(alive ? STALE_ALIVE : STALE) > 0 ? null : snapshot;
     }
 
     /** The wait before the next look for the apps after a PowerShell that lived so long: doubled from a minute while it dies young. */
@@ -158,11 +175,17 @@ final class WindowsMedia {
      * processes and the window's title.
      */
     static String script(long parent) {
+        return script(parent, APPS);
+    }
+
+    /** The script for these apps (a test on Windows asks it about PowerShell itself). */
+    static String script(long parent, List<String> apps) {
         return """
                 $ErrorActionPreference = 'SilentlyContinue'
                 [Console]::OutputEncoding = [Text.Encoding]::UTF8
                 $parent = %d
                 $apps = %s
+                $only = '%s'
                 $manager = $null
                 function Clean($text) { if ($null -eq $text) { '' } else { [string]$text -replace "[`t`r`n]", ' ' } }
                 try {
@@ -185,6 +208,7 @@ final class WindowsMedia {
                     [void]$out.AppendLine('P=' + ((@($running | ForEach-Object { $_.ProcessName.ToLower() }) | Sort-Object -Unique) -join ','))
                     if ($manager) {
                         foreach ($session in $manager.GetSessions()) {
+                            if ([string]$session.SourceAppUserModelId -notmatch $only) { continue }
                             $status = $session.GetPlaybackInfo().PlaybackStatus
                             $media = Await ($session.TryGetMediaPropertiesAsync()) ([Windows.Media.Control.GlobalSystemMediaTransportControlsSessionMediaProperties])
                             [void]$out.AppendLine('S=' + (Clean $session.SourceAppUserModelId) + "`t" + (Clean $status) + "`t" + (Clean $media.Artist) + "`t" + (Clean $media.Title))
@@ -197,7 +221,8 @@ final class WindowsMedia {
                     [Console]::Out.Flush()
                     Start-Sleep -Seconds 2
                 }
-                """.formatted(parent, String.join(",", APPS.stream().map(app -> "'" + app + "'").toList()));
+                """.formatted(parent, String.join(",", apps.stream().map(app -> "'" + app + "'").toList()),
+                String.join("|", apps.stream().map(app -> app.toLowerCase(Locale.ROOT)).toList()));
     }
 
     /** The script as PowerShell's -EncodedCommand takes it: Base64 of its UTF-16LE. */
@@ -211,7 +236,7 @@ final class WindowsMedia {
                     encoded(script(ProcessHandle.current().pid()))).redirectError(ProcessBuilder.Redirect.DISCARD).start();
             started.getOutputStream().close();
             shell = started;
-            startedAt = Instant.now();
+            startedAt = clock.instant();
             Thread reader = new Thread(() -> listen(started), "media-sessions");
             reader.setDaemon(true);
             reader.start();
@@ -225,7 +250,7 @@ final class WindowsMedia {
             List<String> lines = new ArrayList<>();
             for (String line; (line = reader.readLine()) != null; ) {
                 if (line.startsWith("E=") || line.startsWith("\uFEFFE=")) {
-                    last = parse(lines, Instant.now());
+                    last = parse(lines, clock.instant());
                     lines.clear();
                 } else if (lines.size() < 100) {
                     lines.add(line);
