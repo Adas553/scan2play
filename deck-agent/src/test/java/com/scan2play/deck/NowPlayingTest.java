@@ -15,22 +15,22 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /** Spotify as a history: what plays long enough becomes a played song, once; what Spotify's window and AppleScript say. */
-class SpotifyNowPlayingTest {
+class NowPlayingTest {
 
     private static final Instant START = Instant.parse("2026-11-25T20:00:00Z");
 
     /** Spotify as the test sets it. */
-    private static final class FakePlayer implements SpotifyNowPlaying.Player {
+    private static final class FakePlayer implements NowPlaying.Player {
         boolean running = true;
-        SpotifyNowPlaying.Track track;
+        NowPlaying.Track track;
 
         @Override public boolean running() { return running; }
-        String why = SpotifyNowPlaying.NOTHING;
+        String why = NowPlaying.NOTHING;
 
-        @Override public SpotifyNowPlaying.Heard now() { return new SpotifyNowPlaying.Heard(track, track == null ? why : ""); }
+        @Override public NowPlaying.Heard now() { return new NowPlaying.Heard(track, track == null ? why : ""); }
 
         void plays(String artist, String title) {
-            track = new SpotifyNowPlaying.Track(artist, title);
+            track = new NowPlaying.Track(artist, title);
         }
     }
 
@@ -45,7 +45,7 @@ class SpotifyNowPlayingTest {
 
     private final FakePlayer player = new FakePlayer();
     private final Ticking clock = new Ticking();
-    private final SpotifyNowPlaying spotify = new SpotifyNowPlaying(player, clock);
+    private final NowPlaying spotify = new NowPlaying("Spotify", player, clock);
 
     /** Looks every 3 s, as the agent does, for that long. */
     private void looksFor(Duration duration) {
@@ -146,7 +146,7 @@ class SpotifyNowPlayingTest {
         spotify.version();
         clock.now = clock.now.plus(Duration.ofHours(1));
         spotify.version();
-        assertEquals(List.of(), spotify.songs(), "only " + SpotifyNowPlaying.LONGEST_GAP + " counted for the gap");
+        assertEquals(List.of(), spotify.songs(), "only " + NowPlaying.LONGEST_GAP + " counted for the gap");
     }
 
     @Test
@@ -166,12 +166,12 @@ class SpotifyNowPlayingTest {
 
     @Test
     void spotifySilentForAReason_saysIt() {
-        player.why = SpotifyNowPlaying.HIDDEN;
+        player.why = NowPlaying.HIDDEN;
         spotify.version();
-        assertEquals(SpotifyNowPlaying.HIDDEN, spotify.reading());
-        player.why = SpotifyNowPlaying.NO_CONSENT;
+        assertEquals(NowPlaying.HIDDEN, spotify.reading());
+        player.why = NowPlaying.NO_CONSENT;
         spotify.version();
-        assertEquals(SpotifyNowPlaying.NO_CONSENT, spotify.reading());
+        assertEquals(NowPlaying.NO_CONSENT, spotify.reading());
         player.plays("", "Odcinek 12");                        // a podcast: no artist
         spotify.version();
         assertEquals("gra: Odcinek 12", spotify.reading());
@@ -206,14 +206,14 @@ class SpotifyNowPlayingTest {
 
     @Test
     void onlyTheLastSongsAreKept() {
-        for (int i = 0; i <= SpotifyNowPlaying.KEPT; i++) {
+        for (int i = 0; i <= NowPlaying.KEPT; i++) {
             player.plays("A", "Piosenka " + i);
             looksFor(Duration.ofSeconds(33));
         }
         List<Played> songs = spotify.songs();
-        assertEquals(SpotifyNowPlaying.KEPT, songs.size());
+        assertEquals(NowPlaying.KEPT, songs.size());
         assertEquals("Piosenka 1", songs.getFirst().title());
-        assertEquals("spotify:" + (SpotifyNowPlaying.KEPT + 1), spotify.version(), "the version counts every play, kept or not");
+        assertEquals("spotify:" + (NowPlaying.KEPT + 1), spotify.version(), "the version counts every play, kept or not");
     }
 
     private void ticksFor(Agent agent, Duration duration) {
@@ -264,59 +264,43 @@ class SpotifyNowPlayingTest {
 
     @Test
     void theWindowTitle_isArtistAndTitle_orNothing() {
-        assertEquals(Optional.of(new SpotifyNowPlaying.Track("Sanah", "Szampan")), SpotifyNowPlaying.fromWindowTitle("Sanah - Szampan"));
-        assertEquals(Optional.of(new SpotifyNowPlaying.Track("Queen", "Don't Stop Me Now - Remastered 2011")),
-                SpotifyNowPlaying.fromWindowTitle("Queen - Don't Stop Me Now - Remastered 2011"));
-        assertEquals(Optional.of(new SpotifyNowPlaying.Track("Kult", "Arahja")), SpotifyNowPlaying.fromWindowTitle(" Kult - Arahja \r"));
+        assertEquals(Optional.of(new NowPlaying.Track("Sanah", "Szampan")), NowPlaying.fromWindowTitle("Sanah - Szampan"));
+        assertEquals(Optional.of(new NowPlaying.Track("Queen", "Don't Stop Me Now - Remastered 2011")),
+                NowPlaying.fromWindowTitle("Queen - Don't Stop Me Now - Remastered 2011"));
+        assertEquals(Optional.of(new NowPlaying.Track("Kult", "Arahja")), NowPlaying.fromWindowTitle(" Kult - Arahja \r"));
         for (String paused : List.of("Spotify Premium", "Spotify Free", "Spotify", "Advertisement", "Spotify - Advertisement", "", "N/A")) {
-            assertEquals(Optional.empty(), SpotifyNowPlaying.fromWindowTitle(paused), paused);
+            assertEquals(Optional.empty(), NowPlaying.fromWindowTitle(paused), paused);
         }
-        assertEquals(Optional.empty(), SpotifyNowPlaying.fromWindowTitle(null));
+        assertEquals(Optional.empty(), NowPlaying.fromWindowTitle(null));
     }
 
     @Test
     void theWindow_paused_orClosedToTheTray() {
-        assertEquals(SpotifyNowPlaying.NOTHING, SpotifyNowPlaying.fromWindow("Spotify Premium").why());
-        assertEquals(SpotifyNowPlaying.HIDDEN, SpotifyNowPlaying.fromWindow("").why(), "no window title: closed to the tray");
-        assertEquals(new SpotifyNowPlaying.Track("Kult", "Arahja"), SpotifyNowPlaying.fromWindow("Kult - Arahja").track());
-    }
-
-    @Test
-    void powerShellsLines_titleAfterTEquals_theBomLeftOut() {
-        assertEquals(Optional.of("Sanah - Szampan"), SpotifyNowPlaying.titleOf("\uFEFFT=Sanah - Szampan"));
-        assertEquals(Optional.of("Kult - Arahja"), SpotifyNowPlaying.titleOf("T=Kult - Arahja"));
-        assertEquals(Optional.of(""), SpotifyNowPlaying.titleOf("T="));
-        assertEquals(Optional.empty(), SpotifyNowPlaying.titleOf("Get-Process : nie znaleziono"));
+        assertEquals(NowPlaying.NOTHING, NowPlaying.fromWindow("Spotify Premium").why());
+        assertEquals(NowPlaying.HIDDEN, NowPlaying.fromWindow("").why(), "no window title: closed to the tray");
+        assertEquals(new NowPlaying.Track("Kult", "Arahja"), NowPlaying.fromWindow("Kult - Arahja").track());
     }
 
     @Test
     void osascriptsAnswer_aSong_nothing_orNoConsent() {
-        assertEquals(new SpotifyNowPlaying.Track("Kult", "Arahja"), SpotifyNowPlaying.fromOsascript(0, "Kult\tArahja\n", "").track());
-        assertEquals(SpotifyNowPlaying.NOTHING, SpotifyNowPlaying.fromOsascript(0, "\n", "").why());
-        assertEquals(SpotifyNowPlaying.NO_CONSENT, SpotifyNowPlaying.fromOsascript(1, "",
+        assertEquals(new NowPlaying.Track("Kult", "Arahja"), NowPlaying.fromOsascript(0, "Kult\tArahja\n", "").track());
+        assertEquals(NowPlaying.NOTHING, NowPlaying.fromOsascript(0, "\n", "").why());
+        assertEquals(NowPlaying.NO_CONSENT, NowPlaying.fromOsascript(1, "",
                 "execution error: Not authorized to send Apple events to Spotify. (-1743)").why());
-        assertEquals(SpotifyNowPlaying.NOTHING, SpotifyNowPlaying.fromOsascript(1, "", "syntax error").why());
+        assertEquals(NowPlaying.NOTHING, NowPlaying.fromOsascript(1, "", "syntax error").why());
     }
 
     @Test
-    void aPowerShellDyingYoung_isStartedAgainLaterAndLater() {
-        Duration wait = Duration.ofSeconds(10);
-        List<Duration> waits = new java.util.ArrayList<>();
-        for (int i = 0; i < 6; i++) {
-            wait = SpotifyNowPlaying.WindowsSpotify.nextWait(Duration.ofSeconds(1), wait);
-            waits.add(wait);
-        }
-        assertEquals(List.of(Duration.ofMinutes(1), Duration.ofMinutes(2), Duration.ofMinutes(4), Duration.ofMinutes(8),
-                Duration.ofMinutes(10), Duration.ofMinutes(10)), waits);
-        assertEquals(Duration.ofSeconds(10), SpotifyNowPlaying.WindowsSpotify.nextWait(Duration.ofHours(1), Duration.ofMinutes(10)),
-                "one that lived (Spotify closed): looked for every 10 s again");
+    void theAppsAsked_spotifyAndTidalOnWindows_spotifyOnAMac_noneElsewhere() {
+        assertEquals(List.of("Spotify", "TIDAL"), NowPlaying.forSystem("Windows 11", clock).stream().map(NowPlaying::program).toList());
+        assertEquals(List.of("Spotify"), NowPlaying.forSystem("Mac OS X", clock).stream().map(NowPlaying::program).toList());
+        assertEquals(List.of(), NowPlaying.forSystem("Linux", clock));
     }
 
     @Test
-    void spotifyIsAskedOnWindowsAndMac_onlyThere() {
-        assertEquals(true, SpotifyNowPlaying.playerFor("Windows 11") instanceof SpotifyNowPlaying.WindowsSpotify);
-        assertEquals(true, SpotifyNowPlaying.playerFor("Mac OS X") instanceof SpotifyNowPlaying.MacSpotify);
-        assertEquals(null, SpotifyNowPlaying.playerFor("Linux"));
+    void eachApp_hasAVersionOfItsOwn() {
+        NowPlaying tidal = new NowPlaying("TIDAL", player, clock);
+        assertEquals("tidal:0", tidal.version());
     }
 
     @Test
@@ -324,16 +308,16 @@ class SpotifyNowPlayingTest {
         // one Spotify for the program's life: a second would count from zero and, on Windows, start a second PowerShell
         List<HistorySource> usual = Platform.withoutAsking().sources();
         List<HistorySource> again = Platform.withoutAsking().sources();
-        assertEquals(usual.stream().filter(SpotifyNowPlaying.class::isInstance).map(System::identityHashCode).toList(),
-                again.stream().filter(SpotifyNowPlaying.class::isInstance).map(System::identityHashCode).toList());
+        assertEquals(usual.stream().filter(NowPlaying.class::isInstance).map(System::identityHashCode).toList(),
+                again.stream().filter(NowPlaying.class::isInstance).map(System::identityHashCode).toList());
     }
 
     @Test
     void appleScriptsAnswer_isArtistTabTitle_orNothing() {
-        assertEquals(Optional.of(new SpotifyNowPlaying.Track("Daria Zawiałow", "Kinga")),
-                SpotifyNowPlaying.fromAppleScript("Daria Zawiałow\tKinga\n"));
-        assertEquals(Optional.empty(), SpotifyNowPlaying.fromAppleScript("\n"));
-        assertEquals(Optional.empty(), SpotifyNowPlaying.fromAppleScript(""));
-        assertEquals(Optional.empty(), SpotifyNowPlaying.fromAppleScript("Artysta\t"));
+        assertEquals(Optional.of(new NowPlaying.Track("Daria Zawiałow", "Kinga")),
+                NowPlaying.fromAppleScript("Daria Zawiałow\tKinga\n"));
+        assertEquals(Optional.empty(), NowPlaying.fromAppleScript("\n"));
+        assertEquals(Optional.empty(), NowPlaying.fromAppleScript(""));
+        assertEquals(Optional.empty(), NowPlaying.fromAppleScript("Artysta\t"));
     }
 }

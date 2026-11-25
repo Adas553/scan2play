@@ -63,8 +63,8 @@ final class Window {
     static final Color AMBER = new Color(0xffc107);
     static final Color RED = new Color(0xea868f);
 
-    /** Read: no DJ program's history anywhere it is looked for, and Spotify not running. */
-    static final String NO_HISTORY = "<html>Brak historii VirtualDJ i Serato, Spotify zamknięty. Zagraj w programie DJ-a jedną<br>"
+    /** Read: no DJ program's history anywhere it is looked for, and no music app running. */
+    static final String NO_HISTORY = "<html>Brak historii VirtualDJ i Serato, Spotify i Tidal zamknięte. Zagraj w programie DJ-a jedną<br>"
             + "piosenkę albo wskaż folder, w którym trzyma historię.</html>";
     /**
      * The quiet link when something is read, with its tooltip. It names the two programs: a DJ with rekordbox and Spotify open would
@@ -78,7 +78,7 @@ final class Window {
     static final String NOT_IN_FOLDER = ("<html>W tym folderze nie ma historii — VirtualDJ: …\\VirtualDJ\\History,<br>"
             + "Serato: …\\_Serato_\\History\\Sessions albo …\\Serato\\Library.</html>").replace('\\', java.io.File.separatorChar);
     /**
-     * A Spotify row that hears nothing though Spotify may play ({@link SpotifyNowPlaying#HIDDEN}, {@link SpotifyNowPlaying#NO_CONSENT}):
+     * A Spotify row that hears nothing though Spotify may play ({@link NowPlaying#HIDDEN}, {@link NowPlaying#NO_CONSENT}):
      * what to do, in the row's tooltip.
      */
     static final String SPOTIFY_UNSEEN_TIP = "<html>Windows: otwórz okno Spotify (może być zminimalizowane, nie schowane obok zegara).<br>"
@@ -102,11 +102,11 @@ final class Window {
 
     /**
      * "Oznaczone" before the first song: when a song marks itself, for each program — Serato's library counts a play a few seconds
-     * after Play ({@link Serato4Database}), VirtualDJ writes its history after ~45 s, Spotify's song counts after
-     * {@link SpotifyNowPlaying#PLAYED_AFTER}.
+     * after Play ({@link Serato4Database}), VirtualDJ writes its history after ~45 s, a music app's song counts after
+     * {@link NowPlaying#PLAYED_AFTER}.
      */
     static final String NOTHING_MARKED = "<html>Jeszcze nic. Piosenka z kolejki oznaczy się sama po puszczeniu:<br>"
-            + "z Serato po kilku sekundach, z VirtualDJ po około 45 s, ze Spotify po 30 s.</html>";
+            + "z Serato po kilku sekundach, z VirtualDJ po około 45 s, ze Spotify i Tidala po 30 s.</html>";
 
     /**
      * The size a pack asks for: the content's height, but never narrower than before — the status line's width differs by state,
@@ -389,7 +389,7 @@ final class Window {
             return new Line("„Zagrane samo” działa w planie Pro — ta impreza go nie ma", AMBER);
         }
         if (status.reading().isEmpty()) {
-            return new Line("Połączono — brak historii VirtualDJ i Serato, Spotify zamknięty", AMBER);
+            return new Line("Połączono — brak historii VirtualDJ i Serato, Spotify i Tidal zamknięte", AMBER);
         }
         return new Line("Działa — połączono z imprezą", GREEN);
     }

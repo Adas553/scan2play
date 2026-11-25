@@ -35,8 +35,8 @@ class WindowTest {
         Agent.Status nothingRead = new Agent.Status(true, java.util.List.of(), java.time.Instant.EPOCH, java.util.List.of(), 0,
                 ServerClient.Outcome.OK);
         for (String text : java.util.List.of(Window.line(nothingRead).text(), Window.NO_HISTORY, Window.NOT_IN_FOLDER,
-                Window.OTHER_FOLDER, Window.OTHER_FOLDER_TIP, Window.SPOTIFY_UNSEEN_TIP, SpotifyNowPlaying.NOTHING,
-                SpotifyNowPlaying.HIDDEN, SpotifyNowPlaying.NO_CONSENT)) {
+                Window.OTHER_FOLDER, Window.OTHER_FOLDER_TIP, Window.SPOTIFY_UNSEEN_TIP, NowPlaying.NOTHING,
+                NowPlaying.HIDDEN, NowPlaying.NO_CONSENT)) {
             assertNull(java.util.regex.Pattern.compile("(?iU)\\b(widzę|czekam|mogę|szukam)\\b").matcher(text).results().findFirst()
                     .map(java.util.regex.MatchResult::group).orElse(null), text);
         }
@@ -80,7 +80,7 @@ class WindowTest {
     /** Spotify silent for a reason: "!" in amber and what to do in the tooltip, not a green "✓". */
     @Test
     void spotifyThatHearsNothing_isMarked_andSaysWhatToDo() {
-        javax.swing.JPanel row = Window.readingRow("Spotify (" + SpotifyNowPlaying.HIDDEN + ")");
+        javax.swing.JPanel row = Window.readingRow("Spotify (" + NowPlaying.HIDDEN + ")");
         assertEquals("!", ((javax.swing.JLabel) row.getComponent(0)).getText());
         assertEquals(Window.SPOTIFY_UNSEEN_TIP, ((javax.swing.JLabel) row.getComponent(2)).getToolTipText());
         assertEquals("✓", ((javax.swing.JLabel) Window.readingRow("Spotify (nic nie gra)").getComponent(0)).getText());

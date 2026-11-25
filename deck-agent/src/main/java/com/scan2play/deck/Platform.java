@@ -182,16 +182,17 @@ final class Platform {
     List<HistorySource> sources() {
         List<HistorySource> sources = new ArrayList<>(List.of(new VirtualDjHistory(virtualDjFolders()),
                 new SeratoSessions(seratoSessionFolders()), new Serato4Database(serato4Databases())));
-        Spotify.ON_THIS_COMPUTER.ifPresent(sources::add);
+        sources.addAll(MusicApps.ON_THIS_COMPUTER);
         return List.copyOf(sources);
     }
 
     /**
-     * Spotify, one for the program's life (the usual places and the look's whole list both hold it): it counts the song playing now
-     * and, on Windows, keeps its PowerShell — a second one would count from zero and start a second PowerShell.
+     * The music apps (Spotify, TIDAL), one of each for the program's life (the usual places and the look's whole list both hold
+     * them): each counts the song playing now and, on Windows, they share one PowerShell — new ones would count from zero and start
+     * another PowerShell.
      */
-    private static final class Spotify {
-        static final Optional<HistorySource> ON_THIS_COMPUTER = SpotifyNowPlaying.onThisComputer();
+    private static final class MusicApps {
+        static final List<NowPlaying> ON_THIS_COMPUTER = NowPlaying.onThisComputer();
     }
 
     List<Path> virtualDjFolders() {

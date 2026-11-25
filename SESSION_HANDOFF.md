@@ -104,9 +104,11 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
   recommended (the policy: "nigdy w innych celach reklamowych", no "sam"; "Zasady: Polityka prywatności, pkt 3" at the consent). Waits
   for the owner: the merge.
 - **2026-11-25 — `claude/gracious-bell-iap7ms` (from `main` = `0316624`), PRs to `main` and `dev`, no migration:** "Zagrane samo" for
-  Spotify in `deck-agent` (`SpotifyNowPlaying`, `docs/ideas.md` item 20; works on the owner's Windows), its review
-  (`review-2026-11-25-spotify.md`) and fixes P1–P17. Waits for the owner: a try on Windows (Spotify by the clock, a long pause) and on a
-  Mac (macOS's question, "brak zgody"), a new `program.webp`, the merge; then "Run workflow" of deck-agent from `main`.
+  Spotify in `deck-agent` (`NowPlaying`, `docs/ideas.md` item 20; works on the owner's Windows), its review
+  (`review-2026-11-25-spotify.md`) and fixes P1–P17; then TIDAL and Windows' media sessions (`WindowsMedia`, never run yet). PR #313
+  (`dev`); the one to `main` refused by GitHub (500) — by hand. Waits for the owner: a try on Windows (Spotify and TIDAL by the media
+  sessions, Spotify by the clock, a long pause) and on a Mac (macOS's question, "brak zgody"), a new `program.webp`, the merge; then
+  "Run workflow" of deck-agent from `main`.
 - **Waits for the owner (from #269):** after the first commit the deploy window holds back (Fri–Sun 18:00–6:00): does Railway
   deploy it on the workflow's re-run? UptimeRobot is set up (the owner, 2026-11-17; `docs/monitoring.md`).
 - **Waits for the owner (the wishes, #263):** the three older Polish texts with "DJ" and a masculine verb (`guest.vote.gone`,

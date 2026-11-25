@@ -1,8 +1,6 @@
 package com.scan2play.deck;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Duration;
@@ -14,16 +12,16 @@ import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Spotify's desktop app as a history (docs/ideas.md item 20): Spotify writes none and its Web API is closed to an app like ours, so
- * the song playing now is asked of the app itself at each look — on Windows its window's title ("Artist - Title" while it plays, "Spotify
- * Premium" paused), on macOS by AppleScript — and a song heard for {@link #PLAYED_AFTER} becomes a played one, its start the time it
- * was first heard. A short pause stops the count, it goes on when the same song plays again; another song, or the same one after a
+ * A music app as a history (docs/ideas.md item 20): Spotify and TIDAL write none and their Web APIs are closed to an app like ours, so
+ * the song playing now is asked of the app itself at each look — on Windows by Windows' media sessions ({@link WindowsMedia}; Spotify
+ * without one by its window's title), on macOS Spotify by AppleScript — and a song heard for {@link #PLAYED_AFTER} becomes a played
+ * one, its start the time it was first heard. A short pause stops the count, it goes on when the same song plays again; another song, or the same one after a
  * pause over {@link #LONG_PAUSE}, starts it anew. The same song again with no other counted in between is one play: a DJ who clicked
  * another song by mistake for a few seconds and went back.
  */
-final class SpotifyNowPlaying implements HistorySource {
+final class NowPlaying implements HistorySource {
 
-    /** How long a song must play to count: a DJ skimming through songs in Spotify plays none of them. */
+    /** How long a song must play to count: a DJ skimming through songs in the app plays none of them. */
     static final Duration PLAYED_AFTER = Duration.ofSeconds(30);
     /** A look later than this after the previous one (a computer asleep) adds only this much: the time between was not heard. */
     static final Duration LONGEST_GAP = Duration.ofSeconds(10);
@@ -36,16 +34,16 @@ final class SpotifyNowPlaying implements HistorySource {
     /** The songs kept for the agent: tonight's last ones; the agent has its own "seen". */
     static final int KEPT = 200;
 
-    /** The window's words for Spotify running and no song heard. */
+    /** The window's words for the app running and no song heard. */
     static final String NOTHING = "nic nie gra";
     static final String HIDDEN = "okno schowane — nie widać, co gra";
     static final String NO_CONSENT = "brak zgody macOS — nie widać, co gra";
 
-    /** What Spotify plays now. */
+    /** What the app plays now. */
     record Track(String artist, String title) {
     }
 
-    /** What Spotify plays now: a song, or none and the window's words why ({@link #NOTHING}, {@link #HIDDEN}, {@link #NO_CONSENT}). */
+    /** What the app plays now: a song, or none and the window's words why ({@link #NOTHING}, {@link #HIDDEN}, {@link #NO_CONSENT}). */
     record Heard(Track track, String why) {
         static final Heard SILENCE = new Heard(null, NOTHING);
 
@@ -54,13 +52,14 @@ final class SpotifyNowPlaying implements HistorySource {
         }
     }
 
-    /** Spotify on this computer: whether it runs, and what plays now. */
+    /** The app on this computer: whether it runs, and what plays now. */
     interface Player {
         boolean running();
 
         Heard now();
     }
 
+    private final String program;
     private final Player player;
     private final Clock clock;
     private final List<Played> played = new ArrayList<>();
@@ -76,26 +75,34 @@ final class SpotifyNowPlaying implements HistorySource {
     private Instant heardBefore;
     private Track lastPlayed;
 
-    SpotifyNowPlaying(Player player, Clock clock) {
+    NowPlaying(String program, Player player, Clock clock) {
+        this.program = program;
         this.player = player;
         this.clock = clock;
     }
 
-    /** Spotify of this computer's system, or none on a system it is not asked on. */
-    static Optional<HistorySource> onThisComputer() {
-        return Optional.ofNullable(playerFor(System.getProperty("os.name", "")))
-                .map(player -> new SpotifyNowPlaying(player, Clock.systemDefaultZone()));
+    /** The music apps of this computer's system. */
+    static List<NowPlaying> onThisComputer() {
+        return forSystem(System.getProperty("os.name", ""), Clock.systemDefaultZone());
     }
 
-    /** The way Spotify is asked on a system ("Windows 11", "Mac OS X"); none elsewhere. Starts nothing yet. */
-    static Player playerFor(String osName) {
+    /**
+     * The music apps asked on a system ("Windows 11", "Mac OS X"): on Windows {@link WindowsMedia#APPS}, sharing one
+     * {@link WindowsMedia}; on macOS Spotify (TIDAL has no AppleScript, and macOS' own "Now Playing" is closed to other programs —
+     * TIDAL inside VirtualDJ or Serato is in their history); none elsewhere. Starts nothing yet.
+     */
+    static List<NowPlaying> forSystem(String osName, Clock clock) {
         String os = osName.toLowerCase(Locale.ROOT);
-        return os.contains("win") ? new WindowsSpotify() : os.contains("mac") ? new MacSpotify() : null;
+        if (os.contains("win")) {
+            WindowsMedia media = new WindowsMedia();
+            return WindowsMedia.APPS.stream().map(app -> new NowPlaying(app, media.player(app), clock)).toList();
+        }
+        return os.contains("mac") ? List.of(new NowPlaying("Spotify", new MacSpotify(), clock)) : List.of();
     }
 
     @Override
     public String program() {
-        return "Spotify";
+        return program;
     }
 
     @Override
@@ -103,7 +110,7 @@ final class SpotifyNowPlaying implements HistorySource {
         return true;
     }
 
-    /** Asks Spotify what plays now (each look); a new song played changes it. Empty while Spotify is not running. */
+    /** Asks the app what plays now (each look); a new song played changes it. Empty while the app is not running. */
     @Override
     public synchronized String version() {
         running = player.running();
@@ -137,7 +144,7 @@ final class SpotifyNowPlaying implements HistorySource {
                 }
             }
         }
-        return running ? "spotify:" + playedEver : "";
+        return running ? program.toLowerCase(Locale.ROOT) + ":" + playedEver : "";
     }
 
     @Override
@@ -174,12 +181,6 @@ final class SpotifyNowPlaying implements HistorySource {
         return windowTitle == null || windowTitle.isBlank() ? new Heard(null, HIDDEN) : Heard.of(fromWindowTitle(windowTitle));
     }
 
-    /** A line of the Windows PowerShell: "T=" and the window's title; the first line may start with UTF-8's BOM. None for another line. */
-    static Optional<String> titleOf(String line) {
-        String text = line.startsWith("\uFEFF") ? line.substring(1) : line;
-        return text.startsWith("T=") ? Optional.of(text.substring(2)) : Optional.empty();
-    }
-
     /**
      * osascript's answer: the song, or nothing; "-1743" (Not authorized to send Apple events) is the DJ's "Nie pozwalaj", said in the
      * window — without it Spotify would only seem silent.
@@ -203,117 +204,14 @@ final class SpotifyNowPlaying implements HistorySource {
     }
 
     /** Whether a process of this computer is one of these programs (its file's path ends so, whatever the letters' case). */
-    private static boolean processRuns(String... endings) {
+    static boolean processRuns(List<String> endings) {
         return ProcessHandle.allProcesses().anyMatch(process -> process.info().command()
                 .map(command -> command.toLowerCase(Locale.ROOT).replace('\\', '/'))
-                .filter(command -> List.of(endings).stream().anyMatch(command::endsWith))
+                .filter(command -> endings.stream().anyMatch(command::endsWith))
                 .isPresent());
     }
 
-    /**
-     * Windows: one PowerShell for as long as Spotify runs, writing the title of Spotify's window every two seconds in UTF-8 (a song's
-     * Polish letters come whole; tasklist answers in the console's code page) — not one PowerShell a look, which takes a second's CPU
-     * each on a DJ's laptop. It ends by itself when Spotify or this program does. Spotify closed to the tray has no window title:
-     * nothing is heard then, and the window says so ({@link #HIDDEN}). A PowerShell that ends at once (blocked, killed by an
-     * antivirus) is started again later and later, never every 10 s for a whole night.
-     */
-    static final class WindowsSpotify implements Player {
-
-        private static final Duration CHECK_EVERY = Duration.ofSeconds(10);
-        private static final Duration STALE = Duration.ofSeconds(8);
-        private static final Duration SHORT_LIFE = Duration.ofSeconds(30);
-        private static final Duration LONGEST_WAIT = Duration.ofMinutes(10);
-
-        /** Read by the shutdown hook's thread too. */
-        private volatile Process shell;
-        private Instant startedAt = Instant.EPOCH;
-        private Instant checkedAt = Instant.EPOCH;
-        private Duration waitBeforeCheck = CHECK_EVERY;
-        private volatile String title = "";
-        private volatile Instant heardAt = Instant.EPOCH;
-
-        WindowsSpotify() {
-            Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-                Process last = shell;
-                if (last != null) {
-                    last.destroyForcibly();
-                }
-            }));
-        }
-
-        @Override
-        public boolean running() {
-            if (shell != null && shell.isAlive()) {
-                return true;
-            }
-            Instant now = Instant.now();
-            if (shell != null) {   // ended since the last look
-                waitBeforeCheck = nextWait(Duration.between(startedAt, now), waitBeforeCheck);
-                shell = null;
-            }
-            if (Duration.between(checkedAt, now).compareTo(waitBeforeCheck) < 0) {
-                return false;
-            }
-            checkedAt = now;
-            if (!processRuns("/spotify.exe")) {
-                return false;
-            }
-            start();
-            return shell != null && shell.isAlive();
-        }
-
-        @Override
-        public Heard now() {
-            return Duration.between(heardAt, Instant.now()).compareTo(STALE) > 0 ? Heard.SILENCE : fromWindow(title);
-        }
-
-        /** The wait before the next look for Spotify after a PowerShell that lived so long: doubled from a minute while it dies young. */
-        static Duration nextWait(Duration lived, Duration before) {
-            if (lived.compareTo(SHORT_LIFE) >= 0) {
-                return CHECK_EVERY;
-            }
-            Duration doubled = before.multipliedBy(2);
-            return doubled.compareTo(Duration.ofMinutes(1)) < 0 ? Duration.ofMinutes(1)
-                    : doubled.compareTo(LONGEST_WAIT) > 0 ? LONGEST_WAIT : doubled;
-        }
-
-        private void start() {
-            String script = "$ErrorActionPreference='SilentlyContinue';[Console]::OutputEncoding=[Text.Encoding]::UTF8;"
-                    + "while($true){"
-                    + "if(-not(Get-Process -Id " + ProcessHandle.current().pid() + ")){exit};"
-                    + "$all=@(Get-Process -Name Spotify);if($all.Count -eq 0){exit};"
-                    + "$w=$all|Where-Object{$_.MainWindowTitle}|Select-Object -First 1;"
-                    + "[Console]::Out.WriteLine('T='+$w.MainWindowTitle);[Console]::Out.Flush();"
-                    + "Start-Sleep -Seconds 2}";
-            try {
-                Process started = new ProcessBuilder("powershell", "-NoProfile", "-NonInteractive", "-Command", script)
-                        .redirectError(ProcessBuilder.Redirect.DISCARD).start();
-                started.getOutputStream().close();
-                shell = started;
-                startedAt = Instant.now();
-                Thread reader = new Thread(() -> listen(started), "spotify");
-                reader.setDaemon(true);
-                reader.start();
-            } catch (IOException e) {
-                shell = null;   // no PowerShell (blocked by the IT): Spotify is not read, the rest works
-            }
-        }
-
-        private void listen(Process process) {
-            try (BufferedReader lines = new BufferedReader(new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {
-                for (String line; (line = lines.readLine()) != null; ) {
-                    titleOf(line).ifPresent(heard -> {
-                        title = heard;
-                        heardAt = Instant.now();
-                    });
-                }
-            } catch (IOException e) {
-                // the shell ended: asked again at the next check
-            }
-        }
-    }
-
-    /**
+        /**
      * macOS: AppleScript asked at each look while Spotify runs (osascript, a few hundredths of a second). The first time macOS asks the
      * DJ whether "Scan2Play Zagrane" may control Spotify; a "Nie pozwalaj" leaves Spotify unread (System Settings → Privacy → Automation),
      * said in the window ({@link #NO_CONSENT}). An ad is no song: its track's address starts "spotify:ad". Whether Spotify runs is
@@ -344,7 +242,7 @@ final class SpotifyNowPlaying implements HistorySource {
             Instant now = Instant.now();
             if (Duration.between(checkedAt, now).compareTo(CHECK_EVERY) >= 0) {
                 checkedAt = now;
-                runs = processRuns("/spotify.app/contents/macos/spotify");
+                runs = processRuns(List.of("/spotify.app/contents/macos/spotify"));
             }
             return runs;
         }

@@ -92,7 +92,7 @@ jobs:
 
       # Apple's chips run no code without a signature: an ad-hoc one ("-", no developer's name, no Apple account) keeps the bundle
       # whole, so Gatekeeper offers "Open Anyway" instead of saying the app is damaged. It is no signature for Gatekeeper.
-      # NSAppleEventsUsageDescription: the program asks Spotify by AppleScript what plays (SpotifyNowPlaying); without the key macOS
+      # NSAppleEventsUsageDescription: the program asks Spotify by AppleScript what plays (NowPlaying); without the key macOS
       # may refuse the Apple events without asking the DJ. -replace: added, or set if jpackage ever writes it. Before the signature,
       # which covers Info.plist.
       - name: Zip (macOS)
