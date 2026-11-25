@@ -83,11 +83,11 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
   workflow" of "Program DJ-a (deck-agent)" from `main`. Untried: Mac, P23, P24.
 - **2026-11-22 — the library key without "- Prod. by X" merged (#305 `main` = `7f0c87c`, #306 `dev`), V79 (moves rows)**, review
   `review-2026-11-22-library-key-producer.md`; #303 / #304 to close. Held back by the deploy window: deploy by hand; then Flyway at 79.
-- **2026-11-25 — `claude/sleepy-johnson-0z01t9` (from `main` = `e2d96d1`), pushed, no PR, no migration:** the guide (PL / EN) caught up:
+- **2026-11-25 — `claude/sleepy-johnson-0z01t9` (from `main` = `e2d96d1`), PRs #309 (`main`) and #310 (`dev`), no migration:** the guide (PL / EN) caught up:
   a section "Przed imprezą" (the wishes, the plan moved there), "🗳 Pytanie do gości" in "W trakcie imprezy", the settings' four
   groups, "Poranne podsumowanie", the guest's side (the question, the theme, "Zarezerwuj tego DJ-a"). Then its format (the owner:
   one page, as recommended): the jumps stuck to the top (`guide-nav.js` marks the section read), "W skrócie" (five steps, links),
-  the rarer details under "Więcej" (`<details>`). Waits for the owner: a look on a phone. `kiosk-full-fits-820x1180` is red here on
+  the rarer details under "Więcej" (`<details>`). Waits for the owner: the review in a new session, a look on a phone, the merge. `kiosk-full-fits-820x1180` is red here on
   `main` too (this container's fonts?), not by this change.
 - **Waits for the owner (from #269):** after the first commit the deploy window holds back (Fri–Sun 18:00–6:00): does Railway
   deploy it on the workflow's re-run? UptimeRobot is set up (the owner, 2026-11-17; `docs/monitoring.md`).
