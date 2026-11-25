@@ -128,12 +128,14 @@
     async function runScenario() {
         const definition = scenarios[name];
         // a scenario on another rendered page: load that page (the scenario files are served with every page)
-        // and as an older browser runs it (definition.without, see the top of this file)
+        // and as an older browser runs it (definition.without, see the top of this file), entered by a link into a place of it
+        // (definition.hash: the browser's own jump on loading, as a link from another page makes it)
         if (definition && ((definition.page && params.get('page') !== definition.page)
-                || (definition.without && params.get('without') !== definition.without))) {
+                || (definition.without && params.get('without') !== definition.without)
+                || (definition.hash && location.hash !== definition.hash))) {
             if (definition.page) params.set('page', definition.page);
             if (definition.without) params.set('without', definition.without);
-            location.replace(location.pathname + '?' + params.toString());
+            location.replace(location.pathname + '?' + params.toString() + (definition.hash || ''));
             return;
         }
         if (!definition) {
