@@ -34,7 +34,8 @@ class WindowTest {
     void theTexts_areImpersonal() {
         Agent.Status nothingRead = new Agent.Status(true, java.util.List.of(), java.time.Instant.EPOCH, java.util.List.of(), 0,
                 ServerClient.Outcome.OK);
-        for (String text : java.util.List.of(Window.line(nothingRead).text(), Window.NO_HISTORY, Window.NOT_IN_FOLDER)) {
+        for (String text : java.util.List.of(Window.line(nothingRead).text(), Window.NO_HISTORY, Window.NOT_IN_FOLDER,
+                Window.OTHER_FOLDER, Window.OTHER_FOLDER_TIP)) {
             assertNull(java.util.regex.Pattern.compile("(?iU)\\b(widzę|czekam|mogę|szukam)\\b").matcher(text).results().findFirst()
                     .map(java.util.regex.MatchResult::group).orElse(null), text);
         }

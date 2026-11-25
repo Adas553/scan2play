@@ -66,6 +66,10 @@ final class Window {
     /** Read: no history of either program anywhere it is looked for. */
     static final String NO_HISTORY = "<html>Brak historii VirtualDJ i Serato, Spotify wyłączony. Zagraj w programie DJ-a jedną<br>"
             + "piosenkę albo wskaż folder, w którym trzyma historię.</html>";
+    /** The quiet link when something is read: for a DJ program that is not in "CZYTA", with its tooltip. */
+    static final String OTHER_FOLDER = "Twojego programu DJ-a nie ma na liście? Wskaż jego folder…";
+    static final String OTHER_FOLDER_TIP = "<html>Tylko gdy VirtualDJ albo Serato trzyma historię w nietypowym miejscu<br>"
+            + "(np. na dysku zewnętrznym) — wtedy wskaż ten folder.</html>";
     /** The folder picked holds no history the program reads. */
     static final String NOT_IN_FOLDER = "<html>W tym folderze nie ma historii — VirtualDJ: …\\VirtualDJ\\History,<br>"
             + "Serato: …\\_Serato_\\History\\Sessions albo …\\Serato\\Library.</html>";
@@ -319,9 +323,11 @@ final class Window {
                     boolean broken = source.contains("nie da się odczytać");
                     readingRows.add(left(row(text(broken ? "!" : "✓", broken ? RED : GREEN, Font.BOLD), text(source, broken ? RED : TEXT, 0))));
                 }
-                // nothing seen: a button the DJ cannot miss; something read: a quiet link, for the rare other folder
+                // nothing seen: a button the DJ cannot miss; something read: a quiet link, for the rare other folder — saying when
+                // it is needed, as "Inny folder historii…" alone did not
                 boolean nothing = status.reading().isEmpty();
-                pickFolder.setText(nothing ? "Wskaż folder historii…" : "Inny folder historii…");
+                pickFolder.setText(nothing ? "Wskaż folder historii…" : OTHER_FOLDER);
+                pickFolder.setToolTipText(nothing ? null : OTHER_FOLDER_TIP);
                 pickFolder.putClientProperty("JButton.buttonType", nothing ? null : "borderless");
                 pickFolder.setForeground(nothing ? null : CYAN);
             }

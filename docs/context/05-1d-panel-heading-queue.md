@@ -140,7 +140,7 @@ the taskbar's and the tray's icon): unpaired, "Połącz ten komputer z imprezą"
 "Wpisz kod z panelu."), the server behind "Zmień serwer" (`https://www.scan2play.com.pl`; `dev.` for a try); paired, a status line
 with a dot ("Działa — połączono z imprezą" green; amber/red: no server, too many calls, no Pro, no history seen) and "sprawdzone
 23:53:52"; "CZYTA" — each history read ("✓ VirtualDJ (2026-11-21.m3u)", red "nie da się odczytać"), or "Brak historii VirtualDJ i Serato…" with the
-button "Wskaż folder historii…" (a quiet link "Inny folder historii…" when something is read): a folder the DJ picks is kept in the
+button "Wskaż folder historii…" (a quiet link "Twojego programu DJ-a nie ma na liście? Wskaż jego folder…" when something is read, its tooltip: only for VirtualDJ or Serato keeping its history in an unusual place): a folder the DJ picks is kept in the
 settings and read beside the usual places (`Platform.sourcesIn`: VirtualDJ's `.m3u`, Serato's `.session`, `master.sqlite`, in it or
 right under it; "Nie czytaj go" forgets it); "OZNACZONE OD URUCHOMIENIA · 12" — the last 5 songs marked with their times, newest
 first, never a night's whole list (empty: when a song marks itself; a song or a folder longer than 60 characters cut with "…", whole
@@ -161,5 +161,7 @@ by itself with Spotify or the program; on macOS by AppleScript (`osascript`, onl
 whether the program may control Spotify — the bundle's `NSAppleEventsUsageDescription`, added by the workflow; an ad, `spotify:ad`,
 none). A song heard 30 s (`PLAYED_AFTER`; a pause stops the count, another song starts it anew, a gap over 10 s between looks adds
 10 s) is a played one from the time it was first heard; the same song straight after again is not a second play. It goes as any
-history's song (the server unchanged); the window's "CZYTA" shows "Spotify (gra: …)" while Spotify runs. Its limits: Spotify closed
+history's song (the server unchanged); the window's "CZYTA" shows "Spotify (gra: …)" while Spotify runs. Named for the DJs only where the program is explained — the panel's card,
+the guide's `#deck`, the privacy policy (PL / EN) — never in "Nowości", the news e-mail or the landing pages: Spotify's terms forbid
+playing it in public, so it is a quiet possibility, not a selling point (the owner, 2026-11-25). Its limits: Spotify closed
 to the tray on Windows has no window title — nothing heard; the window's title is Spotify's own, unofficial way and may change.
