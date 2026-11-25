@@ -388,8 +388,9 @@ piece of work or when a task names an item. A finished item stays here until its
    since 2025 only for registered businesses with ~250 000 monthly users, the DJ's Spotify login and tokens kept by us, and Spotify's
    terms forbid playing it in public. Instead the program asks Spotify's desktop app what plays now — Windows: its window's title,
    macOS: AppleScript — and a song heard 30 s is a played one (`SpotifyNowPlaying`; details `docs/context/05-1d-panel-heading-queue.md`).
-   The server unchanged. **To try:** a real Windows and a Mac with Spotify (the title on a Polish Windows, macOS's question about
-   controlling Spotify, an ad, a pause, Spotify closed to the tray). **Open:** the panel's card and the guide name VirtualDJ and Serato
+   The server unchanged. **Tried (the owner, 2026-11-25, Windows, production):** the window read "Spotify (gra: Linkin Park -
+   Faint)", the request "LINKIN PARK - Faint" marked "Zagrane" ~30 s after. **To try:** a Mac (macOS's question about controlling
+   Spotify), an ad, a pause, Spotify closed to the tray. **Open:** the panel's card and the guide name VirtualDJ and Serato
    only — Spotify there once it works; the Windows media sessions (Tidal, a browser too) if DJs ask. **Asked the same day, not
    built:** adding the guests' songs to VirtualDJ / Serato by the program — VirtualDJ a playlist `Scan2Play.m3u` (whether it reloads
    by itself is to try) or a plugin; Serato has no API and reads its crates at the start (at most a crate after a restart).

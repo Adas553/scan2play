@@ -106,7 +106,8 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
 - **2026-11-25 — `claude/gracious-bell-iap7ms` (from `main` = `0316624`), pushed, no PR, no migration:** "Zagrane samo" for Spotify, a
   try in `deck-agent` (`SpotifyNowPlaying`, `docs/ideas.md` item 20): Windows — Spotify's window title by one PowerShell; macOS —
   AppleScript (the workflow adds `NSAppleEventsUsageDescription`); a song heard 30 s is played. The server unchanged; deck-agent's
-  tests 61/61. Waits for the owner: a build ("Run workflow" from this branch) and a try with Spotify on Windows and a Mac.
+  tests 61/61. **Tried on the owner's Windows: works** (a request marked ~30 s after Spotify started it). Waits for the owner: a
+  try on a Mac, then a PR (and Spotify named in the panel's card and the guide).
 - **Waits for the owner (from #269):** after the first commit the deploy window holds back (Fri–Sun 18:00–6:00): does Railway
   deploy it on the workflow's re-run? UptimeRobot is set up (the owner, 2026-11-17; `docs/monitoring.md`).
 - **Waits for the owner (the wishes, #263):** the three older Polish texts with "DJ" and a masculine verb (`guest.vote.gone`,

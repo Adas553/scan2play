@@ -153,7 +153,7 @@ lock when the program ends) and says "Program już działa…" (a window, or a l
 to run it at all); the three builds have a read-only token, the job `release` (from `main` only) uploads all three together once each
 was built, and a "Run workflow" is never cancelled by a later push.
 
-**Spotify in the program** (`SpotifyNowPlaying`, `docs/ideas.md` item 20; a try, not on a real computer yet): Spotify writes no
+**Spotify in the program** (`SpotifyNowPlaying`, `docs/ideas.md` item 20; tried on the owner's Windows, not on a Mac yet): Spotify writes no
 history and its Web API is closed to an app like this one, so the song playing now is asked of Spotify's desktop app at each look — on
 Windows the title of its window ("Artist - Title" while it plays; "Spotify Premium" / "Spotify Free" paused; an ad none), by one
 PowerShell started when a `Spotify.exe` runs (checked every 10 s by `ProcessHandle`), writing the title every 2 s in UTF-8 and ending
