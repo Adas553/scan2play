@@ -23,7 +23,7 @@
                 }),
                 [['Impreza', ['partyHoursCard', 'limitsCard', 'hostListsCard', 'kioskCard']],
                     ['Dla gości', ['guestThemeCard', 'wishesRow', 'pollsRow']],
-                    ['Ty jako DJ', ['linksCard', 'logoCard', 'libraryCard', 'morningSummaryCard']],
+                    ['Ty jako DJ', ['linksCard', 'logoCard', 'libraryCard', 'morningSummaryCard', 'newsEmailsCard']],
                     ['Dostęp', ['staffRow', 'deviceCard', 'partyCodeCard']]]);
             t.step('every card folded', folds().filter(function (fold) { return fold.open; }).length, 0);
             t.step('each line\'s state, as the panel\'s rows', [stateOf('partyHoursCard'), stateOf('guestThemeCard'), stateOf('hostListsCard'),
@@ -54,7 +54,8 @@
                 return box.height < 44 || (state && state.getBoundingClientRect().right > box.right)
                     || (state && state.getBoundingClientRect().left < name.right);
             }).map(function (line) { return line.parentElement.id || line.id; }), []);
-            t.step('the page folded fits one phone screen', document.documentElement.scrollHeight <= 1400, true);
+            // 1400 px until "Nowości mailem" (V80) added a line of ~50 px: a new card may add its one line, never its fields
+            t.step('the page folded fits one phone screen', document.documentElement.scrollHeight <= 1460, true);
             t.step('no field of a card shown while folded', shows(document.getElementById('hostBlockedInput')), false);
 
             document.querySelector('#hostListsCard > summary').click();
