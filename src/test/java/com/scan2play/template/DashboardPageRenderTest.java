@@ -1123,8 +1123,8 @@ class DashboardPageRenderTest {
         assertThat(card.indexOf("Połącz go z tą imprezą:")).isLessThan(card.indexOf("trafiają tylko wykonawca"));
         assertThat(card).as("when a song is marked: VirtualDJ writes it to its history some 45 seconds after it started")
                 .contains("około 45 sekund");
-        assertThat(card).as("Serato of any version: the program reads 4 and 5 (no version named, as if only 4 were)")
-                .contains("historię VirtualDJ i Serato i sam oznacza").doesNotContain("Serato 4");
+        assertThat(card).as("Serato of any version: the program reads 4 and 5 (no version named, as if only 4 were); Spotify too")
+                .contains("historię VirtualDJ i Serato oraz to, co gra Spotify, i sam oznacza").doesNotContain("Serato 4");
         assertThat(card).as("the first start: SmartScreen's own words; a Windows that gives no way past it leads to the panel's help; "
                         + "the Mac's second question")
                 .contains("„System Windows ochronił ten komputer”", "Jeśli „Uruchom mimo to” się nie pojawia",
