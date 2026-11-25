@@ -25,9 +25,12 @@ import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -139,6 +142,7 @@ class GuidePageRenderTest {
                 "„Wskaż folder historii…”", "tylko wykonawca, tytuł i godzina", "Traktor", "„Zagrane”");
         assertThat(html.substring(html.indexOf("s2p-btn-played"), html.indexOf("s2p-btn-skip"))).as("the row of \"Zagrane\" points to it")
                 .contains("href=\"#deck\"");
+        assertTheLayout(html, "Jak połączyć", "Na imprezie");
         assertThePictures(html, "pl");
         DashboardPageRenderTest.assertNothingInline(html);
         write("guide-pl.html", html);
@@ -181,8 +185,38 @@ class GuidePageRenderTest {
                 "3 requests a minute", "20 👍 per 10 minutes", "New link", "🖥 kiosk", "From the kiosk");
         assertThat(html.substring(html.indexOf("Co-organiser"), html.indexOf("Custom"))).contains("guest kiosk", "questions for the guests");
         assertThat(render(Locale.GERMAN, ANONYMOUS)).contains("lang=\"en\"", ">How Scan2Play works</h1>");
+        assertTheLayout(html, "How to connect", "At the party");
         assertThePictures(html, "en");
+        DashboardPageRenderTest.assertNothingInline(html);
         write("guide-en.html", html);
+    }
+
+    /**
+     * The page's frame, the same in both languages: the jumps in a bar that stays at the top (guide-nav.js marks the section being
+     * read), "W skrócie" before the first section — five steps, each a link to a place that is on the page —, and the rarer details
+     * folded under "Więcej" ({@code <details>}: no script needed to open one), the program's first steps left out of its fold.
+     */
+    private static void assertTheLayout(String html, String connect, String atTheParty) {
+        assertThat(html).contains("<nav class=\"s2p-guide-jump\" id=\"guideJump\"", "<script src=\"/js/guide-nav.js\"></script>");
+        assertThat(html.indexOf("<section id=\"short\"")).as("\"W skrócie\" under the bar, before the first section")
+                .isGreaterThan(html.indexOf("id=\"guideJump\"")).isLessThan(html.indexOf("<section id=\"start\""));
+        String steps = section(html, "short");
+        List<String> targets = new ArrayList<>();
+        Matcher link = Pattern.compile("<li><a href=\"#([^\"]+)\"><strong>").matcher(steps);
+        while (link.find()) {
+            targets.add(link.group(1));
+        }
+        assertThat(targets).as("five steps, in the order of a party").containsExactly("start", "guidePrint", "before", "party", "after");
+        targets.forEach(id -> assertThat(html).as("the step's place #" + id).contains("id=\"" + id + "\""));
+        for (String fold : List.of("guidePollsMore", "guideKioskMore", "guideDeckMore")) {
+            assertThat(html).as(fold + ", closed at first").contains("<details class=\"s2p-guide-more\" id=\"" + fold + "\">");
+        }
+        assertThat(html).as("every fold closed at first").doesNotContain(" open>", "open=\"");
+        int deckFold = html.indexOf("id=\"guideDeckMore\"");
+        assertThat(html.indexOf("id=\"guidePicture4\"")).as("the program's window in its fold").isGreaterThan(deckFold);
+        assertThat(html.indexOf(">" + connect + "</span>")).as("how to connect, not folded").isLessThan(deckFold);
+        assertThat(html.indexOf(">" + atTheParty + "</span>")).as("what happens at the party, not folded").isLessThan(deckFold);
+        assertThat(section(html, "start")).as("the settings' groups folded in their row").contains("<details class=\"s2p-guide-more\">");
     }
 
     private static String section(String html, String id) {

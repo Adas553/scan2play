@@ -12,7 +12,9 @@
 </head>
 <!--/* The guide for DJs (the owner, 2026-10-12: the app may not be easy, the new features above all; the text approved on
      https://claude.ai/artifact/SdMaijjMmaECKtNjwH2vjc). Public (LegalController.guide), one file per language as the legal pages.
-     In the order of a party. The buttons and badges in it are the app's own classes — pictures of them, not controls (spans, no
+     In the order of a party, one page (read once from the top, searched, linked to by its anchors): the jumps in a bar that stays
+     at the top (guide-nav.js marks the section being read), "W skrócie" — the party in five steps, each a link —, and the rarer
+     details folded under "Więcej" (.s2p-guide-more); a new feature goes in its section, its rarer details in a fold. The buttons and badges in it are the app's own classes — pictures of them, not controls (spans, no
      focus), so they never go stale as screenshots would. Keep it true to the app: a feature that changes changes here too.
      The pictures #guidePicture1–3 (the panel on a computer — the landing page's own —, on a phone, the evening summary) are
      screenshots of a made-up party that src/test/browser/screenshots.py makes of the render tests' pages: when one of those screens
@@ -34,16 +36,35 @@
         i czy dziś już nie leciała. W kolejce widzisz te, które przeszły, i grasz je ze swojego programu DJ-skiego. Odrzucone przez AI
         też zobaczysz, w historii, razem z komentarzem AI, więc zawsze możesz sprawdzić, czy AI ocenia dobrze. Scan2Play niczego nie odtwarza.</p>
 
-    <nav class="s2p-chips mb-4" id="guideJump" aria-label="Przejdź do">
-        <a href="#start">Na start</a>
-        <a href="#before">Przed imprezą</a>
-        <a href="#party">W trakcie imprezy</a>
-        <a href="#deck">Zagrane samo</a>
-        <a href="#phone">Na telefonie</a>
-        <a href="#after">Po imprezie</a>
-        <a href="#staff">Obsługa</a>
-        <a href="#guests">Co widzą goście</a>
+    <nav class="s2p-guide-jump" id="guideJump" aria-label="Przejdź do">
+        <div class="s2p-chips">
+            <a href="#start">Na start</a>
+            <a href="#before">Przed imprezą</a>
+            <a href="#party">W trakcie imprezy</a>
+            <a href="#deck">Zagrane samo</a>
+            <a href="#phone">Na telefonie</a>
+            <a href="#after">Po imprezie</a>
+            <a href="#staff">Obsługa</a>
+            <a href="#guests">Co widzą goście</a>
+        </div>
     </nav>
+
+    <section id="short" class="s2p-guide-short" aria-labelledby="guideShortTitle">
+        <h2 id="guideShortTitle">W skrócie</h2>
+        <ol class="s2p-guide-steps">
+            <li><a href="#start"><strong>Zaloguj się i ustaw klimat</strong>
+                <span>Kontem Google albo e-mailem. W „Impreza i kod QR” wybierz klimat i dopisz opis — według nich AI ocenia prośby.</span></a></li>
+            <li><a href="#guidePrint"><strong>Pokaż gościom kod QR</strong>
+                <span>Plakat i karty na stoły do druku albo duży kod na ekranie TV.</span></a></li>
+            <li><a href="#before"><strong>Przygotuj wesele albo osiemnastkę</strong>
+                <span>Opcjonalnie: życzenia gości i plan wieczoru z gospodarzami, zanim zagrasz.</span></a></li>
+            <li><a href="#party"><strong>Graj z kolejki</strong>
+                <span>Widzisz prośby, które przepuściło AI: „Zagrane” albo „Pomiń” — albo program, który oznacza je sam.</span></a></li>
+            <li><a href="#after"><strong>Zajrzyj do podsumowania</strong>
+                <span>Co grało, czego goście chcieli, a nie usłyszeli, i kto prosił najczęściej.</span></a></li>
+        </ol>
+        <p class="s2p-guide-short-note">Poniżej szczegóły każdego kroku. Rzadziej potrzebne są zwinięte pod „Więcej”.</p>
+    </section>
 
     <section id="start">
         <h2>Na start</h2>
@@ -57,7 +78,7 @@
                 klimat i opis też widzą. Komentarze AI mogą być klasyczne, zabawne, sarkastyczne albo krótkie. Tu też włączasz
                 <strong>dedykacje gości</strong>.</p>
         </div>
-        <div class="s2p-guide-row">
+        <div class="s2p-guide-row" id="guidePrint">
             <span class="btn btn-sm btn-outline-secondary" aria-hidden="true">Drukuj plakat i karty</span>
             <p>Kod QR jako plakat A4 albo osiem kart na stoły. Nad wydrukiem możesz wpisać własny nagłówek i jedną linię tekstu
                 (np. „Osiemnastka Dawida”), wybrać język, motyw (klasyczny, elegancki, klubowy, pastelowy) i kolor nagłówka oraz ukryć to, czego nie chcesz na papierze; „Zapisz” zapamiętuje to przy imprezie.
@@ -73,16 +94,19 @@
             <div>
             <p>Rzadsze ustawienia są w zakładce <strong>Ustawienia</strong> (obok „Panel DJ-a” i „Historia”), w czterech grupach, każde
                 zwinięte do jednej linii ze stanem obok nazwy:</p>
-            <ul>
-                <li><strong>Impreza:</strong> Godziny imprezy, Limity gości (domyślnie 2 prośby na gościa, potem 3 minuty przerwy),
-                    Lista gospodarzy (🚫 nie grać, ⭐ koniecznie zagrać; osoby, dla których grasz, mogą ją wypełnić same przez swój
-                    link) i Kiosk dla gości.</li>
-                <li><strong>Dla gości:</strong> Motyw dla gości, Życzenia i plan imprezy, Pytanie do gości.</li>
-                <li><strong>Ty jako DJ:</strong> Profile, kontakt i napiwki (Instagram, e-mail i telefon do rezerwacji, link do napiwków),
-                    Twoje logo (goście zobaczą je zamiast logo Scan2Play), Twoja biblioteka (przy każdej prośbie zobaczysz „✓ Masz”,
-                    „? Podobny” albo „✗ Nie masz”, a przyciskiem „Ukryj” schowasz te, których nie masz) i Poranne podsumowanie.</li>
-                <li><strong>Dostęp:</strong> Obsługa, To urządzenie i Kod imprezy (nowy kod QR, gdy stary ma przestać działać).</li>
-            </ul>
+            <details class="s2p-guide-more">
+                <summary>Co jest w każdej grupie</summary>
+                <ul>
+                    <li><strong>Impreza:</strong> Godziny imprezy, Limity gości (domyślnie 2 prośby na gościa, potem 3 minuty przerwy),
+                        Lista gospodarzy (🚫 nie grać, ⭐ koniecznie zagrać; osoby, dla których grasz, mogą ją wypełnić same przez swój
+                        link) i Kiosk dla gości.</li>
+                    <li><strong>Dla gości:</strong> Motyw dla gości, Życzenia i plan imprezy, Pytanie do gości.</li>
+                    <li><strong>Ty jako DJ:</strong> Profile, kontakt i napiwki (Instagram, e-mail i telefon do rezerwacji, link do napiwków),
+                        Twoje logo (goście zobaczą je zamiast logo Scan2Play), Twoja biblioteka (przy każdej prośbie zobaczysz „✓ Masz”,
+                        „? Podobny” albo „✗ Nie masz”, a przyciskiem „Ukryj” schowasz te, których nie masz) i Poranne podsumowanie.</li>
+                    <li><strong>Dostęp:</strong> Obsługa, To urządzenie i Kod imprezy (nowy kod QR, gdy stary ma przestać działać).</li>
+                </ul>
+            </details>
             </div>
         </div>
     </section>
@@ -155,8 +179,13 @@
         </div>
         <div class="s2p-guide-row">
             <span class="btn btn-sm btn-outline-secondary" aria-hidden="true">Kopiuj</span>
-            <p>Wykonawca i tytuł trafiają do schowka: wklej je w wyszukiwarkę Serato, VirtualDJ albo rekordboxa (Ctrl+V). Na komputerze
-                możesz też użyć klawiatury: ↑ ↓ (albo kliknięcie) wybierasz prośbę, C (albo Ctrl+C) kopiuje, Enter to „Zagrane”, S to „Pomiń”, Backspace (albo Ctrl+Z) to „Cofnij” (póki widać pasek), Esc kończy wybór.</p>
+            <div>
+            <p>Wykonawca i tytuł trafiają do schowka: wklej je w wyszukiwarkę Serato, VirtualDJ albo rekordboxa (Ctrl+V).</p>
+            <details class="s2p-guide-more">
+                <summary>Skróty klawiszowe na komputerze</summary>
+                <p>↑ ↓ (albo kliknięcie) wybierasz prośbę, C (albo Ctrl+C) kopiuje, Enter to „Zagrane”, S to „Pomiń”, Backspace (albo Ctrl+Z) to „Cofnij” (póki widać pasek), Esc kończy wybór.</p>
+            </details>
+            </div>
         </div>
         <div class="s2p-guide-row">
             <span class="btn btn-sm btn-outline-secondary s2p-btn-tip" aria-hidden="true">💸</span>
@@ -177,11 +206,16 @@
                 nie?”, z 2–4 odpowiedziami (puste pola to „Tak” i „Nie”). Goście widzą je na telefonach nad polem prośby — także gdy
                 wstrzymasz prośby — i na ekranie TV. Każdy głosuje raz i może zmienić zdanie, a Ty widzisz wyniki na żywo.</p>
         </div>
-        <div class="s2p-guide-row s2p-guide-text"><p>„Zadaj teraz” albo „Zapisz na później”, np. kilka pytań przygotowanych przed
-            imprezą. Naraz zadane jest jedno pytanie: nowe kończy poprzednie, a samo kończy się po 12 godzinach. Wyniki goście widzą od
-            razu po głosie albo — gdy wybierzesz „Dopiero gdy je pokażę”, np. przy zabawie — dopiero po „👀 Pokaż wyniki”. „Na TV:
-            Pytanie / Piosenki” wybiera, co pokazuje ekran. Pytanie zapisane na później zmienisz przez „Edytuj”, a już zadane przez
-            „Popraw jako nowe” (stare zostaje ze swoimi głosami).</p></div>
+        <details class="s2p-guide-more" id="guidePollsMore">
+            <summary>Więcej o pytaniach: wyniki, ekran TV, poprawki</summary>
+            <div class="s2p-guide-more-body">
+            <div class="s2p-guide-row s2p-guide-text"><p>„Zadaj teraz” albo „Zapisz na później”, np. kilka pytań przygotowanych przed
+                imprezą. Naraz zadane jest jedno pytanie: nowe kończy poprzednie, a samo kończy się po 12 godzinach. Wyniki goście widzą od
+                razu po głosie albo — gdy wybierzesz „Dopiero gdy je pokażę”, np. przy zabawie — dopiero po „👀 Pokaż wyniki”. „Na TV:
+                Pytanie / Piosenki” wybiera, co pokazuje ekran. Pytanie zapisane na później zmienisz przez „Edytuj”, a już zadane przez
+                „Popraw jako nowe” (stare zostaje ze swoimi głosami).</p></div>
+            </div>
+        </details>
         <div class="s2p-guide-row" id="guideHours">
             <span class="btn btn-sm btn-outline-secondary" aria-hidden="true">⏰ Godziny imprezy</span>
             <p>Ustawienia imprezy → Godziny imprezy: impreza sama otworzy się i zamknie o wybranej porze (czas polski), np. „dziś 20:00”
@@ -194,14 +228,19 @@
                 a obok widać najczęściej wybierane. „Następny gość” zaczyna od nowa dla kolejnej osoby; tablet robi to też sam po minucie
                 bez dotyku (po odpowiedzi AI po 20 sekundach).</p>
         </div>
-        <div class="s2p-guide-row s2p-guide-text"><p><strong>Jak ustawić tablet:</strong> „Utwórz link kiosku”, skopiuj go i otwórz na
-            tablecie w przeglądarce, w której nie jesteś zalogowany — zalogowanemu kiosk pokaże ostrzeżenie, bo gość, który z niego
-            wyjdzie, trafiłby do Twojego panelu. Żeby nikt nie wyszedł z kiosku, włącz na iPadzie Dostęp nadzorowany (Ustawienia →
-            Dostępność), a na Androidzie przypinanie ekranu. Pasek adresu pokazuje samo „/k”, bez sekretu linku.</p></div>
-        <div class="s2p-guide-row s2p-guide-text"><p>Kiosk ma własne limity, bo wszyscy goście piszą z jednego tabletu:
-            3 prośby na minutę i 20 👍 na 10 minut. Twój limit na gościa liczy się dla każdej osoby osobno. „Nowy link” wyłącza stary tablet
-            (np. gdy ktoś poznał link), „Wyłącz” zabiera link całkiem. Prośby z kiosku mają w kolejce i w historii znak „🖥 kiosk”,
-            a podsumowanie wieczoru liczy je jako „Z kiosku” (także w CSV).</p></div>
+        <details class="s2p-guide-more" id="guideKioskMore">
+            <summary>Jak ustawić tablet i limity kiosku</summary>
+            <div class="s2p-guide-more-body">
+            <div class="s2p-guide-row s2p-guide-text"><p><strong>Jak ustawić tablet:</strong> „Utwórz link kiosku”, skopiuj go i otwórz na
+                tablecie w przeglądarce, w której nie jesteś zalogowany — zalogowanemu kiosk pokaże ostrzeżenie, bo gość, który z niego
+                wyjdzie, trafiłby do Twojego panelu. Żeby nikt nie wyszedł z kiosku, włącz na iPadzie Dostęp nadzorowany (Ustawienia →
+                Dostępność), a na Androidzie przypinanie ekranu. Pasek adresu pokazuje samo „/k”, bez sekretu linku.</p></div>
+            <div class="s2p-guide-row s2p-guide-text"><p>Kiosk ma własne limity, bo wszyscy goście piszą z jednego tabletu:
+                3 prośby na minutę i 20 👍 na 10 minut. Twój limit na gościa liczy się dla każdej osoby osobno. „Nowy link” wyłącza stary tablet
+                (np. gdy ktoś poznał link), „Wyłącz” zabiera link całkiem. Prośby z kiosku mają w kolejce i w historii znak „🖥 kiosk”,
+                a podsumowanie wieczoru liczy je jako „Z kiosku” (także w CSV).</p></div>
+            </div>
+        </details>
     </section>
 
     <section id="deck">
@@ -224,40 +263,45 @@
             </ol>
         </div>
         <div class="s2p-guide-row">
-            <span class="s2p-guide-row-name" aria-hidden="true">Raz na zawsze</span>
-            <p>Połączenie zostaje: na kolejnej imprezie wystarczy włączyć program (także po nowym kodzie imprezy). Możesz połączyć
-                do 3 komputerów, np. laptop i zapasowy. „Odłącz” w karcie albo „Odłącz ten komputer” w programie kończy połączenie.</p>
-        </div>
-        <div class="s2p-guide-row">
             <span class="s2p-guide-row-name" aria-hidden="true">Na imprezie</span>
             <p>Włącz program przed pierwszą piosenką i graj jak zwykle. Gdy puścisz piosenkę, o którą prosił gość, prośba sama trafi do
                 historii jako zagrana: z Serato po kilku sekundach, z VirtualDJ po około 45 sekundach (tyle VirtualDJ czeka, zanim zapisze
                 piosenkę w historii). Piosenka tylko załadowana na deck się nie liczy.</p>
         </div>
-        <div class="s2p-guide-row">
-            <span class="s2p-guide-row-name" aria-hidden="true">Kiedy się oznaczy</span>
-            <p>Gdy piosenka w programie DJ-skim ma tego samego wykonawcę i tytuł co prośba (tak jak „✓ Masz” przy bibliotece) i zaczęła
-                grać po prośbie. Plik bez tagów albo inaczej zapisany tytuł? Kliknij „Zagrane” sam — przycisk działa jak zawsze.</p>
-        </div>
-        <div class="s2p-guide-row">
-            <span class="s2p-guide-row-name" aria-hidden="true">Okno programu</span>
-            <p>Mówi, czy program działa, którą historię czyta („Czyta”) i jakie piosenki z kolejki już oznaczył („Oznaczone”). Zamknięte
-                chowa się obok zegara (na Macu do paska menu), a program pracuje dalej. Nie widzi historii? „Wskaż folder historii…”.</p>
-        </div>
-        <figure class="s2p-guide-picture s2p-guide-picture-window" id="guidePicture4">
-            <a href="/images/guide/program.webp">
-                <img src="/images/guide/program.webp" width="525" height="533" loading="lazy" decoding="async"
-                     alt="Okno programu Scan2Play Zagrane: „Działa — połączono z imprezą”, czyta VirtualDJ i Serato, oznaczone cztery piosenki z godzinami">
-            </a>
-            <figcaption>Okno programu na Windows, połączone z imprezą.</figcaption>
-        </figure>
-        <div class="s2p-guide-row">
-            <span class="s2p-guide-row-name" aria-hidden="true">Prywatność</span>
-            <p>Program tylko czyta historię, niczego w VirtualDJ ani Serato nie zmienia. Pliki zostają na komputerze: do Scan2Play trafiają
-                tylko wykonawca, tytuł i godzina piosenek, nic z nich nie jest zapisywane.</p>
-        </div>
         <div class="s2p-guide-row s2p-guide-text"><p>Czyta VirtualDJ i Serato DJ (Pro i Lite). Z rekordboksem, Traktorem i djay klikasz
             „Zagrane” jak dotąd.</p></div>
+        <details class="s2p-guide-more" id="guideDeckMore">
+            <summary>Połączenie, okno programu i prywatność</summary>
+            <div class="s2p-guide-more-body">
+            <div class="s2p-guide-row">
+                <span class="s2p-guide-row-name" aria-hidden="true">Raz na zawsze</span>
+                <p>Połączenie zostaje: na kolejnej imprezie wystarczy włączyć program (także po nowym kodzie imprezy). Możesz połączyć
+                    do 3 komputerów, np. laptop i zapasowy. „Odłącz” w karcie albo „Odłącz ten komputer” w programie kończy połączenie.</p>
+            </div>
+            <div class="s2p-guide-row">
+                <span class="s2p-guide-row-name" aria-hidden="true">Kiedy się oznaczy</span>
+                <p>Gdy piosenka w programie DJ-skim ma tego samego wykonawcę i tytuł co prośba (tak jak „✓ Masz” przy bibliotece) i zaczęła
+                    grać po prośbie. Plik bez tagów albo inaczej zapisany tytuł? Kliknij „Zagrane” sam — przycisk działa jak zawsze.</p>
+            </div>
+            <div class="s2p-guide-row">
+                <span class="s2p-guide-row-name" aria-hidden="true">Okno programu</span>
+                <p>Mówi, czy program działa, którą historię czyta („Czyta”) i jakie piosenki z kolejki już oznaczył („Oznaczone”). Zamknięte
+                    chowa się obok zegara (na Macu do paska menu), a program pracuje dalej. Nie widzi historii? „Wskaż folder historii…”.</p>
+            </div>
+            <figure class="s2p-guide-picture s2p-guide-picture-window" id="guidePicture4">
+                <a href="/images/guide/program.webp">
+                    <img src="/images/guide/program.webp" width="525" height="533" loading="lazy" decoding="async"
+                         alt="Okno programu Scan2Play Zagrane: „Działa — połączono z imprezą”, czyta VirtualDJ i Serato, oznaczone cztery piosenki z godzinami">
+                </a>
+                <figcaption>Okno programu na Windows, połączone z imprezą.</figcaption>
+            </figure>
+            <div class="s2p-guide-row">
+                <span class="s2p-guide-row-name" aria-hidden="true">Prywatność</span>
+                <p>Program tylko czyta historię, niczego w VirtualDJ ani Serato nie zmienia. Pliki zostają na komputerze: do Scan2Play trafiają
+                    tylko wykonawca, tytuł i godzina piosenek, nic z nich nie jest zapisywane.</p>
+            </div>
+            </div>
+        </details>
     </section>
 
     <section id="phone">
@@ -359,5 +403,6 @@
 
 <div th:replace="~{fragments/components :: footer}"></div>
 <script src="/js/guide-pictures.js" th:src="@{/js/guide-pictures.js}"></script>
+<script src="/js/guide-nav.js" th:src="@{/js/guide-nav.js}"></script>
 </body>
 </html>

@@ -25,16 +25,35 @@
         has it played tonight already. The queue shows you the ones that passed, and you play them from your own DJ software. The ones
         the AI turned down are in the history, with the AI's comment, so you can always check that it judges well. Scan2Play plays nothing itself.</p>
 
-    <nav class="s2p-chips mb-4" id="guideJump" aria-label="Go to">
-        <a href="#start">Getting started</a>
-        <a href="#before">Before the party</a>
-        <a href="#party">During the party</a>
-        <a href="#deck">Played by itself</a>
-        <a href="#phone">On a phone</a>
-        <a href="#after">After the party</a>
-        <a href="#staff">Staff</a>
-        <a href="#guests">What guests see</a>
+    <nav class="s2p-guide-jump" id="guideJump" aria-label="Go to">
+        <div class="s2p-chips">
+            <a href="#start">Getting started</a>
+            <a href="#before">Before the party</a>
+            <a href="#party">During the party</a>
+            <a href="#deck">Played by itself</a>
+            <a href="#phone">On a phone</a>
+            <a href="#after">After the party</a>
+            <a href="#staff">Staff</a>
+            <a href="#guests">What guests see</a>
+        </div>
     </nav>
+
+    <section id="short" class="s2p-guide-short" aria-labelledby="guideShortTitle">
+        <h2 id="guideShortTitle">In short</h2>
+        <ol class="s2p-guide-steps">
+            <li><a href="#start"><strong>Log in and set the vibe</strong>
+                <span>With Google or an e-mail. In "Party and QR code" pick the vibe and add notes — the AI judges the requests by them.</span></a></li>
+            <li><a href="#guidePrint"><strong>Show the guests the QR code</strong>
+                <span>A poster and table cards to print, or a big code on the TV screen.</span></a></li>
+            <li><a href="#before"><strong>Prepare a wedding or an 18th</strong>
+                <span>Optional: the guests' wishes and the evening's plan with the hosts, before you play.</span></a></li>
+            <li><a href="#party"><strong>Play from the queue</strong>
+                <span>You see the requests the AI let through: "Played" or "Skip" — or a program that marks them by itself.</span></a></li>
+            <li><a href="#after"><strong>Look at the summary</strong>
+                <span>What played, what guests wanted but didn't hear, and who asked the most.</span></a></li>
+        </ol>
+        <p class="s2p-guide-short-note">Below, each step in detail. The rarer things are folded under "More".</p>
+    </section>
 
     <section id="start">
         <h2>Getting started</h2>
@@ -48,7 +67,7 @@
                 plays</strong> (guests see "🎧 Playing: DJ Alex"); they see the vibe and the notes too. The AI's comments can be classic,
                 funny, sarcastic or short. Here you also switch on the <strong>guests' dedications</strong>.</p>
         </div>
-        <div class="s2p-guide-row">
+        <div class="s2p-guide-row" id="guidePrint">
             <span class="btn btn-sm btn-outline-secondary" aria-hidden="true">Print poster and cards</span>
             <p>The QR code as an A4 poster or eight table cards. Over the print you can type your own heading and one line of text
                 (e.g. "Anna and Tom's wedding"), pick the language, a theme (classic, elegant, club, pastel) and the heading's colour, and hide what you don't want on paper; "Save" keeps it with the party.
@@ -64,16 +83,19 @@
             <div>
             <p>The rarer settings are on the <strong>Settings</strong> tab (beside "DJ Panel" and "History"), in four groups, each
                 folded to one line with its state beside the name:</p>
-            <ul>
-                <li><strong>The party:</strong> Party hours, Guest limits (2 requests per guest, then a 3-minute wait, by default),
-                    The hosts' list (🚫 do not play, ⭐ must play; the people you play for can fill it in themselves through their
-                    own link) and Guest kiosk.</li>
-                <li><strong>For the guests:</strong> Guest theme, Wishes and party plan, Question for the guests.</li>
-                <li><strong>You as the DJ:</strong> Profiles, contact and tips (Instagram, an e-mail and a phone for bookings, a tip
-                    link), Your logo (your guests see it instead of Scan2Play's), Your library (at each request you see "✓ In library",
-                    "? Similar" or "✗ Not in library", and the button "Hide" hides the ones you don't have) and Morning summary.</li>
-                <li><strong>Access:</strong> Staff, This device and Party code (a new QR code when the old one should stop working).</li>
-            </ul>
+            <details class="s2p-guide-more">
+                <summary>What is in each group</summary>
+                <ul>
+                    <li><strong>The party:</strong> Party hours, Guest limits (2 requests per guest, then a 3-minute wait, by default),
+                        The hosts' list (🚫 do not play, ⭐ must play; the people you play for can fill it in themselves through their
+                        own link) and Guest kiosk.</li>
+                    <li><strong>For the guests:</strong> Guest theme, Wishes and party plan, Question for the guests.</li>
+                    <li><strong>You as the DJ:</strong> Profiles, contact and tips (Instagram, an e-mail and a phone for bookings, a tip
+                        link), Your logo (your guests see it instead of Scan2Play's), Your library (at each request you see "✓ In library",
+                        "? Similar" or "✗ Not in library", and the button "Hide" hides the ones you don't have) and Morning summary.</li>
+                    <li><strong>Access:</strong> Staff, This device and Party code (a new QR code when the old one should stop working).</li>
+                </ul>
+            </details>
             </div>
         </div>
     </section>
@@ -146,8 +168,13 @@
         </div>
         <div class="s2p-guide-row">
             <span class="btn btn-sm btn-outline-secondary" aria-hidden="true">Copy</span>
-            <p>The artist and the title go to the clipboard: paste them into the search of Serato, VirtualDJ or rekordbox (Ctrl+V). On a
-                computer the keyboard works too: ↑ ↓ (or a click) choose a request, C (or Ctrl+C) copies, Enter is "Played", S is "Skip", Backspace (or Ctrl+Z) is "Undo" (while its bar is shown), Esc chooses none.</p>
+            <div>
+            <p>The artist and the title go to the clipboard: paste them into the search of Serato, VirtualDJ or rekordbox (Ctrl+V).</p>
+            <details class="s2p-guide-more">
+                <summary>Keyboard shortcuts on a computer</summary>
+                <p>↑ ↓ (or a click) choose a request, C (or Ctrl+C) copies, Enter is "Played", S is "Skip", Backspace (or Ctrl+Z) is "Undo" (while its bar is shown), Esc chooses none.</p>
+            </details>
+            </div>
         </div>
         <div class="s2p-guide-row">
             <span class="btn btn-sm btn-outline-secondary s2p-btn-tip" aria-hidden="true">💸</span>
@@ -169,11 +196,16 @@
                 the request field — also while you have paused the requests — and on the TV screen. Each votes once and may change their
                 mind, and you see the results live.</p>
         </div>
-        <div class="s2p-guide-row s2p-guide-text"><p>"Ask now" or "Save for later", e.g. a few questions ready before the party. One
-            question is asked at a time: a new one ends the one before, and it ends by itself after 12 hours. Guests see the results
-            right after voting or — when you pick "Only when I show them", e.g. for a game — only after "👀 Show the results". "On the
-            TV: Question / Songs" picks what the screen shows. A question saved for later is changed by "Edit"; one already asked by
-            "Correct as a new one" (the old one stays with its votes).</p></div>
+        <details class="s2p-guide-more" id="guidePollsMore">
+            <summary>More on questions: results, the TV screen, corrections</summary>
+            <div class="s2p-guide-more-body">
+            <div class="s2p-guide-row s2p-guide-text"><p>"Ask now" or "Save for later", e.g. a few questions ready before the party. One
+                question is asked at a time: a new one ends the one before, and it ends by itself after 12 hours. Guests see the results
+                right after voting or — when you pick "Only when I show them", e.g. for a game — only after "👀 Show the results". "On the
+                TV: Question / Songs" picks what the screen shows. A question saved for later is changed by "Edit"; one already asked by
+                "Correct as a new one" (the old one stays with its votes).</p></div>
+            </div>
+        </details>
         <div class="s2p-guide-row" id="guideHours">
             <span class="btn btn-sm btn-outline-secondary" aria-hidden="true">⏰ Party hours</span>
             <p>Party settings → Party hours: the party opens and closes by itself at the times you pick (Polish time), e.g. "today 20:00"
@@ -186,14 +218,19 @@
                 with the most wanted beside them. "Next guest" starts afresh for the next person; the tablet does it by itself after a
                 minute without a touch (20 seconds after the AI's answer).</p>
         </div>
-        <div class="s2p-guide-row s2p-guide-text"><p><strong>Setting up the tablet:</strong> "Make the kiosk link", copy it and open it on
-            the tablet in a browser where you are not logged in — logged in, the kiosk shows a warning, because a guest who leaves it
-            would find your panel. So that nobody leaves the kiosk, turn on Guided Access on an iPad (Settings → Accessibility),
-            screen pinning on Android. The address bar shows just "/k", without the link's secret.</p></div>
-        <div class="s2p-guide-row s2p-guide-text"><p>The kiosk has its own limits, since every guest types on one tablet:
-            3 requests a minute and 20 👍 per 10 minutes. Your limit per guest counts for each person on their own. "New link" turns the old tablet
-            off (e.g. when someone learned the link), "Turn off" takes the link away. Requests from the kiosk carry "🖥 kiosk" in the
-            queue and the history, and the evening summary counts them as "From the kiosk" (in the CSV too).</p></div>
+        <details class="s2p-guide-more" id="guideKioskMore">
+            <summary>Setting up the tablet and the kiosk's limits</summary>
+            <div class="s2p-guide-more-body">
+            <div class="s2p-guide-row s2p-guide-text"><p><strong>Setting up the tablet:</strong> "Make the kiosk link", copy it and open it on
+                the tablet in a browser where you are not logged in — logged in, the kiosk shows a warning, because a guest who leaves it
+                would find your panel. So that nobody leaves the kiosk, turn on Guided Access on an iPad (Settings → Accessibility),
+                screen pinning on Android. The address bar shows just "/k", without the link's secret.</p></div>
+            <div class="s2p-guide-row s2p-guide-text"><p>The kiosk has its own limits, since every guest types on one tablet:
+                3 requests a minute and 20 👍 per 10 minutes. Your limit per guest counts for each person on their own. "New link" turns the old tablet
+                off (e.g. when someone learned the link), "Turn off" takes the link away. Requests from the kiosk carry "🖥 kiosk" in the
+                queue and the history, and the evening summary counts them as "From the kiosk" (in the CSV too).</p></div>
+            </div>
+        </details>
     </section>
 
     <section id="deck">
@@ -216,41 +253,46 @@
             </ol>
         </div>
         <div class="s2p-guide-row">
-            <span class="s2p-guide-row-name" aria-hidden="true">Once for good</span>
-            <p>It stays connected: at the next party just start the program (also after a new party code). You can connect
-                up to 3 computers, e.g. a laptop and a spare. “Disconnect” in the card or “Odłącz ten komputer” in the program ends it.</p>
-        </div>
-        <div class="s2p-guide-row">
             <span class="s2p-guide-row-name" aria-hidden="true">At the party</span>
             <p>Start the program before the first song and play as usual. When you play a song a guest asked for, the request goes to
                 the history as played by itself: from Serato within a few seconds, from VirtualDJ about 45 seconds after it starts
                 (VirtualDJ waits that long before writing it to its history). A song only loaded on a deck does not count.</p>
         </div>
-        <div class="s2p-guide-row">
-            <span class="s2p-guide-row-name" aria-hidden="true">When it marks</span>
-            <p>When the song in your DJ software has the request’s artist and title (as “✓ Have” in your library) and started after the
-                request. A file without tags, a title written differently? Click “Played” yourself — the button works as always.</p>
-        </div>
-        <div class="s2p-guide-row">
-            <span class="s2p-guide-row-name" aria-hidden="true">The program’s window</span>
-            <p>It says whether it works, which history it reads (“Czyta”) and which of the queue’s songs it marked (“Oznaczone”). Closed,
-                it hides by the clock (on a Mac in the menu bar) and keeps working. It does not see the history? “Wskaż folder historii…”
-                (pick the history folder).</p>
-        </div>
-        <figure class="s2p-guide-picture s2p-guide-picture-window" id="guidePicture4">
-            <a href="/images/guide/program.webp">
-                <img src="/images/guide/program.webp" width="525" height="533" loading="lazy" decoding="async"
-                     alt="The Scan2Play Zagrane program’s window, in Polish: connected to the party, reading VirtualDJ and Serato, four songs marked with their times">
-            </a>
-            <figcaption>The program’s window on Windows, connected to a party (the program speaks Polish).</figcaption>
-        </figure>
-        <div class="s2p-guide-row">
-            <span class="s2p-guide-row-name" aria-hidden="true">Privacy</span>
-            <p>The program only reads the history and changes nothing in VirtualDJ or Serato. The files stay on the computer:
-                only the artist, title and time of the songs reach Scan2Play, and none of it is kept.</p>
-        </div>
         <div class="s2p-guide-row s2p-guide-text"><p>It reads VirtualDJ and Serato DJ (Pro and Lite). With rekordbox, Traktor and djay you
             click “Played” as before.</p></div>
+        <details class="s2p-guide-more" id="guideDeckMore">
+            <summary>Connection, the program's window and privacy</summary>
+            <div class="s2p-guide-more-body">
+            <div class="s2p-guide-row">
+                <span class="s2p-guide-row-name" aria-hidden="true">Once for good</span>
+                <p>It stays connected: at the next party just start the program (also after a new party code). You can connect
+                    up to 3 computers, e.g. a laptop and a spare. “Disconnect” in the card or “Odłącz ten komputer” in the program ends it.</p>
+            </div>
+            <div class="s2p-guide-row">
+                <span class="s2p-guide-row-name" aria-hidden="true">When it marks</span>
+                <p>When the song in your DJ software has the request’s artist and title (as “✓ Have” in your library) and started after the
+                    request. A file without tags, a title written differently? Click “Played” yourself — the button works as always.</p>
+            </div>
+            <div class="s2p-guide-row">
+                <span class="s2p-guide-row-name" aria-hidden="true">The program’s window</span>
+                <p>It says whether it works, which history it reads (“Czyta”) and which of the queue’s songs it marked (“Oznaczone”). Closed,
+                    it hides by the clock (on a Mac in the menu bar) and keeps working. It does not see the history? “Wskaż folder historii…”
+                    (pick the history folder).</p>
+            </div>
+            <figure class="s2p-guide-picture s2p-guide-picture-window" id="guidePicture4">
+                <a href="/images/guide/program.webp">
+                    <img src="/images/guide/program.webp" width="525" height="533" loading="lazy" decoding="async"
+                         alt="The Scan2Play Zagrane program’s window, in Polish: connected to the party, reading VirtualDJ and Serato, four songs marked with their times">
+                </a>
+                <figcaption>The program’s window on Windows, connected to a party (the program speaks Polish).</figcaption>
+            </figure>
+            <div class="s2p-guide-row">
+                <span class="s2p-guide-row-name" aria-hidden="true">Privacy</span>
+                <p>The program only reads the history and changes nothing in VirtualDJ or Serato. The files stay on the computer:
+                    only the artist, title and time of the songs reach Scan2Play, and none of it is kept.</p>
+            </div>
+            </div>
+        </details>
     </section>
 
     <section id="phone">
@@ -353,5 +395,6 @@
 
 <div th:replace="~{fragments/components :: footer}"></div>
 <script src="/js/guide-pictures.js" th:src="@{/js/guide-pictures.js}"></script>
+<script src="/js/guide-nav.js" th:src="@{/js/guide-nav.js}"></script>
 </body>
 </html>
