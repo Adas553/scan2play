@@ -389,8 +389,11 @@ piece of work or when a task names an item. A finished item stays here until its
    terms forbid playing it in public. Instead the program asks Spotify's desktop app what plays now — Windows: its window's title,
    macOS: AppleScript — and a song heard 30 s is a played one (`SpotifyNowPlaying`; details `docs/context/05-1d-panel-heading-queue.md`).
    The server unchanged. **Tried (the owner, 2026-11-25, Windows, production):** the window read "Spotify (gra: Linkin Park -
-   Faint)", the request "LINKIN PARK - Faint" marked "Zagrane" ~30 s after. **To try:** a Mac (macOS's question about controlling
-   Spotify), an ad, a pause, Spotify closed to the tray. **Open:** the panel's card and the guide name VirtualDJ and Serato
+   Faint)", the request "LINKIN PARK - Faint" marked "Zagrane" ~30 s after; paused, "Spotify (nic nie gra)"; a request added while
+   its song already played marked too (the song sent only at its 30th second, its start within the server's 2 minutes before the
+   request — a request added later in the song stays; the owner: "to raczej dobre zachowanie"). **To try:** a Mac (macOS's question
+   about controlling Spotify), an ad, Spotify closed to the tray. **Open:** marking a request whose song plays when it is asked, at
+   any minute of it (the program would send "plays now", the server's rule against "zagraj to jeszcze raz" would change). **Open:** the panel's card and the guide name VirtualDJ and Serato
    only — Spotify there once it works; the Windows media sessions (Tidal, a browser too) if DJs ask. **Asked the same day, not
    built:** adding the guests' songs to VirtualDJ / Serato by the program — VirtualDJ a playlist `Scan2Play.m3u` (whether it reloads
    by itself is to try) or a plugin; Serato has no API and reads its crates at the start (at most a crate after a restart).
