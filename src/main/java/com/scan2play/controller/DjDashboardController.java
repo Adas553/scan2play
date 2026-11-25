@@ -196,6 +196,10 @@ public class DjDashboardController {
         log.info("DJ Dashboard access: ownerId={}, partyCode={}, owner={}", authentication.getName(), partyCode, owner);
         if (owner) {
             keepOwner(settings, authentication);
+            // logged in while the news is there: its e-mail would only repeat their own panel (one write a news, not one a load)
+            if (settings.getNewsSent() < PanelNews.NUMBER) {
+                partySettingsCommandService.markNewsKnown(partyCode, PanelNews.NUMBER);
+            }
         }
 
         model.addAttribute(PARTY_CODE, partyCode);

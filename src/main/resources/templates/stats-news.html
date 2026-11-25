@@ -17,11 +17,11 @@
 <div class="container py-4">
     <h1 class="h4 text-light-custom mb-1" th:text="'Nowości nr ' + ${number}">Nowości nr 1</h1>
     <p class="text-secondary-bright mb-3">
-        Tylko do DJ-ów, którzy włączyli „Nowości mailem” (w panelu albo w Ustawieniach imprezy).
+        Tylko do DJ-ów, którzy włączyli „Nowości mailem” (w panelu albo w Ustawieniach imprezy) i od tych nowości nie otworzyli panelu.
         <a href="/dj/stats" class="text-secondary-bright">Statystyki</a>
     </p>
     <p class="text-light-custom mb-3" id="newsCounts">
-        Zgody: <b th:text="${counts.yes()}">3</b> · dostali te nowości: <b th:text="${counts.had()}">2</b>
+        Zgody: <b th:text="${counts.yes()}">3</b> · znają je (mail albo panel): <b th:text="${counts.had()}">2</b>
         · czeka: <b th:text="${counts.due()}">1</b>
     </p>
     <p th:if="${done == 'try'}" class="alert alert-success py-2" id="newsTrySent">Próba wysłana na Twój adres.</p>
@@ -40,12 +40,14 @@
             <button type="submit" class="btn btn-outline-light" id="newsTryEn">Wyślij próbę do mnie (EN)</button>
         </form>
     </div>
-    <form th:action="@{/dj/stats/news/send}" method="post" class="mb-4" id="newsSendForm" th:if="${canSend && counts.due() > 0}">
+    <form th:action="@{/dj/stats/news/send}" method="post" class="mb-4" id="newsSendForm" th:if="${canSend && !sending && counts.due() > 0}">
         <div class="form-check mb-2">
             <input class="form-check-input" type="checkbox" id="newsChecked" required>
             <label class="form-check-label text-light-custom" for="newsChecked">Próba sprawdzona, wysyłam</label>
         </div>
-        <button type="submit" class="btn btn-action px-4" id="newsSend" th:text="'Wyślij do ' + ${counts.due()}">Wyślij do 1</button>
+        <button type="submit" class="btn btn-action px-4" id="newsSend" th:text="'Wyślij do ' + ${counts.nextSend()}">Wyślij do 1</button>
+        <p class="small text-secondary-bright mt-2 mb-0" id="newsSendRest" th:if="${counts.due() > counts.nextSend()}"
+           th:text="'Reszta (' + ${counts.due() - counts.nextSend()} + ') następnego dnia: Brevo za darmo wysyła 300 maili dziennie.'">Reszta następnego dnia.</p>
     </form>
     <p th:unless="${canSend}" class="text-secondary-bright" id="newsCannotSend">Wysyłka niemożliwa: brak klucza Brevo.</p>
 

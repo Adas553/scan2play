@@ -9,9 +9,11 @@ What is new in Scan2Play, told to the DJs who already have an account (V80; how 
   it (section 3, art. 6(1)(a) GDPR; and Polish law on e-mail marketing asks for that consent first): **never an e-mail of news to
   anyone else**, never to the whole database. Each has "Nie wysyłaj mi nowości" and `List-Unsubscribe`.
 
-Whoever says yes gets the news now by the next send too — even when they said yes on its card: they asked for the e-mail, and it keeps
-the links in their mailbox. News 1 (2026-11: "Zagrane samo", "Pytanie do gości", "Plan imprezy"): release, wait a week or two while the
-DJs open their panels and say yes, then send it; whoever says yes later gets it by the next click of "Wyślij".
+**Only to whom it is news** (the owner, 2026-11-25: a DJ logged in while the feature is there needs no e-mail of it): an organiser
+who opens their panel, or says yes (only ever logged in), while a news is there has it already — `news_sent` is set to its number
+(`markNewsKnown`), as if e-mailed. So the e-mail of a news reaches the DJs who said yes earlier and have not logged in since. News 1
+(2026-11: "Zagrane samo", "Pytanie do gości", "Plan imprezy") has nobody to go to — every consent is given after it came; its card in
+the panel is the whole of it. The e-mail starts with news 2: release it, wait a day or two, look at "czeka" on `/dj/stats/news`, send.
 
 ## A new news, step by step
 

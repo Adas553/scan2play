@@ -89,7 +89,7 @@ class PasswordAccountServiceTest {
         when(mailer.render(anyString(), any(), anyMap())).thenAnswer(call -> call.getArgument(0) + " | " + ((Map<?, ?>) call.getArgument(2)).get("link"));
         doAnswer(call -> {
             ((Runnable) call.getArgument(0)).run();
-            return null;
+            return true;
         }).when(mailer).later(any());
         when(mailer.send(any())).thenAnswer(call -> sent.add(call.getArgument(0)));
         Clock clock = new Clock() {

@@ -17,7 +17,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 /**
  * The e-mail of what is new ({@link PanelNews}, V80) — only to the organisers who switched "Nowości mailem" on (the privacy policy:
  * never without that consent), in their panel's language, with "Nie wysyłaj mi nowości" and {@code List-Unsubscribe}. Sent by hand
- * by the site's owner ({@code /dj/stats/news}), never by a schedule: a news goes once someone has looked at it.
+ * by the site's owner ({@code /dj/stats/news}), never by a schedule: a news goes once someone has looked at it. Only to whom it is
+ * news: an organiser who opened their panel, or said yes, while it was there has it already ({@code markNewsKnown}) — the e-mail is
+ * for those who have not logged in since.
  * <p>
  * "Once a news" is the claim of the organiser's row ({@code news_sent}, one {@code UPDATE}): two sends at once send it once, and a
  * second send gives it nobody twice. A failed send gives the claim back: the next send tries it again.
@@ -28,13 +30,18 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class NewsEmailService {
 
     /** The most e-mails one send gives Brevo: its free plan takes 300 a day, the owner's daily report and the welcomes among them. */
-    static final int MAX_PER_SEND = 200;
+    public static final int MAX_PER_SEND = 200;
 
     /** How many said yes, and how many of them have had the news now. */
     public record Counts(long yes, long had) {
 
         public long due() {
             return yes - had;
+        }
+
+        /** How many one send gives: the due ones, at most {@value #MAX_PER_SEND} — the rest wait for the next send. */
+        public long nextSend() {
+            return Math.min(due(), MAX_PER_SEND);
         }
     }
 
@@ -57,20 +64,24 @@ public class NewsEmailService {
 
     /**
      * The news to every organiser it is due to, at most {@value #MAX_PER_SEND}, on the e-mails' thread; false when there is nothing to
-     * send with (no key) or a send is on its way already.
+     * send with (no key), a send is on its way already, or the e-mails' queue is full — then nothing is marked as on its way, or the
+     * mark would stay until a restart and no send could start.
      */
     public boolean sendLater() {
         if (!mailer.isOn() || !sending.compareAndSet(false, true)) {
             return false;
         }
-        mailer.later(() -> {
+        boolean queued = mailer.later(() -> {
             try {
                 sendDue();
             } finally {
                 sending.set(false);
             }
         });
-        return true;
+        if (!queued) {
+            sending.set(false);
+        }
+        return queued;
     }
 
     /** Sends the news now to whom it is due; how many went. */

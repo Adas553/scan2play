@@ -110,8 +110,11 @@ public class Mailer {
         return result == Result.SENT || result == Result.UNKNOWN;
     }
 
-    /** Runs {@code task} on the e-mails' thread; a full queue drops it (logged) — the caller's nightly job tries again. */
-    public void later(Runnable task) {
+    /**
+     * Runs {@code task} on the e-mails' thread; a full queue drops it (logged) — the caller's nightly job tries again. False when it was
+     * dropped: a caller that marked something as on its way takes the mark back.
+     */
+    public boolean later(Runnable task) {
         try {
             executor.execute(() -> {
                 try {
@@ -120,8 +123,10 @@ public class Mailer {
                     log.warn("E-mail task failed: {}", e.toString());
                 }
             });
+            return true;
         } catch (RejectedExecutionException e) {
             log.warn("E-mail task dropped (the queue is full); the nightly job sends it");
+            return false;
         }
     }
 

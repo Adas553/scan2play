@@ -71,7 +71,9 @@ class NewsEmailServiceTest {
                 "href=\"https://www.scan2play.com.pl/jak-to-dziala#deck\"", "href=\"https://www.scan2play.com.pl/jak-to-dziala#guidePolls\"",
                 "href=\"https://www.scan2play.com.pl/jak-to-dziala#guidePlan\"", "href=\"https://www.scan2play.com.pl/dj/dashboard\"",
                 "„Nowości mailem”", "href=\"" + stop.replace("&", "&amp;") + "\"", ">Nie wysyłaj mi nowości<");
-        assertThat(email.text()).contains("Nie wysyłaj mi nowości (" + stop + ")").doesNotContain("<");
+        assertThat(email.html()).as("the link asks first: not \"one click\"").contains("albo tym linkiem:").doesNotContain("kliknięciem");
+        assertThat(email.text()).contains("Nie wysyłaj mi nowości (" + stop + ")").doesNotContain("<")
+                .as("a paragraph on one line in the text part").contains("prośby gości jako zagrane", "na żywo, także na ekranie TV");
     }
 
     @Test
@@ -115,6 +117,26 @@ class NewsEmailServiceTest {
         later.getFirst().run();
         assertThat(service.isSending()).isFalse();
         assertThat(service.sendLater()).isTrue();
+    }
+
+    @Test
+    void aSendTheFullQueueDropped_isNotOnItsWay_andTheNextClickStartsOne() {
+        List<Runnable> taken = new ArrayList<>();
+        boolean[] full = {true};
+        Mailer busy = new Mailer(email -> Result.SENT, templates(), mock(JdbcTemplate.class), "https://www.scan2play.com.pl", task -> {
+            if (full[0]) {
+                throw new java.util.concurrent.RejectedExecutionException("full");
+            }
+            taken.add(task);
+        });
+        NewsEmailService onBusyMailer = new NewsEmailService(queries, commands, repository, busy);
+
+        assertThat(onBusyMailer.sendLater()).as("dropped: the page says not sent").isFalse();
+        assertThat(onBusyMailer.isSending()).as("nothing on its way").isFalse();
+
+        full[0] = false;
+        assertThat(onBusyMailer.sendLater()).as("the queue free again: the next click sends").isTrue();
+        assertThat(taken).hasSize(1);
     }
 
     @Test

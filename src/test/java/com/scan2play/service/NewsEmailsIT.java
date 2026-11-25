@@ -23,7 +23,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * "Nowości mailem" (V80) on a real PostgreSQL: the consent kept by its own statement with its time — a save of the settings never puts
- * an old value back —, the news now due to whoever says yes, and the news e-mail's "once": two sends at once send it once, a failed
+ * an old value back —, the news now never e-mailed to whoever had it in their panel (said yes or opened it while it was there), and the news e-mail's "once": two sends at once send it once, a failed
  * send is given back and sent by the next, nobody without the consent gets it.
  */
 class NewsEmailsIT extends PostgresIntegrationTest {
@@ -74,7 +74,7 @@ class NewsEmailsIT extends PostgresIntegrationTest {
     }
 
     @Test
-    void theConsent_isKeptWithItsTime_andTheNewsNowIsDueToThem() {
+    void theConsent_isKeptWithItsTime_andTheNewsNowIsNotEmailedToThem() {
         String code = organiser("yes-" + System.nanoTime() + "@example.com");
         assertThat(queries.getSettings(code).isNewsEmails()).isFalse();   // cached
         assertThat(parties.newsDue(PanelNews.NUMBER, 10_000)).doesNotContain(code);
@@ -84,8 +84,9 @@ class NewsEmailsIT extends PostgresIntegrationTest {
         PartySettingsEntity settings = queries.getSettings(code);
         assertThat(settings.isNewsEmails()).as("the cache follows").isTrue();
         assertThat(settings.getNewsEmailsAt()).isNotNull();
-        assertThat(newsSent(code)).isZero();
-        assertThat(parties.newsDue(PanelNews.NUMBER, 10_000)).as("the news now is theirs by the next send").contains(code);
+        assertThat(newsSent(code)).as("said yes while logged in: the news now is in their panel already").isEqualTo(PanelNews.NUMBER);
+        assertThat(parties.newsDue(PanelNews.NUMBER, 10_000)).as("so no e-mail of it").doesNotContain(code);
+        assertThat(parties.newsDue(PanelNews.NUMBER + 1, 10_000)).as("the next news is theirs").contains(code);
 
         // a save of the other settings (read before or after) never puts the old consent back
         commands.updateSettings(code, s -> s.setDjName("DJ Ola"));
@@ -96,7 +97,23 @@ class NewsEmailsIT extends PostgresIntegrationTest {
         assertThat(queries.getSettings(code).isNewsEmails()).isFalse();
         assertThat(jdbc.queryForObject("SELECT news_emails_at FROM party_settings WHERE party_code = ?", Timestamp.class, code))
                 .as("the time it was taken back").isAfterOrEqualTo(yes);
-        assertThat(parties.newsDue(PanelNews.NUMBER, 10_000)).as("taken back: nothing due").doesNotContain(code);
+        assertThat(parties.newsDue(PanelNews.NUMBER + 1, 10_000)).as("taken back: nothing due").doesNotContain(code);
+    }
+
+    @Test
+    void anOrganiserWhoOpensTheirPanel_whileTheNewsIsThere_isSentNothingOfIt() {
+        String address = "panel-" + System.nanoTime() + "@example.com";
+        String code = waitingForTheNews(address);
+        assertThat(parties.newsDue(PanelNews.NUMBER, 10_000)).as("said yes before the news, not logged in since").contains(code);
+
+        commands.markNewsKnown(code, PanelNews.NUMBER);
+        commands.markNewsKnown(code, PanelNews.NUMBER - 1);
+
+        assertThat(newsSent(code)).as("never lowered").isEqualTo(PanelNews.NUMBER);
+        assertThat(queries.getSettings(code).getNewsSent()).as("the cache follows").isEqualTo(PanelNews.NUMBER);
+        assertThat(service().send(code)).isFalse();
+        service().sendDue();
+        assertThat(sentTo(address)).isZero();
     }
 
     @Test

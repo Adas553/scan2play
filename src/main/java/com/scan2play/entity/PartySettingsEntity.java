@@ -239,7 +239,10 @@ public class PartySettingsEntity {
     @Column(insertable = false, updatable = false)
     private Instant newsEmailsAt;
 
-    /** The number of the latest news e-mailed to the organiser (V80); 0 = none. */
+    /**
+     * The number of the latest news the organiser has had (V80): e-mailed, or known from their own panel — they opened it, or said yes
+     * to the e-mails, while it was there; 0 = none. A news's e-mail goes only to whom it is below that news.
+     */
     @Column(insertable = false, updatable = false)
     private int newsSent;
 

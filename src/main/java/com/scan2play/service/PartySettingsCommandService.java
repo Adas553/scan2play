@@ -1,6 +1,7 @@
 package com.scan2play.service;
 
 import com.scan2play.entity.PartySettingsEntity;
+import com.scan2play.model.PanelNews;
 import com.scan2play.model.VibeType;
 import com.scan2play.repository.PartySettingsRepository;
 import com.scan2play.util.AfterCommit;
@@ -120,11 +121,26 @@ public class PartySettingsCommandService {
         evictAfterCommit(partyCode);
     }
 
-    /** "Nowości mailem" (V80) on or off, with its time — the proof of the consent ({@link PartySettingsRepository#setNewsEmails}). */
+    /**
+     * "Nowości mailem" (V80) on or off, with its time — the proof of the consent ({@link PartySettingsRepository#setNewsEmails}).
+     * Switched on, the news now counts as known: only a logged-in organiser says yes, and their panel has it — the e-mails are for
+     * the news to come.
+     */
     @Transactional
     public void setNewsEmails(String partyCode, boolean on) {
         partySettingsRepository.setNewsEmails(partyCode, on, Instant.now());
+        if (on) {
+            partySettingsRepository.markNewsKnown(partyCode, PanelNews.NUMBER);
+        }
         evictAfterCommit(partyCode);
+    }
+
+    /** The news {@code number} known from the organiser's own panel ({@link PartySettingsRepository#markNewsKnown}): no e-mail of it. */
+    @Transactional
+    public void markNewsKnown(String partyCode, int number) {
+        if (partySettingsRepository.markNewsKnown(partyCode, number) == 1) {
+            evictAfterCommit(partyCode);
+        }
     }
 
     /** The news {@code number}'s e-mail claimed for the organiser ({@link PartySettingsRepository#claimNews}): true for the one sender. */

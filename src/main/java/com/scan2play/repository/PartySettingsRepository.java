@@ -124,8 +124,8 @@ public interface PartySettingsRepository extends JpaRepository<PartySettingsEnti
     List<String> welcomesDue(@Param("since") Instant since, @Param("limit") int limit);
 
     /**
-     * "Nowości mailem" (V80) switched on or off at {@code now} — the time is the proof of the consent. The news they have had stays as
-     * it is: whoever says yes gets the news now by the next send too, as they asked. The caller empties the cache.
+     * "Nowości mailem" (V80) switched on or off at {@code now} — the time is the proof of the consent. The news they have had is
+     * {@link #markNewsKnown}'s: whoever says yes is logged in, so the news now is in their panel already. The caller empties the cache.
      */
     @Transactional
     @Modifying
@@ -152,6 +152,17 @@ public interface PartySettingsRepository extends JpaRepository<PartySettingsEnti
     @Query(value = "UPDATE party_settings SET news_sent = :number WHERE party_code = :partyCode AND news_emails"
             + " AND news_sent < :number AND owner_email IS NOT NULL", nativeQuery = true)
     int claimNews(@Param("partyCode") String partyCode, @Param("number") int number);
+
+    /**
+     * The news {@code number} known to the organiser without an e-mail: they are logged in while it is there (their panel opened, or
+     * the consent given — only ever by someone logged in), so its e-mail would tell them what they already have. Counted with the
+     * e-mailed ones ({@code news_sent}); a later news is due to them as to anyone. 1 when this call marked it.
+     */
+    @Transactional
+    @Modifying
+    @Query(value = "UPDATE party_settings SET news_sent = :number WHERE party_code = :partyCode AND news_sent < :number",
+            nativeQuery = true)
+    int markNewsKnown(@Param("partyCode") String partyCode, @Param("number") int number);
 
     /** A claimed news e-mail given back (its send failed): due again, to the next send. */
     @Transactional

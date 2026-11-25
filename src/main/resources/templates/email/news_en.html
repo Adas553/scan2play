@@ -8,17 +8,13 @@
 <div style="max-width:560px;">
 <p th:text="${firstName != null} ? 'Hi ' + ${firstName} + ',' : 'Hi!'">Hi Ola,</p>
 <p>we've added three things to Scan2Play:</p>
-<p><b>🎧 Played by itself.</b> A small program on the computer you play on reads the history of VirtualDJ or Serato and marks the
-    guests' requests as played by itself. Nothing to tap during the set. <a th:href="${siteUrl} + '/how-it-works#deck'" href="#" style="color:#0a7f99;">How it works</a></p>
-<p><b>🗳 A question for the guests.</b> Ask the room a question, e.g. "Disco polo: yes or no?". The guests vote on their phones and you see
-    the results live, on the TV screen too. <a th:href="${siteUrl} + '/how-it-works#guidePolls'" href="#" style="color:#0a7f99;">How it works</a></p>
-<p><b>📋 The party plan.</b> The evening's moments (the couple's entrance, the first dance, the cake…) with their songs and notes. The
-    hosts fill the plan in themselves through their own link, no account needed, and on the night you see it above the queue with the
-    time to the next moment. <a th:href="${siteUrl} + '/how-it-works#guidePlan'" href="#" style="color:#0a7f99;">How it works</a></p>
+<p><b>🎧 Played by itself.</b> A small program on the computer you play on reads the history of VirtualDJ or Serato and marks the guests' requests as played by itself. Nothing to tap during the set. <a th:href="${siteUrl} + '/how-it-works#deck'" href="#" style="color:#0a7f99;white-space:nowrap;">How it works</a></p>
+<p><b>🗳 A question for the guests.</b> Ask the room a question, e.g. "Disco polo: yes or no?". The guests vote on their phones and you see the results live, on the TV screen too. <a th:href="${siteUrl} + '/how-it-works#guidePolls'" href="#" style="color:#0a7f99;white-space:nowrap;">How it works</a></p>
+<p><b>📋 The party plan.</b> The evening's moments (the couple's entrance, the first dance, the cake…) with their songs and notes. The hosts fill the plan in themselves through their own link, no account needed, and on the night you see it above the queue with the time to the next moment. <a th:href="${siteUrl} + '/how-it-works#guidePlan'" href="#" style="color:#0a7f99;white-space:nowrap;">How it works</a></p>
 <p style="margin:0 0 28px;"><a th:href="${siteUrl} + '/dj/dashboard'" href="#" style="display:inline-block;background:#0a7f99;color:#ffffff;text-decoration:none;padding:12px 20px;border-radius:6px;font-weight:bold;">Open the panel</a></p>
 <p>Something not working, or something missing? Just reply to this e-mail.</p>
 <p>Scan2Play</p>
-<p style="color:#666666;font-size:13px;">You're getting this because "News by e-mail" is on in your party settings. Switch it off there<th:block th:if="${stopUrl != null}"> or with one click: <a th:href="${stopUrl}" href="#" style="color:#666666;">Stop the e-mails of what's new</a></th:block>.</p>
+<p style="color:#666666;font-size:13px;">You're getting this because "News by e-mail" is on in your party settings. Switch it off there<th:block th:if="${stopUrl != null}"> or with this link: <a th:href="${stopUrl}" href="#" style="color:#666666;">Stop the e-mails of what's new</a></th:block>.</p>
 </div>
 </body>
 </html>
