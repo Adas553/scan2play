@@ -1123,13 +1123,17 @@ class DashboardPageRenderTest {
         assertThat(card.indexOf("Połącz go z tą imprezą:")).isLessThan(card.indexOf("trafiają tylko wykonawca"));
         assertThat(card).as("when a song is marked: VirtualDJ writes it to its history some 45 seconds after it started")
                 .contains("około 45 sekund");
-        assertThat(card).as("Serato of any version: the program reads 4 and 5 (no version named, as if only 4 were)")
-                .contains("historię VirtualDJ i Serato i sam oznacza").doesNotContain("Serato 4");
+        assertThat(card).as("Serato of any version: the program reads 4 and 5 (no version named, as if only 4 were); Spotify and Tidal too")
+                .contains("historię VirtualDJ i Serato oraz to, co grają Spotify i Tidal, i sam oznacza").doesNotContain("Serato 4");
         assertThat(card).as("the first start: SmartScreen's own words; a Windows that gives no way past it leads to the panel's help; "
                         + "the Mac's second question")
                 .contains("„System Windows ochronił ten komputer”", "Jeśli „Uruchom mimo to” się nie pojawia",
                         "napisz do nas przez „Pomoc i kontakt”", "potwierdź hasłem",
-                        "Program nie widzi historii? W jego oknie: „Wskaż folder historii…”.");
+                        "Program nie widzi historii VirtualDJ albo Serato? W jego oknie: „Wskaż folder historii…”",
+                        "„VirtualDJ albo Serato nie na liście?”");
+        assertThat(card).as("Spotify and Tidal: on Windows only playing (Windows' media sessions, no window needed); the Mac's "
+                        + "question about controlling Spotify allowed")
+                .contains("na Windows wystarczy, że grają", "może sterować Spotify — pozwól").doesNotContain("musi być otwarte");
     }
 
     /** "Podsumowanie wieczoru" (V35): to an organiser without Pro, the way to /pro with "PRO"; to the staff of such a party, nothing. */

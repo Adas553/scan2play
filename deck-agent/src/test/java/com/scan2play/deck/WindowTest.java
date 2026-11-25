@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** The window's own answers, before anything goes to the server. */
 class WindowTest {
@@ -34,7 +35,9 @@ class WindowTest {
     void theTexts_areImpersonal() {
         Agent.Status nothingRead = new Agent.Status(true, java.util.List.of(), java.time.Instant.EPOCH, java.util.List.of(), 0,
                 ServerClient.Outcome.OK);
-        for (String text : java.util.List.of(Window.line(nothingRead).text(), Window.NO_HISTORY, Window.NOT_IN_FOLDER)) {
+        for (String text : java.util.List.of(Window.line(nothingRead).text(), Window.NO_HISTORY, Window.NOT_IN_FOLDER,
+                Window.OTHER_FOLDER, Window.OTHER_FOLDER_TIP, Window.SPOTIFY_UNSEEN_TIP, NowPlaying.NOTHING,
+                NowPlaying.HIDDEN, NowPlaying.NO_CONSENT)) {
             assertNull(java.util.regex.Pattern.compile("(?iU)\\b(widzę|czekam|mogę|szukam)\\b").matcher(text).results().findFirst()
                     .map(java.util.regex.MatchResult::group).orElse(null), text);
         }
@@ -66,9 +69,42 @@ class WindowTest {
         assertEquals(new java.awt.Dimension(492, 419), Window.grownOnly(new java.awt.Dimension(492, 419), null), "the first pack");
     }
 
+    /** A Spotify song's whole title in "CZYTA" would widen the window for good: cut as a song is, the whole in the tooltip. */
+    @Test
+    void aLongSpotifyTitleInReading_isCut() {
+        String source = "Spotify (gra: Queen, David Bowie - Under Pressure - Remastered 2011 / Live at Wembley Stadium 1986)";
+        javax.swing.JLabel words = (javax.swing.JLabel) Window.readingRow(source).getComponent(2);
+        assertEquals(Window.shortened(source), words.getText());
+        assertEquals(source, words.getToolTipText());
+    }
+
+    /** Spotify silent for a reason: "!" in amber and what to do in the tooltip, not a green "✓". */
+    @Test
+    void spotifyThatHearsNothing_isMarked_andSaysWhatToDo() {
+        javax.swing.JPanel row = Window.readingRow("Spotify (" + NowPlaying.HIDDEN + ")");
+        assertEquals("!", ((javax.swing.JLabel) row.getComponent(0)).getText());
+        assertEquals(Window.SPOTIFY_UNSEEN_TIP, ((javax.swing.JLabel) row.getComponent(2)).getToolTipText());
+        assertEquals("✓", ((javax.swing.JLabel) Window.readingRow("Spotify (nic nie gra)").getComponent(0)).getText());
+    }
+
     /** Before the first song, the window says when one marks itself — Serato's few seconds and VirtualDJ's 45. */
     @Test
     void nothingMarkedYet_speaksOfBothPrograms() {
         assertEquals(true, Window.NOTHING_MARKED.contains("VirtualDJ") && Window.NOTHING_MARKED.contains("Serato"), Window.NOTHING_MARKED);
+    }
+
+    /** A Mac reads no Tidal: its window does not say "Tidal zamknięte"; Windows names both. The status line stays short. */
+    @Test
+    void theMusicApps_namedAreThisSystems() {
+        assertTrue(Window.noHistory(NowPlaying.appsFor("Mac OS X")).contains("Spotify zamknięty"));
+        assertTrue(!Window.noHistory(NowPlaying.appsFor("Mac OS X")).contains("Tidal"));
+        assertTrue(Window.noHistory(NowPlaying.appsFor("Windows 11")).contains("Spotify i Tidal zamknięte"));
+        assertTrue(Window.nothingMarked(NowPlaying.appsFor("Windows 11")).contains("ze Spotify i Tidala po 30 s"));
+        assertTrue(!Window.nothingMarked(NowPlaying.appsFor("Mac OS X")).contains("Tidal"));
+        assertTrue(Window.nothingMarked(NowPlaying.appsFor("Mac OS X")).contains("ze Spotify po 30 s"));
+        Agent.Status nothingRead = new Agent.Status(true, java.util.List.of(), java.time.Instant.EPOCH, java.util.List.of(), 0,
+                ServerClient.Outcome.OK);
+        assertTrue(Window.line(nothingRead).text().length() <= "Połączono — brak historii VirtualDJ i Serato".length(),
+                "the status line sets the window's width for good");
     }
 }

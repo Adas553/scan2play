@@ -382,3 +382,26 @@ piece of work or when a task names an item. A finished item stays here until its
    the Mac bundle is signed ad hoc, the program takes the newest history file of all folders (OneDrive's too); the program's "Odłącz ten komputer" removes it from
    the panel too (`/api/device/unpair`, any plan), Windows' known folders asked by PowerShell, the help for a Windows without "Uruchom
    mimo to" (the owner: "jak uważasz").
+
+20. **"Zagrane samo" for Spotify — a try in `deck-agent` (the owner, 2026-11-25: "zrób próbę ze Spotify w deck-agent")**. Spotify's
+   Web API (`recently-played`) is not the way: an app in development mode only for a few accounts added by hand, the full access
+   since 2025 only for registered businesses with ~250 000 monthly users, the DJ's Spotify login and tokens kept by us, and Spotify's
+   terms forbid playing it in public. Instead the program asks Spotify's desktop app what plays now — Windows: its window's title,
+   macOS: AppleScript — and a song heard 30 s is a played one (`NowPlaying`; details `docs/context/05-1d-panel-heading-queue.md`).
+   The server unchanged. **Tried (the owner, 2026-11-25, Windows, production):** the window read "Spotify (gra: Linkin Park -
+   Faint)", the request "LINKIN PARK - Faint" marked "Zagrane" ~30 s after; paused, "Spotify (nic nie gra)"; a request added while
+   its song already played marked too (the song sent only at its 30th second, its start within the server's 2 minutes before the
+   request — a request added later in the song stays; the owner: "to raczej dobre zachowanie"). **To try:** a Mac (macOS's question
+   about controlling Spotify), an ad, Spotify closed to the tray. **Open:** marking a request whose song plays when it is asked, at
+   any minute of it (the program would send "plays now", the server's rule against "zagraj to jeszcze raz" would change).
+   Review: `docs/history/review-2026-11-25-spotify.md`. **Then (the owner, 2026-11-25: "czy możemy tak samo dodać Tidal?", "czy
+   możemy zrobić sesję multimediów?"):** on Windows Windows' media sessions (`WindowsMedia`) for Spotify and TIDAL — the artist and
+   title apart, Windows' documented interface instead of each app's window title (kept for Spotify without a session); TIDAL not on a
+   Mac (no AppleScript, macOS' "Now Playing" closed). Deezer or Apple Music would be a name in `WindowsMedia.APPS` each — not added
+   untried. **Tried (the owner, 2026-11-25, Windows, a build of the branch):** Spotify works; "TIDAL (gra: Belly Gang Kushington -
+   WTF GOIN (feat. 21 Sava…)" — TIDAL has no window-title fallback, so the media sessions' script works; TIDAL Free plays 29-second
+   previews only, so no TIDAL song reached the 30 s (the counting is Spotify's, tried). Spotify by default quits when its window is
+   closed (no tray); "the window must be open" taken out of the panel's card and the guide (the owner): the media sessions need no
+   window, the program's own "okno schowane" stays for a Spotify heard by neither. **Asked the same day, not
+   built:** adding the guests' songs to VirtualDJ / Serato by the program — VirtualDJ a playlist `Scan2Play.m3u` (whether it reloads
+   by itself is to try) or a plugin; Serato has no API and reads its crates at the start (at most a crate after a restart).

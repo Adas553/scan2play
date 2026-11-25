@@ -63,12 +63,36 @@ final class Window {
     static final Color AMBER = new Color(0xffc107);
     static final Color RED = new Color(0xea868f);
 
-    /** Read: no history of either program anywhere it is looked for. */
-    static final String NO_HISTORY = "<html>Brak historii VirtualDJ i Serato. Zagraj w programie DJ-a jedną piosenkę<br>"
-            + "albo wskaż folder, w którym trzyma historię.</html>";
-    /** The folder picked holds no history the program reads. */
-    static final String NOT_IN_FOLDER = "<html>W tym folderze nie ma historii — VirtualDJ: …\\VirtualDJ\\History,<br>"
-            + "Serato: …\\_Serato_\\History\\Sessions albo …\\Serato\\Library.</html>";
+    /** Read: no DJ program's history anywhere it is looked for, and none of this system's music apps running. */
+    static final String NO_HISTORY = noHistory(NowPlaying.appsOnThisComputer());
+
+    /** {@link #NO_HISTORY} for these music apps: a Mac's window names no Tidal, which is not read there. */
+    static String noHistory(List<String> apps) {
+        String closed = switch (apps.size()) {
+            case 0 -> "";
+            case 1 -> ", " + apps.getFirst() + " zamknięty";
+            default -> ", " + String.join(" i ", apps) + " zamknięte";
+        };
+        return "<html>Brak historii VirtualDJ i Serato" + closed + ".<br>"
+                + "Zagraj w programie DJ-a jedną piosenkę albo wskaż folder, w którym trzyma historię.</html>";
+    }
+    /**
+     * The quiet link when something is read, with its tooltip. It names the two programs: a DJ with rekordbox and Spotify open would
+     * read "your program is not on the list" as an invitation to pick rekordbox's folder, which holds nothing the program reads.
+     */
+    static final String OTHER_FOLDER = "VirtualDJ albo Serato nie na liście? Wskaż ich folder…";
+    static final String OTHER_FOLDER_TIP = ("<html>Gdy VirtualDJ albo Serato trzyma historię w nietypowym miejscu<br>"
+            + "(np. na dysku zewnętrznym). Wskaż folder tego programu: „VirtualDJ” albo „_Serato_”<br>"
+            + "(Serato 4/5: „Serato\\Library”).</html>").replace('\\', java.io.File.separatorChar);
+    /** The folder picked holds no history the program reads; the paths with this system's separator. */
+    static final String NOT_IN_FOLDER = ("<html>W tym folderze nie ma historii — VirtualDJ: …\\VirtualDJ\\History,<br>"
+            + "Serato: …\\_Serato_\\History\\Sessions albo …\\Serato\\Library.</html>").replace('\\', java.io.File.separatorChar);
+    /**
+     * A Spotify row that hears nothing though Spotify may play ({@link NowPlaying#HIDDEN}, {@link NowPlaying#NO_CONSENT}):
+     * what to do, in the row's tooltip.
+     */
+    static final String SPOTIFY_UNSEEN_TIP = "<html>Windows: puść piosenkę w Spotify; jeśli dalej nic — otwórz okno Spotify.<br>"
+            + "macOS: Ustawienia systemowe › Prywatność i ochrona › Automatyzacja › Scan2Play Zagrane › Spotify.</html>";
     /**
      * The longest song or folder shown whole: a guest's request may be a remix's whole title, and the window, packed to its content,
      * would grow past the screen with "Odłącz ten komputer" and the time. Longer is cut with "…", the whole in the line's tooltip.
@@ -87,11 +111,26 @@ final class Window {
     }
 
     /**
-     * "Oznaczone" before the first song: when a song marks itself, for either program — Serato's library counts a play a few seconds
-     * after Play ({@link Serato4Database}), VirtualDJ writes its history after ~45 s.
+     * "Oznaczone" before the first song: when a song marks itself, for each program — Serato's library counts a play a few seconds
+     * after Play ({@link Serato4Database}), VirtualDJ writes its history after ~45 s, a music app's song counts after
+     * {@link NowPlaying#PLAYED_AFTER} — only the apps of this system named.
      */
-    static final String NOTHING_MARKED = "<html>Jeszcze nic. Piosenka z kolejki oznaczy się sama po puszczeniu:<br>"
-            + "z Serato po kilku sekundach, z VirtualDJ po około 45 s.</html>";
+    static final String NOTHING_MARKED = nothingMarked(NowPlaying.appsOnThisComputer());
+
+    static String nothingMarked(List<String> apps) {
+        String music = switch (apps.size()) {
+            case 0 -> "";
+            case 1 -> ", ze " + apps.getFirst() + " po 30 s";
+            default -> ", ze " + String.join(" i ", apps.subList(0, apps.size() - 1)) + " i " + genitive(apps.getLast()) + " po 30 s";
+        };
+        return "<html>Jeszcze nic. Piosenka z kolejki oznaczy się sama po puszczeniu:<br>"
+                + "z Serato po kilku sekundach, z VirtualDJ po około 45 s" + music + ".</html>";
+    }
+
+    /** "ze Spotify i Tidala": Spotify does not change, Tidal does. */
+    private static String genitive(String app) {
+        return app.equals("Tidal") ? "Tidala" : app;
+    }
 
     /**
      * The size a pack asks for: the content's height, but never narrower than before — the status line's width differs by state,
@@ -315,12 +354,13 @@ final class Window {
                     readingRows.add(left(text(NO_HISTORY, AMBER, 0)));
                 }
                 for (String source : status.reading()) {
-                    boolean broken = source.contains("nie da się odczytać");
-                    readingRows.add(left(row(text(broken ? "!" : "✓", broken ? RED : GREEN, Font.BOLD), text(source, broken ? RED : TEXT, 0))));
+                    readingRows.add(left(readingRow(source)));
                 }
-                // nothing seen: a button the DJ cannot miss; something read: a quiet link, for the rare other folder
+                // nothing seen: a button the DJ cannot miss; something read: a quiet link, for the rare other folder, saying for
+                // which programs
                 boolean nothing = status.reading().isEmpty();
-                pickFolder.setText(nothing ? "Wskaż folder historii…" : "Inny folder historii…");
+                pickFolder.setText(nothing ? "Wskaż folder historii…" : OTHER_FOLDER);
+                pickFolder.setToolTipText(nothing ? null : OTHER_FOLDER_TIP);
                 pickFolder.putClientProperty("JButton.buttonType", nothing ? null : "borderless");
                 pickFolder.setForeground(nothing ? null : CYAN);
             }
@@ -342,6 +382,22 @@ final class Window {
         });
     }
 
+    /**
+     * A line of "CZYTA": "✓" and the source; "!" in red for one that cannot be read, in amber for Spotify that hears nothing though it
+     * may play (what to do in its tooltip). Shortened as a song is: Spotify's line holds a song's whole title, and the window, never
+     * narrower again ({@link #grownOnly}), would stay as wide as the longest title of the night.
+     */
+    static JPanel readingRow(String source) {
+        boolean broken = source.contains("nie da się odczytać");
+        boolean unseen = source.contains("nie widać, co gra");
+        Color color = broken ? RED : unseen ? AMBER : TEXT;
+        JLabel words = longText(source, color);
+        if (unseen) {
+            words.setToolTipText(SPOTIFY_UNSEEN_TIP);
+        }
+        return row(text(broken || unseen ? "!" : "✓", broken ? RED : unseen ? AMBER : GREEN, Font.BOLD), words);
+    }
+
     /** The status line: working, or the one thing wrong now. */
     record Line(String text, Color color) {
     }
@@ -357,7 +413,8 @@ final class Window {
             return new Line("„Zagrane samo” działa w planie Pro — ta impreza go nie ma", AMBER);
         }
         if (status.reading().isEmpty()) {
-            return new Line("Połączono — brak historii VirtualDJ i Serato", AMBER);
+            // short: the status line sets the window's width for good, the details are under "CZYTA"
+            return new Line("Połączono — nic do odczytu", AMBER);
         }
         return new Line("Działa — połączono z imprezą", GREEN);
     }
