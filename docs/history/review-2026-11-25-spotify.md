@@ -228,3 +228,41 @@ Mutacje `SpotifyNowPlaying` (`-Dtest=SpotifyNowPlayingTest`):
 - Teksty okna bezosobowe (`WindowTest.theTexts_areImpersonal` obejmuje nowe; „Twojego” / „Wskaż” to tryb jak „Zagraj”, nie program w
   pierwszej osobie); EN karty i przewodnika odpowiada PL; „ze Spotify po 30 s” jest w oknie, w karcie i w przewodniku.
 - `messages*.properties`: same escape'y `\uXXXX`, LF jak było; `05-1d` zostaje CRLF.
+
+## Poprawki (2026-11-25, ta sama gałąź; właściciel: „napraw to co możesz”)
+
+- **P1** wiersz „CZYTA” przez `Window.readingRow` → `longText` (60 znaków, całość w podpowiedzi); zrzut: długi tytuł, okno zostaje
+  647 px. Test `WindowTest.aLongSpotifyTitleInReading_isCut`.
+- **P2** `LONG_PAUSE` = 2 min: po dłuższej pauzie ta sama piosenka jest nowa od chwili, gdy znów gra (nowy początek, `lastPlayed`
+  wyczyszczone — drugie granie się liczy). Test `aShortPause_keepsTheSong_aLongOne_makesItANewPlayFromWhenItPlaysAgain`; test pauzy
+  1-minutowej zostaje (krótka pauza liczy dalej).
+- **P3** `Player.now()` zwraca `Heard` (piosenka albo słowa okna); `osascript` z `-1743` → „brak zgody macOS — nie widać, co gra”
+  (`fromOsascript`, test); stderr już nie odrzucany. Karta: nowe `dashboard.computer.first.spotify` (PL / EN), przewodnik: wiersz
+  „Spotify” w „Więcej”.
+- **P4** pusty tytuł okna przy działającym Spotify → „okno schowane — nie widać, co gra” (`fromWindow`, test). W oknie oba stany
+  żółtym „!” z podpowiedzią, co zrobić (`SPOTIFY_UNSEEN_TIP`; test `spotifyThatHearsNothing_isMarked_andSaysWhatToDo`); karta i
+  przewodnik mówią o otwartym oknie.
+- **P5** link „VirtualDJ albo Serato nie na liście? Wskaż ich folder…”; karta (`dashboard.computer.first.folder`) i przewodnik nazywają
+  oba napisy. **Zostaje:** nowy `program.webp` — zrzut z Windows u właściciela (najlepiej z wierszem Spotify).
+- **P6** „Spotify zamknięty” w obu tekstach.
+- **P7** `countedOnce` usunięte (to samo co `lastPlayed`); reguła A → krótko B → A = jedno granie ma test
+  (`anotherSongClickedForAFewSeconds_andBack_isOnePlay`); javadoc opisuje to, co kod robi.
+- **P8** testy: rozbiór linii PowerShella z BOM (`titleOf`), wersja stała bez nowego zagrania, Spotify zamknięty i otwarty w trakcie
+  (agent nic nie wysyła drugi raz), `KEPT`, pusty wykonawca, `playerFor` (Windows / Mac / nic), wspólna instancja w `sources()` (na
+  Linuksie pusta lista — test ma sens na Windows / Macu).
+- **P9** `WindowsSpotify.nextWait`: PowerShell, który żył < 30 s, następny po 1, 2, 4, 8, 10 min (test).
+- **P10** `shell` `volatile`. **P11** BOM jako `﻿` w `titleOf`.
+- **P12** (a) Mac: `running()` co 10 s jak na Windows. **(b) zostaje** do próby na Macu (czy pytanie macOS przeżywa zabicie `osascript`
+  po 5 s).
+- **P13** `plutil -replace`; zdanie o podpisie ad hoc w 05-1d.
+- **P14** komentarze `Window` (bez historii, trzy programy). **P15** 05-1d (nowe reguły, bez „the owner, 2026-11-25”, łamanie linii),
+  `docs/ideas.md` 20 bez nieaktualnego „Open”, handoff: punkt na 4 linie (porządek całego pliku — przy wydaniu).
+- **P16** okno: separator ścieżek systemu (`File.separatorChar`, także `NOT_IN_FOLDER`); przewodnik: „na Macu „Serato/Library””.
+- **P17** polityka PL / EN: „(bez logowania do Spotify)”.
+
+Mutacje po poprawkach (`SpotifyNowPlayingTest`, `WindowTest`): bez `lastPlayed`, bez długiej pauzy, bez czyszczenia `lastPlayed`
+po niej, bez rozpoznania `-1743`, pusty tytuł jak pauza, wiersz „CZYTA” bez skracania — wszystkie czerwone.
+
+Testy po poprawkach: `deck-agent` 75/75; aplikacja unit 1560/1560; przeglądarka 484/485 (czerwony tylko `kiosk-full-fits-820x1180`,
+czerwony też na `main`); audyt `guide`, `dashboard*` (18 stron × 3 szerokości) OK. Zrzuty okna w xvfb: nic, pauza, schowane okno, brak
+zgody, długi tytuł.

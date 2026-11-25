@@ -25,7 +25,9 @@ class SpotifyNowPlayingTest {
         SpotifyNowPlaying.Track track;
 
         @Override public boolean running() { return running; }
-        @Override public Optional<SpotifyNowPlaying.Track> now() { return Optional.ofNullable(track); }
+        String why = SpotifyNowPlaying.NOTHING;
+
+        @Override public SpotifyNowPlaying.Heard now() { return new SpotifyNowPlaying.Heard(track, track == null ? why : ""); }
 
         void plays(String artist, String title) {
             track = new SpotifyNowPlaying.Track(artist, title);
@@ -82,14 +84,44 @@ class SpotifyNowPlayingTest {
         player.plays("Dawid Podsiadło", "Małomiasteczkowy");
         spotify.version();
         looksFor(Duration.ofSeconds(18));
-        player.track = null;                       // "Spotify Premium": paused
-        looksFor(Duration.ofMinutes(5));
+        player.track = null;                       // "Spotify Premium": paused for a moment
+        looksFor(Duration.ofMinutes(1));
         assertEquals(List.of(), spotify.songs(), "the pause is not heard");
         player.plays("Dawid Podsiadło", "Małomiasteczkowy");
         looksFor(Duration.ofSeconds(12));
         assertEquals(List.of(), spotify.songs(), "the look that finds it playing again starts counting: 18 + 9 s");
         looksFor(Duration.ofSeconds(3));
         assertEquals(List.of(new Played(START, "Dawid Podsiadło", "Małomiasteczkowy")), spotify.songs(), "18 + 12 s heard");
+    }
+
+    @Test
+    void aShortPause_keepsTheSong_aLongOne_makesItANewPlayFromWhenItPlaysAgain() {
+        player.plays("A", "Raz");
+        looksFor(Duration.ofSeconds(20));
+        player.track = null;                                   // paused for another program's set
+        looksFor(Duration.ofMinutes(45));
+        player.plays("A", "Raz");
+        Instant again = clock.now.plusSeconds(3);
+        looksFor(Duration.ofSeconds(12));
+        assertEquals(List.of(), spotify.songs(), "the 20 s before the pause are not counted any more");
+        looksFor(Duration.ofSeconds(21));
+        assertEquals(List.of(new Played(again, "A", "Raz")), spotify.songs(), "its start: when it played again, not 45 minutes before");
+        player.track = null;
+        looksFor(Duration.ofMinutes(10));
+        player.plays("A", "Raz");                              // the same song again, an hour later: a second play
+        looksFor(Duration.ofSeconds(33));
+        assertEquals(2, spotify.songs().size());
+    }
+
+    @Test
+    void anotherSongClickedForAFewSeconds_andBack_isOnePlay() {
+        player.plays("A", "Raz");
+        looksFor(Duration.ofSeconds(40));
+        player.plays("B", "Dwa");
+        looksFor(Duration.ofSeconds(9));
+        player.plays("A", "Raz");
+        looksFor(Duration.ofSeconds(40));
+        assertEquals(List.of("Raz"), spotify.songs().stream().map(Played::title).toList());
     }
 
     @Test
@@ -133,6 +165,82 @@ class SpotifyNowPlayingTest {
     }
 
     @Test
+    void spotifySilentForAReason_saysIt() {
+        player.why = SpotifyNowPlaying.HIDDEN;
+        spotify.version();
+        assertEquals(SpotifyNowPlaying.HIDDEN, spotify.reading());
+        player.why = SpotifyNowPlaying.NO_CONSENT;
+        spotify.version();
+        assertEquals(SpotifyNowPlaying.NO_CONSENT, spotify.reading());
+        player.plays("", "Odcinek 12");                        // a podcast: no artist
+        spotify.version();
+        assertEquals("gra: Odcinek 12", spotify.reading());
+    }
+
+    @Test
+    void theVersion_staysWhileNoNewSongPlays_soTheAgentDoesNotReadItAtEachLook() {
+        player.plays("A", "Raz");
+        String first = spotify.version();
+        looksFor(Duration.ofSeconds(27));
+        assertEquals(first, spotify.version());
+        looksFor(Duration.ofSeconds(3));
+        String played = spotify.version();
+        looksFor(Duration.ofMinutes(2));
+        assertEquals(played, spotify.version());
+    }
+
+    @Test
+    void spotifyClosedAndOpenedAgain_goesOnCounting_andSendsNothingTwice(@TempDir Path dir) throws Exception {
+        List<Played> sent = new java.util.ArrayList<>();
+        Agent agent = new Agent(List.of(spotify), server(sent), paired(dir), clock, status -> { });
+        player.plays("A", "Raz");
+        ticksFor(agent, Duration.ofSeconds(40));
+        player.running = false;
+        ticksFor(agent, Duration.ofMinutes(1));
+        player.running = true;
+        player.plays("B", "Dwa");
+        ticksFor(agent, Duration.ofSeconds(40));
+        assertEquals(List.of("Raz", "Dwa"), sent.stream().map(Played::title).toList());
+        assertEquals("spotify:2", spotify.version());
+    }
+
+    @Test
+    void onlyTheLastSongsAreKept() {
+        for (int i = 0; i <= SpotifyNowPlaying.KEPT; i++) {
+            player.plays("A", "Piosenka " + i);
+            looksFor(Duration.ofSeconds(33));
+        }
+        List<Played> songs = spotify.songs();
+        assertEquals(SpotifyNowPlaying.KEPT, songs.size());
+        assertEquals("Piosenka 1", songs.getFirst().title());
+        assertEquals("spotify:" + (SpotifyNowPlaying.KEPT + 1), spotify.version(), "the version counts every play, kept or not");
+    }
+
+    private void ticksFor(Agent agent, Duration duration) {
+        Instant end = clock.now.plus(duration);
+        while (clock.now.isBefore(end)) {
+            clock.now = clock.now.plusSeconds(3);
+            agent.tick();
+        }
+    }
+
+    private static ServerClient server(List<Played> sent) {
+        return new ServerClient("test") {
+            @Override
+            Answer plays(String address, String token, List<Played> songs) {
+                sent.addAll(songs);
+                return new Answer(Outcome.OK, token, List.of());
+            }
+        };
+    }
+
+    private static Settings paired(Path dir) throws java.io.IOException {
+        Settings settings = new Settings(dir.resolve("zagrane.properties"));
+        settings.paired("https://example.test", "tok");
+        return settings;
+    }
+
+    @Test
     void theAgent_sendsASpotifySongOnce(@TempDir Path dir) throws Exception {
         List<List<Played>> sent = new java.util.ArrayList<>();
         ServerClient server = new ServerClient("test") {
@@ -164,6 +272,60 @@ class SpotifyNowPlayingTest {
             assertEquals(Optional.empty(), SpotifyNowPlaying.fromWindowTitle(paused), paused);
         }
         assertEquals(Optional.empty(), SpotifyNowPlaying.fromWindowTitle(null));
+    }
+
+    @Test
+    void theWindow_paused_orClosedToTheTray() {
+        assertEquals(SpotifyNowPlaying.NOTHING, SpotifyNowPlaying.fromWindow("Spotify Premium").why());
+        assertEquals(SpotifyNowPlaying.HIDDEN, SpotifyNowPlaying.fromWindow("").why(), "no window title: closed to the tray");
+        assertEquals(new SpotifyNowPlaying.Track("Kult", "Arahja"), SpotifyNowPlaying.fromWindow("Kult - Arahja").track());
+    }
+
+    @Test
+    void powerShellsLines_titleAfterTEquals_theBomLeftOut() {
+        assertEquals(Optional.of("Sanah - Szampan"), SpotifyNowPlaying.titleOf("\uFEFFT=Sanah - Szampan"));
+        assertEquals(Optional.of("Kult - Arahja"), SpotifyNowPlaying.titleOf("T=Kult - Arahja"));
+        assertEquals(Optional.of(""), SpotifyNowPlaying.titleOf("T="));
+        assertEquals(Optional.empty(), SpotifyNowPlaying.titleOf("Get-Process : nie znaleziono"));
+    }
+
+    @Test
+    void osascriptsAnswer_aSong_nothing_orNoConsent() {
+        assertEquals(new SpotifyNowPlaying.Track("Kult", "Arahja"), SpotifyNowPlaying.fromOsascript(0, "Kult\tArahja\n", "").track());
+        assertEquals(SpotifyNowPlaying.NOTHING, SpotifyNowPlaying.fromOsascript(0, "\n", "").why());
+        assertEquals(SpotifyNowPlaying.NO_CONSENT, SpotifyNowPlaying.fromOsascript(1, "",
+                "execution error: Not authorized to send Apple events to Spotify. (-1743)").why());
+        assertEquals(SpotifyNowPlaying.NOTHING, SpotifyNowPlaying.fromOsascript(1, "", "syntax error").why());
+    }
+
+    @Test
+    void aPowerShellDyingYoung_isStartedAgainLaterAndLater() {
+        Duration wait = Duration.ofSeconds(10);
+        List<Duration> waits = new java.util.ArrayList<>();
+        for (int i = 0; i < 6; i++) {
+            wait = SpotifyNowPlaying.WindowsSpotify.nextWait(Duration.ofSeconds(1), wait);
+            waits.add(wait);
+        }
+        assertEquals(List.of(Duration.ofMinutes(1), Duration.ofMinutes(2), Duration.ofMinutes(4), Duration.ofMinutes(8),
+                Duration.ofMinutes(10), Duration.ofMinutes(10)), waits);
+        assertEquals(Duration.ofSeconds(10), SpotifyNowPlaying.WindowsSpotify.nextWait(Duration.ofHours(1), Duration.ofMinutes(10)),
+                "one that lived (Spotify closed): looked for every 10 s again");
+    }
+
+    @Test
+    void spotifyIsAskedOnWindowsAndMac_onlyThere() {
+        assertEquals(true, SpotifyNowPlaying.playerFor("Windows 11") instanceof SpotifyNowPlaying.WindowsSpotify);
+        assertEquals(true, SpotifyNowPlaying.playerFor("Mac OS X") instanceof SpotifyNowPlaying.MacSpotify);
+        assertEquals(null, SpotifyNowPlaying.playerFor("Linux"));
+    }
+
+    @Test
+    void theUsualPlacesAndTheLooksList_holdTheSameSpotify() {
+        // one Spotify for the program's life: a second would count from zero and, on Windows, start a second PowerShell
+        List<HistorySource> usual = Platform.withoutAsking().sources();
+        List<HistorySource> again = Platform.withoutAsking().sources();
+        assertEquals(usual.stream().filter(SpotifyNowPlaying.class::isInstance).map(System::identityHashCode).toList(),
+                again.stream().filter(SpotifyNowPlaying.class::isInstance).map(System::identityHashCode).toList());
     }
 
     @Test

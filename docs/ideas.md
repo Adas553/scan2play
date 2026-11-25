@@ -393,7 +393,7 @@ piece of work or when a task names an item. A finished item stays here until its
    its song already played marked too (the song sent only at its 30th second, its start within the server's 2 minutes before the
    request — a request added later in the song stays; the owner: "to raczej dobre zachowanie"). **To try:** a Mac (macOS's question
    about controlling Spotify), an ad, Spotify closed to the tray. **Open:** marking a request whose song plays when it is asked, at
-   any minute of it (the program would send "plays now", the server's rule against "zagraj to jeszcze raz" would change). **Open:** the panel's card and the guide name VirtualDJ and Serato
-   only — Spotify there once it works; the Windows media sessions (Tidal, a browser too) if DJs ask. **Asked the same day, not
+   any minute of it (the program would send "plays now", the server's rule against "zagraj to jeszcze raz" would change).
+   **Open:** the Windows media sessions (Tidal, a browser too) if DJs ask. Review: `docs/history/review-2026-11-25-spotify.md`. **Asked the same day, not
    built:** adding the guests' songs to VirtualDJ / Serato by the program — VirtualDJ a playlist `Scan2Play.m3u` (whether it reloads
    by itself is to try) or a plugin; Serato has no API and reads its crates at the start (at most a crate after a restart).

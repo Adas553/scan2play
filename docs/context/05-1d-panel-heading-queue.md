@@ -139,12 +139,14 @@ Documents are and where VirtualDJ's `HomeFolder` points (UTF-8: a user name with
 the taskbar's and the tray's icon): unpaired, "Połącz ten komputer z imprezą", the code's large box and "Połącz" (an empty code:
 "Wpisz kod z panelu."), the server behind "Zmień serwer" (`https://www.scan2play.com.pl`; `dev.` for a try); paired, a status line
 with a dot ("Działa — połączono z imprezą" green; amber/red: no server, too many calls, no Pro, no history seen) and "sprawdzone
-23:53:52"; "CZYTA" — each history read ("✓ VirtualDJ (2026-11-21.m3u)", red "nie da się odczytać"), or "Brak historii VirtualDJ i Serato…" with the
-button "Wskaż folder historii…" (a quiet link "Twojego programu DJ-a nie ma na liście? Wskaż jego folder…" when something is read, its tooltip: only for VirtualDJ or Serato keeping its history in an unusual place): a folder the DJ picks is kept in the
+23:53:52"; "CZYTA" — each history read ("✓ VirtualDJ (2026-11-21.m3u)", red "nie da się odczytać", amber "!" for Spotify heard not — below), or
+"Brak historii VirtualDJ i Serato, Spotify zamknięty…" with the button "Wskaż folder historii…" (a quiet link "VirtualDJ albo Serato nie
+na liście? Wskaż ich folder…" when something is read — naming the two, so a rekordbox DJ with Spotify open is not invited to pick a
+folder that holds nothing read; its tooltip: a history in an unusual place, which folder): a folder the DJ picks is kept in the
 settings and read beside the usual places (`Platform.sourcesIn`: VirtualDJ's `.m3u`, Serato's `.session`, `master.sqlite`, in it or
 right under it; "Nie czytaj go" forgets it); "OZNACZONE OD URUCHOMIENIA · 12" — the last 5 songs marked with their times, newest
-first, never a night's whole list (empty: when a song marks itself; a song or a folder longer than 60 characters cut with "…", whole
-in its tooltip, so the window never grows past the screen; the window never narrows when the status line changes); "Odłącz ten komputer"; a tray icon ("Pokaż", "Zakończ"). One
+first, never a night's whole list (empty: when a song marks itself; a song, a folder or a line of "CZYTA" — Spotify's song — longer
+than 60 characters cut with "…", whole in its tooltip, so the window never grows past the screen; the window never narrows when the status line changes); "Odłącz ten komputer"; a tray icon ("Pokaż", "Zakończ"). One
 copy per user: a second start finds `~/.scan2play/zagrane.lock` locked (`SingleInstance`, `FileChannel.tryLock`; the system drops the
 lock when the program ends) and says "Program już działa…" (a window, or a line and exit 1 in the console). `~/.scan2play/zagrane.properties` keeps the server, the token and the folder picked. Without a screen: `--pair <code> [--server …]`, then
 `--console`. Tests: `sh mvnw -f deck-agent/pom.xml -B -ntp verify` (`HistoryFormatsTest`, `AgentTest`, `SingleInstanceTest`, `WindowTest`, `SpotifyNowPlayingTest`). Packages:
@@ -156,12 +158,19 @@ was built, and a "Run workflow" is never cancelled by a later push.
 **Spotify in the program** (`SpotifyNowPlaying`, `docs/ideas.md` item 20; tried on the owner's Windows, not on a Mac yet): Spotify writes no
 history and its Web API is closed to an app like this one, so the song playing now is asked of Spotify's desktop app at each look — on
 Windows the title of its window ("Artist - Title" while it plays; "Spotify Premium" / "Spotify Free" paused; an ad none), by one
-PowerShell started when a `Spotify.exe` runs (checked every 10 s by `ProcessHandle`), writing the title every 2 s in UTF-8 and ending
-by itself with Spotify or the program; on macOS by AppleScript (`osascript`, only while `Spotify.app` runs; macOS asks the DJ once
-whether the program may control Spotify — the bundle's `NSAppleEventsUsageDescription`, added by the workflow; an ad, `spotify:ad`,
-none). A song heard 30 s (`PLAYED_AFTER`; a pause stops the count, another song starts it anew, a gap over 10 s between looks adds
-10 s) is a played one from the time it was first heard; the same song straight after again is not a second play. It goes as any
-history's song (the server unchanged); the window's "CZYTA" shows "Spotify (gra: …)" while Spotify runs. Named for the DJs only where the program is explained — the panel's card,
-the guide's `#deck`, the privacy policy (PL / EN) — never in "Nowości", the news e-mail or the landing pages: Spotify's terms forbid
-playing it in public, so it is a quiet possibility, not a selling point (the owner, 2026-11-25). Its limits: Spotify closed
-to the tray on Windows has no window title — nothing heard; the window's title is Spotify's own, unofficial way and may change.
+PowerShell started when a `Spotify.exe` runs (checked every 10 s by `ProcessHandle`; a PowerShell that dies within 30 s is started
+again after 1, 2, 4 … at most 10 minutes), writing the title every 2 s in UTF-8 and ending by itself with Spotify or the program (it
+checks the program's PID: ~2 s after the program is killed); on macOS by AppleScript (`osascript` at each look while `Spotify.app` runs,
+looked for every 10 s; macOS asks the DJ once whether the program may control Spotify — the bundle's `NSAppleEventsUsageDescription`,
+added by the workflow; the ad-hoc signature changes with each build, so macOS may ask again after an update — to see on a Mac; an
+ad, `spotify:ad`, none). A song heard 30 s (`PLAYED_AFTER`; a pause stops the count, another song starts it anew, a gap over 10 s
+between looks adds 10 s) is a played one from the time it was first heard. A pause over 2 minutes (`LONG_PAUSE`, the server's slack
+for a request after a song's start) makes the same song a new one from when it plays again — a song paused for another program's set
+and played on keeps no old start, and played again later is a second play; another song clicked for a few seconds and back is one
+play. It goes as any history's song (the server unchanged). The window's "CZYTA": "Spotify (gra: …)" while a song plays, "Spotify
+(nic nie gra)" paused; amber "!" when Spotify may play but is not heard, what to do in the tooltip — "okno schowane — nie widać, co
+gra" (Windows: no window title, closed to the tray; minimised is fine) and "brak zgody macOS — nie widać, co gra" (`osascript`'s
+-1743, the DJ's "Nie pozwalaj"); the panel's card ("Pierwsze uruchomienie") and the guide say both. Named for the DJs only where the
+program is explained — the panel's card, the guide's `#deck`, the privacy policy (PL / EN; "bez logowania do Spotify") — never in
+"Nowości", the news e-mail or the landing pages: Spotify's terms forbid playing it in public, so it is a quiet possibility, not a
+selling point (`docs/ideas.md` item 20). The window's title is Spotify's own, unofficial way and may change.

@@ -1129,7 +1129,10 @@ class DashboardPageRenderTest {
                         + "the Mac's second question")
                 .contains("„System Windows ochronił ten komputer”", "Jeśli „Uruchom mimo to” się nie pojawia",
                         "napisz do nas przez „Pomoc i kontakt”", "potwierdź hasłem",
-                        "Program nie widzi historii? W jego oknie: „Wskaż folder historii…”.");
+                        "Program nie widzi historii VirtualDJ albo Serato? W jego oknie: „Wskaż folder historii…”",
+                        "„VirtualDJ albo Serato nie na liście?”");
+        assertThat(card).as("Spotify: the window open on Windows (not by the clock), the Mac's question about controlling it allowed")
+                .contains("okno Spotify musi być otwarte", "nie schowane obok zegara", "może sterować Spotify — pozwól");
     }
 
     /** "Podsumowanie wieczoru" (V35): to an organiser without Pro, the way to /pro with "PRO"; to the staff of such a party, nothing. */
