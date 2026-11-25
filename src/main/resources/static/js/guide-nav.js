@@ -12,6 +12,7 @@
     // at the page's end (a short section near it, a tall screen) would mark the last section instead, and a smooth jump would
     // flicker through every section on its way
     let chosen = null;
+    const FADE = 48;
     // the jumps slide smoothly (app.css) only once the reader has touched the page: the browser's own jump to a link's place (#deck
     // from the panel) is made while the page loads — after its load event in Chrome — and lands there at once, not after a slide
     // through the whole page
@@ -47,12 +48,16 @@
                 a.removeAttribute('aria-current');
             }
         });
-        // a phone's one row: the marked chip slid into sight (the row alone moves, never the page)
+        // a phone's one row: the marked chip slid into sight (the row alone moves, never the page) — into its middle when it is under
+        // a faded side (2.5rem of app.css at either end, kept 48 px here), where it is not yet readable; at the row's ends the
+        // browser stops the slide, so the first and the last chip end where the row's padding begins
         if (on && row.scrollWidth > row.clientWidth) {
             const r = row.getBoundingClientRect();
             const c = on.getBoundingClientRect();
-            if (c.left < r.left || c.right > r.right) {
-                row.scrollLeft += c.left - r.left - (r.width - c.width) / 2;
+            if (c.left < r.left + FADE || c.right > r.right - FADE) {
+                const to = Math.max(0, Math.min(row.scrollWidth - row.clientWidth,
+                    row.scrollLeft + c.left - r.left - (r.width - c.width) / 2));
+                if (Math.abs(to - row.scrollLeft) > 1) row.scrollLeft = to;
             }
         }
     }

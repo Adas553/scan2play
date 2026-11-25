@@ -144,6 +144,12 @@ daje rzędowi klasy `s2p-guide-more-start` / `-end`, a maska (`mask-image`, grad
 stronie, gdzie są kolejne przyciski. Bez skryptu rząd tylko sięga krawędzi ekranu. Scenariusz `guide-nav-row-fades` był czerwony
 przed zmianą (rząd 16…374 z 390, bez klas), po zmianie jest zielony.
 
+Na GitHubie (fonty DejaVu / Liberation, szersze od Inter) scenariusz był czerwony w obu PR-ach: po skoku do „Co widzą goście” rząd
+dalej zanikał z obu stron. Ostatni przycisk mieścił się już w pudełku rzędu, ale pod zanikaniem, więc skrypt go nie przesuwał — był
+nieczytelny. Poprawka: `guide-nav.js` przesuwa zaznaczony przycisk także wtedy, gdy leży w pasie 48 px przy którejkolwiek krawędzi
+rzędu, i nie zapisuje `scrollLeft` bez zmiany. Scenariusz sprawdza teraz też, że zaznaczony przycisk nie leży pod zanikaniem.
+Odtworzone lokalnie bez Inter (CLAUDE.md „Mind” 4): czerwony przed poprawką, zielony po; z Inter też zielony.
+
 ### P10 — „W skrócie” na telefonie zajmuje 1½ ekranu — **zrobione (decyzja właściciela)**
 
 Na 390 × 844 karta ma ~650 px (pięć kroków po 2–4 linie opisu); pierwsza sekcja zaczyna się dopiero na drugim ekranie. **Rekomendacja:**

@@ -198,6 +198,14 @@
             const fades = function () {
                 return ['s2p-guide-more-start', 's2p-guide-more-end'].filter(function (c) { return row.classList.contains(c); });
             };
+            // the marked chip is never under a faded side (2.5rem = 40 px): it is slid out of it, whatever the fonts' widths
+            const clear = function (label) {
+                const chip = box(nav.querySelector('a[aria-current]'));
+                const left = box(row).left + (row.classList.contains('s2p-guide-more-start') ? 40 : 0);
+                const right = box(row).right - (row.classList.contains('s2p-guide-more-end') ? 40 : 0);
+                t.check(label + ': the marked chip clear of the fades (' + Math.round(chip.left) + '…' + Math.round(chip.right) + ' in '
+                    + Math.round(left) + '…' + Math.round(right) + ')', chip.left >= left - 0.5 && chip.right <= right + 0.5);
+            };
             t.check('the row from the screen\'s left edge to its right (' + Math.round(box(row).left) + '…' + Math.round(box(row).right)
                 + ' of ' + w + ')', Math.abs(box(row).left) <= 0.5 && Math.abs(box(row).right - w) <= 0.5);
             t.check('… its first chip where the page\'s text starts (' + Math.round(box(row.firstElementChild).left) + ')',
@@ -207,9 +215,11 @@
             tap(nav.querySelector('a[href="#staff"]'));
             await settled(t, '#staff');
             await t.waitFor(function () { return fades().length === 2; }, 'in the middle of the row: faded at both sides');
+            clear('#staff');
             tap(nav.querySelector('a[href="#guests"]'));
             await settled(t, '#guests');
             await t.waitFor(function () { return fades().join() === 's2p-guide-more-start'; }, 'at the row\'s end: faded at the left only');
+            clear('#guests');
             t.check('still no sideways scrolling of the page', document.documentElement.scrollWidth <= w);
         }
     });
