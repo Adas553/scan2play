@@ -80,6 +80,12 @@ public class Mailer {
         return emailToken == null ? null : siteUrl + "/email/stop/" + emailToken + "?lang=" + languageOf(locale);
     }
 
+    /** "Nie wysyłaj mi nowości" (V80): the one-click address that switches the news e-mails off, in the organiser's language. */
+    public String newsStopUrl(String emailToken, Locale locale) {
+        String stop = stopUrl(emailToken, locale);
+        return stop == null ? null : stop + "&what=news";
+    }
+
     /** The page of an e-mail: {@code templates/email/<name>_<pl|en>.html} with {@code variables}. */
     public String render(String name, Locale locale, Map<String, Object> variables) {
         Context context = new Context(locale, variables);
@@ -104,8 +110,11 @@ public class Mailer {
         return result == Result.SENT || result == Result.UNKNOWN;
     }
 
-    /** Runs {@code task} on the e-mails' thread; a full queue drops it (logged) — the caller's nightly job tries again. */
-    public void later(Runnable task) {
+    /**
+     * Runs {@code task} on the e-mails' thread; a full queue drops it (logged) — the caller's nightly job tries again. False when it was
+     * dropped: a caller that marked something as on its way takes the mark back.
+     */
+    public boolean later(Runnable task) {
         try {
             executor.execute(() -> {
                 try {
@@ -114,8 +123,10 @@ public class Mailer {
                     log.warn("E-mail task failed: {}", e.toString());
                 }
             });
+            return true;
         } catch (RejectedExecutionException e) {
             log.warn("E-mail task dropped (the queue is full); the nightly job sends it");
+            return false;
         }
     }
 

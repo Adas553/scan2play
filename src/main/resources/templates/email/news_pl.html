@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<!--/* The news e-mail (V80, NewsEmailService, PanelNews), Polish: what is new, as the panel's card "Nowości" says it — only to an
+     organiser who switched "Nowości mailem" on. Mail programs read little CSS — inline styles only, one column, no images. A new news:
+     docs/news.md. */-->
+<html xmlns:th="http://www.thymeleaf.org" lang="pl">
+<head><meta charset="UTF-8"><title>Scan2Play</title></head>
+<body style="margin:0;padding:24px;background:#ffffff;color:#1a1a1a;font-family:-apple-system,'Segoe UI',Roboto,Arial,sans-serif;font-size:16px;line-height:1.5;">
+<div style="max-width:560px;">
+<p th:text="${firstName != null} ? 'Cześć ' + ${firstName} + ',' : 'Cześć!'">Cześć Ola,</p>
+<p>dodaliśmy w Scan2Play trzy rzeczy:</p>
+<p><b>🎧 Zagrane samo.</b> Mały program na komputer, na którym grasz, czyta historię VirtualDJ albo Serato i sam oznacza prośby gości jako zagrane. W trakcie seta nie musisz niczego klikać. <a th:href="${siteUrl} + '/jak-to-dziala#deck'" href="#" style="color:#0a7f99;white-space:nowrap;">Jak to działa</a></p>
+<p><b>🗳 Pytanie do gości.</b> Zadaj sali pytanie, np. „Disco polo: tak czy nie?”. Goście głosują telefonem, a wyniki widzisz na żywo, także na ekranie TV. <a th:href="${siteUrl} + '/jak-to-dziala#guidePolls'" href="#" style="color:#0a7f99;white-space:nowrap;">Jak to działa</a></p>
+<p><b>📋 Plan imprezy.</b> Momenty wieczoru (wejście pary, pierwszy taniec, tort…) z piosenkami i uwagami. Gospodarze wypełniają plan sami swoim linkiem, bez konta, a wieczorem widzisz go nad kolejką z czasem do następnego momentu. <a th:href="${siteUrl} + '/jak-to-dziala#guidePlan'" href="#" style="color:#0a7f99;white-space:nowrap;">Jak to działa</a></p>
+<p style="margin:0 0 28px;"><a th:href="${siteUrl} + '/dj/dashboard'" href="#" style="display:inline-block;background:#0a7f99;color:#ffffff;text-decoration:none;padding:12px 20px;border-radius:6px;font-weight:bold;">Otwórz panel</a></p>
+<p>Coś nie działa albo czegoś brakuje? Po prostu odpisz na tego maila.</p>
+<p>Scan2Play</p>
+<p style="color:#666666;font-size:13px;">Ten mail przyszedł, bo w „Ustawieniach imprezy” są włączone „Nowości mailem”. Wyłączysz je tam<th:block th:if="${stopUrl != null}"> albo tym linkiem: <a th:href="${stopUrl}" href="#" style="color:#666666;">Nie wysyłaj mi nowości</a></th:block>.</p>
+</div>
+</body>
+</html>

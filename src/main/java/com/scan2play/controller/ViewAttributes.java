@@ -41,6 +41,9 @@ public final class ViewAttributes {
     /** "Poranne podsumowanie" (V64): the organiser's switch of the morning e-mail, and the card saved in the background. */
     public static final String MORNING_SUMMARY = "morningSummary";
     public static final String MORNING_SUMMARY_SAVED = "morningSummarySaved";
+    /** "Nowości mailem" (V80): the organiser's consent to the e-mails of what is new, and that the card's switch was just saved. */
+    public static final String NEWS_EMAILS = "newsEmails";
+    public static final String NEWS_EMAILS_SAVED = "newsEmailsSaved";
     /** The card "Twoje logo": the largest file, in bytes and MB, and the longest side kept (V45, {@code LogoImage}). */
     public static final String LOGO_MAX_BYTES = "logoMaxBytes";
     public static final String LOGO_MAX_MB = "logoMaxMb";
@@ -224,6 +227,8 @@ public final class ViewAttributes {
     public static final String IS_OWNER = "isOwner";
     /** Whether the panel shows the welcome card ("Pierwszy raz? Napisz do nas", V48): to the organiser, until they close it. */
     public static final String WELCOME = "welcome";
+    /** Whether the panel shows the card "Nowości" (V80, {@code PanelNews}): to the organiser, until they close it, never with the welcome. */
+    public static final String NEWS = "news";
     /** What the person may do at the panel's party ({@code PartyStaffService.Access}: {@code may(…)}, {@code role()}). */
     public static final String ACCESS = "access";
     /** What the person may do, as the queue poll's {@code X-Panel-Access} says it: the page reloads when the poll says otherwise. */

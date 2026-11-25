@@ -33,5 +33,6 @@ import './queue-keys.js';
 import './add-song.js';
 import './install-hint.js';
 import './welcome.js';
+import './news.js';
 import './plan-card.js';
 import './play-history.js';

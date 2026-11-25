@@ -128,6 +128,8 @@ GuestQueueService          → DjService
 | POST | `/dj/dashboard/host-link` | `link` = `new` (a new secret: the old link dead) / `off` (no link); anything else 400; → `/dj/settings?party=…#hostListsCard` |
 | POST | `/dj/dashboard/tip-count` | `id`, `add` (default true; false takes one back): the DJ's tip for their own numbered song (V28) |
 | POST | `/dj/dashboard/guest-limit-reset` | the party's 24 h limit of guest requests starts again ("Odblokuj prośby gości" in the warning above the queue; `LIMITS`, not a plan's feature — review 2026-10-14 W4) |
+| POST | `/dj/dashboard/news-dismiss` | `partyCode`: the panel's card "Nowości" closed for good (V80; the owner's alone, 204) |
+| POST | `/dj/dashboard/news-emails` | "Nowości mailem" (V80): `on` (none = off) — the organiser's consent to the news e-mails, kept with its time; the organiser's alone; with `X-Requested-With: fetch` the card alone, else back to the settings |
 | POST | `/dj/dashboard/welcome-dismiss` | `partyCode`: the welcome card closed for good (V48; the owner's alone, 204; a second close keeps the first time) |
 | POST | `/dj/dashboard/party-code` | `partyCode`: "Zmień kod imprezy" (V49; the owner's) — a new code, the old one dead for good → `/dj/settings?party=<new>#partyCodeCard` with the flash `codeChanged` |
 | POST | `/dj/dashboard/tip-link` | `tip`: the DJ's tip link (`TipLinks`; 400 and nothing saved when it is not a page on one of the tipping services; empty clears it) |
@@ -138,6 +140,9 @@ GuestQueueService          → DjService
 | GET | `/dj/stats/report` | the owner's daily report as it would go now (with the organisers' addresses); the same owner only, else 404 |
 | POST | `/dj/stats/report/schedule` | when the report goes (V66): `on` (none = off), `time` "HH:mm" (else 400), `days` (MONDAY … SUNDAY, several) → `?saved=yes`; the owner only |
 | POST | `/dj/stats/report` | sends the report now → `/dj/stats/report?sent=yes` / `no`; the owner only |
+| GET | `/dj/stats/news` | the news e-mail (V80): the news's number, the consents and how many had it, its words in PL and EN; the owner only, else 404 |
+| POST | `/dj/stats/news/try` | `lang` (pl / en): the news e-mail to the owner's own address (`ADMIN_EMAIL`) → `?done=try` / `try-failed`; the owner only |
+| POST | `/dj/stats/news/send` | the news e-mail to every organiser who said yes and has not had it (at most 200 a send, on the e-mails' thread) → `?done=sending` / `not-sent`; the owner only |
 | POST | `/dj/dashboard/morning-summary` | "Poranne podsumowanie" (V64): `on` (none = off); the organiser's alone; with `X-Requested-With: fetch` the card alone, else back to the settings |
 | GET | `/demo`, `/demo/updates`, `/demo/history` | the demo (public, GET only): the demo party's panel to look at, its poll and History tab (`DemoController`) |
 | POST | `/dj/library` | `partyCode`, `playlist` (optional: one playlist of a rekordbox collection, "Kluby / Piątek"), `occurrence` (optional, default 1: the second playlist of that name is 2); the body is the file (`application/octet-stream`): the DJ's library (V41 – V43, Pro, the organiser) — text: 200 saved, 413 over 64 MB, 422 not a library / no song / over 50 000 tracks / a collection over 100 000 tracks for one playlist / no such playlist, 503 another file being read (after 30 s), 408 the file still arriving after 5 minutes |

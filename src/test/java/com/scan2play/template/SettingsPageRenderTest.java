@@ -444,7 +444,8 @@ class SettingsPageRenderTest {
 
         assertThat(html).contains("id=\"hostListsCard\"", "id=\"limitsCard\"", "id=\"deviceCard\"", "id=\"pushToggle\"", "s2p-fold-state")
                 .doesNotContain("id=\"linksCard\"", "action=\"/dj/dashboard/tip-link\"", "action=\"/dj/dashboard/dj-links\"",
-                        "href=\"/dj/staff", "id=\"staffRow\"", "id=\"joinStaffForm\"", "id=\"libraryCard\"", "id=\"morningSummaryCard\"");
+                        "href=\"/dj/staff", "id=\"staffRow\"", "id=\"joinStaffForm\"", "id=\"libraryCard\"", "id=\"morningSummaryCard\"",
+                        "id=\"newsEmailsCard\"");
         assertThat(html).as("this device alone in the last group: its heading says so, not \"Dostęp\"")
                 .contains("id=\"settingsGroupAccess\">Urządzenie</h2>").doesNotContain(">Dostęp</h2>");
         assertThat(render(owner(), new GuestRequestLimiter(30, 10, 300, ""), PL)).contains("id=\"settingsGroupAccess\">Dostęp</h2>",
@@ -508,7 +509,7 @@ class SettingsPageRenderTest {
         assertThat(groupsOf(render(owner(), new GuestRequestLimiter(30, 10, 300, ""), PL))).as("the organiser").containsExactly(
                 Map.entry("settingsGroupParty", List.of("partyHoursCard", "limitsCard", "hostListsCard", "kioskCard")),
                 Map.entry("settingsGroupGuests", List.of("guestThemeCard", "wishesRow", "pollsRow")),
-                Map.entry("settingsGroupDj", List.of("linksCard", "logoCard", "libraryCard", "morningSummaryCard")),
+                Map.entry("settingsGroupDj", List.of("linksCard", "logoCard", "libraryCard", "morningSummaryCard", "newsEmailsCard")),
                 Map.entry("settingsGroupAccess", List.of("staffRow", "deviceCard", "partyCodeCard")));
         assertThat(groupsOf(render(staff(StaffPermission.all()), new GuestRequestLimiter(30, 10, 300, ""), PL,
                 com.scan2play.service.Plans.enforced())).keySet()).as("every permission, no Pro: the free cards alone, each in its group")
@@ -617,6 +618,52 @@ class SettingsPageRenderTest {
                 "action=\"/dj/dashboard/morning-summary\"", "data-in-place", "name=\"partyCode\" value=\"" + PARTY + "\"",
                 "Rano po wieczorze z co najmniej 5 prośbami gości").containsPattern(
                 "id=\"morningSummaryToggle\" name=\"on\" value=\"true\"\\s+data-auto-submit checked=\"checked\">");
+    }
+
+    /**
+     * "Nowości mailem" (V80): the organiser's card, folded to its state, a switch that sends at once — off for every account until the
+     * organiser switches it on (the consent the privacy policy asks for).
+     */
+    @Test
+    void theNewsEmails_haveASwitch_offByDefault() throws IOException {
+        String html = render(new PartyStaffService.Access(party(), true, StaffPermission.all()), new GuestRequestLimiter(30, 10, 300, ""), PL);
+
+        String card = html.substring(html.indexOf("id=\"newsEmailsCard\""), html.indexOf("</details>", html.indexOf("id=\"newsEmailsCard\"")));
+        assertThat(card).contains("data-saves-in-place", ">Nowości mailem<", "s2p-fold-state-empty", ">Wyłączone<",
+                "action=\"/dj/dashboard/news-emails\"", "data-in-place", "name=\"partyCode\" value=\"" + PARTY + "\"",
+                "tylko o nowych funkcjach, bez reklam", "href=\"/privacy#dataUse\"", ">Zasady: Polityka prywatności, pkt 3<").containsPattern(
+                "id=\"newsEmailsToggle\" name=\"on\" value=\"true\"\\s+data-auto-submit>").doesNotContain("checked");
+    }
+
+    /** The news switch flipped (V80): the consent kept by its own statement, the card alone answered, "✓ Zapisane" in it. */
+    @Test
+    void theNewsEmailsSwitched_areKept_andAnsweredWithTheCardAlone() throws IOException {
+        PartySettingsEntity party = party();
+        PartySettingsCommandService commands = mock(PartySettingsCommandService.class);
+        DjSessionHelper sessionHelper = mock(DjSessionHelper.class);
+        when(sessionHelper.requireOwner(any(), any(), any())).thenReturn(party);
+        com.scan2play.controller.DjPartySettingsController controller = new com.scan2play.controller.DjPartySettingsController(commands,
+                mock(com.scan2play.service.AccountDeletionService.class), mock(com.scan2play.service.PartyCodeService.class), sessionHelper,
+                com.scan2play.service.Plans.off(), com.scan2play.service.PartySchedules.of(commands, com.scan2play.service.PartySchedules.FRIDAY_NOON));
+        ConcurrentModel model = new ConcurrentModel();
+        String view = controller.updateNewsEmails(PARTY, true, "fetch", user("owner"), new MockHttpSession(), model);
+        assertThat(view).isEqualTo("settings :: newsEmailsCard");
+        org.mockito.Mockito.verify(commands).setNewsEmails(PARTY, true);
+        assertThat(controller.updateNewsEmails(PARTY, false, null, user("owner"), new MockHttpSession(), new ConcurrentModel()))
+                .as("without the script: the page again, at the card").isEqualTo("redirect:/dj/settings?party=" + PARTY + "#newsEmailsCard");
+        org.mockito.Mockito.verify(commands).setNewsEmails(PARTY, false);
+        MockServletContext servletContext = new MockServletContext();
+        WebContext context = new WebContext(JakartaServletWebApplication.buildApplication(servletContext)
+                .buildExchange(new MockHttpServletRequest(servletContext), new MockHttpServletResponse()), PL);
+        context.setVariables(model.asMap());
+        context.setVariable("_csrf", new DefaultCsrfToken("X-CSRF-TOKEN", "_csrf", "harness-csrf-token"));
+        String html = engine.process("settings", Set.of("newsEmailsCard"), context);
+        assertThat(html).doesNotContain("??");
+        DashboardPageRenderTest.assertNothingInline(html);
+        assertThat(html.trim()).startsWith("<details").endsWith("</details>").doesNotContain("<html", "morningSummaryCard");
+        assertThat(html).contains("id=\"newsEmailsCard\" data-saves-in-place open=\"open\"", "id=\"newsEmailsState\">Włączone<",
+                "id=\"newsEmailsSaved\">✓ Zapisane<", "checked=\"checked\"");
+        write("settings-news-answer.html", html);
     }
 
     /**

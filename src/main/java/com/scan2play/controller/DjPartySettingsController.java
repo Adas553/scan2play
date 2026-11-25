@@ -258,6 +258,28 @@ public class DjPartySettingsController {
     }
 
     /**
+     * "Nowości mailem" (V80): the organiser's consent to the e-mails of what is new — their address, so theirs alone; off until they
+     * switch it on here or on the panel's card "Nowości". Kept with its time (the proof of the consent). Answered as "Poranne
+     * podsumowanie": the card alone to {@code X-Requested-With: fetch}, else the page "Ustawienia imprezy" again at the card.
+     */
+    @PostMapping("/dashboard/news-emails")
+    public String updateNewsEmails(@RequestParam String partyCode, @RequestParam(defaultValue = "false") boolean on,
+                                   @RequestHeader(value = "X-Requested-With", required = false) String requestedWith,
+                                   OAuth2AuthenticationToken authentication, HttpSession session, Model model) {
+        sessionHelper.requireOwner(partyCode, authentication, session);
+        partySettingsCommandService.setNewsEmails(partyCode, on);
+        log.info("Party [{}]: the news e-mails switched {}", partyCode, on ? "on" : "off");
+        if (!"fetch".equals(requestedWith)) {
+            return REDIRECT_SETTINGS + "?party=" + partyCode + "#newsEmailsCard";
+        }
+        model.addAttribute(IS_OWNER, true);
+        model.addAttribute(PARTY_CODE, partyCode);
+        model.addAttribute(NEWS_EMAILS, on);
+        model.addAttribute(NEWS_EMAILS_SAVED, true);
+        return "settings :: newsEmailsCard";
+    }
+
+    /**
      * The card "Impreza"'s words, under one "Zapisz" (the design review, 2026-10-10: each field had its own): the DJ's own words
      * about the vibe (V16) — one line, at most {@value PartySettingsEntity#VIBE_NOTE_MAX} characters; the AI is given it with every
      * request, the guests see it on the party page — and who plays (V17), e.g. "DJ Koko" — at most
