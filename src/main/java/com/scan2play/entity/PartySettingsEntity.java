@@ -102,6 +102,14 @@ public class PartySettingsEntity {
     private boolean dedicationsOn = true;
 
     /**
+     * Whether the TV screen and the kiosk show "🎶 Teraz: …", the guest's request the DJ's program plays now (V84,
+     * {@code NowPlayingService}). On by default; the DJ switches it in the card of the program.
+     */
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean nowPlayingShown = true;
+
+    /**
      * Whether the guests' song suggestions are marked by the DJ's library (V58): the songs the DJ has first, "✓ DJ ma"
      * ({@code LibraryHintService}). On by default; it works only with a library and the plan that has it. The organiser switches it in
      * the card "Twoja biblioteka".

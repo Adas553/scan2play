@@ -225,7 +225,8 @@ public class KioskController {
         model.addAttribute(IS_ACTIVE, party.isActive());
         if (party.isActive()) {
             model.addAttribute(TV_SONGS, guestQueueService.mostWanted(partyCode));
-            model.addAttribute(NOW_PLAYING, nowPlayingService.now(partyCode, Instant.now()).orElse(null));   // as on the TV
+            model.addAttribute(NOW_PLAYING, party.isNowPlayingShown()   // as on the TV, unless the DJ keeps it off (V84)
+                    ? nowPlayingService.now(partyCode, Instant.now()).orElse(null) : null);
             model.addAttribute(KIOSK_MY_VOTES, guestVoteService.myVotes(session, partyCode));
             model.addAttribute(KIOSK_MY_REQUESTS, guestSessionService.myRequestIds(session, partyCode));
         }

@@ -424,7 +424,7 @@ piece of work or when a task names an item. A finished item stays here until its
    review `docs/history/review-2026-11-27-now-playing-and-set.md`; details `docs/context/05-1d-panel-heading-queue.md`): **3 "🎶
    Teraz: …"** on the TV and the kiosk for the guest's request the program marked (only the program's marks, not the DJ's "Zagrane";
    the title only, no dedication — the guest's form promises "Zobaczy ją tylko DJ"; in memory, no query and no new fetch; 6 min or the
-   next song); **4 the night's set kept** — every song the program sends, while "Zapisuj set wieczoru" is on (on by default in Pro, a
+   next song; the DJ may switch it off in the program's card — the owner, 2026-11-27, V84); **4 the night's set kept** — every song the program sends, while "Zapisuj set wieczoru" is on (on by default in Pro, a
    switch in the card; kept 30 days like the requests): "Ta piosenka już leciała o 21:30" before the AI for a song among the DJ's last
    "Bez powtórek z ostatnich N" (one rule the DJ knows; 0 = off; only info, no "Poproś jeszcze raz"), "Cały set" in the summary and its
    count in the morning e-mail, "Co to było?" on the guest's page (the last 10, fetched when unfolded). Never in "Trendy" (16). **Not

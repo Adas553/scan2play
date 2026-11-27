@@ -109,9 +109,18 @@ przebiegu.
 - „baśka wilki” trzeba zrozumieć, zanim da się porównać z setem. Sprawdzenie przed AI (słowa gościa „Wilki - Baśka”) oszczędza
   wywołanie, gdy się da.
 
+### P10 — DJ nie mógł wyłączyć paska „Teraz” · zmiana na prośbę właściciela · zrobione
+
+- **Gdzie:** `TvScreenController`, `KioskController`, karta programu (`dashboard.html`, `play-history.js`).
+- **Co:** właściciel (2026-11-27, po przeglądzie): „czy DJ może sam ustawić, czy chce, by ludzie widzieli, co jest grane teraz?” —
+  „Pokazuj na TV i kiosku, co teraz leci” w karcie programu, domyślnie włączone (V84 `party_settings.now_playing_shown`). Pole jest
+  w encji: TV i kiosk czytają je z ustawień w cache, bez własnego zapytania; zapis jedną kolumną, cache czyszczony po commicie.
+  Testy: `TvScreenWebTest`, `KioskWebTest`, `DeckSetIT.nowPlayingShown_…`, `PlanFeatureEndpointsTest`, scenariusz
+  `deck-now-playing-switch` (najpierw czerwony); mutacje M22 (TV ignoruje przełącznik) i M23 (kiosk) — czerwone.
+
 ## Mutacje
 
-21 mutacji kodu, każda uruchomiona na swoim teście (`check.py unit` / `it -t …`); wszystkie czerwone. M1 pierwszy raz zbudowana źle
+23 mutacje kodu, każda uruchomiona na swoim teście (`check.py unit` / `it -t …`); wszystkie czerwone. M1 pierwszy raz zbudowana źle
 (błąd liczby parametrów SQL — czerwień z innego powodu), powtórzona poprawnie. M9 za pierwszym razem **przeżyła**: test łączył
 piosenkę DJ-a i niesprawdzoną prośbę w jednym wywołaniu, a pasek i tak znikał przez nowszą piosenkę — test rozdzielony, teraz czerwona.
 
@@ -138,3 +147,5 @@ piosenkę DJ-a i niesprawdzoną prośbę w jednym wywołaniu, a pasek i tak znik
 | M19 | e-mail bez liczby piosenek setu | **czerwony** |
 | M20 | P3: pierwsza prośba wieczoru też sprawdza (bez gości — wszystko) | **czerwony** |
 | M21 | P3: „+ Dodaj piosenkę” DJ-a liczy się jako gość | **czerwony** |
+| M22 | P10: TV pokazuje pasek mimo wyłączenia | **czerwony** (`TvScreenWebTest`) |
+| M23 | P10: kiosk pokazuje pasek mimo wyłączenia | **czerwony** (`KioskWebTest`) |

@@ -80,7 +80,9 @@ public class TvScreenController {
         if (settings.isActive()) {
             model.addAttribute(TV_SONGS, guestQueueService.mostWanted(settings.getPartyCode()));
             // "🎶 Teraz: …" — the request the DJ's program plays (in memory: no query on the screen's every fetch)
-            model.addAttribute(NOW_PLAYING, nowPlayingService.now(settings.getPartyCode(), Instant.now()).orElse(null));
+            // ... unless the DJ keeps it off the room's screens (V84)
+            model.addAttribute(NOW_PLAYING, settings.isNowPlayingShown()
+                    ? nowPlayingService.now(settings.getPartyCode(), Instant.now()).orElse(null) : null);
         } else {
             // "Prośby od 20:00" while it opens by itself later (V55), in both of the screen's languages
             model.addAttribute(OPENS_AT_PL, partyScheduleService.guestOpens(settings, Locale.forLanguageTag("pl")));

@@ -95,7 +95,8 @@ GuestQueueService          → DjService
 | POST | `/dj/invitation/decline` | `id`: the invitation goes (V34; only the verified address it names) → the panel with a note |
 | GET | `/dj/dashboard/updates` | the guest queue `<tbody>` (ETag / 304); every answer, 304 too, carries `X-Guest-Limits`, `X-Guest-Limits-Use`, `X-Party-Active`, `X-Panel-Access` (V32); 403 when the access was taken away |
 | POST | `/dj/dashboard/add-song` | `song`: a song the DJ adds to the queue by hand (V44; QUEUE; nothing typed: 400) |
-| GET | `/dj/devices` | `partyCode`: the party's computers paired with it (V78; QUEUE, Pro — `DECK`) → `{computers: [{id, name, createdAt, lastSeenAt, lastPlayAt, program, state, warn}], silenceMinutes, setKept}` (V81, V83) |
+| GET | `/dj/devices` | `partyCode`: the party's computers paired with it (V78; QUEUE, Pro — `DECK`) → `{computers: [{id, name, createdAt, lastSeenAt, lastPlayAt, program, state, warn}], silenceMinutes, setKept, nowPlayingShown}` (V81, V83, V84) |
+| POST | `/dj/devices/now-playing` | `shown` true / false: "Pokazuj na TV i kiosku, co teraz leci" (V84; QUEUE, Pro — `DECK`; CSRF) → 204 |
 | POST | `/dj/devices/set` | `kept` true / false: "Zapisuj set wieczoru" (V83; QUEUE, Pro — `DECK`; CSRF) → 204; false deletes the party's kept set |
 | POST | `/dj/devices/code`, `/dj/devices/remove` | "Połącz komputer" → `{code, minutes}`; "Odłącz" (`id`) → 204, 404 for a computer not of the party (V78; QUEUE; CSRF; the code with Pro — `DECK`, "Odłącz" any plan) |
 | POST | `/dj/dashboard/play` | `id`: a request marked played |

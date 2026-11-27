@@ -107,7 +107,8 @@ class PlanFeatureEndpointsTest {
                         WishControllers.djWishes(wishes, helper, plans, settings, codesAsTexts()),
                         WishControllers.djPlan(wishes, helper, plans, settings, codesAsTexts()),
                         new DjPollsController(polls, helper, plans, codesAsTexts()),
-                        new DjDeviceController(devices(), deckWatch(), helper, plans, org.mockito.Mockito.mock(com.scan2play.service.DeckSetService.class)))
+                        new DjDeviceController(devices(), deckWatch(), helper, plans, org.mockito.Mockito.mock(com.scan2play.service.DeckSetService.class),
+                                org.mockito.Mockito.mock(com.scan2play.service.PartySettingsCommandService.class)))
                 .setViewResolvers(new InternalResourceViewResolver("/WEB-INF/views/", ".html")).build();
     }
 
@@ -203,7 +204,9 @@ class PlanFeatureEndpointsTest {
                 // ... and "Ostrzeż po" (V81)
                 Arguments.of(PlanFeature.DECK, true, post("/dj/devices/silence").param("partyCode", PUB).param("minutes", "10")),
                 // ... and "Zapisuj set wieczoru" (V83)
-                Arguments.of(PlanFeature.DECK, true, post("/dj/devices/set").param("partyCode", PUB).param("kept", "false")));
+                Arguments.of(PlanFeature.DECK, true, post("/dj/devices/set").param("partyCode", PUB).param("kept", "false")),
+                // ... and "Pokazuj na TV i kiosku, co teraz leci" (V84)
+                Arguments.of(PlanFeature.DECK, true, post("/dj/devices/now-playing").param("partyCode", PUB).param("shown", "false")));
     }
 
     @ParameterizedTest(name = "{0}: {2}")

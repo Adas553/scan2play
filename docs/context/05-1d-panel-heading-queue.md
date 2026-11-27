@@ -151,7 +151,10 @@ song that started more than 30 s later reaches the server (`SAME_SONG`: a song s
 ~45 s into the next song; Serato 2/3 writes a song when it is loaded on a deck, so there the bar may go a little early. A request whose
 song is not the newest of its call (a history read again) is over already. With the bar the TV's ten rows close up (`.tv-list-now`, a
 class, not `:has()`: a TV's browser may be old) so a window of 1280 × 720 still shows them all. Not on the guest's page (it would need a
-fetch of its own). `NowPlayingServiceTest`, `DeckHistoryServiceTest`, `TvScreenWebTest`, `KioskWebTest`; browser scenarios
+fetch of its own). The DJ may keep it off the room's screens: "Pokazuj na TV i kiosku, co teraz leci" in the program's card (V84,
+`party_settings.now_playing_shown`, on by default, mapped in the entity so the TV and the kiosk read it from the cached settings — no
+query of their own; `POST /dj/devices/now-playing`, QUEUE, Pro; `GET /dj/devices` says `nowPlayingShown`; scenario
+`deck-now-playing-switch`). `NowPlayingServiceTest`, `DeckHistoryServiceTest`, `TvScreenWebTest`, `KioskWebTest`; browser scenarios
 `tv-now-playing-*`, `kiosk-now-playing-fits-1180x820`.
 
 **The night's set kept (V83, `docs/ideas.md` item 21, 4; Pro — `DECK`).** Every song the program sends is kept for the party

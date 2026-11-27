@@ -242,6 +242,14 @@ class TvScreenWebTest {
             assertThat(noSession(mockMvc.perform(get("/p/ENDED/tv/list")).andReturn())).as("not for another party")
                     .doesNotContain("tvNowPlaying");
 
+            // the DJ keeps it off the room's screens (V84): no bar, the list as before
+            doReturn(PartySettingsEntity.builder().partyCode("OFFNP").active(true).nowPlayingShown(false).build())
+                    .when(partySettingsQueryService).getSettings("OFFNP");
+            when(guestQueueService.mostWanted("OFFNP")).thenReturn(songs(0));
+            nowPlaying.heard("OFFNP", new NowPlayingService.Song("Wilki - Baśka", started), started);
+            String off = noSession(mockMvc.perform(get("/p/OFFNP/tv/list")).andReturn());
+            assertThat(off).doesNotContain("tvNowPlaying", "tv-list-now").contains("class=\"tv-song\"");
+
             nowPlaying.heard("ABC12", null, started.plusSeconds(200));   // the next song, no request of it
             assertThat(noSession(mockMvc.perform(get("/p/ABC12/tv/list")).andReturn())).doesNotContain("tvNowPlaying");
         } finally {

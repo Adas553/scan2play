@@ -405,4 +405,25 @@
                 [true, true]);
         }
     });
+
+    S2P.scenario({
+        name: 'deck-now-playing-switch',
+        title: '"Pokazuj na TV i kiosku, co teraz leci" (V84): shown with the computer, as the server keeps it, saved at once with the CSRF token',
+        setup: { devices: [] },
+        run: async function (t) {
+            const box = function () { return document.getElementById('deviceNowPlaying'); };
+            await t.stand.config({ devices: [device(5)], nowPlayingShown: true });
+            document.dispatchEvent(new Event('visibilitychange'));
+            await t.waitFor(function () { return rows() === 1 && box().checked; }, 'the computer, the bar shown', 3000);
+            toggle().click();
+            t.step('a switch beside the computer', [box().getBoundingClientRect().height > 0, box().getAttribute('role')], [true, 'switch']);
+            box().click();
+            await t.waitFor(function () { return !box().disabled; }, 'saved, the list asked again', 3000);
+            await t.sleep(300);
+            const saved = await t.stand.requests('POST /dj/devices/now-playing');
+            t.step('saved once, for the party, with the CSRF token', [saved.length, saved[0].q.shown, saved[0].q.partyCode,
+                !!saved[0].q['X-CSRF-TOKEN']], [1, 'false', document.getElementById('partyCode').value, true]);
+            t.check('off after the list came again', !box().checked);
+        }
+    });
 })();

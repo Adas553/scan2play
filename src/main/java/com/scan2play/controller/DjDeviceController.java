@@ -6,6 +6,7 @@ import com.scan2play.model.StaffPermission;
 import com.scan2play.service.DeckSetService;
 import com.scan2play.service.DeckWatchService;
 import com.scan2play.service.DjDeviceService;
+import com.scan2play.service.PartySettingsCommandService;
 import com.scan2play.service.PlanService;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
@@ -26,7 +27,8 @@ import java.util.Map;
  * party's paired computers and "Odłącz" — for whom may work the queue (the program marks the queue played, as "Zagrane" does).
  * JSON for play-history.js, which draws the card. With Pro (PlanFeature.DECK), but "Odłącz". Each computer's line says whether its
  * program sees songs, and "Ostrzeż po" sets when the organiser is warned that it stopped (DeckWatchService, V81); "Zapisuj set
- * wieczoru" whether the night's set is kept (DeckSetService, V83).
+ * wieczoru" whether the night's set is kept (DeckSetService, V83), "Pokazuj na TV i kiosku, co teraz leci" whether the room's screens
+ * show the song the program plays (V84).
  */
 @RestController
 @RequestMapping(value = "/dj/devices", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -38,9 +40,10 @@ public class DjDeviceController {
     private final DjSessionHelper sessionHelper;
     private final PlanService plans;
     private final DeckSetService deckSet;
+    private final PartySettingsCommandService partySettingsCommandService;
 
     /** The card's content: the computers, the minutes of "Ostrzeż po" and "Zapisuj set wieczoru" (V83). */
-    public record Card(List<DeckWatchService.Computer> computers, int silenceMinutes, boolean setKept) {
+    public record Card(List<DeckWatchService.Computer> computers, int silenceMinutes, boolean setKept, boolean nowPlayingShown) {
     }
 
     /**
@@ -53,7 +56,7 @@ public class DjDeviceController {
         PartySettingsEntity party = plans.require(sessionHelper.require(partyCode, StaffPermission.QUEUE, authentication, session),
                 PlanFeature.DECK);
         DeckWatchService.Watch seen = watch.watch(party);
-        return new Card(seen.computers(), seen.silenceMinutes(), deckSet.kept(party.getPartyCode()));
+        return new Card(seen.computers(), seen.silenceMinutes(), deckSet.kept(party.getPartyCode()), party.isNowPlayingShown());
     }
 
     /** "Zapisuj set wieczoru" (V83): on or off — 204; off deletes the party's kept set ({@link DeckSetService#setKept}). */
@@ -63,6 +66,16 @@ public class DjDeviceController {
         String party = plans.require(sessionHelper.require(partyCode, StaffPermission.QUEUE, authentication, session),
                 PlanFeature.DECK).getPartyCode();
         deckSet.setKept(party, kept);
+        return ResponseEntity.noContent().build();
+    }
+
+    /** "Pokazuj na TV i kiosku, co teraz leci" (V84): on or off — 204. */
+    @PostMapping("/now-playing")
+    public ResponseEntity<Void> nowPlaying(@RequestParam boolean shown, @RequestParam(required = false) String partyCode,
+                                           OAuth2AuthenticationToken authentication, HttpSession session) {
+        String party = plans.require(sessionHelper.require(partyCode, StaffPermission.QUEUE, authentication, session),
+                PlanFeature.DECK).getPartyCode();
+        partySettingsCommandService.setNowPlayingShown(party, shown);
         return ResponseEntity.noContent().build();
     }
 

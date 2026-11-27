@@ -25,7 +25,8 @@
  * device-offline, device-stale, deck-toggle-warn, deck-toggle-offline, deck-toggle-stale — "{…}" filled in here), #deviceList,
  * #deviceStale, #deviceAnother, #deviceSetup, #deviceConnect, #deviceCode, #deviceWatch with <select id="deviceSilence"> and
  * #deviceSilenceFailed (both role="status": always there, only their text changes, so a screen reader reads it), the switch
- * #deviceSetKept ("Zapisuj set wieczoru", /dj/devices/set, V83) with #deviceSetFailed.
+ * #deviceSetKept ("Zapisuj set wieczoru", /dj/devices/set, V83) with #deviceSetFailed, the switch #deviceNowPlaying ("Pokazuj na TV i
+ * kiosku, co teraz leci", /dj/devices/now-playing, V84) with #deviceNowPlayingFailed.
  */
 import { csrfHeaders, partyCode } from './common.js';
 
@@ -85,6 +86,8 @@ function computers() {
     const silenceFailed = document.getElementById('deviceSilenceFailed');
     const setKept = document.getElementById('deviceSetKept');
     const setFailed = document.getElementById('deviceSetFailed');
+    const nowShown = document.getElementById('deviceNowPlaying');
+    const nowFailed = document.getElementById('deviceNowPlayingFailed');
     const stale = document.getElementById('deviceStale');
     const toggleLabel = toggle.getAttribute('aria-label') || '';
     const toggleTitle = toggle.title || '';
@@ -112,6 +115,7 @@ function computers() {
         let devices;
         let minutes;
         let kept;
+        let shown;
         const mine = ++asked;
         try {
             const response = await fetch('/dj/devices?partyCode=' + encodeURIComponent(partyCode() || ''),
@@ -122,6 +126,7 @@ function computers() {
             devices = answer.computers || [];
             minutes = answer.silenceMinutes;
             kept = answer.setKept;
+            shown = answer.nowPlayingShown;
         } catch (e) {
             return notLoaded(mine);
         }
@@ -173,6 +178,7 @@ function computers() {
         // the select follows the server, unless the DJ is changing it right now
         if (minutes !== undefined && (force === true || document.activeElement !== silence)) silence.value = String(minutes);
         if (typeof kept === 'boolean' && !setKept.disabled) setKept.checked = kept;
+        if (typeof shown === 'boolean' && !nowShown.disabled) nowShown.checked = shown;
         newest = devices.reduce(function (most, device) { return Math.max(most, device.id); }, 0);
         // the program took the code: it is used up. By the newest id, not the count: a fourth computer replaces the one seen
         // longest ago (the count stays), and an "Odłącz" meanwhile shortens the list while the code is still good
@@ -228,24 +234,29 @@ function computers() {
         }
     });
 
-    // "Zapisuj set wieczoru": saved at once; not saved, said, and the switch back as the server keeps it (the next list puts it)
-    setKept.addEventListener('change', async function () {
-        setKept.disabled = true;
-        setFailed.textContent = '';
-        let saved = false;
-        try {
-            saved = (await post('/dj/devices/set', { kept: String(setKept.checked) })).ok;
-        } catch (e) {
-            saved = false;
-        } finally {
-            setKept.disabled = false;
-            if (!saved) {
-                setFailed.textContent = text('deviceFailed');
-                setKept.checked = !setKept.checked;
+    // "Zapisuj set wieczoru" and "Pokazuj na TV i kiosku, co teraz leci": saved at once; not saved, said, and the switch back as the
+    // server keeps it (the next list puts it)
+    function savedAtOnce(box, failed, path, field) {
+        box.addEventListener('change', async function () {
+            box.disabled = true;
+            failed.textContent = '';
+            let saved = false;
+            try {
+                saved = (await post(path, { [field]: String(box.checked) })).ok;
+            } catch (e) {
+                saved = false;
+            } finally {
+                box.disabled = false;
+                if (!saved) {
+                    failed.textContent = text('deviceFailed');
+                    box.checked = !box.checked;
+                }
+                await load();
             }
-            await load();
-        }
-    });
+        });
+    }
+    savedAtOnce(setKept, setFailed, '/dj/devices/set', 'kept');
+    savedAtOnce(nowShown, nowFailed, '/dj/devices/now-playing', 'shown');
 
     /**
      * "Kod do wpisania w programie: 123 456 (ważny 10 min) [Kopiuj]": the code bold, split in two for the eye; "Kopiuj" copies the

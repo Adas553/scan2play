@@ -31,6 +31,8 @@ class DeckSetIT extends PostgresIntegrationTest {
     @Autowired DeckSetService sets;
     @Autowired PartySettingsRepository partyRepository;
     @Autowired JdbcTemplate jdbc;
+    @Autowired PartySettingsCommandService settingsCommands;
+    @Autowired PartySettingsQueryService settingsQueries;
 
     private static final Instant NOW = Instant.now().truncatedTo(ChronoUnit.SECONDS);
 
@@ -184,6 +186,18 @@ class DeckSetIT extends PostgresIntegrationTest {
         assertThat(sets.deleteStartedBefore(cutoff, 1)).isEqualTo(1);
         assertThat(sets.deleteStartedBefore(cutoff, 1)).isZero();
         assertThat(rows(party)).isEqualTo(1);
+    }
+
+    /** "Pokazuj na TV i kiosku, co teraz leci" (V84): on by default; switched, the cached settings the TV reads follow after the commit. */
+    @Test
+    void nowPlayingShown_isOnByDefault_andTheCachedSettingsFollowTheSwitch() {
+        String party = party();
+        assertThat(settingsQueries.getSettings(party).isNowPlayingShown()).isTrue();
+        settingsCommands.setNowPlayingShown(party, false);
+        assertThat(settingsQueries.getSettings(party).isNowPlayingShown()).isFalse();
+        assertThat(jdbc.queryForObject("SELECT now_playing_shown FROM party_settings WHERE party_code = ?", Boolean.class, party)).isFalse();
+        settingsCommands.setNowPlayingShown(party, true);
+        assertThat(settingsQueries.getSettings(party).isNowPlayingShown()).isTrue();
     }
 
     @Test

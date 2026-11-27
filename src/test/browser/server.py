@@ -130,6 +130,7 @@ def default_state():
         # V81 lastPlayAt, program, state ('OK', 'WAITING', 'SILENT', 'OFFLINE'; none: 'OK') and warn] — and "Ostrzeż po"'s minutes
         'devices': [],
         'silenceMinutes': 20,
+        'nowPlayingShown': True,       # "Pokazuj na TV i kiosku, co teraz leci" (V84), as GET /dj/devices says it
         'setKept': True,               # "Zapisuj set wieczoru" (V83), as GET /dj/devices says it and POST /dj/devices/set keeps it
         'devicesStatus': None,         # e.g. 500 or 403: GET /dj/devices fails (the card says its lines are old)
         'libraryStatus': 200,
@@ -340,7 +341,8 @@ class Handler(BaseHTTPRequestHandler):
             if state['devicesStatus']:
                 return self._send(state['devicesStatus'])
             computers = [dict({'state': 'OK', 'warn': False}, **d) for d in state['devices']]
-            return self._json({'computers': computers, 'silenceMinutes': state['silenceMinutes'], 'setKept': state['setKept']})
+            return self._json({'computers': computers, 'silenceMinutes': state['silenceMinutes'], 'setKept': state['setKept'],
+                               'nowPlayingShown': state['nowPlayingShown']})
         if path.startswith('/p/') and path.endswith('/logo.png'):   # the DJ's logo (V45): a square one — the tallest a box lets it be —, as a real PNG
             return self._send(200, LOGO_PNG, 'image/png')
         if path.startswith('/p/') and path.endswith('/played'):   # "Co to było?" (V83), as the real server renders it
@@ -464,7 +466,7 @@ class Handler(BaseHTTPRequestHandler):
             fields['X-Requested-With'] = self.headers.get('X-Requested-With')
         if path == '/dj/dashboard/kiosk-link':        # the kiosk's link sent by fetch (V56): with its headers
             fields['X-Requested-With'] = self.headers.get('X-Requested-With')
-        if path in ('/dj/devices/code', '/dj/devices/remove', '/dj/devices/silence', '/dj/devices/set'):   # "Połącz komputer", "Odłącz" (V78), "Ostrzeż po" (V81), "Zapisuj set" (V83)
+        if path in ('/dj/devices/code', '/dj/devices/remove', '/dj/devices/silence', '/dj/devices/set', '/dj/devices/now-playing'):   # "Połącz komputer", "Odłącz" (V78), "Ostrzeż po" (V81), "Zapisuj set" (V83)
             fields['X-CSRF-TOKEN'] = self.headers.get('X-CSRF-TOKEN')
         if path in ('/dj/dashboard/schedule', '/dj/dashboard/guest-theme', '/dj/dashboard/morning-summary',
                     '/dj/library/hints', '/dj/dashboard/news-emails'):   # by fetch (V55, V59, V64, V58, V80)
@@ -493,6 +495,10 @@ class Handler(BaseHTTPRequestHandler):
         if path == '/dj/devices/silence':              # "Ostrzeż po" (V81): kept, as the real server
             with stand.lock:
                 state['silenceMinutes'] = int(fields.get('minutes'))
+            return self._send(204)
+        if path == '/dj/devices/now-playing':          # "Pokazuj na TV i kiosku, co teraz leci" (V84): kept, as the real server
+            with stand.lock:
+                state['nowPlayingShown'] = fields.get('shown') == 'true'
             return self._send(204)
         if path == '/dj/devices/set':                  # "Zapisuj set wieczoru" (V83): kept, as the real server
             with stand.lock:

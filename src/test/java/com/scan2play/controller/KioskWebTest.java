@@ -384,6 +384,10 @@ class KioskWebTest {
         assertThat(now.indexOf("id=\"kioskNowPlaying\"")).isLessThan(now.indexOf("id=\"kioskListTitle\""));
         assertThat(mockMvc.perform(get(KIOSK + "/list")).andReturn().getResponse().getContentAsString()).contains("id=\"kioskNowPlaying\"");
         write("kiosk-full-now.html", now);
+        // the DJ keeps it off the room's screens (V84)
+        party.setNowPlayingShown(false);
+        assertThat(mockMvc.perform(get(KIOSK + "/list")).andReturn().getResponse().getContentAsString()).doesNotContain("kioskNowPlaying");
+        party.setNowPlayingShown(true);
         nowPlaying.heard(partyCode, null, started.plusSeconds(3600));
         assertThat(page(new MockHttpSession())).doesNotContain("kioskNowPlaying");
         write("kiosk-result-full.html", send(new MockHttpSession(), "baśka wilki").getResponse().getContentAsString());
