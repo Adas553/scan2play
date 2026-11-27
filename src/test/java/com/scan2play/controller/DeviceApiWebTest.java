@@ -42,6 +42,8 @@ class DeviceApiWebTest {
     @MockitoBean
     private DeckHistoryService deckHistory;
     @MockitoBean
+    private com.scan2play.service.DeckWatchService deckWatch;
+    @MockitoBean
     private GuestRequestLimiter limiter;
     @MockitoBean
     private DjSessionHelper sessionHelper;

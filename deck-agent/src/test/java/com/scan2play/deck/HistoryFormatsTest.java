@@ -477,6 +477,16 @@ class HistoryFormatsTest {
         assertEquals("{\"plays\":[{\"at\":1795300000,\"artist\":\"Sanah\",\"title\":\"Szampan\"}],\"sentAt\":1795300100}", json);
     }
 
+    /** The program a song was read from goes with it (V81: the panel's "ostatnia piosenka 21:43 (VirtualDJ)"); none, no field. */
+    @Test
+    void aSongsProgram_goesWithIt() {
+        String json = Json.plays(List.of(new Played(Instant.ofEpochSecond(1795300000L), "Sanah", "Szampan").from("VirtualDJ")),
+                Instant.ofEpochSecond(1795300100L));
+
+        assertEquals("{\"plays\":[{\"at\":1795300000,\"artist\":\"Sanah\",\"title\":\"Szampan\",\"program\":\"VirtualDJ\"}],"
+                + "\"sentAt\":1795300100}", json);
+    }
+
     /**
      * The folders a DJ program is most likely in are looked through first (Music, Documents, OneDrive, then AppData), the whole
      * profile last: a profile with many folders must not use up the look before Music is reached.

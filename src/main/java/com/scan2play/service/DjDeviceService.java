@@ -43,6 +43,13 @@ public class DjDeviceService {
     static final int CALLS_PER_MINUTE = 30;
     /** The longest device name kept (the column). */
     static final int NAME_MAX = 60;
+    /** The longest program name kept (V81's column). */
+    static final int PROGRAM_MAX = 30;
+    /**
+     * A gap this long without a song ends a run of songs (V82): the next song starts a new one. Longer than any pause the DJ makes
+     * mid-set on purpose (speeches, the cake), shorter than the hours between a test before the party and the set.
+     */
+    public static final Duration RUN_GAP = Duration.ofMinutes(30);
 
     private static final SecureRandom RANDOM = new SecureRandom();
     private static final String ALL_FAILURES = "*";
@@ -60,8 +67,18 @@ public class DjDeviceService {
         this.calls = Caffeine.newBuilder().expireAfterWrite(Duration.ofMinutes(1)).maximumSize(100_000).build();
     }
 
-    /** A device of a party as the panel shows it. */
-    public record Device(long id, String name, Instant createdAt, Instant lastSeenAt) {
+    /**
+     * A device of a party: {@code lastPlayAt} the start of the newest song its program sent (V81; null: none yet), {@code playRunFrom}
+     * the start of the run of songs it belongs to (V82; null: none since V82), {@code program} what it read it from (null: a program
+     * too old to say).
+     */
+    public record Device(long id, String name, Instant createdAt, Instant lastSeenAt, Instant lastPlayAt, Instant playRunFrom,
+                         String program) {
+
+        /** Its last call, or its pairing when it never called since. */
+        Instant heardAt() {
+            return lastSeenAt == null ? createdAt : lastSeenAt;
+        }
     }
 
     /** What a token opens: the device and its party. */
@@ -148,10 +165,32 @@ public class DjDeviceService {
 
     /** The party's devices, the one seen last first. */
     public List<Device> devices(String partyCode) {
-        return jdbc.query("SELECT id, name, created_at, last_seen_at FROM dj_device WHERE party_code = ?"
+        return jdbc.query("SELECT id, name, created_at, last_seen_at, last_play_at, play_run_from, last_play_program FROM dj_device"
+                        + " WHERE party_code = ?"
                         + " ORDER BY COALESCE(last_seen_at, created_at) DESC, id DESC LIMIT " + MAX_DEVICES,
-                (row, n) -> new Device(row.getLong(1), row.getString(2), row.getTimestamp(3).toInstant(),
-                        row.getTimestamp(4) == null ? null : row.getTimestamp(4).toInstant()), partyCode);
+                (row, n) -> new Device(row.getLong(1), row.getString(2), row.getTimestamp(3).toInstant(), instant(row.getTimestamp(4)),
+                        instant(row.getTimestamp(5)), instant(row.getTimestamp(6)), row.getString(7)), partyCode);
+    }
+
+    /**
+     * The songs a device sent, from {@code oldestAt} to {@code newestAt}: the newest one's start kept (never earlier than what is kept
+     * — a song sent again after a restart moves nothing back), the program it came from, and the run of songs it belongs to — a new
+     * run from {@code oldestAt} when the last song kept is more than {@link #RUN_GAP} before it. Only times and the program's name:
+     * the songs themselves are not kept.
+     */
+    public void notePlay(long deviceId, Instant oldestAt, Instant newestAt, String program) {
+        String name = program == null || program.isBlank() ? null : cleanName(program);
+        // the SET's expressions read the row as it was: last_play_at below is the one kept before this call
+        jdbc.update("UPDATE dj_device SET play_run_from = CASE WHEN last_play_at IS NULL OR play_run_from IS NULL"
+                        + " OR last_play_at < ?::timestamptz - interval '" + RUN_GAP.toMinutes() + " minutes' THEN ? ELSE play_run_from END,"
+                        + " last_play_at = ?, last_play_program = COALESCE(?, last_play_program)"
+                        + " WHERE id = ? AND (last_play_at IS NULL OR last_play_at < ?)",
+                Timestamp.from(oldestAt), Timestamp.from(oldestAt), Timestamp.from(newestAt),
+                name == null ? null : name.substring(0, Math.min(PROGRAM_MAX, name.length())), deviceId, Timestamp.from(newestAt));
+    }
+
+    private static Instant instant(Timestamp at) {
+        return at == null ? null : at.toInstant();
     }
 
     /** "Odłącz": the device of this party forgotten, its token dead at once. */

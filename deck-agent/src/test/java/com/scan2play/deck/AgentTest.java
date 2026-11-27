@@ -102,7 +102,7 @@ class AgentTest {
         Agent agent = agent(paired(dir));
 
         agent.tick();
-        assertEquals(List.of(List.of(new Played(START.minus(Duration.ofMinutes(4)), "Tuż przed", "Ostatnia przed programem"))),
+        assertEquals(List.of(List.of(new Played(START.minus(Duration.ofMinutes(4)), "Tuż przed", "Ostatnia przed programem", "VirtualDJ"))),
                 server.calls, "only the song of the last 10 minutes");
 
         source.played(START.plusSeconds(200), "Sanah", "Szampan");
@@ -113,9 +113,31 @@ class AgentTest {
         agent.tick();
 
         assertEquals(2, server.calls.size(), "nothing new, nothing sent (and the minute's call not due yet)");
-        assertEquals(List.of(new Played(START.plusSeconds(200), "Sanah", "Szampan")), server.calls.get(1));
+        assertEquals(List.of(new Played(START.plusSeconds(200), "Sanah", "Szampan", "VirtualDJ")), server.calls.get(1));
         assertEquals(List.of("Sanah - Szampan"), shown.get().marked().stream().map(Agent.Marked::song).toList());
         assertEquals(List.of("VirtualDJ (2026-11-21.m3u)"), shown.get().reading());
+    }
+
+    /**
+     * "Ostatnia piosenka", the DJ's test before the party: the newest song read since the start, a request or not, with its program;
+     * none before the first — the set before the program is no proof that it sees what plays now.
+     */
+    @Test
+    void theNewestSongRead_isShownAsTheLastOne(@TempDir Path dir) throws Exception {
+        source.played(START.minus(Duration.ofHours(2)), "Wcześniej", "Grane dwie godziny temu");
+        Agent agent = agent(paired(dir));
+
+        agent.tick();
+        assertNull(shown.get().heard(), "the earlier set is no test");
+
+        source.played(START.plusSeconds(60), "Kult", "Arahja");
+        source.played(START.plusSeconds(30), "Sanah", "Szampan");
+        now.set(START.plusSeconds(63));
+        agent.tick();
+
+        assertEquals(new Agent.Heard(START.plusSeconds(60), "Kult - Arahja", "VirtualDJ"), shown.get().heard(),
+                "the newest by its start, whatever order the history wrote them in");
+        assertEquals("Kult - Arahja (VirtualDJ)", Window.heardLine(shown.get().heard()));
     }
 
     /**
@@ -182,7 +204,7 @@ class AgentTest {
         now.set(START.plusSeconds(9));
         agent.tick();
 
-        assertEquals(List.of(new Played(START.plusSeconds(5), "Sanah", "Szampan")), server.calls.stream().flatMap(List::stream).toList());
+        assertEquals(List.of(new Played(START.plusSeconds(5), "Sanah", "Szampan", "VirtualDJ")), server.calls.stream().flatMap(List::stream).toList());
         assertEquals(List.of("VirtualDJ (dzisiaj.m3u)"), shown.get().reading(), "one line, not two");
     }
 
@@ -362,7 +384,8 @@ class AgentTest {
         now.set(START.plusSeconds(9));
         agent.tick();
 
-        assertEquals(List.of(new Played(START.plusSeconds(5), "Sanah", "Szampan"), new Played(START.plusSeconds(8), "Kult", "Arahja")),
+        assertEquals(List.of(new Played(START.plusSeconds(5), "Sanah", "Szampan", "VirtualDJ"),
+                        new Played(START.plusSeconds(8), "Kult", "Arahja", "VirtualDJ")),
                 server.calls.stream().flatMap(List::stream).toList());
     }
 }

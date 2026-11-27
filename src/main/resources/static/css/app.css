@@ -828,6 +828,9 @@ th[data-sort].sort-desc::after {
 .s2p-deck-steps summary  { cursor: pointer; }
 /* a computer paired: its row, the tick green */
 .s2p-deck-device-ok      { color: var(--s2p-green); font-weight: 700; }
+/* a computer's line (V81): no song yet, or silent out of the party — grey; silent or gone during the party — amber */
+.s2p-deck-device-wait    { color: var(--s2p-text-muted); font-weight: 700; }
+.s2p-deck-device-warn    { color: var(--s2p-warning); font-weight: 700; }
 /* the pairing code: read off the screen and typed in the program — large digits, apart */
 .s2p-device-code         { font-size: 1.1em; letter-spacing: 0.08em; font-variant-numeric: tabular-nums; }
 @media (max-width: 575.98px) {
