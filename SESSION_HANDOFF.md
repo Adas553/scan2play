@@ -18,7 +18,7 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
 - **2026-11-27 — the state.** `main` = `693813f` (#317, the second deck watch review's fixes), `dev` = `8ab6f2e` (#318); every PR up to
   #318 merged. The deploy of #315: 2026-11-27 14:34 UTC, SUCCESS, Flyway at v82 (#317 needs no migration). The history of #272 … #318:
   `docs/history/session-handoff-2026-11-27.md`.
-- **2026-11-27 — `claude/optimistic-hopper-20ct09` (from `main` = `693813f`), PRs to `main` and `dev`, V83:** "🎶 Teraz: …" on the TV
+- **2026-11-27 — `claude/optimistic-hopper-20ct09` (from `main` = `693813f`), PRs #319 (`main`) and #320 (`dev`), V83:** "🎶 Teraz: …" on the TV
   and the kiosk; the night's set kept ("Już leciało o 21:30" before the AI, "Cały set" in the summary, "Co to było?" for the guests;
   "Zapisuj set wieczoru" on by default, 30 days). Review `docs/history/review-2026-11-27-now-playing-and-set.md`. Waits for the owner:
   the merge, then Flyway at v83 in the deploy's log; a look on a phone and a TV. The program unchanged (no "Run workflow").
