@@ -2,6 +2,7 @@ package com.scan2play.controller;
 
 import com.scan2play.entity.PartySettingsEntity;
 import com.scan2play.service.GuestQueueService;
+import com.scan2play.service.NowPlayingService;
 import com.scan2play.service.PartyScheduleService;
 import com.scan2play.service.PartySettingsQueryService;
 import com.scan2play.service.PlanService;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.Instant;
 import java.util.Locale;
 
 import static com.scan2play.controller.ViewAttributes.*;
@@ -24,7 +26,7 @@ import static com.scan2play.controller.ViewAttributes.*;
 /**
  * The screen for a TV in the hall or the pub (Next 7 c, an idea from Rekwest; the owner, 2026-10-18: public, the ten most wanted,
  * plan Free): the party's QR code and the guests' most wanted songs with their votes — what the guests see under their form anyway,
- * never their words or dedications, and no order of play (the DJ plays from their own software). Public like the guest's page, so
+ * never their words or dedications, and no order of play — only, above the list, the request the DJ's program plays now (the DJ plays from their own software). Public like the guest's page, so
  * a smart TV opens it without a login; it has no form and makes no session — a TV keeps it open all night. {@code js/tv.js} fetches
  * the list again every few seconds.
  */
@@ -42,6 +44,7 @@ public class TvScreenController {
     private final PlanService planService;
     private final PartyScheduleService partyScheduleService;
     private final PollView pollView;
+    private final NowPlayingService nowPlayingService;
 
     @Value("${scan2play.guest-url}")
     private String rawBaseUrl;
@@ -76,6 +79,8 @@ public class TvScreenController {
         }
         if (settings.isActive()) {
             model.addAttribute(TV_SONGS, guestQueueService.mostWanted(settings.getPartyCode()));
+            // "🎶 Teraz: …" — the request the DJ's program plays (in memory: no query on the screen's every fetch)
+            model.addAttribute(NOW_PLAYING, nowPlayingService.now(settings.getPartyCode(), Instant.now()).orElse(null));
         } else {
             // "Prośby od 20:00" while it opens by itself later (V55), in both of the screen's languages
             model.addAttribute(OPENS_AT_PL, partyScheduleService.guestOpens(settings, Locale.forLanguageTag("pl")));

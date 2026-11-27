@@ -10,6 +10,7 @@ import com.scan2play.service.GuestRequestService.Sent;
 import com.scan2play.service.GuestSessionService;
 import com.scan2play.service.GuestVoteService;
 import com.scan2play.service.LibraryHintService;
+import com.scan2play.service.NowPlayingService;
 import com.scan2play.service.PartyScheduleService;
 import com.scan2play.service.PlanService;
 import lombok.RequiredArgsConstructor;
@@ -36,6 +37,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import java.security.Principal;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.concurrent.Callable;
@@ -80,6 +82,7 @@ public class KioskController {
     private final PartyScheduleService partyScheduleService;
     private final MessageSource messageSource;
     private final LibraryHintService libraryHintService;
+    private final NowPlayingService nowPlayingService;
 
     /** The kiosk's page: the form and the most wanted, or — the party closed — when it opens. Leaves the kiosk's cookie. */
     @GetMapping("/{token}")
@@ -222,6 +225,7 @@ public class KioskController {
         model.addAttribute(IS_ACTIVE, party.isActive());
         if (party.isActive()) {
             model.addAttribute(TV_SONGS, guestQueueService.mostWanted(partyCode));
+            model.addAttribute(NOW_PLAYING, nowPlayingService.now(partyCode, Instant.now()).orElse(null));   // as on the TV
             model.addAttribute(KIOSK_MY_VOTES, guestVoteService.myVotes(session, partyCode));
             model.addAttribute(KIOSK_MY_REQUESTS, guestSessionService.myRequestIds(session, partyCode));
         }

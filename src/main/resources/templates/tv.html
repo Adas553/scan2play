@@ -11,7 +11,8 @@
 </head>
 <!--/*
     The screen for a TV in the hall or the pub (TvScreenController, Next 7 c): the party's QR code on the left, the guests' ten most
-    wanted songs with their votes on the right — no order of play, no guests' words or dedications. In the language of the DJ's panel,
+    wanted songs with their votes on the right — no order of play, no guests' words or dedications; above them, a few minutes long,
+    "🎶 Teraz: …", the guest's request the DJ's program plays now. In the language of the DJ's panel,
     as the QR poster: a Polish panel gives Polish and English at once (the guests of a Polish party are of both), any other English
     alone — the panel's link "📺 Ekran na TV" carries it (?lang=, kept by the TV in the cookie lang), and so does the list's address.
     The texts are written here, each in an element with its own lang. js/tv.js fetches the list (the fragment tvList) again every few
@@ -29,7 +30,7 @@
         <p th:if="${djName}" class="tv-dj">🎧 <span th:replace="~{fragments/components :: djNameText}">DJ Koko</span></p>
     </section>
 
-    <section id="tvList" class="tv-list" th:fragment="tvList" th:attr="data-url=@{/p/{code}/tv/list(code=${partyCode},lang=${#locale.language == 'pl' ? 'pl' : 'en'})}">
+    <section id="tvList" class="tv-list" th:fragment="tvList" th:classappend="${poll == null and isActive and nowPlaying != null} ? 'tv-list-now'" th:attr="data-url=@{/p/{code}/tv/list(code=${partyCode},lang=${#locale.language == 'pl' ? 'pl' : 'en'})}">
         <!--/* the DJ's question (V74) in place of the list while it is asked, and its results a quarter of an hour after: the
              question and the answers in the DJ's own words, the rest in the screen's languages */-->
         <th:block th:if="${poll != null}">
@@ -55,6 +56,11 @@
             <span lang="en" th:class="${#locale.language == 'pl'} ? 'second'" th:text="'Votes: ' + ${pollResults != null ? pollResults.total() : poll.voteCount()}">Votes: 12</span></p>
         </th:block>
         <th:block th:if="${poll == null}">
+        <!--/* the guest's request the DJ's program plays now (NowPlayingService): its name only, never its dedication */-->
+        <p th:if="${isActive and nowPlaying != null}" id="tvNowPlaying" class="tv-now">
+            <span class="tv-now-label"><span aria-hidden="true">🎶</span> <span th:if="${#locale.language == 'pl'}" lang="pl">Teraz:</span>
+                <span lang="en" th:class="${#locale.language == 'pl'} ? 'second'">Now playing:</span></span>
+            <span class="tv-name" th:text="${nowPlaying.name()}">Wilki - Baśka</span></p>
         <h2><span aria-hidden="true">🔥</span> <span th:if="${#locale.language == 'pl'}" lang="pl">Najczęściej wybierane</span>
             <span lang="en" th:class="${#locale.language == 'pl'} ? 'second'">Most wanted</span></h2>
         <!--/* the votes are given on the phone: the screen shows them, so it says where */-->

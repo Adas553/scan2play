@@ -30,7 +30,7 @@
 | `DjPollsController` | "Pytanie do gości" (V74, Pro, POLLS): `/dj/polls` — a new question, the one asked with its results live, asking, ending, deleting |
 | `SharedSummaryController` | an evening summary's hosts' link `/s/{token}` (V61): the hosts' version, without an account |
 | `LanguageSwitchAdvice` | every page's model: `langSwitch` — this page's address with `?lang=pl` / `?lang=en` for the footer's switch (2026-10-18); null for a POST |
-| `TvScreenController` | the screen for a TV `/p/{code}/tv` (Next 7 c, 2026-10-18): the party's QR code and the ten most wanted songs (`GuestQueueService.mostWanted`), public, no session; its list alone `/p/{code}/tv/list` |
+| `TvScreenController` | the screen for a TV `/p/{code}/tv` (Next 7 c, 2026-10-18): the party's QR code and the ten most wanted songs (`GuestQueueService.mostWanted`), above them "🎶 Teraz: …" (`NowPlayingService`), public, no session; its list alone `/p/{code}/tv/list` |
 | `KioskController` | the venue's kiosk `/k/{token}` (V56, Pro): the request form and the most wanted with 👍 for guests without a phone, a guest's turn a session ("Następny gość"), the kiosk's own limits; a request through `GuestRequestService.fromKiosk` |
 | `FeedbackController` | `POST /dj/feedback` (JSON; 10 an hour per account, then 429) |
 | `PushController` | `POST /dj/push/subscribe`, `/unsubscribe` (JSON: the browser's `PushSubscription.toJSON()`) |
@@ -57,6 +57,7 @@
 | `PlayHistoryService` | the history (Section 5.1) |
 | `DjDeviceService` | "Program na komputerze" (V78): pairing codes, the computers' tokens (their hashes), limits |
 | `DeckHistoryService` | "Zagrane samo": the songs of the DJ's program's history mark the waiting requests played (Section 5.1, the queue) |
+| `NowPlayingService` | "🎶 Teraz: …" on the TV and the kiosk: the guest's request the DJ's program played last, in memory (Caffeine), from its start for 6 min or until the next song; set only by `DeckHistoryService` |
 | `EveningSummaryService` | "Podsumowanie wieczoru": the party's evenings (by month), one evening's requests from `song_requests` and `evening_song` (V61), its counts, waits, top songs, missed songs, artists, half-hours and setlist, the CSV (Section 5.1); with a library (V42, Pro) "Nie masz w bibliotece" and the CSV's column "W bibliotece"; the evening's title and hosts' link |
 | `GuestQueueService` | what the guest sees under the form (with the most wanted songs, every waiting one by votes — but a request the AI did not judge, V39, only to the guest who sent it); `mostWanted`: the first ten of that order, for the screen for a TV, only requests the AI judged |
 | `GuestVoteService` | a guest's 👍 on a waiting song: once per song, taken back with a second tap (memory + session) |

@@ -140,6 +140,20 @@ since its start, any song, with its program — kept on the computer only). `Dec
 scenarios `deck-computer-lines(-en)`, `deck-silence-choice`, `deck-silence-not-saved(-en)`, `deck-older-answer-dropped`,
 `deck-list-not-loaded`, `deck-computer-row-800`.
 
+**"🎶 Teraz: …" on the TV and the kiosk (`docs/ideas.md` item 21, "Teraz leci"; no migration).** When the program marks a guest's
+request played (`DeckHistoryService.markPlayed`), the TV screen and the kiosk show above their list "🎶 Teraz: <song>" / "Now playing:"
+(`#tvNowPlaying`, `#kioskNowPlaying`) — the request's name only, never its dedication (the guest's form promises "Zobaczy ją tylko DJ";
+the owner, 2026-11-27) or the guest's words; only a request the AI judged, never the DJ's own "+ Dodaj piosenkę". Only the program sets
+it: the DJ's "Zagrane" is often tapped minutes later, when "now" would be untrue. `NowPlayingService` keeps the song and its start in
+memory (Caffeine, ≤ 10 000 parties): the TV and the kiosk already fetch their lists every 10 s, and the bar costs them a map's look-up,
+no query and no new fetch; a restart forgets at most one song's bar. It shows from the song's start for 6 min (`SHOWN`) and goes once a
+song that started more than 30 s later reaches the server (`SAME_SONG`: a song sent again is not the next one) — with VirtualDJ that is
+~45 s into the next song; Serato 2/3 writes a song when it is loaded on a deck, so there the bar may go a little early. A request whose
+song is not the newest of its call (a history read again) is over already. With the bar the TV's ten rows close up (`.tv-list-now`, a
+class, not `:has()`: a TV's browser may be old) so a window of 1280 × 720 still shows them all. Not on the guest's page (it would need a
+fetch of its own). `NowPlayingServiceTest`, `DeckHistoryServiceTest`, `TvScreenWebTest`, `KioskWebTest`; browser scenarios
+`tv-now-playing-*`, `kiosk-now-playing-fits-1180x820`.
+
 **Parked: the panel reading the history folder itself** (variant E of `docs/ideas.md` item 18 — "Wskaż folder historii" in Chrome and
 Edge, `showDirectoryPicker`, the tab kept open, `POST /dj/dashboard/plays`). Removed 2026-11-21 after the program worked on the owner's
 Windows 11: two ways in one card were too much for a DJ to choose from. Back only if the program fails. Its code: commit `6c25e0a`

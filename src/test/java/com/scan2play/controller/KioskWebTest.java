@@ -56,7 +56,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  */
 @WebMvcTest(KioskController.class)
 @Import({SecurityConfig.class, com.scan2play.service.PlansOffConfig.class, com.scan2play.service.PartySchedulesConfig.class,
-        GuestRequestLimiter.class, GuestSessionService.class, com.scan2play.service.GuestRequestService.class})
+        GuestRequestLimiter.class, GuestSessionService.class, com.scan2play.service.GuestRequestService.class,
+        com.scan2play.service.NowPlayingService.class})
 class KioskWebTest {
 
     private static final String TOKEN = "Kiosk_123-xyzKiosk_123-x";
@@ -67,6 +68,8 @@ class KioskWebTest {
 
     @Autowired
     private MockMvc mockMvc;
+    @Autowired
+    private com.scan2play.service.NowPlayingService nowPlaying;
 
     @MockitoBean
     private com.scan2play.service.LibraryHintService libraryHintService;
@@ -373,6 +376,16 @@ class KioskWebTest {
         String page = page(new MockHttpSession());
         assertThat(page).contains("Varius Manx - Orła cień");
         write("kiosk-full.html", page);
+        // "🎶 Teraz: …" above the full list, as on the TV (NowPlayingService): the page of the browser test that it still fits
+        java.time.Instant started = java.time.Instant.now().minusSeconds(45);
+        nowPlaying.heard(partyCode, new com.scan2play.service.NowPlayingService.Song("Dua Lipa - Levitating", started), started);
+        String now = page(new MockHttpSession());
+        assertThat(now).contains("id=\"kioskNowPlaying\"", ">Teraz:<", "Dua Lipa - Levitating");
+        assertThat(now.indexOf("id=\"kioskNowPlaying\"")).isLessThan(now.indexOf("id=\"kioskListTitle\""));
+        assertThat(mockMvc.perform(get(KIOSK + "/list")).andReturn().getResponse().getContentAsString()).contains("id=\"kioskNowPlaying\"");
+        write("kiosk-full-now.html", now);
+        nowPlaying.heard(partyCode, null, started.plusSeconds(3600));
+        assertThat(page(new MockHttpSession())).doesNotContain("kioskNowPlaying");
         write("kiosk-result-full.html", send(new MockHttpSession(), "baśka wilki").getResponse().getContentAsString());
         // the same list fetched again (kiosk.js), and as the answer to a 👍 on its last song: the scenarios that keep the list's place
         write("kiosk-list-full.html", mockMvc.perform(get(KIOSK + "/list")).andExpect(status().isOk()).andReturn().getResponse()

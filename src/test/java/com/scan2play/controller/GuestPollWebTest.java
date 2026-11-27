@@ -63,7 +63,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  */
 @WebMvcTest({GuestController.class, GuestPollController.class, TvScreenController.class})
 @Import({PollView.class, SecurityConfig.class, com.scan2play.service.PlansOffConfig.class,
-        com.scan2play.service.PartySchedulesConfig.class, com.scan2play.service.GuestRequestService.class, GuestPollWebTest.Sessions.class})
+        com.scan2play.service.PartySchedulesConfig.class, com.scan2play.service.GuestRequestService.class, GuestPollWebTest.Sessions.class,
+        com.scan2play.service.NowPlayingService.class})
 class GuestPollWebTest {
 
     private static final String PARTY = "ABC12";

@@ -85,3 +85,46 @@ S2P.scenario({
         t.step('no songs once the party has ended', document.querySelectorAll('.tv-song').length, 0);
     }
 });
+
+/** "🎶 Teraz: …" (NowPlayingService) on one line above the list's heading, and the whole screen still fitting it. */
+function nowPlayingFits(t) {
+    const now = document.getElementById('tvNowPlaying');
+    t.check('"Teraz: …" on the screen', !!now);
+    if (!now) return;
+    const name = now.querySelector('.tv-name');
+    t.step('the song\'s name on one line', name.getBoundingClientRect().height <= parseFloat(getComputedStyle(name).fontSize) * 1.6, true);
+    t.check('above the list\'s heading', now.getBoundingClientRect().bottom <= document.querySelector('.tv-list h2').getBoundingClientRect().top);
+    screenFits(t);
+}
+
+S2P.scenario({
+    name: 'tv-now-playing-fits-a-small-tv',
+    title: '"🎶 Teraz: …" above the ten most wanted in a window of 1280 × 720: one line, and still nothing to scroll',
+    page: 'tv-now',
+    viewport: '1280,720',
+    run: async function (t) { nowPlayingFits(t); }
+});
+
+S2P.scenario({
+    name: 'tv-now-playing-fits-a-full-hd-tv',
+    title: '"🎶 Teraz: …" above the ten most wanted at 1920 × 1080: one line, nothing to scroll',
+    page: 'tv-now',
+    viewport: '1920,1080',
+    run: async function (t) { nowPlayingFits(t); }
+});
+
+S2P.scenario({
+    name: 'tv-now-playing-comes-and-goes',
+    title: 'the DJ\'s program plays a guest\'s request: "🎶 Teraz: …" comes with the list\'s next fetch, and goes with the one after the next song',
+    page: 'tv',
+    viewport: '1920,1080',
+    setup: { tvList: 'tv-list-now' },
+    run: async function (t) {
+        t.check('nothing playing at first', !document.getElementById('tvNowPlaying'));
+        await t.waitFor(function () { return !!document.getElementById('tvNowPlaying'); }, '"Teraz: …" fetched', 13000);
+        t.step('the song', document.querySelector('#tvNowPlaying .tv-name').textContent.trim(), 'Golec uOrkiestra - Ściernisco (Radio Edit 2024)');
+        await t.stand.config({ tvList: 'tv-list' });
+        await t.waitFor(function () { return !document.getElementById('tvNowPlaying'); }, '"Teraz: …" gone', 13000);
+        t.step('the ten songs stay', document.querySelectorAll('.tv-song').length, 10);
+    }
+});

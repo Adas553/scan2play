@@ -276,6 +276,8 @@ public final class ViewAttributes {
     public static final String JOIN_PROBLEM = "joinProblem";
     /** The screen for a TV (Next 7 c): the most wanted of the waiting songs, {@code GuestQueueService.mostWanted}. */
     public static final String TV_SONGS = "tvSongs";
+    /** "🎶 Teraz: …" on the TV and the kiosk: the guest's request the DJ's program plays now, {@code NowPlayingService}; null: none. */
+    public static final String NOW_PLAYING = "nowPlaying";
 
     // --- "Życzenia przed imprezą" (V68) ---
     /** The guests' page of an event ({@code /w/{token}}): its secret for its form. */

@@ -5,7 +5,7 @@
 ```
 GuestController            → GuestRequestService, GuestQueueService, GuestSessionService, GuestVoteService, GuestRequestLimiter, PartySettingsQueryService
 GuestRequestService        → SongEvaluationService, GuestSessionService, GuestVoteService, GuestRequestLimiter, SiteCounter
-KioskController            → PartySettingsRepository, PlanService, GuestRequestService, GuestQueueService, GuestSessionService, GuestVoteService, GuestRequestLimiter, PartyScheduleService
+KioskController            → PartySettingsRepository, PlanService, GuestRequestService, GuestQueueService, GuestSessionService, GuestVoteService, GuestRequestLimiter, PartyScheduleService, NowPlayingService
 GuestVoteService           → SongRequestRepository, DjService
 DjDashboardController      → DjService, PlayHistoryService, QrCodeService, GuestRequestLimiter, PartySettingsCommandService, DjSessionHelper, PushNotificationService, PartyStaffService, StaffInvitationService, PlanService
 DjPartySettingsController  → PartySettingsCommandService, AccountDeletionService, DjSessionHelper, PlanService
@@ -15,7 +15,7 @@ StaffInvitationService     → StaffInvitationRepository, PartySettingsRepositor
 PlanService                → DjPlanRepository (and trial_used), CacheManager
 PartyStaffService          → PartyStaffRepository, PartySettingsRepository, PartySettingsQueryService
 HostController             → PartySettingsRepository, PartySettingsCommandService, PlanService
-TvScreenController         → PartySettingsQueryService, GuestQueueService, QrCodeService, PlanService
+TvScreenController         → PartySettingsQueryService, GuestQueueService, QrCodeService, PlanService, NowPlayingService
 DjSongController           → DjService, DjSessionHelper, PlanService
 DjSummaryController        → EveningSummaryService, DjSessionHelper, MessageSource, PlanService
 SharedSummaryController    → EveningSummaryService, PartySettingsRepository, PlanService
@@ -51,7 +51,7 @@ GuestQueueService          → DjService
 | GET | `/p/{partyCode}/library/has` | `song` (repeated, "Artist - Title", the first 10 looked at): which of them the DJ has — JSON `[true, false, …]` in their order (V58, `LibraryHintService`); 404 for an unknown party or one with nothing to tell (ended, no library, no Pro, switched off); 429 past 120 asks a minute of the address (the suggestions shown unmarked); no session made |
 | GET | `/p/{partyCode}/queue` | the guest's list alone: the first five (empty when closed, 404 for an unknown party) |
 | GET | `/p/{partyCode}/queue/more` | the rest of the guest's list, fetched when "Pokaż pozostałe prośby" is unfolded |
-| GET | `/p/{partyCode}/tv` | the screen for a TV (2026-10-18): in the language of the DJ's panel (the panel's link carries `?lang=`; Polish: Polish and English at once, any other: English alone — 2026-10-23); the QR code, the ten most wanted songs and their votes, "Głosuj 👍 na telefonie" under the list's heading while it has songs — no guests' words, no dedications, no request the AI did not judge (V39); "DJ nie przyjmuje teraz próśb" when closed; the DJ's question (V74) with its bars in the list's place while it is asked (unless the DJ keeps the songs, V76) and 15 minutes after; 404 for an unknown party; no session |
+| GET | `/p/{partyCode}/tv` | the screen for a TV (2026-10-18): in the language of the DJ's panel (the panel's link carries `?lang=`; Polish: Polish and English at once, any other: English alone — 2026-10-23); the QR code, the ten most wanted songs and their votes, "Głosuj 👍 na telefonie" under the list's heading while it has songs — no guests' words, no dedications, no request the AI did not judge (V39); "🎶 Teraz: <song>" above the list for the guest's request the DJ's program plays now (`NowPlayingService`; never its dedication); "DJ nie przyjmuje teraz próśb" when closed; the DJ's question (V74) with its bars in the list's place while it is asked (unless the DJ keeps the songs, V76) and 15 minutes after; 404 for an unknown party; no session |
 | GET | `/p/{partyCode}/logo.png` | the DJ's logo (V45): our PNG, ETag = its version (304), `Cache-Control: public, max-age=3600`; 404 without one or without the plan |
 | GET | `/p/{partyCode}/tv/list` | the screen's list alone (`tv :: tvList`), fetched by `tv.js` every 10 s |
 | POST | `/p/{partyCode}/request` | a request: `songName`, `dedication` (optional, V38) |

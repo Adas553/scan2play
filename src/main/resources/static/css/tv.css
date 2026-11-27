@@ -128,6 +128,44 @@ body {
     margin-left: 0.6vw;
 }
 
+/* "🎶 Teraz: …" (NowPlayingService): the song the room hears, above the list, in the accent; both languages of its label on one line */
+.tv-now {
+    display: flex;
+    align-items: center;
+    gap: 1.5vw;
+    margin: 0 0 2.4vh;
+    padding: 1.4vh 1.5vw;
+    border: 2px solid var(--tv-accent);
+    border-radius: 1.2vh;
+    background: var(--tv-card);
+    font-size: 3.6vh;
+    line-height: 1.2;
+}
+
+.tv-now-label {
+    flex: none;
+    color: var(--tv-accent);
+    font-weight: 700;
+}
+
+.tv-now-label .second {
+    display: inline;
+    margin-left: 0.4vw;
+    font-size: 0.75em;
+}
+
+/* with "Teraz: …" above them the ten rows close up, so they still fit a laptop's window on a projector (a class, not :has() —
+   a TV's browser may be years old) */
+.tv-list-now .tv-songs {
+    gap: 0.5vh;
+}
+
+.tv-list-now .tv-song {
+    min-height: 5vh;
+    padding: 0.5vh 1.5vw;
+    font-size: 2.9vh;
+}
+
 /* "Głosuj 👍 na telefonie": one quiet line under the heading, both languages on it */
 .tv-hint {
     margin: -0.6vh 0 1.6vh;
@@ -338,7 +376,9 @@ body {
         font-size: 3vh;
     }
 
-    .tv-song {
+    .tv-song,
+    .tv-list-now .tv-song,
+    .tv-now {
         font-size: 2.4vh;
     }
 }
