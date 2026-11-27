@@ -38,7 +38,10 @@ class DeckWatchServiceTest {
         assertThat(DeckWatchService.state(device(Duration.ofSeconds(30), Duration.ofMinutes(19)), 20, NOW)).isEqualTo(OK);
         assertThat(DeckWatchService.state(device(Duration.ofSeconds(30), Duration.ofMinutes(21)), 20, NOW)).isEqualTo(SILENT);
         assertThat(DeckWatchService.state(device(Duration.ofSeconds(30), Duration.ofMinutes(21)), 30, NOW)).isEqualTo(OK);
-        assertThat(DeckWatchService.state(device(Duration.ofSeconds(30), Duration.ofMinutes(90)), 0, NOW)).as("never warn").isEqualTo(OK);
+        assertThat(DeckWatchService.state(device(Duration.ofSeconds(30), Duration.ofMinutes(90)), 0, NOW))
+                .as("\"nigdy\": no warning, but no \"widzi piosenki\" for a song of 90 min ago either").isEqualTo(SILENT);
+        assertThat(DeckWatchService.state(device(Duration.ofSeconds(30), Duration.ofMinutes(19)), 0, NOW))
+                .as("\"nigdy\": said by the default's minutes").isEqualTo(OK);
         assertThat(DeckWatchService.state(device(Duration.ofMinutes(4), Duration.ofMinutes(5)), 20, NOW))
                 .as("three calls missed: gone, whatever it played").isEqualTo(OFFLINE);
         assertThat(DeckWatchService.state(device(null, null), 20, NOW)).as("never called since its pairing a day ago").isEqualTo(OFFLINE);
@@ -58,7 +61,7 @@ class DeckWatchServiceTest {
         assertThat(DeckWatchService.state(device(Duration.ofSeconds(30), Duration.ofHours(12)), 0, NOW)).as("exactly 12 h")
                 .isEqualTo(WAITING);
         assertThat(DeckWatchService.state(device(Duration.ofSeconds(30), Duration.ofHours(12).minusSeconds(1)), 0, NOW))
-                .isEqualTo(OK);
+                .as("tonight's song, said as the last one").isEqualTo(SILENT);
     }
 
     /** The lead computer is the one with tonight's newest song: a spare laptop tested at 15:00 is not it. */
@@ -71,16 +74,23 @@ class DeckWatchServiceTest {
         assertThat(DeckWatchService.lead(List.of(yesterday), NOW)).as("nothing tonight").isEmpty();
     }
 
-    /** One song (or two) played to test the program is no set; ten minutes of songs is. */
+    /**
+     * A set: ten minutes of songs with a guest's request in them, or thirty without; one song (or two) played to test the program, or
+     * a soundcheck before the guests came, is not.
+     */
     @Test
-    void aSet_isARunOfTenMinutes_notATest() {
-        assertThat(DeckWatchService.setPlayed(device(1, Duration.ofSeconds(30), Duration.ofMinutes(90), Duration.ofMinutes(90))))
+    void aSet_isTenMinutesWithGuests_orThirty_notATestOrASoundcheck() {
+        assertThat(DeckWatchService.setPlayed(device(1, Duration.ofSeconds(30), Duration.ofMinutes(90), Duration.ofMinutes(90)), true))
                 .as("one song").isFalse();
-        assertThat(DeckWatchService.setPlayed(device(1, Duration.ofSeconds(30), Duration.ofMinutes(90), Duration.ofMinutes(99))))
-                .as("two songs, 9 min").isFalse();
-        assertThat(DeckWatchService.setPlayed(device(1, Duration.ofSeconds(30), Duration.ofMinutes(90), Duration.ofMinutes(100))))
-                .as("10 min").isTrue();
-        assertThat(DeckWatchService.setPlayed(device(1, Duration.ofSeconds(30), Duration.ofMinutes(90), null)))
+        assertThat(DeckWatchService.setPlayed(device(1, Duration.ofSeconds(30), Duration.ofMinutes(90), Duration.ofMinutes(99)), true))
+                .as("two songs, 9 min, a guest asking").isFalse();
+        assertThat(DeckWatchService.setPlayed(device(1, Duration.ofSeconds(30), Duration.ofMinutes(90), Duration.ofMinutes(100)), true))
+                .as("exactly 10 min, a guest asking").isTrue();
+        assertThat(DeckWatchService.setPlayed(device(1, Duration.ofSeconds(30), Duration.ofMinutes(90), Duration.ofMinutes(115)), false))
+                .as("a soundcheck of 25 min, nobody asking").isFalse();
+        assertThat(DeckWatchService.setPlayed(device(1, Duration.ofSeconds(30), Duration.ofMinutes(90), Duration.ofMinutes(120)), false))
+                .as("exactly 30 min, nobody asking yet").isTrue();
+        assertThat(DeckWatchService.setPlayed(device(1, Duration.ofSeconds(30), Duration.ofMinutes(90), null), true))
                 .as("no run noted yet (before V82)").isFalse();
     }
 

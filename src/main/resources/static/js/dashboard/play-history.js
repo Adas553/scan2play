@@ -15,14 +15,16 @@
  * Each computer's line says whether its program sees songs (V81, DeckWatchService's state): "widzi piosenki · ostatnia 21:43
  * (VirtualDJ)", "czeka na pierwszą piosenkę" — the DJ's test before the party: play any song —, and, during the party, "brak nowych
  * piosenek od 21:43" or "program nie łączy się od 21:40" in amber (warn: only the computer the set is played on), the queue's button
- * amber too (and said in its name). The list is asked again every minute while the page is shown and a computer is paired, so a
- * program that stopped is seen without a reload. "Ostrzeż po" (#deviceSilence, shown once a computer is paired) sets after how many
+ * amber too (and said in its name: "nie widzi piosenek" or "nie łączy się"). The list is asked again every minute while the page is
+ * shown and a computer is paired, so a program that stopped is seen without a reload; two asks in a row that fail (the panel's own
+ * network, the session gone) say so and leave the button neither green nor amber — a line kept from an hour ago is no news. "Ostrzeż po" (#deviceSilence, shown once a computer is paired) sets after how many
  * minutes of silence the devices of the organiser and the staff get a push (/dj/devices/silence); "nigdy": neither push nor amber.
  *
  * Dependencies (DOM): <button id="deckToggle" hidden>, <section id="deckReader" hidden> with its texts in data-* (device-code,
  * device-copy, device-copied, device-seen, device-remove, device-failed, device-ok, device-waiting, device-last, device-silent,
- * device-offline, deck-toggle-warn — "{…}" filled in here), #deviceList, #deviceAnother, #deviceSetup, #deviceConnect, #deviceCode,
- * #deviceWatch with <select id="deviceSilence"> and #deviceSilenceFailed.
+ * device-offline, device-stale, deck-toggle-warn, deck-toggle-offline, deck-toggle-stale — "{…}" filled in here), #deviceList,
+ * #deviceStale, #deviceAnother, #deviceSetup, #deviceConnect, #deviceCode, #deviceWatch with <select id="deviceSilence"> and
+ * #deviceSilenceFailed (both role="status": always there, only their text changes, so a screen reader reads it).
  */
 import { csrfHeaders, partyCode } from './common.js';
 
@@ -80,10 +82,14 @@ function computers() {
     const watch = document.getElementById('deviceWatch');
     const silence = document.getElementById('deviceSilence');
     const silenceFailed = document.getElementById('deviceSilenceFailed');
+    const stale = document.getElementById('deviceStale');
     const toggleLabel = toggle.getAttribute('aria-label') || '';
     const toggleTitle = toggle.title || '';
     let count = 0;        // the computers paired, as last listed
     let warning = false;  // a computer's line in amber: the queue's button amber too
+    let gone = false;     // ... and that line is a program that does not connect (the button says so, not "sees no songs")
+    let failed = 0;       // the lists asked in a row that did not come: from two on, the lines are said to be old
+    let loadedAt = null;  // when the lines shown came
     let asked = 0;        // the lists asked for: an answer to an older one (the minute's, a tap's) is dropped when a newer was asked
     let adding = false;   // "Połącz kolejny komputer" pressed, or a code waiting: the steps shown beside the rows
     let newest = -1;      // the highest id of the list: a program that took the code is a computer newer than this
@@ -106,36 +112,44 @@ function computers() {
         try {
             const response = await fetch('/dj/devices?partyCode=' + encodeURIComponent(partyCode() || ''),
                 { headers: { 'X-Requested-With': 'fetch' } });
-            if (!response.ok) return;
+            if (!response.ok) return notLoaded(mine);
             const answer = await response.json();
             if (mine !== asked) return;   // a newer list is on its way: this one may be older than what the DJ just did
             devices = answer.computers || [];
             minutes = answer.silenceMinutes;
         } catch (e) {
-            return;
+            return notLoaded(mine);
         }
+        failed = 0;
+        loadedAt = new Date().toISOString();
         list.replaceChildren();
         warning = false;
+        gone = false;
+        let silent = false;   // an amber line that sees no songs: said first, the one to fix in the program
         devices.forEach(function (device) {
             const said = line(device);
-            warning = warning || said.css === 's2p-deck-device-warn';
+            const warn = said.css === 's2p-deck-device-warn';
+            warning = warning || warn;
+            gone = gone || warn && device.state === 'OFFLINE';
+            silent = silent || warn && device.state !== 'OFFLINE';
             const row = document.createElement('li');
-            row.className = 'd-flex flex-wrap align-items-center gap-2 mb-1';
+            // one line where it fits; else the words break in their place, "Odłącz" stays at the row's end
+            row.className = 'd-flex align-items-baseline gap-2 mb-1';
             row.dataset.deviceId = device.id;
             row.dataset.state = device.state;
             const ok = document.createElement('span');
-            ok.className = said.css;
+            ok.className = said.css + ' s2p-deck-device-glyph';
             ok.setAttribute('aria-hidden', 'true');
             ok.textContent = said.glyph;
             const name = document.createElement('span');
-            name.className = 'text-light fw-semibold';
+            name.className = 'text-light fw-semibold s2p-deck-device-name';
             name.textContent = device.name;
             const seen = document.createElement('span');
-            seen.className = said.css === 's2p-deck-device-warn' ? 'text-warning' : 'text-secondary';
+            seen.className = (warn ? 'text-warning' : 'text-secondary') + ' s2p-deck-device-words';
             seen.textContent = said.words;
             const remove = document.createElement('button');
             remove.type = 'button';
-            remove.className = 'btn btn-sm btn-outline-secondary py-0';
+            remove.className = 'btn btn-sm btn-outline-secondary py-0 flex-shrink-0';
             remove.textContent = text('deviceRemove');
             remove.setAttribute('aria-label', text('deviceRemove') + ' ' + device.name);   // a screen reader hears which computer
             remove.addEventListener('click', async function () {
@@ -149,6 +163,7 @@ function computers() {
             row.append(ok, name, seen, remove);
             list.append(row);
         });
+        gone = gone && !silent;
         count = devices.length;
         // the select follows the server, unless the DJ is changing it right now
         if (minutes !== undefined && (force === true || document.activeElement !== silence)) silence.value = String(minutes);
@@ -167,15 +182,25 @@ function computers() {
         list.dataset.loaded = 'true';
     }
 
+    /** A list asked for did not come (no network, the session or Pro gone): the lines kept, but from the second in a row said old. */
+    function notLoaded(mine) {
+        if (mine !== asked) return;   // a newer ask is on its way: that one says
+        failed++;
+        show();
+    }
+
     function show() {
+        const old = count > 0 && failed >= 2;
         setup.hidden = count > 0 && !adding;
         another.hidden = count === 0 || adding;
         watch.hidden = count === 0;
-        toggle.classList.toggle('btn-outline-warning', count > 0 && warning);
-        toggle.classList.toggle('btn-outline-success', count > 0 && !warning);
-        toggle.classList.toggle('btn-outline-light', count === 0);
+        toggle.classList.toggle('btn-outline-warning', count > 0 && warning && !old);
+        toggle.classList.toggle('btn-outline-success', count > 0 && !warning && !old);
+        toggle.classList.toggle('btn-outline-light', count === 0 || old);
+        stale.textContent = old ? text('deviceStale', { time: clock(loadedAt) }) : '';
         // amber is a colour only: a screen reader, or an eye that tells amber from green badly, hears it in the button's name
-        const warn = count > 0 && warning ? ' — ' + text('deckToggleWarn') : '';
+        const said = old ? 'deckToggleStale' : count > 0 && warning ? (gone ? 'deckToggleOffline' : 'deckToggleWarn') : '';
+        const warn = said ? ' — ' + text(said) : '';
         toggle.setAttribute('aria-label', toggleLabel + warn);
         toggle.title = toggleTitle + warn;
     }
@@ -184,7 +209,7 @@ function computers() {
     // network): said, and the select back at what the server keeps — else the DJ would trust a choice that is not there
     silence.addEventListener('change', async function () {
         silence.disabled = true;
-        silenceFailed.hidden = true;
+        silenceFailed.textContent = '';
         let saved = false;
         try {
             saved = (await post('/dj/devices/silence', { minutes: silence.value })).ok;
@@ -192,10 +217,7 @@ function computers() {
             saved = false;
         } finally {
             silence.disabled = false;
-            if (!saved) {
-                silenceFailed.textContent = text('deviceFailed');
-                silenceFailed.hidden = false;
-            }
+            if (!saved) silenceFailed.textContent = text('deviceFailed');
             await load(!saved);
         }
     });

@@ -32,15 +32,18 @@ import java.util.Set;
  * sent the newest song in the last {@value #SET_HOURS} hours:
  * <ul>
  *     <li>the party open and the minutes chosen (not "never");</li>
- *     <li>a set had started: the lead's run of songs ({@code play_run_from}, V82) lasted at least {@code RUN_MIN} — one song played to
- *     test the program before the party is no set that stopped;</li>
+ *     <li>a set was played: the lead's run of songs ({@code play_run_from}, V82) was one — {@code DjDeviceService.RUN_LONG}, or
+ *     {@code RUN_MIN} with a guest's request in it ({@link DjDeviceService#setSql}): a song played to test the program, or a
+ *     soundcheck before the guests came, is no set that stopped;</li>
  *     <li>its newest song older than the minutes chosen;</li>
- *     <li>a guest's request since that song (more than {@code AFTER_LAST_SONG} after it, in the last {@value #GUESTS_MINUTES} minutes):
- *     when the program stops seeing songs the music goes on and so do the guests; at the end of the set they stop — the requests of
- *     its last minutes are no sign of a fault.</li>
+ *     <li>guests still asking: {@value #GUESTS_AFTER} requests more than {@code AFTER_LAST_SONG} after that song's start, in the last
+ *     {@value #GUESTS_MINUTES} minutes. When the program stops seeing songs the music goes on and so do the guests; at the end of
+ *     the set they stop — the requests of its last song, and the "one more!" just after it, are no sign of a fault.</li>
  * </ul>
- * The other computers (a spare laptop tested and left aside) are said in grey. One push a silence: the next only after a new song and
- * another silence.
+ * A request is a guest's: the DJ's own "+ Dodaj piosenkę" is none. The lead's program gone (no call for {@code OFFLINE_AFTER}) while
+ * guests ask is amber in the card even without a set — a program not started tonight after the test — but no push. The other
+ * computers (a spare laptop tested and left aside) are said in grey. One push a silence: the next only after a new song and another
+ * silence.
  */
 @Slf4j
 @Service
@@ -51,10 +54,13 @@ public class DeckWatchService {
     static final int DEFAULT_SILENCE_MINUTES = 20;
     static final int SET_HOURS = 12;
     static final int GUESTS_MINUTES = 60;
-    /** A run of songs this long is a set (three songs or so); a test of one song, or two, is not. */
-    static final Duration RUN_MIN = Duration.ofMinutes(10);
-    /** A request this soon after the last song still belongs to the set's end: the guest asked while it played. */
-    static final Duration AFTER_LAST_SONG = Duration.ofMinutes(2);
+    /**
+     * A request this soon after the last song's start still belongs to the set's end: asked while it played, or the "one more!" just
+     * after it.
+     */
+    static final Duration AFTER_LAST_SONG = Duration.ofMinutes(8);
+    /** This many requests since then are guests still asking: one late request is no party going on without the program. */
+    static final int GUESTS_AFTER = 2;
     /** The program calls once a minute even with nothing to send: three missed calls are a program gone. */
     static final Duration OFFLINE_AFTER = Duration.ofMinutes(3);
     /** The most parties one look warns: the newest silences first, those not warned yet. */
@@ -64,9 +70,9 @@ public class DeckWatchService {
     public enum State {
         /** Paired, no song seen yet tonight: the DJ's test — play any song for a minute. */
         WAITING,
-        /** Songs seen, the last one within the minutes chosen. */
+        /** Songs seen, the last one within the minutes chosen (with "never": the default's). */
         OK,
-        /** The last song is older than the minutes chosen. */
+        /** The last song is older than the minutes chosen (with "never": the default's — said, never warned). */
         SILENT,
         /** The program has not called for {@code OFFLINE_AFTER}: closed, the laptop asleep, no internet. */
         OFFLINE
@@ -118,17 +124,29 @@ public class DeckWatchService {
         int minutes = silenceMinutes(party.getPartyCode());
         List<DjDeviceService.Device> paired = devices.devices(party.getPartyCode());
         Optional<DjDeviceService.Device> lead = lead(paired, now);
-        boolean live = minutes > 0 && party.isActive() && lead.filter(DeckWatchService::setPlayed).isPresent()
-                && guestsSince(party.getPartyCode(), guestsAfter(lead.get().lastPlayAt(), now));
+        boolean live = false;
+        boolean set = false;
+        if (minutes > 0 && party.isActive() && lead.isPresent()) {
+            Guests guests = guests(party.getPartyCode(), lead.get(), now);
+            live = guests.since() >= GUESTS_AFTER;
+            set = setPlayed(lead.get(), guests.duringRun());
+        }
+        long leadId = lead.map(DjDeviceService.Device::id).orElse(-1L);
+        boolean silentSet = set;
+        boolean asking = live;
         return new Watch(paired.stream().map(device -> {
             State state = state(device, minutes, now);
-            boolean warn = live && device.id() == lead.get().id() && (state == State.SILENT || state == State.OFFLINE);
+            boolean warn = asking && device.id() == leadId
+                    && (state == State.OFFLINE || state == State.SILENT && silentSet);
             return new Computer(device.id(), device.name(), device.createdAt(), device.lastSeenAt(), device.lastPlayAt(),
                     device.program(), state, warn);
         }).toList(), minutes);
     }
 
-    /** A computer's state now (see {@link State}); {@code minutes} 0: never SILENT. */
+    /**
+     * A computer's state now (see {@link State}). {@code minutes} 0 ("never"): SILENT after the default's minutes all the same — the
+     * line says the truth ("ostatnia piosenka 15:00", not "widzi piosenki"), only the warning is off.
+     */
     static State state(DjDeviceService.Device device, int minutes, Instant now) {
         if (device.heardAt().isBefore(now.minus(OFFLINE_AFTER))) {
             return State.OFFLINE;
@@ -136,7 +154,8 @@ public class DeckWatchService {
         if (!setStarted(device.lastPlayAt(), now)) {
             return State.WAITING;
         }
-        if (minutes > 0 && device.lastPlayAt().isBefore(now.minus(Duration.ofMinutes(minutes)))) {
+        int after = minutes > 0 ? minutes : DEFAULT_SILENCE_MINUTES;
+        if (device.lastPlayAt().isBefore(now.minus(Duration.ofMinutes(after)))) {
             return State.SILENT;
         }
         return State.OK;
@@ -148,10 +167,16 @@ public class DeckWatchService {
                 .max(Comparator.comparing(DjDeviceService.Device::lastPlayAt).thenComparing(DjDeviceService.Device::id));
     }
 
-    /** Whether the computer's newest song ends a run of songs long enough to be a set, not a test of the program. */
-    static boolean setPlayed(DjDeviceService.Device device) {
-        return device.playRunFrom() != null && device.lastPlayAt() != null
-                && Duration.between(device.playRunFrom(), device.lastPlayAt()).compareTo(RUN_MIN) >= 0;
+    /**
+     * Whether the computer's newest song ends a set, not a test of the program or a soundcheck — {@link DjDeviceService#setSql}'s rule:
+     * {@code RUN_LONG} of songs, or {@code RUN_MIN} with a guest's request in it ({@code guestDuringRun}).
+     */
+    static boolean setPlayed(DjDeviceService.Device device, boolean guestDuringRun) {
+        if (device.playRunFrom() == null || device.lastPlayAt() == null) {
+            return false;
+        }
+        Duration run = Duration.between(device.playRunFrom(), device.lastPlayAt());
+        return run.compareTo(DjDeviceService.RUN_LONG) >= 0 || run.compareTo(DjDeviceService.RUN_MIN) >= 0 && guestDuringRun;
     }
 
     private static boolean setStarted(Instant lastPlayAt, Instant now) {
@@ -165,9 +190,17 @@ public class DeckWatchService {
         return afterSong.isAfter(recent) ? afterSong : recent;
     }
 
-    private boolean guestsSince(String partyCode, Instant after) {
-        return Boolean.TRUE.equals(jdbc.queryForObject("SELECT EXISTS (SELECT 1 FROM song_requests WHERE party_code = ?"
-                + " AND requested_at > ?)", Boolean.class, partyCode, Timestamp.from(after)));
+    /** The guests around the lead's run: a request during it (a set, not a soundcheck), and the requests since its last song (≤ 2). */
+    private record Guests(boolean duringRun, int since) {
+    }
+
+    private Guests guests(String partyCode, DjDeviceService.Device lead, Instant now) {
+        Instant runFrom = lead.playRunFrom() == null ? lead.lastPlayAt() : lead.playRunFrom();
+        return jdbc.queryForObject("SELECT EXISTS (SELECT 1 FROM song_requests WHERE party_code = ? AND NOT added_by_dj"
+                        + " AND requested_at BETWEEN ? AND ?), (SELECT COUNT(*) FROM (SELECT 1 FROM song_requests WHERE party_code = ?"
+                        + " AND NOT added_by_dj AND requested_at > ? LIMIT " + GUESTS_AFTER + ") g)",
+                (row, n) -> new Guests(row.getBoolean(1), row.getInt(2)), partyCode, Timestamp.from(runFrom),
+                Timestamp.from(lead.lastPlayAt()), partyCode, Timestamp.from(guestsAfter(lead.lastPlayAt(), now)));
     }
 
     /** "Ostrzeż po": the minutes chosen for the party (0: never). */
@@ -184,9 +217,11 @@ public class DeckWatchService {
         }
         int before = silenceMinutes(partyCode);
         jdbc.update("UPDATE party_settings SET deck_silence_minutes = ? WHERE party_code = ?", minutes, partyCode);
-        // more minutes: a silence warned about may be warned again when it reaches them. Fewer, or "never" and back: the silence
-        // warned about already was the DJ's news — not a second push about it at the next minute
-        if (before > 0 && minutes > before) {
+        // more minutes than a silence warned about has lasted: warned again when it reaches them. Fewer, a silence past the new
+        // minutes already, or "never" and back: that silence was the DJ's news — not a second push about it at the next minute
+        Instant warnedAbout = warned.getIfPresent(partyCode);
+        if (before > 0 && minutes > before && warnedAbout != null
+                && warnedAbout.isAfter(clock.instant().minus(Duration.ofMinutes(minutes)))) {
             warned.invalidate(partyCode);
         }
         return true;
@@ -199,7 +234,7 @@ public class DeckWatchService {
     /**
      * The parties silent now (see the class), at most {@value #MAX_PER_LOOK}, the newest silences first. One read: the few computers
      * that saw a song in the last {@value #SET_HOURS} hours (V81's partial index), each party's lead one, the party open and watched,
-     * and a guest's request since the lead's newest song (the queue's index by party).
+     * its run a set and guests asking since its newest song (the queue's index by party).
      */
     List<Silent> silentNow(Instant now) {
         return jdbc.query("WITH lead AS (SELECT DISTINCT ON (party_code) party_code, last_play_at, play_run_from,"
@@ -209,10 +244,10 @@ public class DeckWatchService {
                         + " FROM lead l JOIN party_settings p ON p.party_code = l.party_code"
                         + " WHERE p.active AND p.deck_silence_minutes > 0"
                         + " AND l.last_play_at < ?::timestamptz - p.deck_silence_minutes * interval '1 minute'"
-                        + " AND l.last_play_at - l.play_run_from >= interval '" + RUN_MIN.toMinutes() + " minutes'"
-                        + " AND EXISTS (SELECT 1 FROM song_requests r WHERE r.party_code = l.party_code"
-                        + " AND r.requested_at > GREATEST(?::timestamptz, l.last_play_at + interval '" + AFTER_LAST_SONG.toMinutes()
-                        + " minutes'))"
+                        + " AND " + DjDeviceService.setSql("l")
+                        + " AND (SELECT COUNT(*) FROM (SELECT 1 FROM song_requests r WHERE r.party_code = l.party_code"
+                        + " AND NOT r.added_by_dj AND r.requested_at > GREATEST(?::timestamptz, l.last_play_at + "
+                        + DjDeviceService.interval(AFTER_LAST_SONG) + ") LIMIT " + GUESTS_AFTER + ") g) >= " + GUESTS_AFTER
                         + " ORDER BY l.last_play_at DESC LIMIT " + MAX_PER_LOOK,
                 (row, n) -> new Silent(row.getString(1), row.getString(2), row.getTimestamp(3).toInstant(),
                         row.getTimestamp(4).toInstant(), row.getInt(5)),

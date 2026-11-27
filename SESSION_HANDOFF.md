@@ -112,7 +112,12 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
   silent or not connected in amber during the party), "Ostrzeż po" 10 / 20 / 30 min / nigdy and a push (`DeckWatchService`), "OSTATNIA
   PIOSENKA" in the program's window. Its review (`docs/history/review-2026-11-27-deck-watch.md`) and fixes: P1–P7, P9, P10, P13–P16
   (V82 `play_run_from`: no alarm for the test song nor at the set's end, only the lead computer amber, the push to the staff with
-  QUEUE too); P8, P11, P12, P17 left. Waits for the owner: a look, the merge; after it "Run workflow" of deck-agent (the new window).
+  QUEUE too); P8, P11, P12, P17 left. Merged (#315 `main` = `2e332bb`, #316 `dev`); deployed 14:34 UTC, Flyway at 82, no WARN.
+  Waits for the owner: "Run workflow" of deck-agent (the new window).
+- **2026-11-27 — `claude/modest-gauss-n1936m` (from `main` = `2e332bb`), no PR, no migration:** the second review of the deck watch
+  (`docs/history/review-2026-11-27-deck-watch-2.md`) and its fixes P1–P12: no push for a soundcheck, the set's "one more!" or the
+  DJ's own songs; a set goes on after a break; the lead gone amber in the card after a test only. Waits for the owner: a look, then
+  PRs to `main` and `dev` (the false pushes are on production now).
 - **Waits for the owner (from #269):** after the first commit the deploy window holds back (Fri–Sun 18:00–6:00): does Railway
   deploy it on the workflow's re-run? UptimeRobot is set up (the owner, 2026-11-17; `docs/monitoring.md`).
 - **Waits for the owner (the wishes, #263):** the three older Polish texts with "DJ" and a masculine verb (`guest.vote.gone`,

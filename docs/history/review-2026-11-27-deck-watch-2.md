@@ -316,3 +316,37 @@ wiersz sprzed V82 (M15), przerwa w obrębie jednego wywołania (M16) i 60-minuto
 2. **P4** po decyzji właściciela: seria nie znika po przerwie, gdy już była setem; OFFLINE prowadzącego żółty w karcie bez warunku
    serii.
 3. Potem P5–P11 według uznania. Jeśli przy P1–P4 powstaje migracja, dołożyć `deck_warned_play_at` (P8 pierwszego review).
+
+## Poprawki (2026-11-27, gałąź `claude/modest-gauss-n1936m`, bez migracji)
+
+| punkt | stan | co zrobione |
+|---|---|---|
+| P1 | poprawione | Set to seria 30 min piosenek albo 10 min z prośbą gościa w trakcie (`DjDeviceService.setSql`: jedna reguła dla serii i dla obserwacji; w karcie `setPlayed(device, guestDuringRun)`). Próba dźwięku bez gości nie jest setem. |
+| P2 | poprawione | Goście „dalej proszą”, gdy przyszły **dwie** prośby później niż 8 min po starcie ostatniej piosenki, w ostatnich 60 min (`AFTER_LAST_SONG`, `GUESTS_AFTER`). Przewodnik PL / EN: po secie „Zakończ imprezę” albo godzina zamknięcia, przy zespole albo długiej przerwie 30 min albo „nigdy”. |
+| P3 | poprawione | `NOT added_by_dj` w serii, w karcie i w pushu. |
+| P4 | poprawione (a, b) | (a) Seria, która była setem, trwa po przerwie do 4 h (`SET_BREAK_MAX`). Następnego dnia, po teście i po próbie dźwięku zaczyna się nowa. (b) OFFLINE prowadzącego jest żółty w karcie, gdy goście proszą, także bez seta (program niewłączony po teście), ale bez pusha. (c) nie było potrzebne: po (b) przycisk w tej sytuacji jest żółty. |
+| P5 | poprawione | Podniesienie progu unieważnia pamięć tylko wtedy, gdy ostrzeżona cisza trwa krócej niż nowy próg (`warned` trzyma jej początek). |
+| P6 | poprawione | Przy „nigdy” stan liczony z domyślnych 20 min: szare „ostatnia piosenka 15:00” zamiast zielonego „widzi piosenki”. Ani żółtego, ani pusha. |
+| P7 | poprawione | Przycisk mówi „program nie łączy się” (`dashboard.deck.toggle.offline`), gdy żółty jest program bez połączenia; „nie widzi piosenek”, gdy cichy. |
+| P8 | poprawione | Polityka PL / EN: „godzinę ostatniej przeczytanej piosenki i początku seta, do którego należy”. Karta: „Zapisujemy tylko godziny (początek seta i ostatnia piosenka) i nazwę programu, bez tytułów”. |
+| P9 | poprawione | Znak stanu w kolumnie 1em (`.s2p-deck-device-glyph`), opis łamie się w swoim miejscu (`.s2p-deck-device-words`), „Odłącz” zostaje na końcu wiersza (`flex-shrink-0`). Scenariusz `deck-computer-row-800`. |
+| P10 | poprawione | Dwa nieudane odświeżenia z rzędu: „Nie udało się sprawdzić programu — stan z 21:43” (`#deviceStale`, `role="status"`), przycisk ani zielony, ani żółty, z tym w nazwie. Wraca przy udanym. `#deviceSilenceFailed` jest stale w DOM, zmienia się tylko tekst. Stand-in: `devicesStatus`. |
+| P11 | poprawione | Pomoc selecta: „…na Twoje urządzenia i obsługi, która prowadzi kolejkę”. Przewodnik bez obietnicy o końcu seta. Komentarze testów bez „(review P…)”. |
+| P12 | poprawione | Testy niżej. |
+| P8 pierwszego review | zostawione | Pamięć dalej w Caffeine (bez migracji). |
+
+Testy po poprawkach:
+- `DeckWatchIT` 20 testów, w tym nowe: próba dźwięku i seria z gościem (10 / 9 / 30 min), piosenki DJ-a, okno 60 min, krawędź
+  20 min, program niewłączony po teście (żółty bez pusha), set po przerwie / test / próba / następny dzień, seria wiersza sprzed V82
+  i przez jedno wywołanie, organizator w obsłudze (jeden push), podniesienie progu ponad ciszę, prowadzący zmieniony w trakcie ciszy.
+  **Na usługach z `main` (`2e332bb`) czerwonych jest dokładnie sześć nowych:** próba dźwięku (P1), koniec seta (P2), piosenki DJ-a
+  (P3), set po przerwie (P4a), program niewłączony po teście (P4b), podniesienie progu (P5).
+- `DeckWatchServiceTest`: seria (10 min z gościem, 9 min, próba 25 min, dokładnie 30 min), „nigdy” mówi prawdę.
+- Przeglądarka: nowe `deck-list-not-loaded`, `deck-computer-row-800`, `deck-computer-lines-en`, `deck-silence-not-saved-en`;
+  `deck-computer-lines` z nazwą przycisku przy OFFLINE. Na starym `play-history.js` czerwone: `deck-computer-lines` (nazwa
+  przycisku), `deck-computer-row-800`, `deck-list-not-loaded`. Dwa scenariusze EN sprawdzają tylko język.
+- EXPLAIN (PostgreSQL 16, `s2p_review3`, te same dane co wyżej, jedna trzecia serii krótka): `silentNow` **2,0 ms, 487 buforów**.
+  Oba podzapytania (seria, goście) to `Index Scan using idx_party_decision_time`. `notePlay`: `Index Scan using dj_device_pkey`,
+  podzapytanie serii wykonywane tylko przy przerwie > 30 min, **0,3 ms**.
+
+MUTATIONS2

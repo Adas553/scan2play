@@ -50,6 +50,19 @@ public class DjDeviceService {
      * mid-set on purpose (speeches, the cake), shorter than the hours between a test before the party and the set.
      */
     public static final Duration RUN_GAP = Duration.ofMinutes(30);
+    /**
+     * A run that was a set (see {@link #setSql}) goes on after a longer gap too, up to this long — a dinner without music, a band's
+     * set: the music is back, a program that fails then is still worth a warning. Shorter than the night between two parties: the
+     * next day's soundcheck starts its own run.
+     */
+    static final Duration SET_BREAK_MAX = Duration.ofHours(4);
+    /** A run this long, with a guest's request in it, is a set; shorter, a test of the program (a song or two). */
+    public static final Duration RUN_MIN = Duration.ofMinutes(10);
+    /**
+     * A run this long is a set even without a request in it (the set played before the first guest asked); a soundcheck before the
+     * party is shorter, and has no guests.
+     */
+    public static final Duration RUN_LONG = Duration.ofMinutes(30);
 
     private static final SecureRandom RANDOM = new SecureRandom();
     private static final String ALL_FAILURES = "*";
@@ -175,18 +188,39 @@ public class DjDeviceService {
     /**
      * The songs a device sent, from {@code oldestAt} to {@code newestAt}: the newest one's start kept (never earlier than what is kept
      * — a song sent again after a restart moves nothing back), the program it came from, and the run of songs it belongs to — a new
-     * run from {@code oldestAt} when the last song kept is more than {@link #RUN_GAP} before it. Only times and the program's name:
-     * the songs themselves are not kept.
+     * run from {@code oldestAt} when the last song kept is more than {@link #RUN_GAP} before it, unless that run was a set and the gap
+     * shorter than {@link #SET_BREAK_MAX} (a break in the party: the set goes on). Only times and the program's name: the songs
+     * themselves are not kept.
      */
     public void notePlay(long deviceId, Instant oldestAt, Instant newestAt, String program) {
         String name = program == null || program.isBlank() ? null : cleanName(program);
-        // the SET's expressions read the row as it was: last_play_at below is the one kept before this call
-        jdbc.update("UPDATE dj_device SET play_run_from = CASE WHEN last_play_at IS NULL OR play_run_from IS NULL"
-                        + " OR last_play_at < ?::timestamptz - interval '" + RUN_GAP.toMinutes() + " minutes' THEN ? ELSE play_run_from END,"
+        // the SET's expressions read the row as it was: last_play_at and play_run_from below are the ones kept before this call
+        jdbc.update("UPDATE dj_device SET play_run_from = CASE WHEN last_play_at IS NULL OR play_run_from IS NULL THEN ?"
+                        + " WHEN last_play_at >= ?::timestamptz - " + interval(RUN_GAP) + " THEN play_run_from"
+                        + " WHEN last_play_at >= ?::timestamptz - " + interval(SET_BREAK_MAX) + " AND " + setSql("dj_device")
+                        + " THEN play_run_from ELSE ? END,"
                         + " last_play_at = ?, last_play_program = COALESCE(?, last_play_program)"
                         + " WHERE id = ? AND (last_play_at IS NULL OR last_play_at < ?)",
-                Timestamp.from(oldestAt), Timestamp.from(oldestAt), Timestamp.from(newestAt),
-                name == null ? null : name.substring(0, Math.min(PROGRAM_MAX, name.length())), deviceId, Timestamp.from(newestAt));
+                Timestamp.from(oldestAt), Timestamp.from(oldestAt), Timestamp.from(oldestAt), Timestamp.from(oldestAt),
+                Timestamp.from(newestAt), name == null ? null : name.substring(0, Math.min(PROGRAM_MAX, name.length())), deviceId,
+                Timestamp.from(newestAt));
+    }
+
+    /**
+     * SQL: whether the run of songs of the {@code dj_device} row {@code row} (its {@code play_run_from} to {@code last_play_at}) was a
+     * set, not a test of the program or a soundcheck: {@link #RUN_LONG} of songs, or {@link #RUN_MIN} with a guest's request in it (the
+     * DJ's own "+ Dodaj piosenkę" is no guest). One rule for the run kept across a break ({@link #notePlay}) and the deck watch.
+     */
+    public static String setSql(String row) {
+        String run = row + ".last_play_at - " + row + ".play_run_from";
+        return "(" + run + " >= " + interval(RUN_LONG) + " OR (" + run + " >= " + interval(RUN_MIN)
+                + " AND EXISTS (SELECT 1 FROM song_requests r WHERE r.party_code = " + row + ".party_code AND NOT r.added_by_dj"
+                + " AND r.requested_at BETWEEN " + row + ".play_run_from AND " + row + ".last_play_at)))";
+    }
+
+    /** A constant duration as SQL. */
+    static String interval(Duration duration) {
+        return "interval '" + duration.toMinutes() + " minutes'";
     }
 
     private static Instant instant(Timestamp at) {
