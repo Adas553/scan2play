@@ -171,6 +171,9 @@ class SummaryPageTest {
         return render(locale, evening, null, evenings, requests, file);
     }
 
+    /** The night's set (V83) the summary reads: none, unless a test gives one. */
+    private static com.scan2play.service.DeckSetService deckSet = mock(com.scan2play.service.DeckSetService.class);
+
     private static String render(Locale locale, String evening, String view, List<EveningSummaryService.Evening> evenings,
                                  List<SongRequestEntity> requests, String file) throws IOException {
         SongRequestRepository repository = mock(SongRequestRepository.class);
@@ -180,7 +183,7 @@ class SummaryPageTest {
         DjSessionHelper sessionHelper = mock(DjSessionHelper.class);
         when(sessionHelper.require(any(), any(), any(), any()))
                 .thenReturn(PartySettingsEntity.builder().partyCode(PARTY).djName(djName).logoVersion(logoVersion).build());
-        DjSummaryController controller = new DjSummaryController(new EveningSummaryService(repository, libraries, kept), sessionHelper, messages, com.scan2play.service.Plans.off(), "https://www.scan2play.com.pl");
+        DjSummaryController controller = new DjSummaryController(new EveningSummaryService(repository, libraries, kept, deckSet), sessionHelper, messages, com.scan2play.service.Plans.off(), "https://www.scan2play.com.pl");
 
         ConcurrentModel model = new ConcurrentModel();
         String template = controller.summary(evening, null, view, model, null, new MockHttpSession());
@@ -209,6 +212,37 @@ class SummaryPageTest {
 
     private static final List<EveningSummaryService.Evening> TWO_EVENINGS = List.of(
             new EveningSummaryService.Evening(EVENING, 34), new EveningSummaryService.Evening(LocalDate.of(2026, 9, 26), 3));
+
+    /**
+     * "Cały set" (V83): every song the DJ's program saw that evening, in order, the guests' requests that played marked 🙋; folded,
+     * in both versions; none without a set. Written as {@code summary-wedding-set-pl.html} (and the hosts' {@code -hosts-}).
+     */
+    @Test
+    void theWholeSet_isListedInOrder_theRequestsMarked() throws IOException {
+        List<com.scan2play.service.DeckSetService.SetSong> set = new ArrayList<>();
+        set.add(new com.scan2play.service.DeckSetService.SetSong(at(19, 38), "Varius Manx", "Orła cień (Radio Edit)", "VirtualDJ"));
+        set.add(new com.scan2play.service.DeckSetService.SetSong(at(19, 42), "Kombii", "Pokolenie", "VirtualDJ"));
+        for (int i = 0; i < 40; i++) {
+            set.add(new com.scan2play.service.DeckSetService.SetSong(at(20, 0).plusSeconds(210L * i), "Dawid Podsiadło",
+                    "Szczęśliwej drogi, już czas " + i, "VirtualDJ"));
+        }
+        set.add(new com.scan2play.service.DeckSetService.SetSong(at(0, 33), null, "Sanah - Szampan", "Serato"));
+        deckSet = mock(com.scan2play.service.DeckSetService.class);
+        when(deckSet.evening(eq(PARTY), any(), any())).thenReturn(set);
+        try {
+            String html = render(Locale.forLanguageTag("pl"), null, TWO_EVENINGS, wedding(), "wedding-set-pl");
+            assertThat(html).contains("id=\"wholeSet\"", "Cały set (43)", "id=\"wholeSetFold\">").doesNotContain("??");
+            String list = html.substring(html.indexOf("id=\"wholeSetList\""), html.indexOf("</ol>", html.indexOf("id=\"wholeSetList\"")));
+            assertThat(list.indexOf("Varius Manx - Orła cień (Radio Edit)")).isLessThan(list.indexOf("Kombii - Pokolenie"));
+            assertThat(list.split("🙋", -1)).as("Orła cień and Szampan were asked for and played").hasSize(3);
+            assertThat(list).contains(">19:38<", ">Sanah - Szampan<");
+            assertThat(render(Locale.ENGLISH, null, "hosts", TWO_EVENINGS, wedding(), "wedding-set-hosts-en"))
+                    .contains("The whole set (43)");
+        } finally {
+            deckSet = mock(com.scan2play.service.DeckSetService.class);
+        }
+        assertThat(render(Locale.forLanguageTag("pl"), null, TWO_EVENINGS, wedding(), "wedding-pl")).doesNotContain("wholeSet");
+    }
 
     @Test
     void theLatestEvening_withItsCounts_theTopSongs_theHours_andTheSetlist() throws IOException {
@@ -414,7 +448,7 @@ class SummaryPageTest {
             com.scan2play.repository.PartySettingsRepository parties = mock(com.scan2play.repository.PartySettingsRepository.class);
             when(parties.findByPartyCode(PARTY)).thenReturn(java.util.Optional.of(PartySettingsEntity.builder().partyCode(PARTY).djName("DJ Koko").build()));
             com.scan2play.controller.SharedSummaryController controller = new com.scan2play.controller.SharedSummaryController(
-                    new EveningSummaryService(repositoryOf(wedding()), libraries, kept), parties, com.scan2play.service.Plans.off());
+                    new EveningSummaryService(repositoryOf(wedding()), libraries, kept, org.mockito.Mockito.mock(com.scan2play.service.DeckSetService.class)), parties, com.scan2play.service.Plans.off());
 
             ConcurrentModel model = new ConcurrentModel();
             MockHttpServletResponse response = new MockHttpServletResponse();
@@ -507,7 +541,7 @@ class SummaryPageTest {
         when(repository.findRequestedBetween(eq(PARTY), any(), any(), any())).thenReturn(wedding());
         DjSessionHelper sessionHelper = mock(DjSessionHelper.class);
         when(sessionHelper.require(any(), any(), any(), any())).thenReturn(PartySettingsEntity.builder().partyCode(PARTY).build());
-        DjSummaryController controller = new DjSummaryController(new EveningSummaryService(repository, libraries, kept), sessionHelper, messages, com.scan2play.service.Plans.off(), "https://www.scan2play.com.pl");
+        DjSummaryController controller = new DjSummaryController(new EveningSummaryService(repository, libraries, kept, org.mockito.Mockito.mock(com.scan2play.service.DeckSetService.class)), sessionHelper, messages, com.scan2play.service.Plans.off(), "https://www.scan2play.com.pl");
 
         ResponseEntity<byte[]> csv = controller.csv(null, null, Locale.ENGLISH, null, new MockHttpSession());
 
@@ -538,7 +572,7 @@ class SummaryPageTest {
                     ">Bajm - Biała armia<", "class=\"library-similar\"").doesNotContain("Sanah - Szampan", "Nirvana");
             assertThat(gaps.indexOf("Zenek Martyniuk")).as("the most wanted first").isLessThan(gaps.indexOf("Varius Manx"));
 
-            ResponseEntity<byte[]> csv = new DjSummaryController(new EveningSummaryService(repositoryOf(wedding()), libraries, kept),
+            ResponseEntity<byte[]> csv = new DjSummaryController(new EveningSummaryService(repositoryOf(wedding()), libraries, kept, org.mockito.Mockito.mock(com.scan2play.service.DeckSetService.class)),
                     sessionHelperOf(), messages, com.scan2play.service.Plans.off(), "https://www.scan2play.com.pl").csv(null, null, Locale.ENGLISH, null, new MockHttpSession());
             assertThat(new String(csv.getBody(), StandardCharsets.UTF_8).split("\r\n")[0])
                     .endsWith(";AI comment;Added by the DJ;From the kiosk;Waited (min);Artist;Title;Dedications;Why the AI rejected it;In your library");

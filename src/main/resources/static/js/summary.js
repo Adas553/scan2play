@@ -1,7 +1,7 @@
 // The evening summary (templates/summary.html): "Print / PDF" opens the browser's print window ("Save as PDF" makes a file), and
 // picking another evening shows it at once — so the "Show" button, which sends the form without the script, is hidden.
 // What played, in order, is folded on a phone (a long list under the rest) and unfolded to print — the paper always has it; without
-// the script it stays unfolded. "Kopiuj listę" of the library's gaps is the DJ pages' "Kopiuj" (dj-nav.js): shown only with a script.
+// the script it stays unfolded. The whole set of the DJ's program (V83) is folded everywhere and unfolded to print. "Kopiuj listę" of the library's gaps is the DJ pages' "Kopiuj" (dj-nav.js): shown only with a script.
 (function () {
     'use strict';
     const print = document.getElementById('printBtn');
@@ -17,6 +17,9 @@
         if (window.matchMedia('(max-width: 575.98px)').matches) setlist.open = false;
         window.addEventListener('beforeprint', function () { setlist.open = true; });
     }
+    // the whole set (V83): folded on every screen (a night's songs), unfolded to print
+    const wholeSet = document.getElementById('wholeSetFold');
+    if (wholeSet) window.addEventListener('beforeprint', function () { wholeSet.open = true; });
     const copy = document.getElementById('copyLibrary');
     if (copy) copy.hidden = false;
 })();

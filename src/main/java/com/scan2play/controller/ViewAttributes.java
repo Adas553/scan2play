@@ -278,6 +278,12 @@ public final class ViewAttributes {
     public static final String TV_SONGS = "tvSongs";
     /** "🎶 Teraz: …" on the TV and the kiosk: the guest's request the DJ's program plays now, {@code NowPlayingService}; null: none. */
     public static final String NOW_PLAYING = "nowPlaying";
+    /** "Co to było?" on the guest's page (V83): whether to offer it — the party keeps its set and the program sent a song tonight. */
+    public static final String PLAYED_TONIGHT = "playedTonight";
+    /** "Co to było?": the songs, {@code DeckSetService.lastPlayed}. */
+    public static final String PLAYED_SONGS = "playedSongs";
+    /** "Podsumowanie wieczoru": the evening's whole set, {@code EveningSummaryService.set}. */
+    public static final String EVENING_SET = "eveningSet";
 
     // --- "Życzenia przed imprezą" (V68) ---
     /** The guests' page of an event ({@code /w/{token}}): its secret for its form. */

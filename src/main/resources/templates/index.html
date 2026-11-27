@@ -93,6 +93,14 @@
         <div th:replace="~{fragments/guest-queue :: guestQueue}"></div>
     </div>
 
+    <!--/* "Co to było?" (V83): the last songs of the DJ's set, from the DJ's program — only while the party keeps its set and the
+         program sent a song tonight. Folded: guest-party.js fetches the list (GET /p/{code}/played) when it is unfolded. */-->
+    <details th:if="${playedTonight == true}" id="playedTonight" class="w-100 s2p-mw-500 mt-3"
+             th:attr="data-url=@{/p/{code}/played(code=${partyCode})},data-text-failed=#{guest.played.failed}">
+        <summary class="btn btn-sm btn-outline-light w-100" th:text="#{guest.played.toggle}">🎵 What was that? The last songs</summary>
+        <div class="s2p-played-list" aria-live="polite"></div>
+    </details>
+
     <!--/* The DJ's profiles (V24) and tip link (V27), under the list: only https addresses on those sites, as SocialLinks and TipLinks
          wrote them (the buttons: the fragment djLinks) */-->
     <div th:if="${instagramUrl != null or facebookUrl != null or tiktokUrl != null or tipUrl != null}"

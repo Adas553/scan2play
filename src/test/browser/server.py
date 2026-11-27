@@ -15,6 +15,7 @@ the REAL static js and css of the repo, and answers the few endpoints the dashbo
   GET  /dj/history-view/fragment     the REAL history fragment (rendered by DashboardPageRenderTest: history-<filter>.html, and
                                      history-<filter>-more.html when the request has a limit — "Show more")
   GET  /p/ABC12/queue                the REAL list of the guest page alone (guest-queue.html, GuestPageRenderTest: the list of guest-many)
+  GET  /p/ABC12/played               the REAL "Co to było?" list (state 'guestPlayed': guest-played*.html, GuestPageRenderTest), or 'guestPlayedStatus'
   GET  /p/ABC12/queue/more           the REAL folded rest of the guest's list (guest-queue-more.html, GuestPageRenderTest)
   GET  /p/ABC12/tv/list              the REAL list of the screen for a TV (state 'tvList': tv-list.html, tv-list-next.html,
                                      tv-list-empty.html, tv-list-ended.html — TvScreenWebTest), or the status 'tvListStatus'
@@ -129,6 +130,7 @@ def default_state():
         # V81 lastPlayAt, program, state ('OK', 'WAITING', 'SILENT', 'OFFLINE'; none: 'OK') and warn] — and "Ostrzeż po"'s minutes
         'devices': [],
         'silenceMinutes': 20,
+        'setKept': True,               # "Zapisuj set wieczoru" (V83), as GET /dj/devices says it and POST /dj/devices/set keeps it
         'devicesStatus': None,         # e.g. 500 or 403: GET /dj/devices fails (the card says its lines are old)
         'libraryStatus': 200,
         'libraryAnswer': 'Gotowe — utwory w bibliotece: 3.',
@@ -143,6 +145,9 @@ def default_state():
         # What GET /p/ABC12/queue ("↻ Odśwież" of the guest page) answers instead of the list (the vote's answer file), e.g. 500
         'guestQueueStatus': None,
         # What GET /p/ABC12/tv/list (the screen for a TV, tv.js) answers: the rendered list of that name, or the status instead
+        # "Co to było?" (V83): what GET /p/ABC12/played answers — the rendered list of that name, or the status instead
+        'guestPlayed': 'guest-played',
+        'guestPlayedStatus': None,
         'tvList': 'tv-list',
         'tvListStatus': None,
         # "Pytanie do gości" (V74): what GET /p/ABC12/poll (the card fetched again), POST /p/ABC12/poll/<id> (an answer) and
@@ -335,9 +340,14 @@ class Handler(BaseHTTPRequestHandler):
             if state['devicesStatus']:
                 return self._send(state['devicesStatus'])
             computers = [dict({'state': 'OK', 'warn': False}, **d) for d in state['devices']]
-            return self._json({'computers': computers, 'silenceMinutes': state['silenceMinutes']})
+            return self._json({'computers': computers, 'silenceMinutes': state['silenceMinutes'], 'setKept': state['setKept']})
         if path.startswith('/p/') and path.endswith('/logo.png'):   # the DJ's logo (V45): a square one — the tallest a box lets it be —, as a real PNG
             return self._send(200, LOGO_PNG, 'image/png')
+        if path.startswith('/p/') and path.endswith('/played'):   # "Co to było?" (V83), as the real server renders it
+            if state['guestPlayedStatus']:
+                return self._send(state['guestPlayedStatus'])
+            with open(os.path.join(stand.rendered, state['guestPlayed'] + '.html'), encoding='utf-8') as f:
+                return self._send(200, f.read(), 'text/html; charset=utf-8')
         if path.startswith('/p/') and path.endswith('/queue/more'):   # the folded rest of the guest's list, as the real server renders it
             with open(os.path.join(stand.rendered, 'guest-queue-more.html'), encoding='utf-8') as f:
                 return self._send(200, f.read(), 'text/html; charset=utf-8')
@@ -454,7 +464,7 @@ class Handler(BaseHTTPRequestHandler):
             fields['X-Requested-With'] = self.headers.get('X-Requested-With')
         if path == '/dj/dashboard/kiosk-link':        # the kiosk's link sent by fetch (V56): with its headers
             fields['X-Requested-With'] = self.headers.get('X-Requested-With')
-        if path in ('/dj/devices/code', '/dj/devices/remove', '/dj/devices/silence'):   # "Połącz komputer", "Odłącz" (V78), "Ostrzeż po" (V81)
+        if path in ('/dj/devices/code', '/dj/devices/remove', '/dj/devices/silence', '/dj/devices/set'):   # "Połącz komputer", "Odłącz" (V78), "Ostrzeż po" (V81), "Zapisuj set" (V83)
             fields['X-CSRF-TOKEN'] = self.headers.get('X-CSRF-TOKEN')
         if path in ('/dj/dashboard/schedule', '/dj/dashboard/guest-theme', '/dj/dashboard/morning-summary',
                     '/dj/library/hints', '/dj/dashboard/news-emails'):   # by fetch (V55, V59, V64, V58, V80)
@@ -483,6 +493,10 @@ class Handler(BaseHTTPRequestHandler):
         if path == '/dj/devices/silence':              # "Ostrzeż po" (V81): kept, as the real server
             with stand.lock:
                 state['silenceMinutes'] = int(fields.get('minutes'))
+            return self._send(204)
+        if path == '/dj/devices/set':                  # "Zapisuj set wieczoru" (V83): kept, as the real server
+            with stand.lock:
+                state['setKept'] = fields.get('kept') == 'true'
             return self._send(204)
         if path == '/dj/devices/remove':               # "Odłącz": the computer forgotten
             with stand.lock:

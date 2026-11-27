@@ -107,7 +107,7 @@ class PlanFeatureEndpointsTest {
                         WishControllers.djWishes(wishes, helper, plans, settings, codesAsTexts()),
                         WishControllers.djPlan(wishes, helper, plans, settings, codesAsTexts()),
                         new DjPollsController(polls, helper, plans, codesAsTexts()),
-                        new DjDeviceController(devices(), deckWatch(), helper, plans))
+                        new DjDeviceController(devices(), deckWatch(), helper, plans, org.mockito.Mockito.mock(com.scan2play.service.DeckSetService.class)))
                 .setViewResolvers(new InternalResourceViewResolver("/WEB-INF/views/", ".html")).build();
     }
 
@@ -201,7 +201,9 @@ class PlanFeatureEndpointsTest {
                 Arguments.of(PlanFeature.DECK, true, post("/dj/devices/code").param("partyCode", PUB)),
                 Arguments.of(PlanFeature.DECK, true, get("/dj/devices").param("partyCode", PUB)),
                 // ... and "Ostrzeż po" (V81)
-                Arguments.of(PlanFeature.DECK, true, post("/dj/devices/silence").param("partyCode", PUB).param("minutes", "10")));
+                Arguments.of(PlanFeature.DECK, true, post("/dj/devices/silence").param("partyCode", PUB).param("minutes", "10")),
+                // ... and "Zapisuj set wieczoru" (V83)
+                Arguments.of(PlanFeature.DECK, true, post("/dj/devices/set").param("partyCode", PUB).param("kept", "false")));
     }
 
     @ParameterizedTest(name = "{0}: {2}")

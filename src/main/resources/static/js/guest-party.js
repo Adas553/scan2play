@@ -252,3 +252,28 @@
         }
     });
 })();
+
+// "Co to było?" (V83, DeckSetService): the last songs of the DJ's set, fetched only when the guest unfolds it — again at each
+// unfolding (the server keeps them half a minute), never by a timer. Offline: a line says so, unfolding again asks again.
+(function () {
+    const details = document.getElementById('playedTonight');
+    if (!details) return;
+    const place = details.querySelector('.s2p-played-list');
+    let asked = 0;
+    details.addEventListener('toggle', async function () {
+        if (!details.open) return;
+        const mine = ++asked;
+        try {
+            const response = await fetch(details.dataset.url, { headers: { 'Accept': 'text/html' }, cache: 'no-store' });
+            if (mine !== asked) return;
+            if (!response.ok || response.redirected) throw new Error('status ' + response.status);
+            place.innerHTML = await response.text();
+        } catch (e) {
+            if (mine !== asked) return;
+            const note = document.createElement('p');
+            note.className = 'small text-secondary text-center mt-2 mb-0';
+            note.textContent = details.dataset.textFailed || '';
+            place.replaceChildren(note);
+        }
+    });
+})();

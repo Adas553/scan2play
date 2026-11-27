@@ -301,6 +301,44 @@ class GuestPageRenderTest {
         assertThat(html).contains("TAK!").doesNotContain("id=\"myPosition\"", "czeka u DJ-a", "Czekają u DJ-a");
     }
 
+    /**
+     * "Co to było?" (V83): folded under the list while the party keeps its set and the program sent a song tonight — its address for
+     * guest-party.js, nothing fetched with the page; none otherwise. Its list (GET /p/{code}/played) the newest first with their
+     * times, or "nothing yet". Writes {@code guest-with-set.html}, {@code guest-played.html} and {@code guest-played-none.html}.
+     */
+    @Test
+    void whatWasThat_isFoldedUnderTheList_andItsListIsTheSetsLastSongs() {
+        String none = render(PL, Map.of());
+        assertThat(none).doesNotContain("playedTonight");
+        for (Locale locale : List.of(PL, Locale.ENGLISH)) {
+            String html = render(locale, Map.of("playedTonight", true));
+            assertThat(html).as(locale.toString()).doesNotContain("??").contains("id=\"playedTonight\"", "data-url=\"/p/ABC12/played\"",
+                    locale == PL ? "Co to było? Ostatnie piosenki" : "What was that? The last songs");
+            assertThat(tag(html, "playedTonight")).as("folded").doesNotContain(" open>", " open=\"");
+            DashboardPageRenderTest.assertNothingInline(html);
+        }
+        writeForTheBrowserTests("guest-with-set.html", render(PL, Map.of("playedTonight", true)));
+
+        MockServletContext servletContext = new MockServletContext();
+        WebContext context = new WebContext(
+                JakartaServletWebApplication.buildApplication(servletContext)
+                        .buildExchange(new MockHttpServletRequest(servletContext), new MockHttpServletResponse()), PL);
+        java.time.Instant at = java.time.Instant.parse("2026-11-28T20:42:00Z");
+        context.setVariable("playedSongs", List.of(new com.scan2play.service.DeckSetService.SetSong(at, "Wilki", "Baśka", "VirtualDJ"),
+                new com.scan2play.service.DeckSetService.SetSong(at.minusSeconds(240), null, "Golec uOrkiestra - Ściernisco", "Serato"),
+                new com.scan2play.service.DeckSetService.SetSong(at.minusSeconds(480), "Kayah & Goran Bregović",
+                        "Prawy do lewego (Radio Edit, Remastered 2024 Version)", "VirtualDJ")));
+        String list = engine.process("fragments/guest-played", Set.of("playedList"), context);
+        assertThat(list).contains("id=\"playedSongs\"", ">21:42<", ">Wilki - Baśka<", ">Golec uOrkiestra - Ściernisco<", ">21:34<")
+                .doesNotContain("??", "<html", "VirtualDJ", "Serato");
+        assertThat(list.indexOf("Wilki")).as("the newest first").isLessThan(list.indexOf("Golec"));
+        writeForTheBrowserTests("guest-played.html", list);
+        context.setVariable("playedSongs", List.of());
+        String empty = engine.process("fragments/guest-played", Set.of("playedList"), context);
+        assertThat(empty).contains("id=\"playedNone\"", "Jeszcze nic nie zagrało.");
+        writeForTheBrowserTests("guest-played-none.html", empty);
+    }
+
     /** GET /p/{code}/queue renders the fragment alone: the same list, with its refresh button, and nothing when it is empty. */
     @Test
     void theFragmentAlone_isTheList_withItsRefreshButton() {

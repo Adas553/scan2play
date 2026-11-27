@@ -77,7 +77,7 @@ class EveningSummaryServiceTest {
     @Test
     void theRequestsOfAnEvening_areReadFromSixToSix_bounded() {
         SongRequestRepository repository = mock(SongRequestRepository.class);
-        new EveningSummaryService(repository, org.mockito.Mockito.mock(DjLibraryService.class), mock(com.scan2play.repository.EveningSummaryRepository.class)).requests("SUMM1", EVENING);
+        new EveningSummaryService(repository, org.mockito.Mockito.mock(DjLibraryService.class), mock(com.scan2play.repository.EveningSummaryRepository.class), org.mockito.Mockito.mock(com.scan2play.service.DeckSetService.class)).requests("SUMM1", EVENING);
 
         verify(repository).findRequestedBetween(eq("SUMM1"), eq(at("06:00")), eq(at("05:59").plusSeconds(60)),
                 eq(Pageable.ofSize(EveningSummaryService.MAX_REQUESTS)));
@@ -104,7 +104,7 @@ class EveningSummaryServiceTest {
                 new Object[]{4L, "Kult - Arahja", at("22:00"), null, "SKIPPED", 3, 0, 0, true, false},
                 new Object[]{5L, "Bajm - Biała armia", at("22:30"), null, "CLEARED", 2, 0, 0, false, false}));
 
-        List<SongRequestEntity> requests = new EveningSummaryService(repository, mock(DjLibraryService.class), kept).requests("SUMM1", EVENING);
+        List<SongRequestEntity> requests = new EveningSummaryService(repository, mock(DjLibraryService.class), kept, org.mockito.Mockito.mock(com.scan2play.service.DeckSetService.class)).requests("SUMM1", EVENING);
 
         assertThat(requests).extracting(SongRequestEntity::getId).containsExactly(1L, 2L, 3L, 4L, 5L, 9L);
         assertThat(requests).extracting(EveningSummaryService::statusOf).containsExactly(EveningSummaryService.Status.PLAYED,
@@ -175,7 +175,7 @@ class EveningSummaryServiceTest {
         when(repository.findEvenings("SUMM1", EveningSummaryService.MAX_EVENINGS)).thenReturn(List.<Object[]>of(
                 new Object[]{"2026-10-03", 42L, 30L, 5L, java.sql.Timestamp.from(at("19:05")), java.sql.Timestamp.from(at("02:40"))}));
 
-        assertThat(new EveningSummaryService(repository, mock(DjLibraryService.class), mock(com.scan2play.repository.EveningSummaryRepository.class))
+        assertThat(new EveningSummaryService(repository, mock(DjLibraryService.class), mock(com.scan2play.repository.EveningSummaryRepository.class), org.mockito.Mockito.mock(com.scan2play.service.DeckSetService.class))
                 .evenings("SUMM1")).containsExactly(new EveningSummaryService.Evening(EVENING, 42, 30, 5, at("19:05"), at("02:40")));
     }
 
@@ -210,7 +210,7 @@ class EveningSummaryServiceTest {
         when(kept.findByShareToken("good")).thenReturn(java.util.Optional.of(works));
         when(kept.findByShareToken("old")).thenReturn(java.util.Optional.of(com.scan2play.entity.EveningSummaryEntity.builder().partyCode("SUMM1")
                 .evening(EVENING).shareToken("old").shareExpiresAt(Instant.now().minusSeconds(1)).build()));
-        EveningSummaryService service = new EveningSummaryService(mock(SongRequestRepository.class), mock(DjLibraryService.class), kept);
+        EveningSummaryService service = new EveningSummaryService(mock(SongRequestRepository.class), mock(DjLibraryService.class), kept, org.mockito.Mockito.mock(com.scan2play.service.DeckSetService.class));
 
         assertThat(service.shared("good")).contains(works);
         assertThat(service.shared("old")).isEmpty();
@@ -229,7 +229,7 @@ class EveningSummaryServiceTest {
         when(repository.findEvenings("SUMM1", EveningSummaryService.MAX_EVENINGS))
                 .thenReturn(List.of(new Object[]{"2026-10-03", 42L}, new Object[]{"2026-09-26", 7L}));
 
-        assertThat(new EveningSummaryService(repository, org.mockito.Mockito.mock(DjLibraryService.class), mock(com.scan2play.repository.EveningSummaryRepository.class)).evenings("SUMM1")).containsExactly(
+        assertThat(new EveningSummaryService(repository, org.mockito.Mockito.mock(DjLibraryService.class), mock(com.scan2play.repository.EveningSummaryRepository.class), org.mockito.Mockito.mock(com.scan2play.service.DeckSetService.class)).evenings("SUMM1")).containsExactly(
                 new EveningSummaryService.Evening(EVENING, 42), new EveningSummaryService.Evening(LocalDate.of(2026, 9, 26), 7));
     }
 

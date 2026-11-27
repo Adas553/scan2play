@@ -39,6 +39,9 @@ class GuestNoSessionWebTest {
     private MockMvc mockMvc;
 
     /** "Pytanie do gości" (V74): no question asked here (an empty Optional, the mock's default). */
+    /** The night's set (V83): none kept. */
+    @MockitoBean
+    private com.scan2play.service.DeckSetService deckSetService;
     @MockitoBean
     private com.scan2play.service.PollService pollService;
     @MockitoBean

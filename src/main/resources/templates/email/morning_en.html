@@ -20,6 +20,7 @@
     <li th:each="song : ${top}"><span th:text="${song.name()}">Artist - Title</span> <span style="color:#555555;" th:text="'· ' + ${song.votes()} + ' 👍'">· 9 👍</span></li>
 </ol>
 </th:block>
+<p th:if="${setSize > 0}" style="margin:0 0 20px;">🎧 The whole set from your DJ software: <strong th:text="${setSize} + ' ' + ${setLabel}">87 songs</strong> — in order in the summary.</p>
 <p style="margin:0 0 28px;"><a th:href="${summaryUrl}" href="#" style="display:inline-block;background:#0a7f99;color:#ffffff;text-decoration:none;padding:12px 20px;border-radius:6px;font-weight:bold;">See the whole summary</a></p>
 <p style="color:#666666;font-size:13px;">We send it the morning after an evening with at least 5 guests' requests. Switch it off in "Party settings" (Morning summary)<th:block th:if="${stopUrl != null}"> or with one click: <a th:href="${stopUrl}" href="#" style="color:#666666;">Don't send me this</a></th:block>.</p>
 </div>

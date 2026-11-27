@@ -83,6 +83,9 @@ class GuestPollWebTest {
     @Autowired
     private MockMvc mockMvc;
 
+    /** The night's set (V83): none kept. */
+    @MockitoBean
+    private com.scan2play.service.DeckSetService deckSetService;
     @MockitoBean
     private PollService pollService;
     @MockitoBean

@@ -57,6 +57,7 @@
 | `PlayHistoryService` | the history (Section 5.1) |
 | `DjDeviceService` | "Program na komputerze" (V78): pairing codes, the computers' tokens (their hashes), limits |
 | `DeckHistoryService` | "Zagrane samo": the songs of the DJ's program's history mark the waiting requests played (Section 5.1, the queue) |
+| `DeckSetService` | the night's set (V83, `deck_play`): every song of the DJ's program kept 30 days while "Zapisuj set wieczoru" is on — "Już leciało" (`playedLately`), the guests' "Co to było?" (`lastPlayed`, 30 s in memory), the summary's "Cały set" (`evening`); ≤ 600 a day per computer |
 | `NowPlayingService` | "🎶 Teraz: …" on the TV and the kiosk: the guest's request the DJ's program played last, in memory (Caffeine), from its start for 6 min or until the next song; set only by `DeckHistoryService` |
 | `EveningSummaryService` | "Podsumowanie wieczoru": the party's evenings (by month), one evening's requests from `song_requests` and `evening_song` (V61), its counts, waits, top songs, missed songs, artists, half-hours and setlist, the CSV (Section 5.1); with a library (V42, Pro) "Nie masz w bibliotece" and the CSV's column "W bibliotece"; the evening's title and hosts' link |
 | `GuestQueueService` | what the guest sees under the form (with the most wanted songs, every waiting one by votes — but a request the AI did not judge, V39, only to the guest who sent it); `mostWanted`: the first ten of that order, for the screen for a TV, only requests the AI judged |
