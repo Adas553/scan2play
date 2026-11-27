@@ -127,6 +127,19 @@ class PlanFeatureEndpointsTest {
         return watch;
     }
 
+    /** "Ostrzeż po" with Pro: a value not offered (the service says no) or not a number is 400, nothing more. */
+    @Test
+    void ostrzezPo_aValueNotOffered_is400() throws Exception {
+        assertThat(perform(mvc(Plans.enforced(ORGANISER)), ORGANISER, post("/dj/devices/silence").param("partyCode", PUB)
+                .param("minutes", "10"))).isEqualTo(204);
+        assertThat(perform(mvc(Plans.enforced(ORGANISER)), ORGANISER, post("/dj/devices/silence").param("partyCode", PUB)
+                .param("minutes", "15"))).isEqualTo(400);
+        assertThat(perform(mvc(Plans.enforced(ORGANISER)), ORGANISER, post("/dj/devices/silence").param("partyCode", PUB)
+                .param("minutes", "abc"))).isEqualTo(400);
+        assertThat(perform(mvc(Plans.enforced(ORGANISER)), ORGANISER, post("/dj/devices/silence").param("partyCode", PUB)))
+                .as("no minutes").isEqualTo(400);
+    }
+
     /** The answer's status: a request let through is answered (below 400), not only "nothing thrown" (the review of 2026-10-14). */
     private static int perform(MockMvc mvc, String who, MockHttpServletRequestBuilder request) throws Exception {
         return mvc.perform(request.principal(user(who)).session(new MockHttpSession())).andReturn().getResponse().getStatus();

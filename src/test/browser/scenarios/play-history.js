@@ -165,6 +165,9 @@
             document.dispatchEvent(new Event('visibilitychange'));
             await t.waitFor(function () { return rows() === 4; }, 'four computers', 3000);
             t.step('the button amber, not green: one program stopped during the party', [amber(), green()], [true, false]);
+            t.step('the amber said in the button\'s name and title too, not by its colour alone',
+                [toggle().getAttribute('aria-label').indexOf('program nie widzi piosenek') >= 0,
+                    toggle().title.indexOf('program nie widzi piosenek') >= 0], [true, true]);
             toggle().click();
             t.step('sees songs: the last one\'s time and the program, a green tick', [row(1).textContent.indexOf('widzi piosenki') >= 0,
                 row(1).textContent.indexOf('(VirtualDJ)') >= 0, row(1).querySelector('.s2p-deck-device-ok').textContent], [true, true, '✓']);
@@ -181,6 +184,46 @@
             t.step('after the party: the last song and the last call in grey, no amber, the button green again',
                 [row(3).textContent.indexOf('ostatnia piosenka ' + hhmm(played)) >= 0, row(4).textContent.indexOf('ostatnio ' + hhmm(seen)) >= 0,
                     document.querySelectorAll('#deviceList .s2p-deck-device-warn').length, amber(), green()], [true, true, 0, false, true]);
+            t.check('the button\'s name without the warning again', toggle().getAttribute('aria-label').indexOf('nie widzi') < 0);
+        }
+    });
+
+    S2P.scenario({
+        name: 'deck-silence-not-saved',
+        title: '"Ostrzeż po" not saved (the server refuses: no Pro any more): said, and the select back at the minutes the server keeps — even with the focus still on it',
+        setup: { devices: [], postStatus: { '/dj/devices/silence': 403 } },
+        run: async function (t) {
+            const select = function () { return document.getElementById('deviceSilence'); };
+            const failed = function () { return document.getElementById('deviceSilenceFailed'); };
+            await t.stand.config({ devices: [device(5)], silenceMinutes: 20 });
+            document.dispatchEvent(new Event('visibilitychange'));
+            await t.waitFor(function () { return rows() === 1; }, 'the computer', 3000);
+            toggle().click();
+            t.step('nothing said yet', failed().hidden, true);
+
+            select().focus();
+            select().value = '10';
+            select().dispatchEvent(new Event('change'));
+            await t.waitFor(function () { return !failed().hidden; }, 'the refusal said', 3000);
+            await t.waitFor(function () { return select().value === '20'; }, 'the select back at 20', 3000);
+            t.step('said, the select at what the server keeps', [failed().textContent.indexOf('Nie udało się') >= 0, select().value],
+                [true, '20']);
+        }
+    });
+
+    S2P.scenario({
+        name: 'deck-older-answer-dropped',
+        title: '"Zagrane samo": an answer to an older ask of the list (slow), coming after a newer one, is dropped — the card shows the newer',
+        setup: { devices: [] },
+        run: async function (t) {
+            await t.stand.config({ devices: [device(5, 'Stary')], delays: { '/dj/devices': 1.2 } });
+            document.dispatchEvent(new Event('visibilitychange'));   // asked first, answered last
+            await t.sleep(200);
+            await t.stand.config({ devices: [device(6, 'Nowy')], delays: { '/dj/devices': 0 } });
+            document.dispatchEvent(new Event('visibilitychange'));   // asked second, answered at once
+            await t.waitFor(function () { return row(6) !== null; }, 'the newer list', 3000);
+            await t.sleep(1600);   // the older answer has come by now
+            t.step('the newer list stays', [row(6) !== null, row(5) === null], [true, true]);
         }
     });
 

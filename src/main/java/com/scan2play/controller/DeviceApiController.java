@@ -107,19 +107,25 @@ public class DeviceApiController {
             return ResponseEntity.badRequest().build();
         }
         List<DeckHistoryService.Play> songs = songsOf(plays, body.sentAt(), now);
-        newest(songs, now).ifPresent(at -> devices.notePlay(paired.get().deviceId(), at, programOfNewest(plays, songs, now)));
+        span(songs, now).ifPresent(span -> devices.notePlay(paired.get().deviceId(), span.oldest(), span.newest(),
+                programOfNewest(plays, songs, now)));
         return ResponseEntity.ok(Map.of("marked", deckHistory.markPlayed(paired.get().partyCode(), songs, now,
                 clockKnown(body.sentAt()))));
     }
 
+    /** The first and the last start of the songs of one call. */
+    record Span(Instant oldest, Instant newest) {
+    }
+
     /**
-     * The newest song's start (one without a time: now; one "later" than now: now), for the panel's "ostatnia piosenka" (V81); none
-     * when every song is older than {@link DeckHistoryService#OLDEST} — a history read again, not tonight's set.
+     * The oldest and the newest song's start (one without a time: now; one "later" than now: now), for the panel's "ostatnia piosenka"
+     * (V81) and the run of songs (V82); none when every song is older than {@link DeckHistoryService#OLDEST} — a history read again,
+     * not tonight's set (such songs are left out of the span too).
      */
-    static Optional<Instant> newest(List<DeckHistoryService.Play> songs, Instant now) {
-        return songs.stream().map(song -> startOf(song, now))
-                .filter(at -> !at.isBefore(now.minus(DeckHistoryService.OLDEST)))
-                .max(Instant::compareTo);
+    static Optional<Span> span(List<DeckHistoryService.Play> songs, Instant now) {
+        List<Instant> starts = songs.stream().map(song -> startOf(song, now))
+                .filter(at -> !at.isBefore(now.minus(DeckHistoryService.OLDEST))).sorted().toList();
+        return starts.isEmpty() ? Optional.empty() : Optional.of(new Span(starts.getFirst(), starts.getLast()));
     }
 
     private static Instant startOf(DeckHistoryService.Play song, Instant now) {

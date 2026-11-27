@@ -224,15 +224,16 @@ public class PushNotificationService {
     }
 
     /**
-     * The DJ's program saw no song for {@code minutes} during the party ({@code DeckWatchService}): the organiser's devices get "⚠
-     * Program DJ-a nie widzi piosenek" — or, when it stopped calling too, that it is not connected. Returns at once.
+     * The DJ's program saw no song for {@code minutes} during the party ({@code DeckWatchService}): the devices of {@code userId} (the
+     * organiser, or one of the staff) get "⚠ Program DJ-a nie widzi piosenek" — or, when it stopped calling too, that it is not
+     * connected. Returns at once.
      */
-    public void notifyDeckSilent(String ownerId, String partyCode, int minutes, boolean offline) {
-        if (keyPair == null || ownerId == null) {
+    public void notifyDeckSilent(String userId, String partyCode, long minutes, boolean offline) {
+        if (keyPair == null || userId == null) {
             return;
         }
         try {
-            sender.execute(() -> sendToDevices(ownerId, "the deck watch of party " + partyCode,
+            sender.execute(() -> sendToDevices(userId, "the deck watch of party " + partyCode,
                     device -> deckSilentPayload(device, partyCode, minutes, offline)));
         } catch (RejectedExecutionException e) {
             log.warn("The deck watch's push for party {} dropped: the queue is full", partyCode);
@@ -240,7 +241,7 @@ public class PushNotificationService {
     }
 
     /** The deck watch's message: one tag a party (a second replaces the first), a tap opens the party's panel. */
-    String deckSilentPayload(PushSubscriptionEntity device, String partyCode, int minutes, boolean offline) {
+    String deckSilentPayload(PushSubscriptionEntity device, String partyCode, long minutes, boolean offline) {
         Locale locale = localeOf(device);
         Map<String, String> message = new LinkedHashMap<>();
         message.put("title", messageSource.getMessage(offline ? "push.deck_offline.title" : "push.deck_silent.title", null, locale));

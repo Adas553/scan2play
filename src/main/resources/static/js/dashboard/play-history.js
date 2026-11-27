@@ -14,14 +14,15 @@
  *
  * Each computer's line says whether its program sees songs (V81, DeckWatchService's state): "widzi piosenki · ostatnia 21:43
  * (VirtualDJ)", "czeka na pierwszą piosenkę" — the DJ's test before the party: play any song —, and, during the party, "brak nowych
- * piosenek od 21:43" or "program nie łączy się od 21:40" in amber (warn), the queue's button amber too. The list is asked again every
- * minute while the page is shown, so a program that stopped is seen without a reload. "Ostrzeż po" (#deviceSilence, shown once a
- * computer is paired) sets after how many minutes of silence the organiser's devices get a push (/dj/devices/silence).
+ * piosenek od 21:43" or "program nie łączy się od 21:40" in amber (warn: only the computer the set is played on), the queue's button
+ * amber too (and said in its name). The list is asked again every minute while the page is shown and a computer is paired, so a
+ * program that stopped is seen without a reload. "Ostrzeż po" (#deviceSilence, shown once a computer is paired) sets after how many
+ * minutes of silence the devices of the organiser and the staff get a push (/dj/devices/silence); "nigdy": neither push nor amber.
  *
  * Dependencies (DOM): <button id="deckToggle" hidden>, <section id="deckReader" hidden> with its texts in data-* (device-code,
  * device-copy, device-copied, device-seen, device-remove, device-failed, device-ok, device-waiting, device-last, device-silent,
- * device-offline — "{…}" filled in here), #deviceList, #deviceAnother, #deviceSetup, #deviceConnect, #deviceCode, #deviceWatch with
- * <select id="deviceSilence">.
+ * device-offline, deck-toggle-warn — "{…}" filled in here), #deviceList, #deviceAnother, #deviceSetup, #deviceConnect, #deviceCode,
+ * #deviceWatch with <select id="deviceSilence"> and #deviceSilenceFailed.
  */
 import { csrfHeaders, partyCode } from './common.js';
 
@@ -78,6 +79,9 @@ function computers() {
     const another = document.getElementById('deviceAnother');
     const watch = document.getElementById('deviceWatch');
     const silence = document.getElementById('deviceSilence');
+    const silenceFailed = document.getElementById('deviceSilenceFailed');
+    const toggleLabel = toggle.getAttribute('aria-label') || '';
+    const toggleTitle = toggle.title || '';
     let count = 0;        // the computers paired, as last listed
     let warning = false;  // a computer's line in amber: the queue's button amber too
     let asked = 0;        // the lists asked for: an answer to an older one (the minute's, a tap's) is dropped when a newer was asked
@@ -94,7 +98,8 @@ function computers() {
         });
     }
 
-    async function load() {
+    /** {@code force}: the select set to the server's minutes even while it has the focus (a choice that was not saved). */
+    async function load(force) {
         let devices;
         let minutes;
         const mine = ++asked;
@@ -146,7 +151,7 @@ function computers() {
         });
         count = devices.length;
         // the select follows the server, unless the DJ is changing it right now
-        if (minutes !== undefined && document.activeElement !== silence) silence.value = String(minutes);
+        if (minutes !== undefined && (force === true || document.activeElement !== silence)) silence.value = String(minutes);
         newest = devices.reduce(function (most, device) { return Math.max(most, device.id); }, 0);
         // the program took the code: it is used up. By the newest id, not the count: a fourth computer replaces the one seen
         // longest ago (the count stays), and an "Odłącz" meanwhile shortens the list while the code is still good
@@ -169,16 +174,29 @@ function computers() {
         toggle.classList.toggle('btn-outline-warning', count > 0 && warning);
         toggle.classList.toggle('btn-outline-success', count > 0 && !warning);
         toggle.classList.toggle('btn-outline-light', count === 0);
+        // amber is a colour only: a screen reader, or an eye that tells amber from green badly, hears it in the button's name
+        const warn = count > 0 && warning ? ' — ' + text('deckToggleWarn') : '';
+        toggle.setAttribute('aria-label', toggleLabel + warn);
+        toggle.title = toggleTitle + warn;
     }
 
-    // "Ostrzeż po": saved at once; the list asked again, so the lines follow the new minutes
+    // "Ostrzeż po": saved at once; the list asked again, so the lines follow the new minutes. Not saved (no Pro any more, no
+    // network): said, and the select back at what the server keeps — else the DJ would trust a choice that is not there
     silence.addEventListener('change', async function () {
         silence.disabled = true;
+        silenceFailed.hidden = true;
+        let saved = false;
         try {
-            await post('/dj/devices/silence', { minutes: silence.value });
+            saved = (await post('/dj/devices/silence', { minutes: silence.value })).ok;
+        } catch (e) {
+            saved = false;
         } finally {
             silence.disabled = false;
-            await load();
+            if (!saved) {
+                silenceFailed.textContent = text('deviceFailed');
+                silenceFailed.hidden = false;
+            }
+            await load(!saved);
         }
     });
 
@@ -232,6 +250,12 @@ function computers() {
         }
     });
 
+    // every minute while the page is shown and a computer is paired: a program that stops during the set turns its line (and the
+    // button) amber. None paired: nothing to watch — a pairing is seen by the code's own look (above) or when the page is shown again
+    setInterval(function () {
+        if (document.visibilityState === 'visible' && count > 0) load();
+    }, REFRESH_MS);
+
     return load;
 }
 
@@ -239,10 +263,6 @@ if (toggle && reader && wide) {
     const loadComputers = computers();
     toggle.hidden = false;
     loadComputers();
-    // every minute while the page is shown: a program that stops during the set turns its line (and the button) amber
-    setInterval(function () {
-        if (document.visibilityState === 'visible') loadComputers();
-    }, REFRESH_MS);
     // back to the panel from the program's window (paired just now) or from another tab: the button tells the truth again
     document.addEventListener('visibilitychange', function () {
         if (document.visibilityState === 'visible') loadComputers();

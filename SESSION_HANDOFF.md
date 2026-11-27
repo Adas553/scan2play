@@ -107,10 +107,12 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
   Spotify and Tidal (`NowPlaying`, `WindowsMedia`: Windows' media sessions; `docs/ideas.md` item 20; works on the owner's Windows), reviews
   `review-2026-11-25-spotify.md` (P1–P17), `review-2026-11-25-media-sessions.md` (M1–M9), fixed. Waits for the owner: a try on a Mac,
   a new `program.webp`, the merge; then "Run workflow" of deck-agent from `main` (it runs the PowerShell script on Windows first).
-- **2026-11-27 — `claude/funny-hawking-brlqnj` (from `main` = `2912c2d`), PRs #315 (`main`) and #316 (`dev`), migration V81 (only adds):** "Zagrane samo"
+- **2026-11-27 — `claude/funny-hawking-brlqnj` (from `main` = `2912c2d`), PRs #315 (`main`) and #316 (`dev`), migrations V81, V82 (only add):** "Zagrane samo"
   watched (`docs/ideas.md` item 21): each computer's line in the card (sees songs / waiting for the first — the test before the party /
   silent or not connected in amber during the party), "Ostrzeż po" 10 / 20 / 30 min / nigdy and a push (`DeckWatchService`), "OSTATNIA
-  PIOSENKA" in the program's window. Waits for the owner: the review (prompt `docs/history/prompt-2026-11-27-review-deck-watch.md`), a look, the merge; after it "Run workflow" of deck-agent (the new window).
+  PIOSENKA" in the program's window. Its review (`docs/history/review-2026-11-27-deck-watch.md`) and fixes: P1–P7, P9, P10, P13–P16
+  (V82 `play_run_from`: no alarm for the test song nor at the set's end, only the lead computer amber, the push to the staff with
+  QUEUE too); P8, P11, P12, P17 left. Waits for the owner: a look, the merge; after it "Run workflow" of deck-agent (the new window).
 - **Waits for the owner (from #269):** after the first commit the deploy window holds back (Fri–Sun 18:00–6:00): does Railway
   deploy it on the workflow's re-run? UptimeRobot is set up (the owner, 2026-11-17; `docs/monitoring.md`).
 - **Waits for the owner (the wishes, #263):** the three older Polish texts with "DJ" and a masculine verb (`guest.vote.gone`,
