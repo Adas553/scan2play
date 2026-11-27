@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 
 import static com.scan2play.service.DeckWatchService.State.OFFLINE;
 import static com.scan2play.service.DeckWatchService.State.OK;
@@ -11,14 +12,21 @@ import static com.scan2play.service.DeckWatchService.State.SILENT;
 import static com.scan2play.service.DeckWatchService.State.WAITING;
 import static org.assertj.core.api.Assertions.assertThat;
 
-/** A computer's line in the panel (V81): gone, waiting for its first song, playing, or silent past the minutes chosen. */
+/**
+ * A computer's line in the panel (V81): gone, waiting for its first song, playing, or silent past the minutes chosen; the party's lead
+ * computer and whether its songs were a set or a test (V82).
+ */
 class DeckWatchServiceTest {
 
     private static final Instant NOW = Instant.parse("2026-11-28T21:00:00Z");
 
     private static DjDeviceService.Device device(Duration seenAgo, Duration playedAgo) {
-        return new DjDeviceService.Device(1, "PC", NOW.minus(Duration.ofDays(1)), seenAgo == null ? null : NOW.minus(seenAgo),
-                playedAgo == null ? null : NOW.minus(playedAgo), "VirtualDJ");
+        return device(1, seenAgo, playedAgo, playedAgo);
+    }
+
+    private static DjDeviceService.Device device(long id, Duration seenAgo, Duration playedAgo, Duration runFromAgo) {
+        return new DjDeviceService.Device(id, "PC", NOW.minus(Duration.ofDays(1)), seenAgo == null ? null : NOW.minus(seenAgo),
+                playedAgo == null ? null : NOW.minus(playedAgo), runFromAgo == null ? null : NOW.minus(runFromAgo), "VirtualDJ");
     }
 
     @Test
@@ -34,6 +42,46 @@ class DeckWatchServiceTest {
         assertThat(DeckWatchService.state(device(Duration.ofMinutes(4), Duration.ofMinutes(5)), 20, NOW))
                 .as("three calls missed: gone, whatever it played").isEqualTo(OFFLINE);
         assertThat(DeckWatchService.state(device(null, null), 20, NOW)).as("never called since its pairing a day ago").isEqualTo(OFFLINE);
+    }
+
+    /** The edges: silent only past the minutes, gone only past three minutes, tonight's set only within the twelve hours. */
+    @Test
+    void theEdges() {
+        assertThat(DeckWatchService.state(device(Duration.ofSeconds(30), Duration.ofMinutes(20)), 20, NOW)).as("exactly 20 min")
+                .isEqualTo(OK);
+        assertThat(DeckWatchService.state(device(Duration.ofSeconds(30), Duration.ofMinutes(20).plusSeconds(1)), 20, NOW))
+                .isEqualTo(SILENT);
+        assertThat(DeckWatchService.state(device(Duration.ofMinutes(3), Duration.ofMinutes(5)), 20, NOW)).as("exactly 3 min")
+                .isEqualTo(OK);
+        assertThat(DeckWatchService.state(device(Duration.ofMinutes(3).plusSeconds(1), Duration.ofMinutes(5)), 20, NOW))
+                .isEqualTo(OFFLINE);
+        assertThat(DeckWatchService.state(device(Duration.ofSeconds(30), Duration.ofHours(12)), 0, NOW)).as("exactly 12 h")
+                .isEqualTo(WAITING);
+        assertThat(DeckWatchService.state(device(Duration.ofSeconds(30), Duration.ofHours(12).minusSeconds(1)), 0, NOW))
+                .isEqualTo(OK);
+    }
+
+    /** The lead computer is the one with tonight's newest song: a spare laptop tested at 15:00 is not it. */
+    @Test
+    void theLead_isTheComputerWithTheNewestSong() {
+        DjDeviceService.Device spare = device(1, Duration.ofSeconds(30), Duration.ofMinutes(300), Duration.ofMinutes(300));
+        DjDeviceService.Device main = device(2, Duration.ofSeconds(30), Duration.ofMinutes(2), Duration.ofMinutes(60));
+        DjDeviceService.Device yesterday = device(3, Duration.ofSeconds(30), Duration.ofHours(13), Duration.ofHours(15));
+        assertThat(DeckWatchService.lead(List.of(spare, main, yesterday), NOW)).contains(main);
+        assertThat(DeckWatchService.lead(List.of(yesterday), NOW)).as("nothing tonight").isEmpty();
+    }
+
+    /** One song (or two) played to test the program is no set; ten minutes of songs is. */
+    @Test
+    void aSet_isARunOfTenMinutes_notATest() {
+        assertThat(DeckWatchService.setPlayed(device(1, Duration.ofSeconds(30), Duration.ofMinutes(90), Duration.ofMinutes(90))))
+                .as("one song").isFalse();
+        assertThat(DeckWatchService.setPlayed(device(1, Duration.ofSeconds(30), Duration.ofMinutes(90), Duration.ofMinutes(99))))
+                .as("two songs, 9 min").isFalse();
+        assertThat(DeckWatchService.setPlayed(device(1, Duration.ofSeconds(30), Duration.ofMinutes(90), Duration.ofMinutes(100))))
+                .as("10 min").isTrue();
+        assertThat(DeckWatchService.setPlayed(device(1, Duration.ofSeconds(30), Duration.ofMinutes(90), null)))
+                .as("no run noted yet (before V82)").isFalse();
     }
 
     @Test

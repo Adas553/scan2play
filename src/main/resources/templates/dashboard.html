@@ -404,7 +404,8 @@
                           data-device-seen=#{dashboard.computer.seen},data-device-remove=#{dashboard.computer.remove},
                           data-device-failed=#{dashboard.computer.failed},data-device-ok=#{dashboard.computer.ok},
                           data-device-waiting=#{dashboard.computer.waiting},data-device-last=#{dashboard.computer.last},
-                          data-device-silent=#{dashboard.computer.silent},data-device-offline=#{dashboard.computer.offline}">
+                          data-device-silent=#{dashboard.computer.silent},data-device-offline=#{dashboard.computer.offline},
+                          data-deck-toggle-warn=#{dashboard.deck.toggle.warn}">
             <h3 id="deckReaderTitle" class="s2p-card-title" th:text="#{dashboard.deck.title}">Played, from your DJ software</h3>
             <p class="s2p-card-help" th:text="#{dashboard.computer.help}">A program for Windows or Mac reads…</p>
             <!--/* The computers paired (/dj/devices), each with "Odłącz" */-->
@@ -419,6 +420,7 @@
                     <option value="30" th:text="#{dashboard.computer.silence.after(30)}">after 30 min</option>
                     <option value="0" th:text="#{dashboard.computer.silence.never}">never</option>
                 </select>
+                <span id="deviceSilenceFailed" class="text-warning" role="status" hidden></span>
                 <span class="text-secondary w-100" th:text="#{dashboard.computer.silence.help}">During the party…</span>
             </div>
             <button type="button" id="deviceAnother" class="btn btn-sm btn-outline-secondary mt-2 align-self-start" hidden

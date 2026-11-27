@@ -415,7 +415,9 @@ piece of work or when a task names an item. A finished item stays here until its
    organiser's devices get one push a silence after the minutes chosen. (2) The test: "czeka na pierwszą piosenkę — puść dowolny
    utwór na minutę" in the card, "OSTATNIA PIOSENKA" in the program's window (any song, with its program). Kept on the server: the
    newest song's time and its program's name only (the privacy policy PL / EN changed). Needs a new build of the program for the
-   program's name and the window's section (older programs: the time only). **Not built from the same list:** 3 "Teraz leci" on the
+   program's name and the window's section (older programs: the time only). Review `docs/history/review-2026-11-27-deck-watch.md`: the
+   warning only for a set that stopped (a run of 10 min, V82 — not the test song) while guests ask since its last song (not the set's
+   end), only on the computer the set is played on (not a spare laptop), the push to the staff with QUEUE too. **Not built from the same list:** 3 "Teraz leci" on the
    TV, 4 the night's set kept ("Już leciało", the summary, "Co to było?"), 5 "Chyba leciało — potwierdź", 6 the queue in the
    program's window; small: the wait from request to play in the summary, "Masz starą wersję programu", Deezer / Apple Music on
    Windows, "Na czym grasz?" to the DJs.

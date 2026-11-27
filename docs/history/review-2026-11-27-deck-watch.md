@@ -309,3 +309,39 @@ Pozostałe punkty to drobiazgi i braki w testach (P5–P17).
 
 Potem, w tym samym PR albo zaraz po: P5, P6, P9 (decyzja o „nigdy” i zdanie w przewodniku), P10, P13, P14. P7, P8, P11, P12, P16
 i P17 według uznania.
+
+## Poprawki (2026-11-27, ta sama gałąź)
+
+| punkt | stan | co zrobione |
+|---|---|---|
+| P1 | poprawione | V82 `dj_device.play_run_from`: początek serii piosenek. `DjDeviceService.notePlay(id, oldest, newest, program)` zaczyna nową serię po 30 min bez piosenki (`RUN_GAP`), a `DeviceApiController.span` podaje najstarszą i najnowszą piosenkę wywołania. Set to seria ≥ 10 min (`RUN_MIN`). Piosenka na próbę nie daje ani pusha, ani żółtego. |
+| P2 | poprawione | Prośba gościa musi przyjść **po** ostatniej piosence (> jej start + 2 min, w ostatnich 60 min): w karcie (`guestsAfter`) i w `silentNow` (`GREATEST(…)`). |
+| P3 | poprawione | Jedna reguła: komputer „prowadzący” (najnowsza piosenka z 12 h, `lead`). Żółty jest tylko on, pozostałe są szare. W `silentNow` CTE `DISTINCT ON (party_code)` bierze dane prowadzącego, także `offline` pusha z jego ostatniego wywołania. EXPLAIN: 1,3 ms, `idx_dj_device_last_play`, `idx_party_decision_time`, unikalny indeks `party_settings`. |
+| P4 | poprawione | Push do organizatora i obsługi z QUEUE (`recipients`). |
+| P5 | poprawione | Push podaje faktyczną ciszę (`Duration.between(lastPlayAt, now)`). |
+| P6 | poprawione | `warned` unieważniane tylko przy podniesieniu progu z wartości > 0. |
+| P7 | poprawione | `ORDER BY l.last_play_at DESC`, czyli najpierw najświeższe cisze; komentarz poprawiony. |
+| P8 | zostawione | Pamięć w Caffeine, jak było (restart może powtórzyć push). |
+| P9 | poprawione | „Nigdy” = ani push, ani żółty. Przewodnik PL / EN opisuje regułę (próba i koniec seta bez ostrzeżenia, OFFLINE po 3 min, obsługa). |
+| P10 | poprawione | Odmowa zapisu jest pokazana pod selectem (`#deviceSilenceFailed`, `role="status"`), a select wraca do wartości serwera (`load(true)`). |
+| P11 | zostawione | Komentarz V81. Nie wiadomo, czy V81 jest już w czyjejś bazie, a zmiana zmienia sumę kontrolną. |
+| P12 | zostawione | Indeks zostaje (EXPLAIN potwierdza, że się przydaje). |
+| P13 | częściowo | Odświeżanie co minutę tylko przy połączonym komputerze. Zapytania o minuty nie połączyłem z listą urządzeń. |
+| P14 | poprawione | Krótszy tekst WAITING (PL / EN). W 800 px dwie linie zamiast czterech, „Odłącz” obok tekstu (`karta-800-po-poprawkach.png`). |
+| P15 | poprawione | Testy niżej. |
+| P16 | poprawione | Żółty przycisk ma ostrzeżenie w `aria-label` i `title` (`dashboard.deck.toggle.warn`). |
+| P17 | zostawione | Bez poprawki, jak w przeglądzie. |
+
+Testy po poprawkach:
+- unit **1573/1573**: `DeckWatchServiceTest` (krawędzie 20 min / 3 min / 12 h, prowadzący, seria) i `PlanFeatureEndpointsTest` (`/dj/devices/silence`: 204, 400 dla 15, `abc` i braku);
+- IT **237/237**: `DeckWatchIT` 10 testów: próba, koniec seta, zapasowy laptop, obsługa, faktyczna cisza, offline, zmiana minut, zamknięta impreza i „nigdy” w karcie;
+- przeglądarka, scenariusze karty **9/9**, w tym nowe `deck-silence-not-saved` i `deck-older-answer-dropped` oraz opis żółtego przycisku w `deck-computer-lines`. Każdy nowy scenariusz widziałem najpierw czerwony: stary `play-history.js`, potem bez `if (mine !== asked)`.
+
+Mutacje nowej reguły (każda osobno) są wszystkie czerwone:
+- dawne M1–M4 (bez `isActive`, krawędź 20 min, `offline` zawsze fałsz, unieważnianie zawsze);
+- karta bez testu serii;
+- SQL bez serii;
+- SQL bez „prośba po piosence”;
+- żółty na każdym komputerze;
+- obsługa bez pusha;
+- „nigdy” z żółtym.
