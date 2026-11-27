@@ -6,7 +6,7 @@ Do wklejenia w nową sesję Claude Code (w chmurze albo lokalnie):
 
 Przeczytaj CLAUDE.md (z AGENTS.md) i „Start here” w SESSION_HANDOFF.md. Potem przeczytaj w docs/context/05-1d-panel-heading-queue.md
 akapit „"Zagrane samo" watched (V81…)” oraz to, co jest przed nim o „Program na komputerze”, i punkty 19–21 w docs/ideas.md.
-Gałąź: `claude/funny-hawking-brlqnj` (od `main` = `2912c2d`), PR https://github.com/Adas553/scan2play/pull/315 do `main`.
+Gałąź: `claude/funny-hawking-brlqnj` (od `main` = `2912c2d`), PR-y https://github.com/Adas553/scan2play/pull/315 (`main`) i https://github.com/Adas553/scan2play/pull/316 (`dev`).
 Zmiany: `git diff origin/main...HEAD`.
 
 **Co zostało zrobione** (punkt 21 w docs/ideas.md):

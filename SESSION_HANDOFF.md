@@ -107,7 +107,7 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
   Spotify and Tidal (`NowPlaying`, `WindowsMedia`: Windows' media sessions; `docs/ideas.md` item 20; works on the owner's Windows), reviews
   `review-2026-11-25-spotify.md` (P1–P17), `review-2026-11-25-media-sessions.md` (M1–M9), fixed. Waits for the owner: a try on a Mac,
   a new `program.webp`, the merge; then "Run workflow" of deck-agent from `main` (it runs the PowerShell script on Windows first).
-- **2026-11-27 — `claude/funny-hawking-brlqnj` (from `main` = `2912c2d`), PR #315 (`main`), migration V81 (only adds):** "Zagrane samo"
+- **2026-11-27 — `claude/funny-hawking-brlqnj` (from `main` = `2912c2d`), PRs #315 (`main`) and #316 (`dev`), migration V81 (only adds):** "Zagrane samo"
   watched (`docs/ideas.md` item 21): each computer's line in the card (sees songs / waiting for the first — the test before the party /
   silent or not connected in amber during the party), "Ostrzeż po" 10 / 20 / 30 min / nigdy and a push (`DeckWatchService`), "OSTATNIA
   PIOSENKA" in the program's window. Waits for the owner: the review (prompt `docs/history/prompt-2026-11-27-review-deck-watch.md`), a look, the merge; after it "Run workflow" of deck-agent (the new window).
