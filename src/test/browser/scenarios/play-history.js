@@ -185,6 +185,35 @@
                 [row(3).textContent.indexOf('ostatnia piosenka ' + hhmm(played)) >= 0, row(4).textContent.indexOf('ostatnio ' + hhmm(seen)) >= 0,
                     document.querySelectorAll('#deviceList .s2p-deck-device-warn').length, amber(), green()], [true, true, 0, false, true]);
             t.check('the button\'s name without the warning again', toggle().getAttribute('aria-label').indexOf('nie widzi') < 0);
+
+            await t.stand.config({ devices: [Object.assign(device(4, 'Zamknięty'), { lastSeenAt: seen, state: 'OFFLINE', warn: true })] });
+            document.dispatchEvent(new Event('visibilitychange'));
+            await t.waitFor(function () { return rows() === 1 && amber(); }, 'the program gone, amber', 3000);
+            t.step('gone: the button says it does not connect, not that it sees no songs',
+                [toggle().getAttribute('aria-label').indexOf('program nie łączy się') >= 0, toggle().title.indexOf('nie widzi') < 0],
+                [true, true]);
+        }
+    });
+
+    S2P.scenario({
+        name: 'deck-computer-lines-en',
+        title: '"Zagrane samo" watched, in English: the lines and the button\'s name in English',
+        page: 'dashboard-en',
+        setup: { devices: [] },
+        run: async function (t) {
+            const played = minutesAgo(25);
+            await t.stand.config({ devices: [
+                Object.assign(device(1, 'Gra'), { lastPlayAt: minutesAgo(2), program: 'VirtualDJ', state: 'OK' }),
+                Object.assign(device(2, 'Nowy'), { state: 'WAITING' }),
+                Object.assign(device(3, 'Cichy'), { lastPlayAt: played, program: 'Serato', state: 'SILENT', warn: true })] });
+            document.dispatchEvent(new Event('visibilitychange'));
+            await t.waitFor(function () { return rows() === 3; }, 'three computers', 3000);
+            t.step('the button amber, its name in English', [amber(), toggle().getAttribute('aria-label').indexOf('the program sees no songs') >= 0],
+                [true, true]);
+            toggle().click();
+            t.step('the lines in English', [row(1).textContent.indexOf('sees songs') >= 0, row(2).textContent.indexOf('play any track') >= 0,
+                row(3).textContent.indexOf('no new songs since ' + hhmm(played)) >= 0], [true, true, true]);
+            t.check('the help says who is warned', document.getElementById('deviceWatch').textContent.indexOf('staff who run the queue') >= 0);
         }
     });
 
@@ -199,15 +228,89 @@
             document.dispatchEvent(new Event('visibilitychange'));
             await t.waitFor(function () { return rows() === 1; }, 'the computer', 3000);
             toggle().click();
-            t.step('nothing said yet', failed().hidden, true);
+            t.step('nothing said yet, the status region there (read when its text changes)', [failed().hidden,
+                failed().textContent, failed().getAttribute('role')], [false, '', 'status']);
 
             select().focus();
             select().value = '10';
             select().dispatchEvent(new Event('change'));
-            await t.waitFor(function () { return !failed().hidden; }, 'the refusal said', 3000);
+            await t.waitFor(function () { return failed().textContent !== ''; }, 'the refusal said', 3000);
             await t.waitFor(function () { return select().value === '20'; }, 'the select back at 20', 3000);
             t.step('said, the select at what the server keeps', [failed().textContent.indexOf('Nie udało się') >= 0, select().value],
                 [true, '20']);
+        }
+    });
+
+    S2P.scenario({
+        name: 'deck-silence-not-saved-en',
+        title: '"Warn me" not saved, in English: said in English, the select back at the server\'s minutes',
+        page: 'dashboard-en',
+        setup: { devices: [], postStatus: { '/dj/devices/silence': 403 } },
+        run: async function (t) {
+            const select = function () { return document.getElementById('deviceSilence'); };
+            const failed = function () { return document.getElementById('deviceSilenceFailed'); };
+            await t.stand.config({ devices: [device(5)], silenceMinutes: 20 });
+            document.dispatchEvent(new Event('visibilitychange'));
+            await t.waitFor(function () { return rows() === 1; }, 'the computer', 3000);
+            toggle().click();
+            select().value = '30';
+            select().dispatchEvent(new Event('change'));
+            await t.waitFor(function () { return failed().textContent !== ''; }, 'the refusal said', 3000);
+            await t.waitFor(function () { return select().value === '20'; }, 'the select back at 20', 3000);
+            t.step('said in English', [failed().textContent.indexOf('That did not work') >= 0, select().options[3].textContent.trim()],
+                [true, 'never']);
+        }
+    });
+
+    S2P.scenario({
+        name: 'deck-list-not-loaded',
+        title: '"Zagrane samo" watched: the list that cannot be asked (the panel\'s own network, the session gone) — one miss nothing, two in a row: said, with the time of the lines shown, and the button neither green nor amber; back when it comes',
+        setup: { devices: [] },
+        run: async function (t) {
+            const stale = function () { return document.getElementById('deviceStale'); };
+            await t.stand.config({ devices: [Object.assign(device(1, 'Gra'), { lastPlayAt: minutesAgo(2), program: 'VirtualDJ', state: 'OK' })] });
+            document.dispatchEvent(new Event('visibilitychange'));
+            await t.waitFor(function () { return rows() === 1 && green(); }, 'the computer, the button green', 3000);
+            const asked = await t.stand.count('GET /dj/devices');
+            await t.stand.config({ devicesStatus: 500 });
+            document.dispatchEvent(new Event('visibilitychange'));
+            await t.sleep(600);
+            t.step('one miss: asked, nothing said, still green', [await t.stand.count('GET /dj/devices') > asked, stale().textContent,
+                green()], [true, '', true]);
+            document.dispatchEvent(new Event('visibilitychange'));
+            await t.waitFor(function () { return stale().textContent !== ''; }, 'the second miss said', 3000);
+            t.step('two misses: said with the lines\' time, the button neither green nor amber, its name says it',
+                [stale().textContent.indexOf('Nie udało się sprawdzić programu') >= 0, green(), amber(),
+                    toggle().classList.contains('btn-outline-light'), toggle().getAttribute('aria-label').indexOf('nie udało się sprawdzić') >= 0,
+                    stale().getAttribute('role')], [true, false, false, true, true, 'status']);
+            t.check('the lines kept', rows() === 1);
+            await t.stand.config({ devicesStatus: null });
+            document.dispatchEvent(new Event('visibilitychange'));
+            await t.waitFor(function () { return stale().textContent === ''; }, 'the list back', 3000);
+            t.step('back: nothing said, green again', [green(), toggle().getAttribute('aria-label').indexOf(' — ') < 0], [true, true]);
+        }
+    });
+
+    S2P.scenario({
+        name: 'deck-computer-row-800',
+        title: '"Zagrane samo" watched, on a small laptop (800 px): a row too long breaks its words in their place — "Odłącz" stays at the row\'s end, not alone below — and the names line up whatever the sign before them',
+        viewport: '800,900',
+        setup: { devices: [] },
+        run: async function (t) {
+            await t.stand.config({ devices: [
+                Object.assign(device(1, 'DESKTOP-1AB2 — Windows'), { lastPlayAt: minutesAgo(25), program: 'VirtualDJ', state: 'SILENT', warn: true }),
+                Object.assign(device(2, 'MacBook-Pro — macOS'), { state: 'WAITING' }),
+                Object.assign(device(3, 'LAPTOP-ZAPAS — Windows'), { lastSeenAt: minutesAgo(200), state: 'OFFLINE' })] });
+            document.dispatchEvent(new Event('visibilitychange'));
+            await t.waitFor(function () { return rows() === 3; }, 'three computers', 3000);
+            toggle().click();
+            const box = function (id, css) { return row(id).querySelector(css).getBoundingClientRect(); };
+            const lefts = [1, 2, 3].map(function (id) { return Math.round(box(id, '.s2p-deck-device-name').left); });
+            t.step('the names in one column', [lefts[0] === lefts[1], lefts[1] === lefts[2]], [true, true]);
+            const words = box(2, '.s2p-deck-device-words');
+            const remove = box(2, 'button');
+            t.step('the waiting row: "Odłącz" beside its words, not on a line of its own', [remove.top < words.bottom,
+                remove.left >= words.right - 1], [true, true]);
         }
     });
 

@@ -129,6 +129,7 @@ def default_state():
         # V81 lastPlayAt, program, state ('OK', 'WAITING', 'SILENT', 'OFFLINE'; none: 'OK') and warn] — and "Ostrzeż po"'s minutes
         'devices': [],
         'silenceMinutes': 20,
+        'devicesStatus': None,         # e.g. 500 or 403: GET /dj/devices fails (the card says its lines are old)
         'libraryStatus': 200,
         'libraryAnswer': 'Gotowe — utwory w bibliotece: 3.',
         # ... and its type: a proxy's own page (Cloudflare's 413 for more than 100 MB) is 'text/html'
@@ -331,6 +332,8 @@ class Handler(BaseHTTPRequestHandler):
         self._note('GET', path, self._fields(query, b'', ''))
         state = stand.state
         if path == '/dj/devices':                      # the party's computers paired with it (V78), "Ostrzeż po" (V81)
+            if state['devicesStatus']:
+                return self._send(state['devicesStatus'])
             computers = [dict({'state': 'OK', 'warn': False}, **d) for d in state['devices']]
             return self._json({'computers': computers, 'silenceMinutes': state['silenceMinutes']})
         if path.startswith('/p/') and path.endswith('/logo.png'):   # the DJ's logo (V45): a square one — the tallest a box lets it be —, as a real PNG

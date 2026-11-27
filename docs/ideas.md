@@ -417,7 +417,11 @@ piece of work or when a task names an item. A finished item stays here until its
    newest song's time and its program's name only (the privacy policy PL / EN changed). Needs a new build of the program for the
    program's name and the window's section (older programs: the time only). Review `docs/history/review-2026-11-27-deck-watch.md`: the
    warning only for a set that stopped (a run of 10 min, V82 — not the test song) while guests ask since its last song (not the set's
-   end), only on the computer the set is played on (not a spare laptop), the push to the staff with QUEUE too. **Not built from the same list:** 3 "Teraz leci" on the
+   end), only on the computer the set is played on (not a spare laptop), the push to the staff with QUEUE too. Second review
+   `docs/history/review-2026-11-27-deck-watch-2.md` (after the release): a set is 30 min of songs or 10 with a guest's request in it (not
+   a soundcheck), it goes on after a break of up to 4 h, the guests still asking are two requests 8 min and more after the last song
+   (not the set's "one more!"), the DJ's own songs are no guests; the lead gone is amber in the card while guests ask, even after a
+   test only; "nigdy" keeps the line true; no migration. **Not built from the same list:** 3 "Teraz leci" on the
    TV, 4 the night's set kept ("Już leciało", the summary, "Co to było?"), 5 "Chyba leciało — potwierdź", 6 the queue in the
    program's window; small: the wait from request to play in the summary, "Masz starą wersję programu", Deezer / Apple Music on
    Windows, "Na czym grasz?" to the DJs.

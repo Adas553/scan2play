@@ -115,24 +115,30 @@ good, the speed by program, when a request marks, the window, the privacy), link
 (nothing in 12 h: the DJ's test before the party); `SILENT` (the last song older than the minutes chosen) and `OFFLINE` (no call for 3
 min — the program calls once a minute). **One rule for the card and the push — "silent during the party"**, about the party's *lead*
 computer (the one that sent the newest song of the last 12 h): the party open, the minutes chosen (not "nigdy"), a set played on it
-(its run of songs — `dj_device.play_run_from`, V82: a new run after 30 min without a song, `DjDeviceService.RUN_GAP` — lasted at least
-10 min: one song played to test the program is no set), its newest song older than the minutes, and a guest's request since that song
-(more than 2 min after it, in the last 60 min: when the program stops seeing songs the music goes on and so do the guests; at the end
-of the set they stop). Then the lead's row is amber (`warn`) — "brak nowych piosenek od 21:43", or "program nie łączy się od 21:40"
-once it has not called for 3 min — and the queue's button amber (`btn-outline-warning`, the warning in its `aria-label` and `title`
-too) instead of green; every other row, and everything out of the party, in grey ("ostatnia piosenka 23:58", "ostatnio 0:10"): a
-spare laptop tested and left aside never turns amber. The list is asked again every minute while the page is shown and a computer is
-paired (an older answer dropped when a newer was asked). Under the rows "Ostrzeż mnie, gdy program nie widzi piosenek: po 10 / 20
+(its run of songs — `dj_device.play_run_from`, V82 — was a set: 30 min of songs, or 10 min with a guest's request in it,
+`DjDeviceService.setSql`, one rule for the run and the watch; a song played to test the program, or a soundcheck before the guests came,
+is no set; a run ends after 30 min without a song, `RUN_GAP`, but a set's run goes on after a break of up to 4 h — a dinner without
+music, a band's set —, `SET_BREAK_MAX`), its newest song older than the minutes, and guests still asking (two requests more than 8 min
+after that song's start, in the last 60 min: when the program stops seeing songs the music goes on and so do the guests; the requests
+of the set's last song and the "one more!" just after it are no fault). A request is a guest's: the DJ's own "+ Dodaj piosenkę"
+(`added_by_dj`) counts for neither. Then the lead's row is amber (`warn`) — "brak nowych piosenek od 21:43" — and the queue's button amber
+(`btn-outline-warning`, the warning in its `aria-label` and `title` too) instead of green; "program nie łączy się od 21:40" once the lead
+has not called for 3 min, amber while guests ask even without a set (the program not started tonight after the test; no push for it),
+the button then named "program nie łączy się". Every other row, and everything out of the party, in grey ("ostatnia piosenka 23:58",
+"ostatnio 0:10"): a spare laptop tested and left aside never turns amber. "Nigdy" turns the amber and the push off, not the truth of the
+line (silent after the default 20 min, in grey). The list is asked again every minute while the page is shown and a computer is
+paired (an older answer dropped when a newer was asked; two asks in a row that fail say "Nie udało się sprawdzić programu — stan z 21:43" under the rows, `#deviceStale`, and the button neither green nor amber). Under the rows "Ostrzeż mnie, gdy program nie widzi piosenek: po 10 / 20
 (default) / 30 min / nigdy" (`POST /dj/devices/silence`, QUEUE, Pro; `party_settings.deck_silence_minutes`, not mapped in the entity —
-read and written by `DeckWatchService`; a refusal said under it, the select back at the server's value). The look (`@Scheduled` every
+read and written by `DeckWatchService`; a refusal said beside it in a status region, the select back at the server's value). The look (`@Scheduled` every
 minute, one query, ≤ 100 parties, the newest silences first) sends a push to the organiser's devices and those of the staff with
 QUEUE ("⚠ Program DJ-a nie widzi piosenek" / "… się nie łączy" when the lead stopped calling too, "Od 47 min…" — the silence as it is;
 tag `s2p-deck-<party>`, a tap opens the party's panel) — once a silence (in memory: the next after a new song and another silence, or
-when the minutes are raised; a restart may repeat one). The program sends each song's source (`program` of a play: "VirtualDJ",
+when the minutes are raised above the silence warned about; a restart may repeat one). The program sends each song's source (`program` of a play: "VirtualDJ",
 "Serato", "Spotify", "Tidal"); the server keeps only the newest song's start (`dj_device.last_play_at`, never moved back), that name
 (`last_play_program`) and the start of its run, never the song. The program's window shows "OSTATNIA PIOSENKA" (the newest song read
 since its start, any song, with its program — kept on the computer only). `DeckWatchServiceTest`, `DeckWatchIT` (PostgreSQL), browser
-scenarios `deck-computer-lines`, `deck-silence-choice`, `deck-silence-not-saved`, `deck-older-answer-dropped`.
+scenarios `deck-computer-lines(-en)`, `deck-silence-choice`, `deck-silence-not-saved(-en)`, `deck-older-answer-dropped`,
+`deck-list-not-loaded`, `deck-computer-row-800`.
 
 **Parked: the panel reading the history folder itself** (variant E of `docs/ideas.md` item 18 — "Wskaż folder historii" in Chrome and
 Edge, `showDirectoryPicker`, the tab kept open, `POST /dj/dashboard/plays`). Removed 2026-11-21 after the program worked on the owner's
