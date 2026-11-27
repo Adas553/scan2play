@@ -146,12 +146,13 @@ class DeckHistoryServiceTest {
         own.setAddedByDj(true);
         SongRequestEntity unchecked = request(2, "Wilki - Baśka", Duration.ofMinutes(10));
         unchecked.setChecked(false);
-        waiting(own, unchecked);
+        waiting(own);
+        assertThat(service.markPlayed(PARTY, List.of(play("Sanah", "Szampan", Duration.ZERO)), NOW, true)).hasSize(1);
+        assertThat(nowPlaying.now(PARTY, NOW)).as("the DJ's own song").isEmpty();
 
-        assertThat(service.markPlayed(PARTY, List.of(play("Sanah", "Szampan", Duration.ofMinutes(4)),
-                play("Wilki", "Baśka", Duration.ZERO)), NOW, true)).hasSize(2);
-
-        assertThat(nowPlaying.now(PARTY, NOW)).isEmpty();
+        waiting(unchecked);
+        assertThat(service.markPlayed(PARTY, List.of(play("Wilki", "Baśka", Duration.ZERO)), NOW, true)).hasSize(1);
+        assertThat(nowPlaying.now(PARTY, NOW)).as("a guest's words the AI did not judge").isEmpty();
     }
 
     @Test

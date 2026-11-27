@@ -3,6 +3,7 @@ package com.scan2play.service;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.scan2play.model.LibraryMark;
+import com.scan2play.util.AfterCommit;
 import com.scan2play.util.LibraryKey;
 import com.scan2play.util.Times;
 import lombok.extern.slf4j.Slf4j;
@@ -113,7 +114,7 @@ public class DeckSetService {
             return 0;   // said in the log once, when it was reached
         }
         List<SetSong> sent = fresh.size() > room ? fresh.subList(0, room) : fresh;
-        jdbc.queryForObject("SELECT 1 FROM (SELECT pg_advisory_xact_lock(hashtext(?))) l", Integer.class, "deck_play:" + partyCode);
+        lock(partyCode);
         int kept = jdbc.update(connection -> {
             var statement = connection.prepareStatement(
                     "INSERT INTO deck_play (party_code, started_at, artist, title, title_key, artists_key, program)"
@@ -137,13 +138,19 @@ public class DeckSetService {
             return statement;
         });
         if (kept > 0) {
-            forGuests.invalidate(partyCode);
+            // after the commit: a guest's read before it would put the old list back for half a minute
+            AfterCommit.run(() -> forGuests.invalidate(partyCode));
             if (today.addAndGet(kept) >= DAILY_PER_DEVICE) {
                 log.warn("Computer {} of party {} reached {} songs kept today: no more of its set kept until tomorrow", deviceId,
                         partyCode, DAILY_PER_DEVICE);
             }
         }
         return kept;
+    }
+
+    /** The party's set, one writer at a time: two computers' calls, a call and "off" (whose delete would miss a song kept meanwhile). */
+    private void lock(String partyCode) {
+        jdbc.queryForObject("SELECT 1 FROM (SELECT pg_advisory_xact_lock(hashtext(?))) l", Integer.class, "deck_play:" + partyCode);
     }
 
     private static Array texts(java.sql.Connection connection, List<String> values) throws java.sql.SQLException {
@@ -155,7 +162,8 @@ public class DeckSetService {
     }
 
     /**
-     * "Już leciało": the start of the song among the party's last {@code window} of tonight's set that the guest's {@code songName}
+     * "Już leciało": the start of the song among the party's last {@code window} of tonight's set — since its first guest's request —
+     * that the guest's {@code songName}
      * is — its title and an artist in common ("✓", as a request is marked played); a title alone matches nothing (another artist's
      * song of that name is no repeat). Empty with {@code window} 0 ("Bez powtórek" off: repeats are the DJ's choice).
      */
@@ -164,11 +172,15 @@ public class DeckSetService {
         if (window <= 0 || wanted.isEmpty() || wanted.artists().isEmpty()) {
             return Optional.empty();
         }
+        Timestamp tonight = Timestamp.from(now.minus(TONIGHT));
+        // only what the guests heard: the songs since the evening's first guest's request (a soundcheck before they came is none;
+        // the evening's very first request checks nothing) — the DJ's own "+ Dodaj piosenkę" is no guest
         List<Kept> same = jdbc.query("SELECT started_at, title_key, artists_key FROM (SELECT started_at, title_key, artists_key"
-                        + " FROM deck_play WHERE party_code = ? AND started_at >= ? ORDER BY started_at DESC LIMIT ?) last"
-                        + " WHERE title_key = ? ORDER BY started_at DESC",
+                        + " FROM deck_play WHERE party_code = ? AND started_at >= ? AND started_at >= COALESCE((SELECT min(r.requested_at)"
+                        + " FROM song_requests r WHERE r.party_code = ? AND r.requested_at >= ? AND NOT r.added_by_dj), 'infinity')"
+                        + " ORDER BY started_at DESC LIMIT ?) last WHERE title_key = ? ORDER BY started_at DESC",
                 (row, n) -> new Kept(row.getTimestamp(1).toInstant(), new LibraryKey(row.getString(2), row.getString(3))),
-                partyCode, Timestamp.from(now.minus(TONIGHT)), Math.min(window, WINDOW_MAX), wanted.title());
+                partyCode, tonight, partyCode, tonight, Math.min(window, WINDOW_MAX), wanted.title());
         return same.stream().filter(kept -> wanted.matchIn(List.of(kept.key()), Set.of()).mark() == LibraryMark.HAVE)
                 .map(Kept::startedAt).findFirst();
     }
@@ -212,12 +224,13 @@ public class DeckSetService {
     /** "Zapisuj set wieczoru" switched; off deletes what the party kept (the DJ said: do not keep my set). */
     @Transactional
     public void setKept(String partyCode, boolean on) {
+        lock(partyCode);
         jdbc.update("UPDATE party_settings SET deck_set_kept = ? WHERE party_code = ?", on, partyCode);
         if (!on) {
             int deleted = jdbc.update("DELETE FROM deck_play WHERE party_code = ?", partyCode);
             log.info("Party {} keeps no set any more: {} song(s) deleted", partyCode, deleted);
         }
-        forGuests.invalidate(partyCode);
+        AfterCommit.run(() -> forGuests.invalidate(partyCode));
     }
 
     /** Deletes up to {@code batch} songs that started before {@code cutoff}; the nightly purge calls it until fewer come. */

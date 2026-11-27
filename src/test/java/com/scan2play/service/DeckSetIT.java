@@ -120,9 +120,17 @@ class DeckSetIT extends PostgresIntegrationTest {
         assertThat(rows(party)).isEqualTo(DeckSetService.DAILY_PER_DEVICE);
     }
 
+    /** A guest's request of the evening, {@code ago} before now. */
+    private void guestAsked(String party, Duration ago, boolean byTheDj) {
+        jdbc.update("INSERT INTO song_requests (party_code, song_name, decision, requested_at, votes, tips, dedications, checked,"
+                + " added_by_dj, via_kiosk) VALUES (?, 'Ktoś - Coś', 'accepted', ?, 1, 0, 0, true, ?, false)", party,
+                Timestamp.from(NOW.minus(ago)), byTheDj);
+    }
+
     @Test
     void alreadyPlayed_isASongAmongTheLastNOfTonight_byItsTitleAndAnArtist() {
         String party = party();
+        guestAsked(party, Duration.ofMinutes(50), false);
         sets.keep(1, party, List.of(song("Wilki", "Baśka", Duration.ofMinutes(40)), song("Kayah & Goran Bregović", "Prawy do lewego", Duration.ofMinutes(30)),
                 song("Sanah", "Szampan", Duration.ofMinutes(20)), song("Kult", "Arahja", Duration.ofMinutes(10))), NOW);
 
@@ -135,6 +143,21 @@ class DeckSetIT extends PostgresIntegrationTest {
         assertThat(sets.playedLately(party, "Wilki - Baśka", 0, NOW)).as("\"Bez powtórek\" off").isEmpty();
         assertThat(sets.playedLately(party, "Wilki - Baśka", 15, NOW.plus(Duration.ofHours(12)))).as("not tonight any more").isEmpty();
         assertThat(sets.playedLately(newPartyCode('S'), "Wilki - Baśka", 15, NOW)).as("another party").isEmpty();
+    }
+
+    /** A soundcheck before the guests came is no "already played": only what played since the evening's first guest's request. */
+    @Test
+    void alreadyPlayed_leavesOutTheSoundcheckBeforeTheFirstGuestsRequest() {
+        String party = party();
+        sets.keep(1, party, List.of(song("Wilki", "Baśka", Duration.ofMinutes(150)), song("Sanah", "Szampan", Duration.ofMinutes(20))), NOW);
+        assertThat(sets.playedLately(party, "Sanah - Szampan", 15, NOW)).as("no guest asked yet: nothing").isEmpty();
+
+        guestAsked(party, Duration.ofMinutes(60), true);
+        assertThat(sets.playedLately(party, "Sanah - Szampan", 15, NOW)).as("the DJ's own song is no guest").isEmpty();
+
+        guestAsked(party, Duration.ofMinutes(60), false);
+        assertThat(sets.playedLately(party, "Sanah - Szampan", 15, NOW)).contains(NOW.minus(Duration.ofMinutes(20)));
+        assertThat(sets.playedLately(party, "Wilki - Baśka", 15, NOW)).as("the soundcheck, before the guests").isEmpty();
     }
 
     @Test
@@ -181,8 +204,9 @@ class DeckSetIT extends PostgresIntegrationTest {
         sets.keep(1, party, List.of(song("Kult", "Arahja", Duration.ofMinutes(10))), NOW);
         jdbc.execute("ANALYZE deck_play");
         String lately = plan("SELECT started_at, title_key, artists_key FROM (SELECT started_at, title_key, artists_key FROM deck_play"
-                + " WHERE party_code = '" + party + "' AND started_at >= now() - interval '12 hours' ORDER BY started_at DESC LIMIT 15) last"
-                + " WHERE title_key = 'arahja'");
+                + " WHERE party_code = '" + party + "' AND started_at >= now() - interval '12 hours' AND started_at >= COALESCE((SELECT"
+                + " min(r.requested_at) FROM song_requests r WHERE r.party_code = '" + party + "' AND r.requested_at >= now() - interval"
+                + " '12 hours' AND NOT r.added_by_dj), 'infinity') ORDER BY started_at DESC LIMIT 15) last WHERE title_key = 'arahja'");
         String evening = plan("SELECT started_at, artist, title, program FROM deck_play WHERE party_code = '" + party + "'"
                 + " AND started_at >= now() - interval '1 day' AND started_at < now() ORDER BY started_at LIMIT 1000");
         String purge = plan("DELETE FROM deck_play WHERE id IN (SELECT id FROM deck_play WHERE started_at < now() - interval '30 days' LIMIT 1000)");

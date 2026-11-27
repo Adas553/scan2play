@@ -164,7 +164,8 @@ song older than 12 h, or without a title, never; a failure is logged and never f
 `SongRequestRetentionService`, as the requests), gone with the party. Never in "Trendy próśb". Its uses: **"Już leciało o 21:30"**
 (`SongEvaluationService`, `DeckSetService.playedLately`) — a guest's song among the party's last N of tonight's set, N being the DJ's
 "Bez powtórek z ostatnich N" (0: repeats allowed, nothing checked; the owner, 2026-11-27: one rule the DJ knows), by its title and an
-artist in common (a title alone matches nothing): "Ta piosenka już leciała o 21:30 — wybierz inną", nothing saved, counted as
+artist in common (a title alone matches nothing), only songs since the evening's first guest's request (a soundcheck before the
+guests came is none; the first request checks nothing): "Ta piosenka już leciała o 21:30 — wybierz inną", nothing saved, counted as
 `ALREADY_PLAYED` in the summary's "Zatrzymane, zanim zapytano AI"; checked on the guest's own words before the AI (no Gemini call) and
 again on the AI's song name when it differs ("baśka wilki"); the kiosk the same. **"Co to było?"** on the guest's page
 (`#playedTonight`, folded under the list, only while the party keeps its set and a song came in the last 12 h): the last 10 songs, the
