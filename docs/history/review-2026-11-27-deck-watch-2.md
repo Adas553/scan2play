@@ -8,8 +8,8 @@ Zakres: `git diff 2912c2d..2e332bb` (`2912c2d` = `main` przed tą pracą, `2e332
 
 Poprawki pierwszego review są zrobione porządnie. Karta i push liczą to samo: ten sam prowadzący, te same granice `<` / `>` /
 `>=`, ta sama seria i to samo okno gości. Zapytanie co minutę kosztuje ~2,5 ms przy 1000 imprez. `notePlay` nie cofa czasu.
-`POST /dj/devices/silence` jest zabezpieczony. Testy są dobre: z 26 mutacji reguły przeżyło tylko kilka, wszystkie na
-krawędziach (tabela niżej). Na produkcji wdrożenie jest czyste.
+`POST /dj/devices/silence` jest zabezpieczony. Testy są dobre: 19 z 26 mutacji jest czerwonych; przeżyły krawędzie SQL, duplikat
+odbiorcy, wiersz sprzed V82, przerwa w jednym wywołaniu i okno gości w karcie (P12). Na produkcji wdrożenie jest czyste.
 
 **Reguła nadal daje fałszywe pushe w trzech zwykłych sytuacjach.** Wszystkie trzy odtworzyłem zapytaniem `silentNow` 1:1 na
 throw-away bazie:
@@ -195,16 +195,47 @@ programem, a DJ może wybrać „nigdy”. Push jest jeden na ciszę, ale przych
 - **Wynik mutacji** (kopia repo, każda mutacja osobno; unit = `DeckWatchServiceTest`, `DeviceApiControllerTest`,
   `PushNotificationServiceTest`, `PlanFeatureEndpointsTest`; it = `DeckWatchIT`, `DjDeviceIT`):
 
-MUTATIONS_TABLE
+| # | mutacja | unit | it |
+|---|---|---|---|
+| M1 | karta bez warunku serii | zielony | **czerwony** |
+| M2 | SQL bez warunku serii | zielony | **czerwony** |
+| M3 | karta: prośba gdziekolwiek w 60 min (bez „po piosence”) | zielony | **czerwony** |
+| M4 | SQL: to samo | zielony | **czerwony** |
+| M5 | żółty na każdym komputerze | zielony | **czerwony** |
+| M6 | push tylko do organizatora | zielony | **czerwony** |
+| M7 | push też do obsługi bez QUEUE | zielony | **czerwony** |
+| M8 | push: bez usuwania duplikatu (organizator w obsłudze) | zielony | zielony — **przeżyła** |
+| M9 | „nigdy” z żółtym | zielony | **czerwony** |
+| M10 | karta: SILENT już przy dokładnie 20 min | **czerwony** | zielony |
+| M11 | SQL: cisza już przy dokładnie 20 min (`<=`) | zielony | zielony — **przeżyła** |
+| M12 | SQL: prośba dokładnie 2 min po piosence liczy się (`>=`) | zielony | zielony — **przeżyła** |
+| M13 | unieważnianie zawsze | zielony | **czerwony** |
+| M14 | unieważnianie nigdy | zielony | **czerwony** |
+| M15 | `notePlay`: wiersz sprzed V82 nigdy nie dostaje serii | zielony | zielony — **przeżyła** |
+| M16 | `notePlay`: przerwa liczona do najnowszej piosenki wywołania | zielony | zielony — **przeżyła** |
+| M17 | karta: seria dokładnie 10 min to nie set | **czerwony** | zielony |
+| M18 | SQL: to samo (`>`) | zielony | zielony — **przeżyła** |
+| M19 | SQL: prowadzący = najstarsza piosenka | zielony | **czerwony** |
+| M20 | push: `offline` zawsze fałsz | zielony | **czerwony** |
+| M21 | karta bez `isActive` | zielony | **czerwony** |
+| M22 | `span`: piosenka „z przyszłości” zostaje | **czerwony** | zielony |
+| M23 | program pierwszej, nie najnowszej piosenki | **czerwony** | zielony |
+| M24 | karta: OFFLINE już przy dokładnie 3 min | **czerwony** | zielony |
+| M25 | karta: okno gości 180 min zamiast 60 | zielony | zielony — **przeżyła** |
+| M26 | `warned.put` usunięte (push co minutę) | zielony | **czerwony** |
+
+19 z 26 czerwonych. Przeżyły: krawędzie SQL (M11, M12, M18; ich odpowiedniki w Javie są testowane), duplikat odbiorcy (M8),
+wiersz sprzed V82 (M15), przerwa w obrębie jednego wywołania (M16) i 60-minutowe okno gości w karcie (M25).
 
 - **Brakuje:**
   - przypadków P1–P3 (próba ≥ 10 min, „jeszcze jedna” po końcu seta, wpis DJ-a). Te testy byłyby dziś czerwone, więc to one
     pokazują błąd;
-  - krawędzi, które przeżyły mutacje (tabela);
-  - wiersza sprzed V82 (`last_play_at` ustawione, `play_run_from` null) w `notePlay`;
+  - krawędzi SQL, które przeżyły mutacje (M11, M12, M18: dokładnie 20 min, dokładnie +2 min, seria dokładnie 10 min) i okna
+    gości w karcie (M25: prośba sprzed 61 min nie liczy się);
+  - wiersza sprzed V82 (M15) (`last_play_at` ustawione, `play_run_from` null) w `notePlay`;
   - jednego wywołania z kilkoma piosenkami przez przerwę > 30 min (kolejka programu po utracie internetu: seria ciągła, bo
-    piosenki z przerwy wypełniają lukę);
-  - odbiorcy-duplikatu (organizator jest też w obsłudze z QUEUE): jeden push, nie dwa;
+    piosenki z przerwy wypełniają lukę; M16) — i odwrotnie, wywołania, którego najstarsza piosenka jest > 30 min po ostatniej;
+  - odbiorcy-duplikatu (M8) (organizator jest też w obsłudze z QUEUE): jeden push, nie dwa;
   - zmiany prowadzącego w trakcie ciszy (zapasowy laptop dostaje jedną piosenkę na próbę: cisza głównego znika; to dobrze, ale
     nieopisane);
   - scenariuszy `deck-computer-lines` i `deck-silence-not-saved` na stronie EN (`?page=dashboard-en`): dziś tylko PL. Zrzuty EN są
