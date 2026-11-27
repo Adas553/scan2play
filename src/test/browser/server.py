@@ -125,8 +125,10 @@ def default_state():
         'pushStatus': 204,             # what POST /dj/push/subscribe answers (400: the server refuses the browser's subscription)
         'djLinksStatus': 302,          # what POST /dj/dashboard/dj-links answers (400: one of the DJ's profiles is not a profile there)
         # What POST /dj/library answers (V41): its status and the server's one sentence (422: not a library, 413: too large)
-        # "Program na komputerze" (V78): the party's computers GET /dj/devices answers, [{id, name, createdAt, lastSeenAt}]
+        # "Program na komputerze" (V78): the party's computers GET /dj/devices answers, [{id, name, createdAt, lastSeenAt}, and since
+        # V81 lastPlayAt, program, state ('OK', 'WAITING', 'SILENT', 'OFFLINE'; none: 'OK') and warn] — and "Ostrzeż po"'s minutes
         'devices': [],
+        'silenceMinutes': 20,
         'libraryStatus': 200,
         'libraryAnswer': 'Gotowe — utwory w bibliotece: 3.',
         # ... and its type: a proxy's own page (Cloudflare's 413 for more than 100 MB) is 'text/html'
@@ -328,8 +330,9 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(stand.state)
         self._note('GET', path, self._fields(query, b'', ''))
         state = stand.state
-        if path == '/dj/devices':                      # the party's computers paired with it (V78)
-            return self._json(state['devices'])
+        if path == '/dj/devices':                      # the party's computers paired with it (V78), "Ostrzeż po" (V81)
+            computers = [dict({'state': 'OK', 'warn': False}, **d) for d in state['devices']]
+            return self._json({'computers': computers, 'silenceMinutes': state['silenceMinutes']})
         if path.startswith('/p/') and path.endswith('/logo.png'):   # the DJ's logo (V45): a square one — the tallest a box lets it be —, as a real PNG
             return self._send(200, LOGO_PNG, 'image/png')
         if path.startswith('/p/') and path.endswith('/queue/more'):   # the folded rest of the guest's list, as the real server renders it
@@ -448,7 +451,7 @@ class Handler(BaseHTTPRequestHandler):
             fields['X-Requested-With'] = self.headers.get('X-Requested-With')
         if path == '/dj/dashboard/kiosk-link':        # the kiosk's link sent by fetch (V56): with its headers
             fields['X-Requested-With'] = self.headers.get('X-Requested-With')
-        if path in ('/dj/devices/code', '/dj/devices/remove'):   # "Połącz komputer", "Odłącz" (V78), by fetch
+        if path in ('/dj/devices/code', '/dj/devices/remove', '/dj/devices/silence'):   # "Połącz komputer", "Odłącz" (V78), "Ostrzeż po" (V81)
             fields['X-CSRF-TOKEN'] = self.headers.get('X-CSRF-TOKEN')
         if path in ('/dj/dashboard/schedule', '/dj/dashboard/guest-theme', '/dj/dashboard/morning-summary',
                     '/dj/library/hints', '/dj/dashboard/news-emails'):   # by fetch (V55, V59, V64, V58, V80)
@@ -474,6 +477,10 @@ class Handler(BaseHTTPRequestHandler):
             return self._json({})
         if path == '/dj/devices/code':                 # a new pairing code (V78)
             return self._json({'code': '123456', 'minutes': '10'})
+        if path == '/dj/devices/silence':              # "Ostrzeż po" (V81): kept, as the real server
+            with stand.lock:
+                state['silenceMinutes'] = int(fields.get('minutes'))
+            return self._send(204)
         if path == '/dj/devices/remove':               # "Odłącz": the computer forgotten
             with stand.lock:
                 state['devices'] = [d for d in state['devices'] if str(d['id']) != str(fields.get('id'))]

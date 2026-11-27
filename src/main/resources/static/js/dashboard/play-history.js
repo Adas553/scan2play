@@ -12,9 +12,17 @@
  * The panel reads no folder itself: that way (variant E of item 18, the File System Access API in Chrome and Edge) is parked — two
  * ways were too much to choose from; its code is in the git history (docs/ideas.md item 18 says where).
  *
+ * Each computer's line says whether its program sees songs (V81, DeckWatchService's state): "widzi piosenki · ostatnia 21:43
+ * (VirtualDJ)", "czeka na pierwszą piosenkę" — the DJ's test before the party: play any song —, and, during the party, "brak nowych
+ * piosenek od 21:43" or "program nie łączy się od 21:40" in amber (warn: only the computer the set is played on), the queue's button
+ * amber too (and said in its name). The list is asked again every minute while the page is shown and a computer is paired, so a
+ * program that stopped is seen without a reload. "Ostrzeż po" (#deviceSilence, shown once a computer is paired) sets after how many
+ * minutes of silence the devices of the organiser and the staff get a push (/dj/devices/silence); "nigdy": neither push nor amber.
+ *
  * Dependencies (DOM): <button id="deckToggle" hidden>, <section id="deckReader" hidden> with its texts in data-* (device-code,
- * device-copy, device-copied, device-seen, device-remove, device-failed — "{…}" filled in here), #deviceList, #deviceAnother, #deviceSetup, #deviceConnect,
- * #deviceCode.
+ * device-copy, device-copied, device-seen, device-remove, device-failed, device-ok, device-waiting, device-last, device-silent,
+ * device-offline, deck-toggle-warn — "{…}" filled in here), #deviceList, #deviceAnother, #deviceSetup, #deviceConnect, #deviceCode,
+ * #deviceWatch with <select id="deviceSilence"> and #deviceSilenceFailed.
  */
 import { csrfHeaders, partyCode } from './common.js';
 
@@ -23,6 +31,9 @@ const reader = document.getElementById('deckReader');
 
 /** A narrow screen is no DJ's laptop, and the queue's tools share one line there (scenario library-tools-one-row-phone). */
 const wide = window.matchMedia('(min-width: 768px)').matches;
+
+/** The list asked again this often while the page is shown: a program that stopped is seen without a reload. */
+const REFRESH_MS = 60000;
 
 function text(name, values) {
     return (reader.dataset[name] || '').replace(/\{(\w+)\}/g, function (all, key) { return values && key in values ? values[key] : all; });
@@ -35,6 +46,29 @@ function clock(iso) {
     return at.toLocaleString(document.documentElement.lang || undefined, options);
 }
 
+/**
+ * A computer's line (V81): the glyph, its class and the words, by its state and whether it is worth the DJ's eye now (warn). Out of the
+ * party a silent or gone program is said in grey — "ostatnia piosenka 23:58", "ostatnio 0:10" —, as no fault.
+ */
+function line(device) {
+    const time = function (iso) { return clock(iso || device.lastSeenAt || device.createdAt); };
+    const program = device.program ? ' (' + device.program + ')' : '';
+    switch (device.state) {
+        case 'OK':
+            return { glyph: '✓', css: 's2p-deck-device-ok', words: text('deviceOk', { time: time(device.lastPlayAt) }) + program };
+        case 'WAITING':
+            return { glyph: '…', css: 's2p-deck-device-wait', words: text('deviceWaiting') };
+        case 'SILENT':
+            return device.warn
+                ? { glyph: '!', css: 's2p-deck-device-warn', words: text('deviceSilent', { time: time(device.lastPlayAt) }) + program }
+                : { glyph: '·', css: 's2p-deck-device-wait', words: text('deviceLast', { time: time(device.lastPlayAt) }) + program };
+        default:   // OFFLINE
+            return device.warn
+                ? { glyph: '!', css: 's2p-deck-device-warn', words: text('deviceOffline', { time: time(device.lastSeenAt) }) }
+                : { glyph: '·', css: 's2p-deck-device-wait', words: text('deviceSeen', { time: time(device.lastSeenAt) }) };
+    }
+}
+
 // ---- the program on the DJ's computer (V78): a code to pair it, the computers paired, "Odłącz" ----
 
 function computers() {
@@ -43,7 +77,14 @@ function computers() {
     const list = document.getElementById('deviceList');
     const setup = document.getElementById('deviceSetup');
     const another = document.getElementById('deviceAnother');
+    const watch = document.getElementById('deviceWatch');
+    const silence = document.getElementById('deviceSilence');
+    const silenceFailed = document.getElementById('deviceSilenceFailed');
+    const toggleLabel = toggle.getAttribute('aria-label') || '';
+    const toggleTitle = toggle.title || '';
     let count = 0;        // the computers paired, as last listed
+    let warning = false;  // a computer's line in amber: the queue's button amber too
+    let asked = 0;        // the lists asked for: an answer to an older one (the minute's, a tap's) is dropped when a newer was asked
     let adding = false;   // "Połącz kolejny komputer" pressed, or a code waiting: the steps shown beside the rows
     let newest = -1;      // the highest id of the list: a program that took the code is a computer newer than this
     let atCode = -1;      // the highest id when the code was made (-1: no list yet then)
@@ -57,31 +98,41 @@ function computers() {
         });
     }
 
-    async function load() {
+    /** {@code force}: the select set to the server's minutes even while it has the focus (a choice that was not saved). */
+    async function load(force) {
         let devices;
+        let minutes;
+        const mine = ++asked;
         try {
             const response = await fetch('/dj/devices?partyCode=' + encodeURIComponent(partyCode() || ''),
                 { headers: { 'X-Requested-With': 'fetch' } });
             if (!response.ok) return;
-            devices = await response.json();
+            const answer = await response.json();
+            if (mine !== asked) return;   // a newer list is on its way: this one may be older than what the DJ just did
+            devices = answer.computers || [];
+            minutes = answer.silenceMinutes;
         } catch (e) {
             return;
         }
         list.replaceChildren();
+        warning = false;
         devices.forEach(function (device) {
+            const said = line(device);
+            warning = warning || said.css === 's2p-deck-device-warn';
             const row = document.createElement('li');
             row.className = 'd-flex flex-wrap align-items-center gap-2 mb-1';
             row.dataset.deviceId = device.id;
+            row.dataset.state = device.state;
             const ok = document.createElement('span');
-            ok.className = 's2p-deck-device-ok';
+            ok.className = said.css;
             ok.setAttribute('aria-hidden', 'true');
-            ok.textContent = '✓';
+            ok.textContent = said.glyph;
             const name = document.createElement('span');
             name.className = 'text-light fw-semibold';
             name.textContent = device.name;
             const seen = document.createElement('span');
-            seen.className = 'text-secondary';
-            seen.textContent = text('deviceSeen', { time: clock(device.lastSeenAt || device.createdAt) });
+            seen.className = said.css === 's2p-deck-device-warn' ? 'text-warning' : 'text-secondary';
+            seen.textContent = said.words;
             const remove = document.createElement('button');
             remove.type = 'button';
             remove.className = 'btn btn-sm btn-outline-secondary py-0';
@@ -99,6 +150,8 @@ function computers() {
             list.append(row);
         });
         count = devices.length;
+        // the select follows the server, unless the DJ is changing it right now
+        if (minutes !== undefined && (force === true || document.activeElement !== silence)) silence.value = String(minutes);
         newest = devices.reduce(function (most, device) { return Math.max(most, device.id); }, 0);
         // the program took the code: it is used up. By the newest id, not the count: a fourth computer replaces the one seen
         // longest ago (the count stays), and an "Odłącz" meanwhile shortens the list while the code is still good
@@ -117,9 +170,35 @@ function computers() {
     function show() {
         setup.hidden = count > 0 && !adding;
         another.hidden = count === 0 || adding;
-        toggle.classList.toggle('btn-outline-success', count > 0);
+        watch.hidden = count === 0;
+        toggle.classList.toggle('btn-outline-warning', count > 0 && warning);
+        toggle.classList.toggle('btn-outline-success', count > 0 && !warning);
         toggle.classList.toggle('btn-outline-light', count === 0);
+        // amber is a colour only: a screen reader, or an eye that tells amber from green badly, hears it in the button's name
+        const warn = count > 0 && warning ? ' — ' + text('deckToggleWarn') : '';
+        toggle.setAttribute('aria-label', toggleLabel + warn);
+        toggle.title = toggleTitle + warn;
     }
+
+    // "Ostrzeż po": saved at once; the list asked again, so the lines follow the new minutes. Not saved (no Pro any more, no
+    // network): said, and the select back at what the server keeps — else the DJ would trust a choice that is not there
+    silence.addEventListener('change', async function () {
+        silence.disabled = true;
+        silenceFailed.hidden = true;
+        let saved = false;
+        try {
+            saved = (await post('/dj/devices/silence', { minutes: silence.value })).ok;
+        } catch (e) {
+            saved = false;
+        } finally {
+            silence.disabled = false;
+            if (!saved) {
+                silenceFailed.textContent = text('deviceFailed');
+                silenceFailed.hidden = false;
+            }
+            await load(!saved);
+        }
+    });
 
     /**
      * "Kod do wpisania w programie: 123 456 (ważny 10 min) [Kopiuj]": the code bold, split in two for the eye; "Kopiuj" copies the
@@ -170,6 +249,12 @@ function computers() {
             connect.disabled = false;
         }
     });
+
+    // every minute while the page is shown and a computer is paired: a program that stops during the set turns its line (and the
+    // button) amber. None paired: nothing to watch — a pairing is seen by the code's own look (above) or when the page is shown again
+    setInterval(function () {
+        if (document.visibilityState === 'visible' && count > 0) load();
+    }, REFRESH_MS);
 
     return load;
 }

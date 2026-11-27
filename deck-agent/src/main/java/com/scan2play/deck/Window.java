@@ -127,6 +127,18 @@ final class Window {
                 + "z Serato po kilku sekundach, z VirtualDJ po około 45 s" + music + ".</html>";
     }
 
+    /**
+     * "Ostatnia piosenka" before the first one: the DJ's test before the party — any song played shows here, and in the panel the
+     * computer "widzi piosenki".
+     */
+    static final String NOTHING_HEARD = "<html>Jeszcze nic. Sprawdź przed imprezą: puść dowolną piosenkę na minutę —<br>"
+            + "pojawi się tutaj, a w panelu przy tym komputerze „widzi piosenki”.</html>";
+
+    /** The last song's line: "Linkin Park - Faint (VirtualDJ)". */
+    static String heardLine(Agent.Heard heard) {
+        return heard.program().isEmpty() ? heard.song() : heard.song() + " (" + heard.program() + ")";
+    }
+
     /** "ze Spotify i Tidala": Spotify does not change, Tidal does. */
     private static String genitive(String app) {
         return app.equals("Tidal") ? "Tidala" : app;
@@ -175,6 +187,7 @@ final class Window {
     private final Dot dot = new Dot();
     private final JLabel checked = text(" ", MUTED, 0);
     private final JPanel readingRows = column();
+    private final JPanel heardRows = column();
     private final JLabel markedTitle = text(" ", MUTED, Font.BOLD);
     private final JPanel markedRows = column();
     private final JButton pickFolder = new JButton("Wskaż folder historii…");
@@ -254,6 +267,13 @@ final class Window {
         reading.add(left(folderLine));
         reading.add(left(row(pickFolder, forgetFolder)));
         pairedPanel.add(left(reading));
+        pairedPanel.add(gap(10));
+
+        JPanel heardSection = section();
+        heardSection.add(left(text("OSTATNIA PIOSENKA", MUTED, Font.BOLD)));
+        heardSection.add(gap(6));
+        heardSection.add(left(heardRows));
+        pairedPanel.add(left(heardSection));
         pairedPanel.add(gap(10));
 
         JPanel marked = section();
@@ -363,6 +383,17 @@ final class Window {
                 pickFolder.setToolTipText(nothing ? null : OTHER_FOLDER_TIP);
                 pickFolder.putClientProperty("JButton.buttonType", nothing ? null : "borderless");
                 pickFolder.setForeground(nothing ? null : CYAN);
+            }
+            if (shown == null || !java.util.Objects.equals(shown.heard(), status.heard())) {
+                heardRows.removeAll();
+                if (status.heard() == null) {
+                    heardRows.add(left(text(NOTHING_HEARD, MUTED, 0)));
+                } else {
+                    JLabel time = text(MINUTE.format(status.heard().at()), MUTED, 0);
+                    time.setFont(time.getFont().deriveFont(Font.PLAIN));
+                    readingWidth(time);
+                    heardRows.add(left(row(time, longText(heardLine(status.heard()), TEXT))));
+                }
             }
             if (shown == null || !shown.marked().equals(status.marked()) || shown.markedCount() != status.markedCount()) {
                 markedTitle.setText("OZNACZONE OD URUCHOMIENIA" + (status.markedCount() > 0 ? " · " + status.markedCount() : ""));

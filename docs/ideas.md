@@ -405,3 +405,19 @@ piece of work or when a task names an item. A finished item stays here until its
    window, the program's own "okno schowane" stays for a Spotify heard by neither. **Asked the same day, not
    built:** adding the guests' songs to VirtualDJ / Serato by the program — VirtualDJ a playlist `Scan2Play.m3u` (whether it reloads
    by itself is to try) or a plugin; Serato has no API and reads its crates at the start (at most a crate after a restart).
+
+21. **"Zagrane samo" watched — the warning and the test before the party (the owner, 2026-11-27: "zrób 1 i 2", from Claude's list of
+   ideas for "Zagrane samo"; "może damy większy wybór" → "Ostrzeż po" 10 / 20 / 30 min or never, 20 by default — 10 alone would
+   sound at speeches and the cake, more than 30 is too late).** Built on `claude/funny-hawking-brlqnj`, V81, details
+   `docs/context/05-1d-panel-heading-queue.md`. (1) Each computer's row in the card says whether its program sees songs — "widzi
+   piosenki · ostatnia 21:43 (VirtualDJ)", in amber "brak nowych piosenek od …" / "program nie łączy się od …" during the party (open, a
+   song in 12 h, a guest's request in 60 min — the end of a set at a party left open is no fault), the queue's button amber too; the
+   organiser's devices get one push a silence after the minutes chosen. (2) The test: "czeka na pierwszą piosenkę — puść dowolny
+   utwór na minutę" in the card, "OSTATNIA PIOSENKA" in the program's window (any song, with its program). Kept on the server: the
+   newest song's time and its program's name only (the privacy policy PL / EN changed). Needs a new build of the program for the
+   program's name and the window's section (older programs: the time only). Review `docs/history/review-2026-11-27-deck-watch.md`: the
+   warning only for a set that stopped (a run of 10 min, V82 — not the test song) while guests ask since its last song (not the set's
+   end), only on the computer the set is played on (not a spare laptop), the push to the staff with QUEUE too. **Not built from the same list:** 3 "Teraz leci" on the
+   TV, 4 the night's set kept ("Już leciało", the summary, "Co to było?"), 5 "Chyba leciało — potwierdź", 6 the queue in the
+   program's window; small: the wait from request to play in the summary, "Masz starą wersję programu", Deezer / Apple Music on
+   Windows, "Na czym grasz?" to the DJs.

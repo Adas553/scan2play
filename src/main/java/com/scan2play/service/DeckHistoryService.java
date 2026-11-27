@@ -43,7 +43,7 @@ public class DeckHistoryService {
     static final Duration SLACK_CLOCK_KNOWN = Duration.ofMinutes(2);
 
     /** A song older than this is no news of tonight's set: a history file read again, a day's file of yesterday. */
-    static final Duration OLDEST = Duration.ofHours(12);
+    public static final Duration OLDEST = Duration.ofHours(12);
 
     private final SongRequestRepository songRequestRepository;
     private final DjService djService;

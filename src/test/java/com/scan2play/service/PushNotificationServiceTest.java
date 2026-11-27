@@ -192,6 +192,29 @@ class PushNotificationServiceTest {
         assertThat(en.path("title").asText()).isEqualTo("⚠ The AI is not judging requests");
     }
 
+    /** V81: the program silent during the party — or not calling at all — in the device's language, a tag a party, its panel. */
+    @Test
+    void theDeckWatch_saysSilentOrNotConnected_withTheMinutes() throws Exception {
+        when(repository.findTop20ByOwnerIdOrderByCreatedAtDesc(OWNER)).thenReturn(List.of(device("https://fcm.googleapis.com/a", "pl")));
+        pushServiceAnswers(201);
+        PushNotificationService push = service(serverPublicKey, serverPrivateKey);
+        ObjectMapper json = new ObjectMapper();
+
+        push.notifyDeckSilent(OWNER, PARTY, 20, false);
+
+        verify(httpClient).send(any(HttpRequest.class), any());
+        JsonNode silent = json.readTree(push.deckSilentPayload(device("https://fcm.googleapis.com/x", "pl"), PARTY, 20, false));
+        JsonNode offline = json.readTree(push.deckSilentPayload(device("https://fcm.googleapis.com/x", "pl"), PARTY, 10, true));
+        JsonNode en = json.readTree(push.deckSilentPayload(device("https://fcm.googleapis.com/y", "en"), PARTY, 30, false));
+        assertThat(silent.path("title").asText()).isEqualTo("⚠ Program DJ-a nie widzi piosenek");
+        assertThat(silent.path("body").asText()).startsWith("Od 20 min żadnej nowej piosenki").contains("„Scan2Play Zagrane”");
+        assertThat(silent.path("tag").asText()).isEqualTo("s2p-deck-" + PARTY);
+        assertThat(silent.path("url").asText()).isEqualTo("/dj/dashboard?party=" + PARTY);
+        assertThat(offline.path("title").asText()).isEqualTo("⚠ Program DJ-a się nie łączy");
+        assertThat(offline.path("body").asText()).startsWith("Od 10 min").contains("internet");
+        assertThat(en.path("body").asText()).startsWith("No new song for 30 min");
+    }
+
     @Test
     void aDeviceThePushServiceNoLongerKnows_isForgotten() throws Exception {
         when(repository.findTop20ByOwnerIdOrderByCreatedAtDesc(OWNER)).thenReturn(List.of(device("https://fcm.googleapis.com/gone", "pl")));

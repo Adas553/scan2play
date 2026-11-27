@@ -52,8 +52,15 @@ public class DeviceApiController {
     public record PlaysRequest(List<DeckPlay> plays, Long sentAt) {
     }
 
-    /** One song as the DJ's program's history writes it: {@code at} in seconds since 1970, or none. */
-    public record DeckPlay(Long at, String artist, String title) {
+    /**
+     * One song as the DJ's program's history writes it: {@code at} in seconds since 1970, or none; {@code program} what it was read
+     * from ("VirtualDJ"), none from a program before V81.
+     */
+    public record DeckPlay(Long at, String artist, String title, String program) {
+
+        public DeckPlay(Long at, String artist, String title) {
+            this(at, artist, title, null);
+        }
     }
 
     /** The longest artist or title taken: more is no song's name (the keys cut at {@code LibraryKey.MAX} anyway). */
@@ -100,14 +107,46 @@ public class DeviceApiController {
             return ResponseEntity.badRequest().build();
         }
         List<DeckHistoryService.Play> songs = songsOf(plays, body.sentAt(), now);
+        span(songs, now).ifPresent(span -> devices.notePlay(paired.get().deviceId(), span.oldest(), span.newest(),
+                programOfNewest(plays, songs, now)));
         return ResponseEntity.ok(Map.of("marked", deckHistory.markPlayed(paired.get().partyCode(), songs, now,
                 clockKnown(body.sentAt()))));
+    }
+
+    /** The first and the last start of the songs of one call. */
+    record Span(Instant oldest, Instant newest) {
+    }
+
+    /**
+     * The oldest and the newest song's start (one without a time: now; one "later" than now: now), for the panel's "ostatnia piosenka"
+     * (V81) and the run of songs (V82); none when every song is older than {@link DeckHistoryService#OLDEST} — a history read again,
+     * not tonight's set (such songs are left out of the span too).
+     */
+    static Optional<Span> span(List<DeckHistoryService.Play> songs, Instant now) {
+        List<Instant> starts = songs.stream().map(song -> startOf(song, now))
+                .filter(at -> !at.isBefore(now.minus(DeckHistoryService.OLDEST))).sorted().toList();
+        return starts.isEmpty() ? Optional.empty() : Optional.of(new Span(starts.getFirst(), starts.getLast()));
+    }
+
+    private static Instant startOf(DeckHistoryService.Play song, Instant now) {
+        return song.at() == null || song.at().isAfter(now) ? now : song.at();
+    }
+
+    /** The program the newest song came from (the same order as {@code songs}); null when it did not say. */
+    private static String programOfNewest(List<DeckPlay> plays, List<DeckHistoryService.Play> songs, Instant now) {
+        int newest = 0;
+        for (int i = 1; i < songs.size(); i++) {
+            if (!startOf(songs.get(i), now).isBefore(startOf(songs.get(newest), now))) {
+                newest = i;
+            }
+        }
+        return plays.get(newest).program();
     }
 
     /** At most {@value DeckHistoryService#MAX_PLAYS} songs, none null, each field at most {@value #DECK_FIELD_MAX} characters. */
     static boolean validPlays(List<DeckPlay> plays) {
         return plays.size() <= DeckHistoryService.MAX_PLAYS && plays.stream().noneMatch(play -> play == null
-                || tooLong(play.artist()) || tooLong(play.title()));
+                || tooLong(play.artist()) || tooLong(play.title()) || tooLong(play.program()));
     }
 
     /**
