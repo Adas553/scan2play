@@ -6,7 +6,7 @@ Do wklejenia w nową sesję Claude Code (w chmurze albo lokalnie):
 
 Przeczytaj CLAUDE.md (z AGENTS.md) i „Start here” w SESSION_HANDOFF.md, potem w docs/ideas.md punkty 13 (co odłożono i dlaczego: „Co to było?”, „Leci Twoja piosenka!”), 18–21 i w docs/context/05-1d-panel-heading-queue.md akapity o „Program na komputerze” i „"Zagrane samo" watched (V81)”. Resztę dokumentów czytaj tylko w potrzebnych kawałkach (agent `context-finder`); testy przez agenta `test-runner` albo `python tools/check.py`.
 
-Zacznij od gałęzi `claude/funny-hawking-brlqnj` (PR-y #315 do `main` i #316 do `dev`, jeszcze niezmergowane; V81). Utwórz swoją gałąź z niej. Jeśli w chwili startu #315 jest już w `main`, zacznij od `main`.
+Zacznij od gałęzi `claude/funny-hawking-brlqnj` (PR-y #315 do `main` i #316 do `dev`, jeszcze niezmergowane; V81, V82 i poprawki z review `docs/history/review-2026-11-27-deck-watch.md`). Utwórz swoją gałąź z niej. Jeśli w chwili startu #315 jest już w `main`, zacznij od `main`.
 
 **Zadanie: zbuduj dwie funkcje z listy pomysłów do „Zagrane samo” (punkt 21 w docs/ideas.md, „Not built”: 3 i 4).**
 
@@ -29,7 +29,7 @@ Nigdy w „Trendy próśb” (punkt 16). Ograniczenia: limity jak w `DeckHistory
 **Jak pracować — profesjonalnie, czytelnie, efektywnie:**
 - Kolejność: najpierw 3 (mniejsze, osobny commit), potem 4. Każda część działa i jest przetestowana sama.
 - Trzymaj się istniejącej struktury: małe, skupione serwisy jak `DeckWatchService`, bez nowych frameworków i zbędnych warstw. Komentarze mówią „dlaczego” (AGENTS.md). Teksty PL / EN w `messages*.properties` z escape'ami `\uXXXX` przez skrypt (CLAUDE.md), bezosobowo, w tonie panelu. Wygląd przez tokeny `app.css` i klasy jak w sąsiednich kartach.
-- Baza: każda zmiana schematu to nowa migracja (V82, …), tylko dodaje. SQL liczący albo zapisujący sprawdzony testem `*IT` na prawdziwym PostgreSQL (nowy `*IT` dla zapisu setu, odczytu „Już leciało” i sprzątania), indeksy dobrane do zapytań i sprawdzone przez `EXPLAIN` na throw-away bazie.
+- Baza: każda zmiana schematu to nowa migracja (następny wolny numer — dziś V83; sprawdź `db/migration`), tylko dodaje. SQL liczący albo zapisujący sprawdzony testem `*IT` na prawdziwym PostgreSQL (nowy `*IT` dla zapisu setu, odczytu „Już leciało” i sprzątania), indeksy dobrane do zapytań i sprawdzone przez `EXPLAIN` na throw-away bazie.
 - Wydajność: policz koszt przy 1000 równoczesnych imprez. Ile zapisów na minutę daje zapis setu, ile odczytów daje „Już leciało” przy każdej prośbie gościa, czy potrzebny jest cache (Caffeine, ograniczony), czy TV nie dokłada zapytań przy każdym odświeżeniu.
 - Testy: jednostkowe, `*IT`, scenariusze przeglądarkowe dla TV, strony gościa i karty. Każdy nowy scenariusz widziany najpierw czerwony. Na koniec `check.py all` i `check.py audit` dla zmienionych stron (320 / 390 / 1280 px). Obejrzyj zmienione ekrany na zrzutach (TV, strona gościa na telefonie, podsumowanie, karta).
 - Dokumenty w tym samym PR: `docs/context` (właściwe pliki, `10-2-migrations.md`), przewodnik `#deck` PL / EN, punkt w `docs/ideas.md`, wpis w „Start here” w SESSION_HANDOFF.md (krótko).
