@@ -103,10 +103,26 @@ class DeckWatchIT extends PostgresIntegrationTest {
     }
 
     private void guestAsked(String party, Duration ago) {
-        jdbc.update("INSERT INTO song_requests (party_code, song_name, decision, votes, checked, requested_at, request_number)"
+        request(party, ago, false);
+    }
+
+    /** Guests asking: one request at each of these times before now. */
+    private void guestsAsked(String party, Duration... agos) {
+        for (Duration ago : agos) {
+            request(party, ago, false);
+        }
+    }
+
+    /** The DJ's own "+ Dodaj piosenkę" (V44): a row of the queue, no guest. */
+    private void djAdded(String party, Duration ago) {
+        request(party, ago, true);
+    }
+
+    private void request(String party, Duration ago, boolean byDj) {
+        jdbc.update("INSERT INTO song_requests (party_code, song_name, decision, votes, checked, requested_at, request_number, added_by_dj)"
                 + " VALUES (?, 'Sanah - Szampan', 'accepted', 1, true, ?,"
-                + " (SELECT COALESCE(MAX(request_number), 0) + 1 FROM song_requests WHERE party_code = ?))", party,
-                Timestamp.from(NOW.minus(ago)), party);
+                + " (SELECT COALESCE(MAX(request_number), 0) + 1 FROM song_requests WHERE party_code = ?), ?)", party,
+                Timestamp.from(NOW.minus(ago)), party, byDj);
     }
 
     private List<String> silent(Instant now, String... among) {
@@ -176,7 +192,7 @@ class DeckWatchIT extends PostgresIntegrationTest {
                 set(id, min(60), min(25));
             }
             if (!party.equals(noGuests)) {
-                guestAsked(party, min(15));
+                guestsAsked(party, min(15), min(14));
             }
         }
         watchAt(NOW).setSilenceMinutes(watchOff, 0);
@@ -187,42 +203,49 @@ class DeckWatchIT extends PostgresIntegrationTest {
         assertThat(silent(NOW, all)).as("30 minutes chosen, 25 passed").isEmpty();
     }
 
-    /** The DJ's test before the party: one song at 15:00, the guests asking from 16:30 before the set — no alarm (review P1). */
+    /** The DJ's test before the party: one song at 15:00, the guests asking from 16:30 before the set — no alarm. */
     @Test
     void aSongPlayedAsATest_isNoSetThatStopped() {
         String party = party(true);
         long id = computer(party, NOW);
         song(id, min(90));
-        guestAsked(party, min(1));
+        guestsAsked(party, min(2), min(1));
 
         assertThat(silent(NOW, party)).isEmpty();
         assertThat(warns(party)).containsExactly(false);
 
         String played = party(true);   // the same silence after a set of half an hour: a set that stopped
         set(computer(played, NOW), min(120), min(90));
-        guestAsked(played, min(1));
+        guestsAsked(played, min(2), min(1));
         assertThat(silent(NOW, played)).containsExactly(played);
         assertThat(warns(played)).containsExactly(true);
     }
 
-    /** The end of the set at a party left open: the guests asked while it played, not since — no alarm (review P2). */
+    /**
+     * The end of the set at a party left open: the guests asked while its last song played and "one more!" just after it — no alarm.
+     * Guests asking 8 minutes and more after the last song's start, twice: the music goes on, the program does not see it.
+     */
     @Test
-    void theEndOfTheSet_isNoFault_untilAGuestAsksSince() {
+    void theEndOfTheSet_isNoFault_untilGuestsKeepAsking() {
         String party = party(true);
         long id = computer(party, NOW);
         set(id, min(120), min(21));
-        guestAsked(party, min(26));
-        guestAsked(party, min(20));   // a minute after the last song started: still the set's end
+        guestsAsked(party, min(26), min(20), min(16));   // during the last song
+        guestsAsked(party, min(15), min(14), min(13));   // "jeszcze jedna!" 6, 7 and exactly 8 min after its start
 
         assertThat(silent(NOW, party)).isEmpty();
         assertThat(warns(party)).containsExactly(false);
 
-        guestAsked(party, min(10));   // asking while nothing is seen: the music goes on, the program does not see it
+        guestAsked(party, min(10));
+        assertThat(silent(NOW, party)).as("one late request is no party going on").isEmpty();
+        assertThat(warns(party)).containsExactly(false);
+
+        guestAsked(party, min(5));
         assertThat(silent(NOW, party)).containsExactly(party);
         assertThat(warns(party)).containsExactly(true);
     }
 
-    /** A spare laptop tested at 15:00 is said in grey: only the computer the set is played on warns (review P3). */
+    /** A spare laptop tested at 15:00 is said in grey: only the computer the set is played on warns. */
     @Test
     void theLeadComputer_alone_warns_andItsCallsSayWhetherItIsGone() {
         String party = party(true);
@@ -230,7 +253,7 @@ class DeckWatchIT extends PostgresIntegrationTest {
         long main = computer(party, NOW.minus(min(10)));
         song(spare, min(300));
         set(main, min(60), min(2));
-        guestAsked(party, min(1));
+        guestsAsked(party, min(1), min(1));
 
         assertThat(silent(NOW, party)).as("the main one plays").isEmpty();
         assertThat(warns(party)).containsExactly(false, false);
@@ -240,7 +263,7 @@ class DeckWatchIT extends PostgresIntegrationTest {
         long mainAsleep = computer(gone, NOW.minus(min(10)));
         song(spareOn, min(300));
         set(mainAsleep, min(60), min(25));
-        guestAsked(gone, min(5));
+        guestsAsked(gone, min(5), min(4));
 
         DeckWatchService.Watch watch = watchAt(NOW).watch(parties.getSettings(gone));
         assertThat(watch.computers()).filteredOn(DeckWatchService.Computer::warn).singleElement()
@@ -255,7 +278,7 @@ class DeckWatchIT extends PostgresIntegrationTest {
         String party = party(true);
         long id = computer(party, NOW);
         set(id, min(60), min(21));
-        guestAsked(party, min(5));
+        guestsAsked(party, min(5), min(4));
         String owner = "watch-" + party;
         staffRepository.saveAndFlush(PartyStaffEntity.builder().partyCode(party).memberId("dj-" + party).joinedAt(NOW)
                 .permissions(EnumSet.of(StaffPermission.QUEUE)).build());
@@ -274,7 +297,7 @@ class DeckWatchIT extends PostgresIntegrationTest {
         watch.look();
         verify(push, times(1)).notifyDeckSilent(eq(owner), eq(party), anyLong(), anyBoolean());
 
-        guestAsked(party, min(15));
+        guestAsked(party, min(10));
         clock.move(min(5));
         watch.look();
         // 24 min since the new song; the program has not called for these 5 minutes either (the test calls for it only at NOW)
@@ -287,19 +310,19 @@ class DeckWatchIT extends PostgresIntegrationTest {
         String party = party(true);
         long id = computer(party, NOW.minus(min(22)));
         set(id, min(60), min(22));
-        guestAsked(party, min(5));
+        guestsAsked(party, min(5), min(4));
 
         watchAt(NOW).look();
         verify(push).notifyDeckSilent(eq("watch-" + party), eq(party), eq(22L), eq(true));
     }
 
-    /** More minutes chosen: the silence warned about may be warned at them; fewer: no second push about it (review P6). */
+    /** More minutes chosen: the silence warned about may be warned at them; fewer: no second push about it. */
     @Test
     void ostrzezPo_changed_warnsAgainOnlyAtMoreMinutes() {
         String party = party(true);
         long id = computer(party, NOW);
         set(id, min(60), min(25));
-        guestAsked(party, min(5));
+        guestsAsked(party, min(5), min(4));
         String owner = "watch-" + party;
         MovingClock clock = new MovingClock(NOW);
         DeckWatchService watch = new DeckWatchService(jdbc, devices, parties, staff, plans, push, clock);
@@ -329,7 +352,7 @@ class DeckWatchIT extends PostgresIntegrationTest {
         String never = party(true);
         set(computer(never, NOW.minus(min(10))), min(60), min(25));
         for (String asking : List.of(party, closed, never)) {
-            guestAsked(asking, min(3));
+            guestsAsked(asking, min(3), min(2));
         }
         watchAt(NOW).setSilenceMinutes(never, 0);
 
@@ -350,5 +373,186 @@ class DeckWatchIT extends PostgresIntegrationTest {
             assertThat(computer.warn()).as("\"nigdy\": neither push nor amber").isFalse();
         });
         verify(push, never()).notifyDeckSilent(anyString(), anyString(), anyLong(), anyBoolean());
+    }
+
+    /** A soundcheck before the party — a quarter of an hour of songs, no guest yet — is no set; the guests at the tables later: no alarm. */
+    @Test
+    void aSoundcheck_isNoSet_aRunWithAGuestAskingIs() {
+        String party = party(true);
+        set(computer(party, NOW), min(95), min(80));
+        guestsAsked(party, min(2), min(1));
+
+        assertThat(silent(NOW, party)).isEmpty();
+        assertThat(warns(party)).containsExactly(false);
+
+        String played = party(true);   // the same quarter of an hour with a guest asking in it: the party had started
+        set(computer(played, NOW), min(95), min(80));
+        guestsAsked(played, min(90), min(2), min(1));
+        assertThat(silent(NOW, played)).containsExactly(played);
+        assertThat(warns(played)).containsExactly(true);
+
+        String nine = party(true);   // nine minutes, a guest asking: a test, not a set
+        set(computer(nine, NOW), min(89), min(80));
+        guestsAsked(nine, min(85), min(2), min(1));
+        assertThat(silent(NOW, nine)).isEmpty();
+
+        String half = party(true);   // half an hour of songs before the first guest asked: a set
+        set(computer(half, NOW), min(110), min(80));
+        guestsAsked(half, min(2), min(1));
+        assertThat(silent(NOW, half)).containsExactly(half);
+    }
+
+    /** The DJ's own "+ Dodaj piosenkę" is no guest: not in the run (no set), not after the last song (no party going on). */
+    @Test
+    void theDjsOwnSongs_areNoGuests() {
+        String party = party(true);
+        set(computer(party, NOW), min(95), min(80));
+        djAdded(party, min(90));
+        guestsAsked(party, min(2), min(1));
+        assertThat(silent(NOW, party)).as("a soundcheck, the DJ typing the couple's list in it").isEmpty();
+
+        String after = party(true);
+        set(computer(after, NOW), min(60), min(25));
+        djAdded(after, min(5));
+        djAdded(after, min(4));
+        assertThat(silent(NOW, after)).as("only the DJ adding songs since").isEmpty();
+        assertThat(warns(after)).containsExactly(false);
+    }
+
+    /** The guests' minutes: a request of 61 minutes ago is no guest asking now — in the card as in the look. */
+    @Test
+    void guestsAsking_onlyInTheLastHour() {
+        String party = party(true);
+        set(computer(party, NOW), min(130), min(90));
+        guestsAsked(party, min(62), min(61));
+        assertThat(silent(NOW, party)).isEmpty();
+        assertThat(warns(party)).containsExactly(false);
+
+        guestsAsked(party, min(59), min(58));
+        assertThat(silent(NOW, party)).containsExactly(party);
+        assertThat(warns(party)).containsExactly(true);
+    }
+
+    /** The edges: silent past the minutes chosen, not at them. */
+    @Test
+    void silent_pastTheMinutes_notAtThem() {
+        String party = party(true);
+        set(computer(party, NOW), min(60), min(20));
+        guestsAsked(party, min(5), min(4));
+        assertThat(silent(NOW, party)).as("exactly 20 min").isEmpty();
+        assertThat(silent(NOW.plusSeconds(1), party)).containsExactly(party);
+    }
+
+    /**
+     * The program not started tonight after the test: amber in the card while guests ask — it does not connect — but no push (a test
+     * song is no set that stopped).
+     */
+    @Test
+    void theProgramGoneAfterTheTest_isAmberInTheCard_withoutAPush() {
+        String party = party(true);
+        long id = computer(party, NOW.minus(min(290)));
+        song(id, min(300));
+        guestsAsked(party, min(5), min(4));
+
+        assertThat(watchAt(NOW).watch(parties.getSettings(party)).computers()).singleElement().satisfies(computer -> {
+            assertThat(computer.state()).isEqualTo(DeckWatchService.State.OFFLINE);
+            assertThat(computer.warn()).isTrue();
+        });
+        assertThat(silent(NOW, party)).isEmpty();
+    }
+
+    /** A set goes on after a break without music (a dinner, a band): a program that fails just after it is still warned about. */
+    @Test
+    void aSetGoesOnAfterABreak_aTestOrASoundcheckDoesNot() {
+        String party = party(true);
+        long id = computer(party, NOW);
+        set(id, min(200), min(150));   // the set before dinner
+        song(id, min(100));            // after 50 min without music, one song — then the program sees nothing
+        assertThat(devices.devices(party).getFirst().playRunFrom()).as("the set's run goes on").isEqualTo(NOW.minus(min(200)));
+        guestsAsked(party, min(5), min(4));
+        assertThat(silent(NOW, party)).containsExactly(party);
+
+        String tested = party(true);
+        long test = computer(tested, NOW);
+        song(test, min(300));          // the test at 15:00
+        song(test, min(100));          // the set's first song
+        assertThat(devices.devices(tested).getFirst().playRunFrom()).as("a test is no set: a new run").isEqualTo(NOW.minus(min(100)));
+
+        String sound = party(true);
+        long check = computer(sound, NOW);
+        set(check, min(300), min(285));   // a soundcheck of 15 minutes, nobody asking
+        song(check, min(100));
+        assertThat(devices.devices(sound).getFirst().playRunFrom()).as("a soundcheck is no set: a new run").isEqualTo(NOW.minus(min(100)));
+
+        String nextDay = party(true);
+        long club = computer(nextDay, NOW);
+        set(club, Duration.ofHours(11), Duration.ofHours(10));   // last night's set
+        song(club, min(30));                                      // today's soundcheck: more than 4 h later
+        assertThat(devices.devices(nextDay).getFirst().playRunFrom()).as("the next day: a new run").isEqualTo(NOW.minus(min(30)));
+    }
+
+    /** The run: a song kept before V82 starts one; one call's songs are one run, a call after a gap starts a new one. */
+    @Test
+    void theRun_fromARowBeforeV82_andAcrossOneCall() {
+        String party = party(true);
+        long id = computer(party, NOW);
+        jdbc.update("UPDATE dj_device SET last_play_at = ?, play_run_from = NULL WHERE id = ?", Timestamp.from(NOW.minus(min(5))), id);
+        song(id, min(1));
+        assertThat(devices.devices(party).getFirst().playRunFrom()).as("a row before V82: a run from now on").isEqualTo(NOW.minus(min(1)));
+
+        String queued = party(true);
+        long late = computer(queued, NOW);
+        song(late, min(100));
+        set(late, min(80), min(1));   // the program's queue after the internet came back: songs from 20 min after the last one on
+        assertThat(devices.devices(queued).getFirst().playRunFrom()).as("the gap measured to the call's oldest song")
+                .isEqualTo(NOW.minus(min(100)));
+
+        String gap = party(true);
+        long after = computer(gap, NOW);
+        song(after, min(100));
+        set(after, min(60), min(1));   // the call's oldest song 40 min after the last one: a new run
+        assertThat(devices.devices(gap).getFirst().playRunFrom()).isEqualTo(NOW.minus(min(60)));
+    }
+
+    /** The organiser in their own party's staff (with the queue): one push, not two. */
+    @Test
+    void theOrganiserInTheStaffToo_isWarnedOnce() {
+        String party = party(true);
+        set(computer(party, NOW), min(60), min(21));
+        guestsAsked(party, min(5), min(4));
+        String owner = "watch-" + party;
+        staffRepository.saveAndFlush(PartyStaffEntity.builder().partyCode(party).memberId(owner).joinedAt(NOW)
+                .permissions(EnumSet.of(StaffPermission.QUEUE)).build());
+
+        watchAt(NOW).look();
+        verify(push, times(1)).notifyDeckSilent(eq(owner), eq(party), anyLong(), anyBoolean());
+    }
+
+    /** "Ostrzeż po" raised while the silence warned about has lasted past the new minutes already: no second push about it. */
+    @Test
+    void ostrzezPo_raisedPastTheSilence_noSecondPush() {
+        String party = party(true);
+        set(computer(party, NOW), min(60), min(25));
+        guestsAsked(party, min(5), min(4));
+        String owner = "watch-" + party;
+        DeckWatchService watch = new DeckWatchService(jdbc, devices, parties, staff, plans, push, new MovingClock(NOW));
+        watch.setSilenceMinutes(party, 10);
+
+        watch.look();
+        watch.setSilenceMinutes(party, 20);
+        watch.look();
+        verify(push, times(1)).notifyDeckSilent(eq(owner), eq(party), anyLong(), anyBoolean());
+    }
+
+    /** A spare laptop tested during the silence of the main one: the lead now, a test — no warning while it is. */
+    @Test
+    void theLeadChangingDuringASilence_toATestedSpare_warnsNot() {
+        String party = party(true);
+        set(computer(party, NOW), min(60), min(25));
+        guestsAsked(party, min(5), min(4));
+        assertThat(silent(NOW, party)).containsExactly(party);
+
+        song(computer(party, NOW), min(1));
+        assertThat(silent(NOW, party)).isEmpty();
     }
 }

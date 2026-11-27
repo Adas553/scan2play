@@ -405,13 +405,17 @@
                           data-device-failed=#{dashboard.computer.failed},data-device-ok=#{dashboard.computer.ok},
                           data-device-waiting=#{dashboard.computer.waiting},data-device-last=#{dashboard.computer.last},
                           data-device-silent=#{dashboard.computer.silent},data-device-offline=#{dashboard.computer.offline},
-                          data-deck-toggle-warn=#{dashboard.deck.toggle.warn}">
+                          data-device-stale=#{dashboard.computer.stale},data-deck-toggle-warn=#{dashboard.deck.toggle.warn},
+                          data-deck-toggle-offline=#{dashboard.deck.toggle.offline},data-deck-toggle-stale=#{dashboard.deck.toggle.stale}">
             <h3 id="deckReaderTitle" class="s2p-card-title" th:text="#{dashboard.deck.title}">Played, from your DJ software</h3>
             <p class="s2p-card-help" th:text="#{dashboard.computer.help}">A program for Windows or Mac reads…</p>
             <!--/* The computers paired (/dj/devices), each with "Odłącz" */-->
             <ul id="deviceList" class="list-unstyled small mb-0"></ul>
+            <!--/* The list could not be asked twice in a row: the lines above are old (play-history.js); empty otherwise */-->
+            <div id="deviceStale" class="small text-secondary" role="status"></div>
             <!--/* "Ostrzeż po" (V81, DeckWatchService): after how many minutes without a song during the party the organiser's devices
-                 get a push; shown once a computer is paired. Saved at once by play-history.js. */-->
+                 get a push; shown once a computer is paired. Saved at once by play-history.js; a choice not saved is said in
+                 #deviceSilenceFailed (always there, empty: a status region read when its text changes). */-->
             <div id="deviceWatch" class="d-flex flex-wrap align-items-center gap-2 small mt-2" hidden>
                 <label for="deviceSilence" class="text-light mb-0" th:text="#{dashboard.computer.silence}">Warn me when it sees no songs</label>
                 <select id="deviceSilence" class="form-select form-select-sm bg-black text-light border-secondary w-auto">
@@ -420,7 +424,7 @@
                     <option value="30" th:text="#{dashboard.computer.silence.after(30)}">after 30 min</option>
                     <option value="0" th:text="#{dashboard.computer.silence.never}">never</option>
                 </select>
-                <span id="deviceSilenceFailed" class="text-warning" role="status" hidden></span>
+                <span id="deviceSilenceFailed" class="text-warning" role="status"></span>
                 <span class="text-secondary w-100" th:text="#{dashboard.computer.silence.help}">During the party…</span>
             </div>
             <button type="button" id="deviceAnother" class="btn btn-sm btn-outline-secondary mt-2 align-self-start" hidden

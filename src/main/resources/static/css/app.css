@@ -831,6 +831,10 @@ th[data-sort].sort-desc::after {
 /* a computer's line (V81): no song yet, or silent out of the party — grey; silent or gone during the party — amber */
 .s2p-deck-device-wait    { color: var(--s2p-text-muted); font-weight: 700; }
 .s2p-deck-device-warn    { color: var(--s2p-warning); font-weight: 700; }
+/* a computer's row: its sign in a column of its own (the names line up), its words breaking in their place, "Odłącz" last */
+.s2p-deck-device-glyph   { display: inline-block; width: 1em; flex-shrink: 0; text-align: center; }
+.s2p-deck-device-name    { min-width: 0; overflow-wrap: anywhere; }
+.s2p-deck-device-words   { flex: 1 1 12em; min-width: 0; }
 /* the pairing code: read off the screen and typed in the program — large digits, apart */
 .s2p-device-code         { font-size: 1.1em; letter-spacing: 0.08em; font-variant-numeric: tabular-nums; }
 @media (max-width: 575.98px) {
