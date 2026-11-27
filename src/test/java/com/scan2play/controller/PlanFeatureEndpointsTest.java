@@ -107,7 +107,7 @@ class PlanFeatureEndpointsTest {
                         WishControllers.djWishes(wishes, helper, plans, settings, codesAsTexts()),
                         WishControllers.djPlan(wishes, helper, plans, settings, codesAsTexts()),
                         new DjPollsController(polls, helper, plans, codesAsTexts()),
-                        new DjDeviceController(devices(), helper, plans))
+                        new DjDeviceController(devices(), deckWatch(), helper, plans))
                 .setViewResolvers(new InternalResourceViewResolver("/WEB-INF/views/", ".html")).build();
     }
 
@@ -117,6 +117,14 @@ class PlanFeatureEndpointsTest {
         when(devices.newCode(PUB)).thenReturn("123456");
         when(devices.remove(PUB, 1L)).thenReturn(true);
         return devices;
+    }
+
+    /** "Ostrzeż po" (V81) taking a value offered, and the card's list. */
+    private static com.scan2play.service.DeckWatchService deckWatch() {
+        com.scan2play.service.DeckWatchService watch = mock(com.scan2play.service.DeckWatchService.class);
+        when(watch.setSilenceMinutes(PUB, 10)).thenReturn(true);
+        when(watch.watch(any())).thenReturn(new com.scan2play.service.DeckWatchService.Watch(java.util.List.of(), 20));
+        return watch;
     }
 
     /** The answer's status: a request let through is answered (below 400), not only "nothing thrown" (the review of 2026-10-14). */
@@ -178,7 +186,9 @@ class PlanFeatureEndpointsTest {
                 Arguments.of(PlanFeature.POLLS, true, post("/dj/polls/1/edit").param("partyCode", PUB).param("question", "Disco polo?")),
                 // "Zagrane samo" (item 19, V78): the program's pairing code and the list of computers
                 Arguments.of(PlanFeature.DECK, true, post("/dj/devices/code").param("partyCode", PUB)),
-                Arguments.of(PlanFeature.DECK, true, get("/dj/devices").param("partyCode", PUB)));
+                Arguments.of(PlanFeature.DECK, true, get("/dj/devices").param("partyCode", PUB)),
+                // ... and "Ostrzeż po" (V81)
+                Arguments.of(PlanFeature.DECK, true, post("/dj/devices/silence").param("partyCode", PUB).param("minutes", "10")));
     }
 
     @ParameterizedTest(name = "{0}: {2}")

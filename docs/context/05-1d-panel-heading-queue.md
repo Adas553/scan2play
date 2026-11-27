@@ -109,6 +109,24 @@ CSRF, no session for `/api/device/*`; `/dj/devices` needs the login). The other 
 `docs/ideas.md` item 18 and `tools/spike/dj_history_spike.py`. The guide (`guide*.html`) has its own section, `#deck` ("Zagrane samo": the button, the three steps, once for
 good, the speed by program, when a request marks, the window, the privacy), linked from its row of "Zagrane"; `GuidePageRenderTest`.
 
+**"Zagrane samo" watched (V81, `docs/ideas.md` item 21).** Each computer's row says whether its program sees songs (`DeckWatchService`,
+the states of `GET /dj/devices` — now `{computers: [{…, lastPlayAt, program, state, warn}], silenceMinutes}`): `OK` "✓ widzi
+piosenki · ostatnia 21:43 (VirtualDJ)"; `WAITING` "… czeka na pierwszą piosenkę — puść dowolny utwór na minutę" (nothing in 12 h: the
+DJ's test before the party); `SILENT` (the last song older than the minutes chosen) and `OFFLINE` (no call for 3 min — the program
+calls once a minute) in amber, "brak nowych piosenek od 21:43" / "program nie łączy się od 21:40", **only during the party** (`warn`:
+the party open, a song in the last 12 h, a guest's request in the last 60 min); out of it the same in grey ("ostatnia piosenka 23:58",
+"ostatnio 0:10"). An amber row turns the queue's button amber (`btn-outline-warning`) instead of green. The list is asked again every
+minute while the page is shown (an older answer dropped when a newer was asked). Under the rows "Ostrzeż mnie, gdy program nie widzi
+piosenek: po 10 / 20 (default) / 30 min / nigdy" (`POST /dj/devices/silence`, QUEUE, Pro; `party_settings.deck_silence_minutes`, not
+mapped in the entity — read and written by `DeckWatchService`). The look (`@Scheduled` every minute, one query, ≤ 100 parties) sends the
+organiser's devices a push ("⚠ Program DJ-a nie widzi piosenek" / "… się nie łączy" when it stopped calling too; tag
+`s2p-deck-<party>`, a tap opens the party's panel) under the same "during the party" rule — once a silence (in memory: the next after
+a new song and another silence; a restart may repeat one). The program sends each song's source (`program` of a play: "VirtualDJ",
+"Serato", "Spotify", "Tidal"); the server keeps only the newest song's start (`dj_device.last_play_at`, never moved back) and that
+name (`last_play_program`), never the song. The program's window shows "OSTATNIA PIOSENKA" (the newest song read since its start,
+any song, with its program — kept on the computer only). `DeckWatchServiceTest`, `DeckWatchIT` (PostgreSQL), browser scenarios
+`deck-computer-lines`, `deck-silence-choice`.
+
 **Parked: the panel reading the history folder itself** (variant E of `docs/ideas.md` item 18 — "Wskaż folder historii" in Chrome and
 Edge, `showDirectoryPicker`, the tab kept open, `POST /dj/dashboard/plays`). Removed 2026-11-21 after the program worked on the owner's
 Windows 11: two ways in one card were too much for a DJ to choose from. Back only if the program fails. Its code: commit `6c25e0a`

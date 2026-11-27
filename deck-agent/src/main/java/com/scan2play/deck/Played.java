@@ -3,14 +3,24 @@ package com.scan2play.deck;
 import java.time.Instant;
 
 /**
- * One song a DJ program says played: when it started (null when the file does not say), its artist and title as written there. Never
- * a file's path: it names the DJ's computer and account.
+ * One song a DJ program says played: when it started (null when the file does not say), its artist and title as written there, and the
+ * program it was read from ("VirtualDJ"; empty until {@link #from}). Never a file's path: it names the DJ's computer and account.
  */
-public record Played(Instant at, String artist, String title) {
+public record Played(Instant at, String artist, String title, String program) {
 
     public Played {
         artist = artist == null ? "" : artist.strip();
         title = title == null ? "" : title.strip();
+        program = program == null ? "" : program.strip();
+    }
+
+    public Played(Instant at, String artist, String title) {
+        this(at, artist, title, "");
+    }
+
+    /** The same song, said to come from {@code program}: the server shows the panel which program the last song came from. */
+    Played from(String program) {
+        return new Played(at, artist, title, program);
     }
 
     /** Neither artist nor title: nothing to match. */

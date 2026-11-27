@@ -258,7 +258,7 @@ class NowPlayingTest {
             clock.now = clock.now.plusSeconds(3);
             agent.tick();
         }
-        assertEquals(List.of(new Played(START.plusSeconds(3), "Sanah", "Szampan")),
+        assertEquals(List.of(new Played(START.plusSeconds(3), "Sanah", "Szampan", "Spotify")),
                 sent.stream().flatMap(List::stream).toList());
     }
 

@@ -223,6 +223,34 @@ public class PushNotificationService {
         }
     }
 
+    /**
+     * The DJ's program saw no song for {@code minutes} during the party ({@code DeckWatchService}): the organiser's devices get "⚠
+     * Program DJ-a nie widzi piosenek" — or, when it stopped calling too, that it is not connected. Returns at once.
+     */
+    public void notifyDeckSilent(String ownerId, String partyCode, int minutes, boolean offline) {
+        if (keyPair == null || ownerId == null) {
+            return;
+        }
+        try {
+            sender.execute(() -> sendToDevices(ownerId, "the deck watch of party " + partyCode,
+                    device -> deckSilentPayload(device, partyCode, minutes, offline)));
+        } catch (RejectedExecutionException e) {
+            log.warn("The deck watch's push for party {} dropped: the queue is full", partyCode);
+        }
+    }
+
+    /** The deck watch's message: one tag a party (a second replaces the first), a tap opens the party's panel. */
+    String deckSilentPayload(PushSubscriptionEntity device, String partyCode, int minutes, boolean offline) {
+        Locale locale = localeOf(device);
+        Map<String, String> message = new LinkedHashMap<>();
+        message.put("title", messageSource.getMessage(offline ? "push.deck_offline.title" : "push.deck_silent.title", null, locale));
+        message.put("body", messageSource.getMessage(offline ? "push.deck_offline.body" : "push.deck_silent.body",
+                new Object[]{minutes}, locale));
+        message.put("tag", "s2p-deck-" + partyCode);
+        message.put("url", DASHBOARD_URL + "?party=" + URLEncoder.encode(partyCode, StandardCharsets.UTF_8));
+        return json(message);
+    }
+
     private void sendToDevices(String ownerId, String what, Function<PushSubscriptionEntity, String> payload) {
         try {
             List<PushSubscriptionEntity> devices = repository.findTop20ByOwnerIdOrderByCreatedAtDesc(ownerId);

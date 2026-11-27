@@ -2,6 +2,7 @@ package com.scan2play.controller;
 
 import com.scan2play.model.PlanFeature;
 import com.scan2play.model.StaffPermission;
+import com.scan2play.service.DeckWatchService;
 import com.scan2play.service.DjDeviceService;
 import com.scan2play.service.PlanService;
 import jakarta.servlet.http.HttpSession;
@@ -15,13 +16,13 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
 import java.util.Map;
 
 /**
  * The panel's side of "Program na komputerze" (V78, docs/ideas.md item 19): a code to pair the DJ's program with the party, the
  * party's paired computers and "Odłącz" — for whom may work the queue (the program marks the queue played, as "Zagrane" does).
- * JSON for play-history.js, which draws the card. With Pro (PlanFeature.DECK), but "Odłącz".
+ * JSON for play-history.js, which draws the card. With Pro (PlanFeature.DECK), but "Odłącz". Each computer's line says whether its
+ * program sees songs, and "Ostrzeż po" sets when the organiser is warned that it stopped (DeckWatchService, V81).
  */
 @RestController
 @RequestMapping(value = "/dj/devices", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -29,15 +30,28 @@ import java.util.Map;
 public class DjDeviceController {
 
     private final DjDeviceService devices;
+    private final DeckWatchService watch;
     private final DjSessionHelper sessionHelper;
     private final PlanService plans;
 
-    /** The party's computers, the one seen last first: {@code [{id, name, createdAt, lastSeenAt}]}. */
+    /**
+     * The party's computers, the one seen last first, with their state, and the minutes of "Ostrzeż po": {@code {"computers": [{id,
+     * name, createdAt, lastSeenAt, lastPlayAt, program, state, warn}], "silenceMinutes": 20}}.
+     */
     @GetMapping
-    public List<DjDeviceService.Device> list(@RequestParam(required = false) String partyCode, OAuth2AuthenticationToken authentication,
-                                             HttpSession session) {
-        return devices.devices(plans.require(sessionHelper.require(partyCode, StaffPermission.QUEUE, authentication, session),
-                PlanFeature.DECK).getPartyCode());
+    public DeckWatchService.Watch list(@RequestParam(required = false) String partyCode, OAuth2AuthenticationToken authentication,
+                                       HttpSession session) {
+        return watch.watch(plans.require(sessionHelper.require(partyCode, StaffPermission.QUEUE, authentication, session),
+                PlanFeature.DECK));
+    }
+
+    /** "Ostrzeż po": 0 (never), 10, 20 or 30 minutes — 204; any other value 400. */
+    @PostMapping("/silence")
+    public ResponseEntity<Void> silence(@RequestParam int minutes, @RequestParam(required = false) String partyCode,
+                                        OAuth2AuthenticationToken authentication, HttpSession session) {
+        String party = plans.require(sessionHelper.require(partyCode, StaffPermission.QUEUE, authentication, session),
+                PlanFeature.DECK).getPartyCode();
+        return watch.setSilenceMinutes(party, minutes) ? ResponseEntity.noContent().build() : ResponseEntity.badRequest().build();
     }
 
     /** "Połącz komputer": a new code, {@code {"code": "123456", "minutes": "10"}}. */

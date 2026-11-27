@@ -54,7 +54,11 @@ final class Json {
         for (int i = 0; i < songs.size(); i++) {
             Played song = songs.get(i);
             out.append(i == 0 ? "" : ",").append("{\"at\":").append(song.at() == null ? "null" : song.at().getEpochSecond())
-                    .append(",\"artist\":").append(quote(cut(song.artist()))).append(",\"title\":").append(quote(cut(song.title()))).append('}');
+                    .append(",\"artist\":").append(quote(cut(song.artist()))).append(",\"title\":").append(quote(cut(song.title())));
+            if (!song.program().isEmpty()) {
+                out.append(",\"program\":").append(quote(cut(song.program())));
+            }
+            out.append('}');
         }
         return out.append("],\"sentAt\":").append(sentAt.getEpochSecond()).append('}').toString();
     }

@@ -402,11 +402,25 @@
                  class="card bg-dark border-secondary p-3 mb-3 s2p-deck-reader" hidden aria-labelledby="deckReaderTitle"
                  th:attr="data-device-code=#{dashboard.computer.code},data-device-copy=#{dashboard.qr.copy},data-device-copied=#{dashboard.qr.copied},
                           data-device-seen=#{dashboard.computer.seen},data-device-remove=#{dashboard.computer.remove},
-                          data-device-failed=#{dashboard.computer.failed}">
+                          data-device-failed=#{dashboard.computer.failed},data-device-ok=#{dashboard.computer.ok},
+                          data-device-waiting=#{dashboard.computer.waiting},data-device-last=#{dashboard.computer.last},
+                          data-device-silent=#{dashboard.computer.silent},data-device-offline=#{dashboard.computer.offline}">
             <h3 id="deckReaderTitle" class="s2p-card-title" th:text="#{dashboard.deck.title}">Played, from your DJ software</h3>
             <p class="s2p-card-help" th:text="#{dashboard.computer.help}">A program for Windows or Mac reads…</p>
             <!--/* The computers paired (/dj/devices), each with "Odłącz" */-->
             <ul id="deviceList" class="list-unstyled small mb-0"></ul>
+            <!--/* "Ostrzeż po" (V81, DeckWatchService): after how many minutes without a song during the party the organiser's devices
+                 get a push; shown once a computer is paired. Saved at once by play-history.js. */-->
+            <div id="deviceWatch" class="d-flex flex-wrap align-items-center gap-2 small mt-2" hidden>
+                <label for="deviceSilence" class="text-light mb-0" th:text="#{dashboard.computer.silence}">Warn me when it sees no songs</label>
+                <select id="deviceSilence" class="form-select form-select-sm bg-black text-light border-secondary w-auto">
+                    <option value="10" th:text="#{dashboard.computer.silence.after(10)}">after 10 min</option>
+                    <option value="20" th:text="#{dashboard.computer.silence.after(20)}">after 20 min</option>
+                    <option value="30" th:text="#{dashboard.computer.silence.after(30)}">after 30 min</option>
+                    <option value="0" th:text="#{dashboard.computer.silence.never}">never</option>
+                </select>
+                <span class="text-secondary w-100" th:text="#{dashboard.computer.silence.help}">During the party…</span>
+            </div>
             <button type="button" id="deviceAnother" class="btn btn-sm btn-outline-secondary mt-2 align-self-start" hidden
                     th:text="#{dashboard.computer.another}">Connect another computer</button>
             <div id="deviceSetup">

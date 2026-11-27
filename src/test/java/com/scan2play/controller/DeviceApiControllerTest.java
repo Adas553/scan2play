@@ -98,6 +98,37 @@ class DeviceApiControllerTest {
         verify(devices, never()).remove(anyString(), org.mockito.ArgumentMatchers.anyLong());
     }
 
+    /**
+     * V81: the newest song's start (on the server's clock) and its program noted for the panel's line — never the song; an empty call
+     * ("still paired?") and a history of yesterday note nothing.
+     */
+    @Test
+    void theNewestSong_isNotedWithItsProgram_anEmptyCallNotesNothing() throws Exception {
+        long now = java.time.Instant.now().getEpochSecond();
+        mockMvc.perform(post("/api/device/plays").header("Authorization", "Bearer good").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"plays\":[{\"at\":" + (now - 300) + ",\"artist\":\"Sanah\",\"title\":\"Szampan\",\"program\":\"Serato\"},"
+                        + "{\"at\":" + (now - 60) + ",\"artist\":\"Kult\",\"title\":\"Arahja\",\"program\":\"VirtualDJ\"},"
+                        + "{\"at\":" + (now - 120) + ",\"artist\":\"A\",\"title\":\"B\"}],\"sentAt\":" + now + "}"))
+                .andExpect(status().isOk());
+        org.mockito.ArgumentCaptor<java.time.Instant> at = org.mockito.ArgumentCaptor.forClass(java.time.Instant.class);
+        verify(devices).notePlay(eq(7L), at.capture(), eq("VirtualDJ"));
+        assertThat(at.getValue()).isBetween(java.time.Instant.ofEpochSecond(now - 62), java.time.Instant.ofEpochSecond(now - 58));
+
+        org.mockito.Mockito.clearInvocations(devices);
+        mockMvc.perform(post("/api/device/plays").header("Authorization", "Bearer good").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"plays\":[]}")).andExpect(status().isOk());
+        mockMvc.perform(post("/api/device/plays").header("Authorization", "Bearer good").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"plays\":[{\"at\":" + (now - 86_400) + ",\"artist\":\"Kult\",\"title\":\"Arahja\"}],\"sentAt\":" + now + "}"))
+                .andExpect(status().isOk());
+        verify(devices, never()).notePlay(org.mockito.ArgumentMatchers.anyLong(), any(), any());
+    }
+
+    @Test
+    void aProgramNameTooLong_isRefusedAsAnyField() {
+        assertThat(DeviceApiController.validPlays(List.of(new DeviceApiController.DeckPlay(1L, "A", "B", "x".repeat(501))))).isFalse();
+        assertThat(DeviceApiController.validPlays(List.of(new DeviceApiController.DeckPlay(1L, "A", "B", "VirtualDJ")))).isTrue();
+    }
+
     @Test
     void theSendersClock_givesTheShorterSlack() throws Exception {
         mockMvc.perform(post("/api/device/plays").header("Authorization", "Bearer good").contentType(MediaType.APPLICATION_JSON)

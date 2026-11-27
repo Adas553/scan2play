@@ -33,9 +33,24 @@ final class Agent {
     record Marked(Instant at, String song) {
     }
 
-    /** What the window shows: {@code marked} the last {@value #MARKED_SHOWN}, newest first, {@code markedCount} all since the start. */
+    /**
+     * The newest song read since the start, whatever it is (a request or not): the window's "Ostatnia piosenka" — the DJ's test that
+     * the program sees what plays. Only on this computer: the server keeps no song.
+     */
+    record Heard(Instant at, String song, String program) {
+    }
+
+    /**
+     * What the window shows: {@code marked} the last {@value #MARKED_SHOWN}, newest first, {@code markedCount} all since the start,
+     * {@code heard} the newest song read (null: none yet).
+     */
     record Status(boolean paired, List<String> reading, Instant checkedAt, List<Marked> marked, int markedCount,
-                  ServerClient.Outcome last) {
+                  ServerClient.Outcome last, Heard heard) {
+
+        Status(boolean paired, List<String> reading, Instant checkedAt, List<Marked> marked, int markedCount,
+               ServerClient.Outcome last) {
+            this(paired, reading, checkedAt, marked, markedCount, last, null);
+        }
     }
 
     /** The places read: first the usual ones, then also what the look through the folders found ({@link #useSources}). */
@@ -60,6 +75,7 @@ final class Agent {
      */
     private volatile List<HistorySource> picked = List.of();
     private ServerClient.Outcome lastOutcome;
+    private Heard heard;
 
     Agent(List<HistorySource> sources, ServerClient client, Settings settings, Clock clock, Consumer<Status> window) {
         this.sources = sources;
@@ -104,7 +120,8 @@ final class Agent {
         if (token != null && (!waiting.isEmpty() || Duration.between(lastCall, now).compareTo(ALIVE_EVERY) >= 0)) {
             send(token, now);
         }
-        window.accept(new Status(settings.token() != null, reading.stream().distinct().toList(), now, lastMarked, markedCount, lastOutcome));
+        window.accept(new Status(settings.token() != null, reading.stream().distinct().toList(), now, lastMarked, markedCount, lastOutcome,
+                heard));
     }
 
     private void read(HistorySource source, List<Played> songs) {
@@ -116,7 +133,11 @@ final class Agent {
             }
             boolean fresh = song.at() == null ? !first : !song.at().isBefore(earlier);
             if (fresh) {
-                waiting.add(song);
+                waiting.add(song.from(source.program()));
+                Instant at = song.at() == null ? clock.instant() : song.at();
+                if (heard == null || !at.isBefore(heard.at())) {
+                    heard = new Heard(at, song.toString(), source.program());
+                }
                 if (waiting.size() > MAX_WAITING) {
                     waiting.removeFirst();   // not paired for a long while: tonight's last songs are the ones worth sending
                 }
