@@ -39,7 +39,19 @@ przebiegu.
 
 ## Testy i sprawdzenia
 
-TESTS_PLACEHOLDER
+- `tools/check.py unit`: **1591/1591**. `check.py it` (PostgreSQL 16 w kontenerze, po `ALTER USER postgres PASSWORD '1111'`):
+  **257/257**, w tym nowy `DeckSetIT` (10). `check.py browser`: **500/501** — czerwony tylko znany `kiosk-full-fits-820x1180`
+  (był czerwony przed tą pracą, poprzedni przegląd). Nowe scenariusze (`tv-now-playing-*`, `kiosk-now-playing-fits-1180x820`,
+  `deck-set-kept-*`, `guest-played-*`) widziane najpierw czerwone: bez paska w wyrenderowanych stronach (TV, kiosk) i bez zmian w
+  `play-history.js` / `guest-party.js` (karta, strona gościa); `tv-now-playing-fits-a-small-tv` był też naprawdę czerwony — dziesiąta
+  piosenka wypadała pod ekran przy 1280 × 720, stąd `.tv-list-now`.
+- `check.py audit -t tv,kiosk,guest,summary-wedding-set,dashboard`: 47 stron × 3 szerokości, bez przewijania w bok i bez błędów
+  konsoli; te same cztery małe cele co przed tą pracą (nie dotyczą zmian).
+- Zrzuty (Playwright na atrapie serwera, bez błędów konsoli i bez przewijania w bok), w
+  `docs/history/review-2026-11-27-shots-now-playing/`: `tv-teraz-1280x720.png` (pasek i dziesięć piosenek mieszczą się), `tv-teraz-1920.png`,
+  `kiosk-teraz-1180.png`, `gosc-co-to-bylo-390.png` (rozwinięte), `podsumowanie-set-390.png`, `podsumowanie-set-1280.png`,
+  `karta-set-800.png` (przełącznik pod „Ostrzeż po”; karta jest pokazywana od 768 px, więc zrzutu z telefonu nie ma). Na TV długa
+  nazwa na pasku kończy się „…”, jak wiersze listy — świadomie, ekran nie przewija się.
 
 ## Punkty
 
@@ -99,4 +111,30 @@ TESTS_PLACEHOLDER
 
 ## Mutacje
 
-MUTATIONS_PLACEHOLDER
+21 mutacji kodu, każda uruchomiona na swoim teście (`check.py unit` / `it -t …`); wszystkie czerwone. M1 pierwszy raz zbudowana źle
+(błąd liczby parametrów SQL — czerwień z innego powodu), powtórzona poprawnie. M9 za pierwszym razem **przeżyła**: test łączył
+piosenkę DJ-a i niesprawdzoną prośbę w jednym wywołaniu, a pasek i tak znikał przez nowszą piosenkę — test rozdzielony, teraz czerwona.
+
+| # | mutacja | wynik |
+|---|---------|-------|
+| M1 | zapis bez „ta sama piosenka ±2 min” w SQL | **czerwony** (`DeckSetIT`, 2 testy) |
+| M2 | zapis mimo `deck_set_kept = false` | **czerwony** |
+| M3 | bez limitu 600 dziennie | **czerwony** |
+| M4 | „Już leciało” także dla tytułu bez wspólnego wykonawcy | **czerwony** |
+| M5 | „Już leciało” bez okna N | **czerwony** |
+| M6 | wyłączenie bez usuwania setu | **czerwony** |
+| M7 | bez sprawdzenia przed AI | **czerwony** (`SongEvaluationServiceTest`) |
+| M8 | bez sprawdzenia po nazwie z AI | **czerwony** |
+| M9 | „Teraz” także dla piosenki DJ-a | **czerwony** (po rozdzieleniu testu) |
+| M10 | ta sama piosenka wysłana ponownie kończy pasek | **czerwony** |
+| M11 | pasek bez limitu 6 min | **czerwony** |
+| M12 | nocne sprzątanie bez setu | **czerwony** |
+| M13 | błąd zapisu setu psuje wywołanie programu | **czerwony** |
+| M14 | podsumowanie bez znacznika 🙋 | **czerwony** |
+| M15 | „Co to było?” zawsze na stronie gościa | **czerwony** |
+| M16 | TV bez paska | **czerwony** |
+| M17 | kiosk bez paska | **czerwony** |
+| M18 | API bez zapisu setu | **czerwony** |
+| M19 | e-mail bez liczby piosenek setu | **czerwony** |
+| M20 | P3: pierwsza prośba wieczoru też sprawdza (bez gości — wszystko) | **czerwony** |
+| M21 | P3: „+ Dodaj piosenkę” DJ-a liczy się jako gość | **czerwony** |
