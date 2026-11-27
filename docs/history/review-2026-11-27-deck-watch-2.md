@@ -349,4 +349,31 @@ Testy po poprawkach:
   Oba podzapytania (seria, goście) to `Index Scan using idx_party_decision_time`. `notePlay`: `Index Scan using dj_device_pkey`,
   podzapytanie serii wykonywane tylko przy przerwie > 30 min, **0,3 ms**.
 
-MUTATIONS2
+- Całość: unit **1573/1573**, it **247/247** (PostgreSQL 16), przeglądarka **492/493** (czerwony tylko znany
+  `kiosk-full-fits-820x1180`), `audit -t dashboard` bez przewijania w bok i bez błędów konsoli.
+- Mutacje poprawionego kodu (kopia repo, każda osobno; unit i it jak w P12) — **wszystkie 19 czerwone**:
+
+| # | mutacja | czerwony test |
+|---|---|---|
+| N1 | karta: set bez prośby w serii | `DeckWatchServiceTest` (seria), `DeckWatchIT.aSoundcheck…` |
+| N2 | SQL serii: piosenki DJ-a liczą się jako goście | `theDjsOwnSongs_areNoGuests` |
+| N3 | SQL serii: bez „30 min bez prośby” | `aSetGoesOnAfterABreak…` |
+| N4 | `notePlay`: set nie trwa po przerwie | `aSetGoesOnAfterABreak…` |
+| N5 | `notePlay`: bez limitu 4 h | `aSetGoesOnAfterABreak…` (następny dzień) |
+| N6 | wystarczy jedna prośba po ciszy | `theEndOfTheSet…` |
+| N7 | margines znów 2 min | `theEndOfTheSet…` |
+| N8 | push: piosenki DJ-a liczą się po ciszy | `theDjsOwnSongs_areNoGuests` |
+| N9 | karta: to samo | `theDjsOwnSongs_areNoGuests` |
+| N10 | karta: OFFLINE tylko po secie | `theProgramGoneAfterTheTest…` |
+| N11 | podniesienie progu zawsze unieważnia | `ostrzezPo_changed…`, `ostrzezPo_raisedPastTheSilence…` |
+| N12 | „nigdy” nigdy SILENT | `DeckWatchServiceTest.theStates`, `theEdges` |
+| M8 | push bez usuwania duplikatu | `theOrganiserInTheStaffToo_isWarnedOnce` |
+| M11 | SQL: cisza przy dokładnie 20 min | `silent_pastTheMinutes_notAtThem` |
+| M12 | SQL: prośba dokładnie 8 min po piosence | `theEndOfTheSet…` |
+| M15 | wiersz sprzed V82 bez serii | `theRun_fromARowBeforeV82…` |
+| M16 | przerwa liczona do najnowszej piosenki | `theRun_fromARowBeforeV82…` |
+| M18 | SQL: seria dokładnie 30 min to nie set | `aSongPlayedAsATest…`, `aSoundcheck…` |
+| M25 | karta: okno gości 180 min | `guestsAsking_onlyInTheLastHour` |
+
+Na produkcji ta gałąź nic nie zmienia w bazie (bez migracji). Po wdrożeniu ten sam deploy co zwykle: start bez WARN od
+`DeckWatchService`, a w logach wpisy „the DJ's program saw no song” tylko przy imprezach z setem i gośćmi proszącymi po nim.
