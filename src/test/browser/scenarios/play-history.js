@@ -362,4 +362,68 @@
             t.check('the choice stays after the list came again', select().value === '10');
         }
     });
+
+    S2P.scenario({
+        name: 'deck-set-kept-switch',
+        title: '"Zapisuj set wieczoru" (V83): shown with "Ostrzeż po" once a computer is paired, as the server keeps it, saved at once with the CSRF token',
+        setup: { devices: [] },
+        run: async function (t) {
+            const box = function () { return document.getElementById('deviceSetKept'); };
+            await t.stand.config({ devices: [device(5)], setKept: false });
+            document.dispatchEvent(new Event('visibilitychange'));
+            await t.waitFor(function () { return rows() === 1 && !box().checked; }, 'the computer, the set not kept', 3000);
+            toggle().click();
+            const shown = box().getBoundingClientRect();
+            t.step('shown beside the computer, a switch', [shown.height > 0, box().getAttribute('role')], [true, 'switch']);
+
+            box().click();
+            await t.waitFor(function () { return !box().disabled; }, 'saved, the list asked again', 3000);
+            await t.sleep(300);
+            const saved = await t.stand.requests('POST /dj/devices/set');
+            t.step('saved once, for the party, with the CSRF token', [saved.length, saved[0].q.kept, saved[0].q.partyCode,
+                !!saved[0].q['X-CSRF-TOKEN']], [1, 'true', document.getElementById('partyCode').value, true]);
+            t.check('on after the list came again', box().checked);
+        }
+    });
+
+    S2P.scenario({
+        name: 'deck-set-kept-not-saved',
+        title: '"Zapisuj set wieczoru" not saved (the server refuses): said, and the switch back as the server keeps it',
+        setup: { devices: [], postStatus: { '/dj/devices/set': 403 } },
+        run: async function (t) {
+            const box = function () { return document.getElementById('deviceSetKept'); };
+            const failed = function () { return document.getElementById('deviceSetFailed'); };
+            await t.stand.config({ devices: [device(5)], setKept: true });
+            document.dispatchEvent(new Event('visibilitychange'));
+            await t.waitFor(function () { return rows() === 1; }, 'the computer', 3000);
+            toggle().click();
+            t.step('nothing said yet, a status region', [failed().textContent, failed().getAttribute('role')], ['', 'status']);
+            box().click();
+            await t.waitFor(function () { return failed().textContent !== ''; }, 'the refusal said', 3000);
+            await t.waitFor(function () { return !box().disabled; }, 'the switch back', 3000);
+            t.step('said, the switch as the server keeps it (on)', [failed().textContent.indexOf('Nie udało się') >= 0, box().checked],
+                [true, true]);
+        }
+    });
+
+    S2P.scenario({
+        name: 'deck-now-playing-switch',
+        title: '"Pokazuj na TV i kiosku, co teraz leci" (V84): shown with the computer, as the server keeps it, saved at once with the CSRF token',
+        setup: { devices: [] },
+        run: async function (t) {
+            const box = function () { return document.getElementById('deviceNowPlaying'); };
+            await t.stand.config({ devices: [device(5)], nowPlayingShown: true });
+            document.dispatchEvent(new Event('visibilitychange'));
+            await t.waitFor(function () { return rows() === 1 && box().checked; }, 'the computer, the bar shown', 3000);
+            toggle().click();
+            t.step('a switch beside the computer', [box().getBoundingClientRect().height > 0, box().getAttribute('role')], [true, 'switch']);
+            box().click();
+            await t.waitFor(function () { return !box().disabled; }, 'saved, the list asked again', 3000);
+            await t.sleep(300);
+            const saved = await t.stand.requests('POST /dj/devices/now-playing');
+            t.step('saved once, for the party, with the CSRF token', [saved.length, saved[0].q.shown, saved[0].q.partyCode,
+                !!saved[0].q['X-CSRF-TOKEN']], [1, 'false', document.getElementById('partyCode').value, true]);
+            t.check('off after the list came again', !box().checked);
+        }
+    });
 })();

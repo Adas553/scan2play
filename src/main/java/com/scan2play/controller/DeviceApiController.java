@@ -2,12 +2,14 @@ package com.scan2play.controller;
 
 import com.scan2play.model.PlanFeature;
 import com.scan2play.service.DeckHistoryService;
+import com.scan2play.service.DeckSetService;
 import com.scan2play.service.DjDeviceService;
 import com.scan2play.service.GuestRequestLimiter;
 import com.scan2play.service.PartySettingsQueryService;
 import com.scan2play.service.PlanService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -27,8 +29,10 @@ import java.util.Optional;
  * The DJ's program on the DJ's computer ("Program na komputerze", docs/ideas.md item 19, V78): it pairs with a party by the code the
  * panel shows, then sends the songs VirtualDJ or Serato played, with its own token instead of the DJ's session. Public (no login, no CSRF: no cookie is used — SecurityConfig); a token unknown or revoked
  * ("Odłącz") is a 401, too many calls a 429, a party whose organiser has no Pro (any more) a 403 {@code {"error": "plan"}}. The
- * program's own "Odłącz ten komputer" forgets its computer here too ({@code /unpair}).
+ * program's own "Odłącz ten komputer" forgets its computer here too ({@code /unpair}). Every song sent is kept for the party's set too
+ * ({@link DeckSetService}, V83), while the party keeps it.
  */
+@Slf4j
 @RestController
 @RequestMapping(value = "/api/device", produces = MediaType.APPLICATION_JSON_VALUE)
 @RequiredArgsConstructor
@@ -38,6 +42,7 @@ public class DeviceApiController {
 
     private final DjDeviceService devices;
     private final DeckHistoryService deckHistory;
+    private final DeckSetService deckSet;
     private final GuestRequestLimiter limiter;
     private final PartySettingsQueryService parties;
     private final PlanService plans;
@@ -109,8 +114,29 @@ public class DeviceApiController {
         List<DeckHistoryService.Play> songs = songsOf(plays, body.sentAt(), now);
         span(songs, now).ifPresent(span -> devices.notePlay(paired.get().deviceId(), span.oldest(), span.newest(),
                 programOfNewest(plays, songs, now)));
-        return ResponseEntity.ok(Map.of("marked", deckHistory.markPlayed(paired.get().partyCode(), songs, now,
-                clockKnown(body.sentAt()))));
+        List<String> marked = deckHistory.markPlayed(paired.get().partyCode(), songs, now, clockKnown(body.sentAt()));
+        keepTheSet(paired.get(), plays, songs, now);
+        return ResponseEntity.ok(Map.of("marked", marked));
+    }
+
+    /**
+     * The night's set kept (V83, {@link DeckSetService}) — every song, not only the requests marked. A failure is logged and never
+     * fails the call: the marks are what the program waits for, and a song sent again would be marked twice for nothing.
+     */
+    private void keepTheSet(DjDeviceService.Paired paired, List<DeckPlay> plays, List<DeckHistoryService.Play> songs, Instant now) {
+        if (songs.isEmpty()) {
+            return;
+        }
+        List<DeckSetService.SetSong> set = new java.util.ArrayList<>();
+        for (int i = 0; i < songs.size(); i++) {
+            DeckHistoryService.Play song = songs.get(i);
+            set.add(new DeckSetService.SetSong(song.at(), song.artist(), song.title(), plays.get(i).program()));
+        }
+        try {
+            deckSet.keep(paired.deviceId(), paired.partyCode(), set, now);
+        } catch (RuntimeException e) {
+            log.warn("The set of party {} not kept: {}", paired.partyCode(), e.toString());
+        }
     }
 
     /** The first and the last start of the songs of one call. */

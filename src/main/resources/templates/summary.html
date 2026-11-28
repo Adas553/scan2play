@@ -302,6 +302,22 @@
         </details>
     </section>
 
+    <!--/* the whole set (V83, EveningSummaryService.set): every song the DJ's program saw that evening, the guests' requests among them
+         marked — only for an evening with the program and the set kept; folded (a long list), unfolded to print, as the played */-->
+    <section th:unless="${#lists.isEmpty(eveningSet)}" id="wholeSet">
+        <details id="wholeSetFold">
+            <summary><h2 th:text="#{summary.set(${#lists.size(eveningSet)})}">The whole set (87)</h2></summary>
+            <p class="legend" th:text="#{summary.set.hint}">Every song the DJ's program saw; 🙋 a guest asked for it.</p>
+            <ol class="songs setlist" id="wholeSetList">
+                <li th:each="song : ${eveningSet}">
+                    <span class="time" th:text="${times.clock(song.startedAt())}">21:30</span>
+                    <span class="song" th:text="${song.name()}">Artist - Title</span>
+                    <span th:if="${song.requested()}" class="votes" th:attr="title=#{summary.set.requested},aria-label=#{summary.set.requested}">🙋</span>
+                </li>
+            </ol>
+        </details>
+    </section>
+
     <p th:if="${summary.truncated}" class="note" th:text="#{summary.truncated(${summary.requests})}">Only the first 2000.</p>
 
     <!--/* "Ostatnie wieczory": this evening beside its neighbours (up to 8), counted in the evenings' query — a club's Fridays side by

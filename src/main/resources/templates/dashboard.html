@@ -426,6 +426,23 @@
                 </select>
                 <span id="deviceSilenceFailed" class="text-warning" role="status"></span>
                 <span class="text-secondary w-100" th:text="#{dashboard.computer.silence.help}">During the party…</span>
+                <!--/* "Pokazuj na TV i kiosku, co teraz leci" (V84, party_settings.now_playing_shown): the "🎶 Teraz: …" bar of the
+                     room's screens (NowPlayingService); saved at once by play-history.js, as the switch below */-->
+                <div class="form-check form-switch m-0 s2p-switch-row w-100">
+                    <input class="form-check-input" type="checkbox" role="switch" id="deviceNowPlaying" checked>
+                    <label class="form-check-label text-light" for="deviceNowPlaying" th:text="#{dashboard.computer.now}">Show what plays now</label>
+                </div>
+                <span id="deviceNowPlayingFailed" class="text-warning" role="status"></span>
+                <span class="text-secondary w-100" th:text="#{dashboard.computer.now.help}">“🎶 Now playing: …” above their list…</span>
+                <!--/* "Zapisuj set wieczoru" (V83, DeckSetService): every song the program sends kept 30 days — "Już leciało", the
+                     summary's whole set, the guests' "Co to było?"; off deletes it. Saved at once by play-history.js, a switch not
+                     saved said in #deviceSetFailed (always there, empty: a status region) and put back as the server has it. */-->
+                <div class="form-check form-switch m-0 s2p-switch-row w-100">
+                    <input class="form-check-input" type="checkbox" role="switch" id="deviceSetKept" checked>
+                    <label class="form-check-label text-light" for="deviceSetKept" th:text="#{dashboard.computer.set}">Keep the night's set</label>
+                </div>
+                <span id="deviceSetFailed" class="text-warning" role="status"></span>
+                <span class="text-secondary w-100" th:text="#{dashboard.computer.set.help}">Every song the program sees…</span>
             </div>
             <button type="button" id="deviceAnother" class="btn btn-sm btn-outline-secondary mt-2 align-self-start" hidden
                     th:text="#{dashboard.computer.another}">Connect another computer</button>

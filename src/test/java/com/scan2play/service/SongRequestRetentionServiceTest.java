@@ -36,6 +36,9 @@ class SongRequestRetentionServiceTest {
     @Mock
     private com.scan2play.repository.EveningSummaryRepository eveningSummaryRepository;
 
+    @Mock
+    private DeckSetService deckSetService;
+
     @InjectMocks
     private SongRequestRetentionService service;
 
@@ -57,6 +60,20 @@ class SongRequestRetentionServiceTest {
 
         ArgumentCaptor<Instant> cutoff = ArgumentCaptor.forClass(Instant.class);
         verify(repository).deleteRequestedBefore(cutoff.capture(), eq(BATCH_SIZE));
+        assertThat(Duration.between(cutoff.getValue(), before.minus(30, ChronoUnit.DAYS)).abs()).isLessThan(Duration.ofMinutes(1));
+    }
+
+    @Test
+    @DisplayName("the nights' sets (V83) go 30 days after their songs, batch by batch as the requests")
+    void theSets_arePurgedThirtyDaysBack_inBatches() {
+        when(repository.deleteRequestedBefore(any(), eq(BATCH_SIZE))).thenReturn(0);
+        when(deckSetService.deleteStartedBefore(any(), eq(BATCH_SIZE))).thenReturn(BATCH_SIZE, 7);
+        Instant before = Instant.now();
+
+        service.purgeStaleRequests();
+
+        ArgumentCaptor<Instant> cutoff = ArgumentCaptor.forClass(Instant.class);
+        verify(deckSetService, org.mockito.Mockito.times(2)).deleteStartedBefore(cutoff.capture(), eq(BATCH_SIZE));
         assertThat(Duration.between(cutoff.getValue(), before.minus(30, ChronoUnit.DAYS)).abs()).isLessThan(Duration.ofMinutes(1));
     }
 

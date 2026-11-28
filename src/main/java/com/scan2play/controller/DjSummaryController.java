@@ -50,6 +50,7 @@ import static com.scan2play.controller.ViewAttributes.LIBRARY_COPY;
 import static com.scan2play.controller.ViewAttributes.LIBRARY_GAPS;
 import static com.scan2play.controller.ViewAttributes.PARTY_CODE;
 import static com.scan2play.controller.ViewAttributes.REFUSALS;
+import static com.scan2play.controller.ViewAttributes.EVENING_SET;
 import static com.scan2play.controller.ViewAttributes.SHARED;
 import static com.scan2play.controller.ViewAttributes.SHARE_LINK;
 import static com.scan2play.controller.ViewAttributes.SHARE_UNTIL;
@@ -132,6 +133,8 @@ public class DjSummaryController {
         model.addAttribute(EVENING_TITLE, named.map(EveningSummaryEntity::getTitle).orElse(null));
         List<SongRequestEntity> requests = shown == null ? List.of() : service.requests(settings.getPartyCode(), shown);
         model.addAttribute(SUMMARY, shown == null ? null : EveningSummaryService.summarize(shown, requests));
+        // "Cały set" (V83): every song the DJ's program saw that evening, the requests among them marked
+        model.addAttribute(EVENING_SET, shown == null ? List.of() : service.set(settings.getPartyCode(), shown, requests));
         return requests;
     }
 

@@ -103,6 +103,10 @@
         <!--/* the most wanted with 👍 — the list the TV screen shows; this turn's own request without one */-->
         <section id="kioskList" class="s2p-kiosk-list" th:fragment="kioskList" aria-labelledby="kioskListTitle"
                  th:attr="data-url=@{/k/{t}/list(t=${kioskToken})},data-active=${isActive}">
+            <!--/* the guest's request the DJ's program plays now (NowPlayingService), as on the TV: its name only */-->
+            <p th:if="${isActive and nowPlaying != null}" id="kioskNowPlaying" class="s2p-kiosk-now">
+                <span class="s2p-kiosk-now-label"><span aria-hidden="true">🎶</span> <span th:text="#{kiosk.now}">Now playing:</span></span>
+                <span class="s2p-kiosk-song-name" th:text="${nowPlaying.name()}">Wilki - Baśka</span></p>
             <h2 id="kioskListTitle"><span aria-hidden="true">🔥</span> <span th:text="#{kiosk.wanted}">Most wanted</span></h2>
             <!--/* what the 👍 is for: nothing else on the kiosk said a song can be voted for */-->
             <p th:if="${isActive and !#lists.isEmpty(tvSongs)}" id="kioskVoteHint" class="s2p-kiosk-vote-hint"

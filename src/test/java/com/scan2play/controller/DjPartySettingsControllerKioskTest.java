@@ -119,6 +119,6 @@ class DjPartySettingsControllerKioskTest {
         return new KioskController(parties, plans, mock(com.scan2play.service.GuestRequestService.class), mock(com.scan2play.service.GuestQueueService.class),
                 mock(com.scan2play.service.GuestSessionService.class), mock(com.scan2play.service.GuestVoteService.class),
                 mock(com.scan2play.service.GuestRequestLimiter.class), PartySchedules.texts(), PartySchedules.messages(),
-                mock(com.scan2play.service.LibraryHintService.class));
+                mock(com.scan2play.service.LibraryHintService.class), new com.scan2play.service.NowPlayingService());
     }
 }

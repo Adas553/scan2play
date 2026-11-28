@@ -632,30 +632,35 @@ h2 {
     white-space: nowrap;
 }
 
-/* ---- What played, in order: a fold whose heading is the summary's (summary.js folds it on a phone, unfolds it to print) ---- */
+/* ---- What played, in order (and the whole set, V83): a fold whose heading is the summary's (summary.js folds it on a phone, unfolds it to print) ---- */
 
-#setlistFold > summary {
+#setlistFold > summary,
+#wholeSetFold > summary {
     list-style: none;
     cursor: pointer;
 }
 
 /* the fold's heading is tapped on a phone: 44 px (the heading alone was 32) */
 @media (max-width: 767.98px), (pointer: coarse) {
-    #setlistFold > summary {
+    #setlistFold > summary,
+    #wholeSetFold > summary {
         padding-block: 0.375rem;
     }
 }
 
-#setlistFold > summary::-webkit-details-marker {
+#setlistFold > summary::-webkit-details-marker,
+#wholeSetFold > summary::-webkit-details-marker {
     display: none;
 }
 
-#setlistFold > summary h2::after {
+#setlistFold > summary h2::after,
+#wholeSetFold > summary h2::after {
     content: " ▾";
     color: #0aa2c0;
 }
 
-#setlistFold[open] > summary h2::after {
+#setlistFold[open] > summary h2::after,
+#wholeSetFold[open] > summary h2::after {
     content: " ▴";
 }
 
@@ -747,7 +752,9 @@ h2 {
 
     /* the fold's sign is the screen's: paper has the list unfolded */
     #setlistFold > summary h2::after,
-    #setlistFold[open] > summary h2::after {
+    #wholeSetFold > summary h2::after,
+    #setlistFold[open] > summary h2::after,
+    #wholeSetFold[open] > summary h2::after {
         content: none;
     }
 

@@ -251,7 +251,19 @@ class AutomaticEmailsTest {
         assertThat(html.indexOf("Don&#39;t Stop Me Now")).isLessThan(html.indexOf("One More Time"));
         assertThat(html).doesNotContain("Dancing Queen", "Szampan");
         assertThat(email.stopUrl()).endsWith("?lang=pl");
+        assertThat(html).as("no set from the DJ's program: no line of it").doesNotContain("Cały set");
         verify(morning.evenings(), never()).releaseMorning(anyString(), any());
+    }
+
+    /** The whole set of the DJ's program (V83): one line with its count, in its Polish form; the list is on the summary's page. */
+    @Test
+    void theMorningSummary_saysTheWholeSetsSize() {
+        Morning morning = morning(organiser("pl"), Plan.PRO);
+        when(morning.summaries().setSize("ABC12", EVENING)).thenReturn(87);
+
+        assertThat(morning.service().send(MORNING)).isEqualTo(1);
+
+        assertThat(sent.getFirst().html()).contains("Cały set z programu DJ-a: <strong>87 piosenek</strong>");
     }
 
     @Test

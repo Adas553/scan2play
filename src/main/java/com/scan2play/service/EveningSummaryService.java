@@ -26,6 +26,7 @@ import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -204,6 +205,8 @@ public class EveningSummaryService {
     private final SongRequestRepository songRequestRepository;
     private final DjLibraryService libraryService;
     private final EveningSummaryRepository eveningSummaryRepository;
+    /** The night's set (V83): "Cały set" beside the requests. */
+    private final DeckSetService deckSetService;
 
     /** The party's evenings with requests, the latest first. */
     @Transactional(readOnly = true)
@@ -662,6 +665,40 @@ public class EveningSummaryService {
 
     private static Instant playedOrRequested(SongRequestEntity request) {
         return request.getPlayedAt() != null ? request.getPlayedAt() : request.getRequestedAt();
+    }
+
+    /** One song of the evening's whole set (V83): its start, its name, whether it answered a guest's request played that evening. */
+    public record SetRow(Instant startedAt, String name, boolean requested) {
+    }
+
+    /**
+     * "Cały set" (V83): every song the DJ's program saw that evening, the first first, at most {@value DeckSetService#EVENING_MAX} —
+     * empty for an evening without the program or with the set not kept. A song is "requested" when a request of the evening that
+     * played is it (its title and an artist in common, the queue's "✓").
+     */
+    public List<SetRow> set(String partyCode, LocalDate evening, List<SongRequestEntity> requests) {
+        List<DeckSetService.SetSong> songs = deckSetService.evening(partyCode, startOf(evening), startOf(evening.plusDays(1)));
+        if (songs.isEmpty()) {
+            return List.of();
+        }
+        Map<String, List<LibraryKey>> played = new HashMap<>();
+        for (SongRequestEntity request : requests) {
+            if (statusOf(request) == Status.PLAYED) {
+                LibraryKey key = LibraryKey.of(request.getSongName());
+                played.computeIfAbsent(key.title(), title -> new ArrayList<>()).add(key);
+            }
+        }
+        return songs.stream().map(song -> {
+            LibraryKey key = song.key();
+            boolean requested = played.getOrDefault(key.title(), List.of()).stream()
+                    .anyMatch(asked -> asked.matchIn(List.of(key), Set.of()).mark() == LibraryMark.HAVE);
+            return new SetRow(song.startedAt(), song.name(), requested);
+        }).toList();
+    }
+
+    /** How many songs the evening's whole set has (V83; up to {@value DeckSetService#EVENING_MAX}): the morning e-mail's line. */
+    public int setSize(String partyCode, LocalDate evening) {
+        return deckSetService.countEvening(partyCode, startOf(evening), startOf(evening.plusDays(1)));
     }
 
     /** How a request ended — the summary's counts and the CSV's status column. */

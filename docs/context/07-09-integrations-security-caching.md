@@ -129,6 +129,10 @@ Cloudflare like a browser: should Cloudflare's bot protection ever challenge it,
 | `accountPlan` | the organiser's Google subject | 10 min / 2000 | `PlanService.planOf` (V35) — read only while the plans are enforced; evicted after the commit of a trial (`util/AfterCommit`) and with the account; the value is the row's plan with its end (`PlanService.Read`), so a plan ends on time |
 | `djLibrary` | partyCode | 24 h / 500 | `DjLibraryService.info` (V41): what the party's library is — the settings' card and the panel's ETag, read on every poll; the row is read inside the cache's load of the key (as `partySettings`); evicted after the commit of an upload or a deletion, and with the party (`AccountDeletionService.PARTY_CACHES`); the value is an `Optional`, so a party without a library is cached too (`DjLibraryIT`) |
 
+Beside these, small Caffeine caches of their own services (not Spring's): `NowPlayingService` (the song playing now, 6 min, 10 000
+parties — the TV and the kiosk), `DeckSetService` ("Co to było?", 30 s, 10 000 parties; the songs kept today per computer, 25 h),
+`DjDeviceService`'s codes and limits.
+
 The DJ's party code is cached in the `HttpSession`. Account deletion evicts the party from the caches after its commit, and so does a
 new party code (V49) — the old code and the new.
 

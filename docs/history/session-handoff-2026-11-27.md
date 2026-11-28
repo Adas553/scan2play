@@ -108,3 +108,11 @@ groups, "Trendy próśb", "Plan imprezy", "Zagrane samo" with Serato, Spotify, T
   (V82 `play_run_from`: no alarm for the test song nor at the set's end, only the lead computer amber, the push to the staff with
   QUEUE too); P8, P11, P12, P17 left. Merged (#315 `main` = `2e332bb`, #316 `dev`); deployed 14:34 UTC, Flyway at 82, no WARN.
   Waits for the owner: "Run workflow" of deck-agent (the new window).
+- **2026-11-27 — the state.** `main` = `2e332bb` (#315, "Zagrane samo" watched, V81, V82), `dev` = `a757b6e` (#316); every PR up to
+  #316 merged, none open. The deploy: 2026-11-27 14:34 UTC, SUCCESS (Railway, read only), Flyway at v82 (PostgreSQL 18.6), started in
+  5.7 s, no WARN, 0 × 5xx. The history of #272 … #316: `docs/history/session-handoff-2026-11-27.md`.
+- **2026-11-27 — `claude/modest-gauss-n1936m` (from `main` = `2e332bb`), PRs #317 (`main`) and #318 (`dev`), no migration:** the second review of
+  the deck watch (`docs/history/review-2026-11-27-deck-watch-2.md`) and its fixes P1–P12: no push for a soundcheck, the set's "one
+  more!" or the DJ's own songs; a set goes on after a break; the lead gone amber in the card after a test only. Waits for the owner:
+  the merge (the false pushes are on production until then).
+  Merged (#317 `main` = `693813f`, #318 `dev` = `8ab6f2e`).

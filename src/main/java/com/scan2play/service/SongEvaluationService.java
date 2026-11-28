@@ -19,6 +19,7 @@ import com.scan2play.repository.SongRequestRepository;
 import com.scan2play.util.SongList;
 import com.scan2play.util.SongNames;
 import com.scan2play.util.Texts;
+import com.scan2play.util.Times;
 import com.scan2play.util.YouTubeSearchLinks;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
@@ -33,6 +34,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 import static com.scan2play.service.DjService.DECISION_ACCEPTED;
@@ -133,6 +135,8 @@ public class SongEvaluationService {
     private final EveningRefusals eveningRefusals;
     /** The Free plan's AI checks an evening: past it a request goes to the DJ unchecked. */
     private final FreeAiLimit freeAiLimit;
+    /** The night's set (V83): "Już leciało o 21:30". */
+    private final DeckSetService deckSetService;
 
     /** The answer's configs: the model, its thinking, the schema (with the dedication's field or without). */
     @PostConstruct
@@ -211,6 +215,13 @@ public class SongEvaluationService {
             return blockedByTheHosts(partyCode, songName, DjResponse.KIND_TITLE, locale);
         }
 
+        // "Już leciało o 21:30" (V83): one of the DJ's last "Bez powtórek z ostatnich N" of tonight's set, by the guest's own words
+        // ("Wilki - Baśka") — said at once, before the AI is asked and paid for
+        Optional<DjResponse> repeat = alreadyPlayed(partyCode, songName, settings, locale);
+        if (repeat.isPresent()) {
+            return repeat.get();
+        }
+
         List<String> recentlyPlayed = recentlyPlayed(partyCode, settings.getDuplicateCheckWindow());
         String recentSongs = recentSongsContext(recentlyPlayed, settings.getDuplicateCheckWindow());
 
@@ -250,6 +261,13 @@ public class SongEvaluationService {
             return blockedByTheHosts(partyCode, aiResponse.songName(), aiResponse.requestKind(), locale);
         }
         aiResponse = withTheHostsWish(partyCode, aiResponse, SongList.of(settings.getHostWanted()), recentlyPlayed, locale);
+        // the song the AI worked out ("baśka wilki", a line of the lyrics) may be one of the set too: the guest is told the truth
+        if (DECISION_ACCEPTED.equalsIgnoreCase(aiResponse.decision()) && !SongNames.same(aiResponse.songName(), songName)) {
+            repeat = alreadyPlayed(partyCode, aiResponse.songName(), settings, locale);
+            if (repeat.isPresent()) {
+                return repeat.get();
+            }
+        }
 
         // 2. The "🔍 Podejrzyj" link of an accepted song: YouTube's search results (a page the DJ's browser opens, no API)
         String trackUrl = DECISION_ACCEPTED.equalsIgnoreCase(aiResponse.decision())
@@ -311,6 +329,23 @@ public class SongEvaluationService {
      * A request for a song on the hosts' "nie grać" list (V29): not saved, the guest is asked for another one — the way a song the
      * DJ skipped is refused. The DJ does not see it: the hosts decided.
      */
+    /**
+     * "Już leciało o 21:30": the song among the party's last {@code duplicateCheckWindow} of tonight's set ({@link DeckSetService},
+     * the same "Bez powtórek z ostatnich N" the AI keeps for the played requests; 0 — repeats allowed — never). Not saved, counted for
+     * the summary as the other refusals before the AI. None for the demo party (no set).
+     */
+    private Optional<DjResponse> alreadyPlayed(String partyCode, String songName, PartySettingsEntity settings, Locale locale) {
+        if (DemoParty.isDemo(partyCode)) {
+            return Optional.empty();
+        }
+        return deckSetService.playedLately(partyCode, songName, settings.getDuplicateCheckWindow(), Instant.now()).map(at -> {
+            log.info("Party [{}]: '{}' played at {} tonight — refused before the AI", partyCode, songName, at);
+            eveningRefusals.count(partyCode, RefusalReason.ALREADY_PLAYED);
+            return new DjResponse(DECISION_REJECTED, messageSource.getMessage("guest.already_played",
+                    new Object[]{Times.clock(at)}, locale), songName, DjResponse.KIND_TITLE);
+        });
+    }
+
     private DjResponse blockedByTheHosts(String partyCode, String songName, String requestKind, Locale locale) {
         log.info("Party [{}]: '{}' is on the hosts' do-not-play list — refused", partyCode, songName);
         eveningRefusals.count(partyCode, RefusalReason.HOSTS_BLOCKED);

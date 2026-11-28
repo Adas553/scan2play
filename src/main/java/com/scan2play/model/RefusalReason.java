@@ -10,5 +10,7 @@ public enum RefusalReason {
     /** A song the DJ skipped within the last two hours. */
     SKIPPED_BY_DJ,
     /** A mood or a message, not a song: the guest was asked for a title. */
-    NOT_A_SONG
+    NOT_A_SONG,
+    /** "Już leciało o 21:30": a song among the DJ's last "Bez powtórek z ostatnich N" of tonight's set (V83). */
+    ALREADY_PLAYED
 }

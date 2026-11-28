@@ -27,7 +27,8 @@ class DeckHistoryServiceTest {
 
     private final SongRequestRepository repository = mock(SongRequestRepository.class);
     private final DjService dj = mock(DjService.class);
-    private final DeckHistoryService service = new DeckHistoryService(repository, dj);
+    private final NowPlayingService nowPlaying = new NowPlayingService();
+    private final DeckHistoryService service = new DeckHistoryService(repository, dj, nowPlaying);
 
     @BeforeEach
     void setUp() {
@@ -125,5 +126,50 @@ class DeckHistoryServiceTest {
         when(dj.markSongAsPlayed(eq(1L), anyString())).thenReturn(false);
 
         assertThat(service.markPlayed(PARTY, List.of(play("Sanah", "Szampan", Duration.ZERO)), NOW, false)).isEmpty();
+    }
+
+    // ---- "🎶 Teraz: …" (NowPlayingService): only what the program played, only a guest's request the AI judged ----
+
+    @Test
+    void aGuestsRequestThePlayedProgramMarks_isTheRoomsNowPlaying() {
+        waiting(request(1, "Sanah - Szampan", Duration.ofMinutes(10)));
+
+        service.markPlayed(PARTY, List.of(play("sanah", "Szampan", Duration.ofSeconds(45))), NOW, true);
+
+        assertThat(nowPlaying.now(PARTY, NOW)).contains(new NowPlayingService.Song("Sanah - Szampan", NOW.minusSeconds(45)));
+        assertThat(nowPlaying.now(PARTY, NOW.plus(NowPlayingService.SHOWN))).as("a few minutes, not for ever").isEmpty();
+    }
+
+    @Test
+    void theDjsOwnSong_orAGuestsUncheckedWords_areNoNowPlaying() {
+        SongRequestEntity own = request(1, "Sanah - Szampan", Duration.ofMinutes(10));
+        own.setAddedByDj(true);
+        SongRequestEntity unchecked = request(2, "Wilki - Baśka", Duration.ofMinutes(10));
+        unchecked.setChecked(false);
+        waiting(own);
+        assertThat(service.markPlayed(PARTY, List.of(play("Sanah", "Szampan", Duration.ZERO)), NOW, true)).hasSize(1);
+        assertThat(nowPlaying.now(PARTY, NOW)).as("the DJ's own song").isEmpty();
+
+        waiting(unchecked);
+        assertThat(service.markPlayed(PARTY, List.of(play("Wilki", "Baśka", Duration.ZERO)), NOW, true)).hasSize(1);
+        assertThat(nowPlaying.now(PARTY, NOW)).as("a guest's words the AI did not judge").isEmpty();
+    }
+
+    @Test
+    void aRequestPlayedBeforeTheCallsNewestSong_isOverAlready_andTheNextSongEndsTheBar() {
+        waiting(request(1, "Sanah - Szampan", Duration.ofMinutes(10)));
+        // the program restarted: the history read again, the request's song and the one after it
+        service.markPlayed(PARTY, List.of(play("Sanah", "Szampan", Duration.ofMinutes(4)), play("Inny", "Utwór", Duration.ofMinutes(1))),
+                NOW, true);
+        assertThat(nowPlaying.now(PARTY, NOW)).isEmpty();
+
+        waiting(request(2, "Wilki - Baśka", Duration.ofMinutes(10)));
+        service.markPlayed(PARTY, List.of(play("Wilki", "Baśka", Duration.ofSeconds(45))), NOW, true);
+        assertThat(nowPlaying.now(PARTY, NOW)).isPresent();
+        waiting();
+        service.markPlayed(PARTY, List.of(play("Wilki", "Baśka", Duration.ofSeconds(44))), NOW, true);
+        assertThat(nowPlaying.now(PARTY, NOW)).as("the same song sent again: still now").isPresent();
+        service.markPlayed(PARTY, List.of(play("Inny", "Utwór", Duration.ZERO)), NOW.plusSeconds(150), true);
+        assertThat(nowPlaying.now(PARTY, NOW.plusSeconds(150))).as("the next song").isEmpty();
     }
 }
