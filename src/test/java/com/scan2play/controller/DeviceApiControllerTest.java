@@ -31,11 +31,12 @@ class DeviceApiControllerTest {
 
     private final DjDeviceService devices = mock(DjDeviceService.class);
     private final DeckHistoryService deckHistory = mock(DeckHistoryService.class);
+    private final com.scan2play.service.DeckSetService deckSet = mock(com.scan2play.service.DeckSetService.class);
     private final com.scan2play.service.PartySettingsQueryService parties = mock(com.scan2play.service.PartySettingsQueryService.class);
     private MockMvc mockMvc;
 
     private MockMvc mvc(com.scan2play.service.PlanService plans) {
-        return MockMvcBuilders.standaloneSetup(new DeviceApiController(devices, deckHistory, new GuestRequestLimiter(5, 10, 100, ""),
+        return MockMvcBuilders.standaloneSetup(new DeviceApiController(devices, deckHistory, deckSet, new GuestRequestLimiter(5, 10, 100, ""),
                 parties, plans)).build();
     }
 
@@ -72,6 +73,33 @@ class DeviceApiControllerTest {
         mockMvc.perform(post("/api/device/plays").header("Authorization", "Bearer good").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"plays\":[{\"at\":1795300000,\"artist\":\"Sanah\",\"title\":\"Szampan\"}]}"))
                 .andExpect(status().isOk()).andExpect(content().json("{\"marked\":[\"Sanah - Szampan\"]}"));
+    }
+
+    /** V83: every song of the call goes to the night's set too, on the server's clock and with its program; a failure there is no 500. */
+    @Test
+    void everySong_isKeptForTheSet_withItsProgram_andAFailureThereFailsNothing() throws Exception {
+        long now = java.time.Instant.now().getEpochSecond();
+        when(deckHistory.markPlayed(eq("AB123"), anyList(), any(), org.mockito.ArgumentMatchers.anyBoolean())).thenReturn(List.of("Sanah - Szampan"));
+        mockMvc.perform(post("/api/device/plays").header("Authorization", "Bearer good").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"plays\":[{\"at\":" + (now - 480) + ",\"artist\":\"Sanah\",\"title\":\"Szampan\",\"program\":\"Serato\"},"
+                                + "{\"at\":" + (now - 240) + ",\"artist\":\"Kult\",\"title\":\"Arahja\"}],\"sentAt\":" + (now - 60) + "}"))
+                .andExpect(status().isOk());
+        @SuppressWarnings("unchecked")
+        org.mockito.ArgumentCaptor<List<com.scan2play.service.DeckSetService.SetSong>> set = org.mockito.ArgumentCaptor.forClass(List.class);
+        verify(deckSet).keep(eq(7L), eq("AB123"), set.capture(), any());
+        assertThat(set.getValue()).extracting(com.scan2play.service.DeckSetService.SetSong::name, com.scan2play.service.DeckSetService.SetSong::program)
+                .containsExactly(org.assertj.core.groups.Tuple.tuple("Sanah - Szampan", "Serato"), org.assertj.core.groups.Tuple.tuple("Kult - Arahja", null));
+        assertThat(set.getValue().getFirst().startedAt()).as("moved by the clock's minute").isBetween(
+                java.time.Instant.ofEpochSecond(now - 422), java.time.Instant.ofEpochSecond(now - 418));
+
+        when(deckSet.keep(org.mockito.ArgumentMatchers.anyLong(), anyString(), anyList(), any())).thenThrow(new IllegalStateException("db"));
+        mockMvc.perform(post("/api/device/plays").header("Authorization", "Bearer good").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"plays\":[{\"artist\":\"Sanah\",\"title\":\"Szampan\"}]}"))
+                .andExpect(status().isOk()).andExpect(content().json("{\"marked\":[\"Sanah - Szampan\"]}"));
+        org.mockito.Mockito.clearInvocations(deckSet);
+        mockMvc.perform(post("/api/device/plays").header("Authorization", "Bearer good").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"plays\":[]}")).andExpect(status().isOk());
+        verify(deckSet, never()).keep(org.mockito.ArgumentMatchers.anyLong(), anyString(), anyList(), any());
     }
 
     @Test

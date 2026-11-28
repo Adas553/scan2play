@@ -66,6 +66,7 @@ class PlanFeatureEndpointsTest {
     private PartySettingsCommandService settings;
     private com.scan2play.service.WishService wishes;
     private com.scan2play.service.PollService polls;
+    private com.scan2play.service.DeckSetService deckSet;
 
     private static OAuth2AuthenticationToken user(String sub) {
         return new OAuth2AuthenticationToken(new DefaultOAuth2User(AuthorityUtils.createAuthorityList("ROLE_USER"), Map.of("sub", sub), "sub"),
@@ -78,6 +79,7 @@ class PlanFeatureEndpointsTest {
         settings = mock(PartySettingsCommandService.class);
         wishes = WishControllers.wishes(PUB);
         polls = PollControllers.polls(PUB);
+        deckSet = mock(com.scan2play.service.DeckSetService.class);
         when(staff.partiesOf(anyString())).thenReturn(List.of(pub));
         when(staff.accessOf(pub, ORGANISER)).thenReturn(Optional.of(new PartyStaffService.Access(pub, true, StaffPermission.all())));
         when(staff.accessOf(pub, "kasia")).thenReturn(Optional.of(new PartyStaffService.Access(pub, false, StaffPermission.all())));
@@ -107,7 +109,7 @@ class PlanFeatureEndpointsTest {
                         WishControllers.djWishes(wishes, helper, plans, settings, codesAsTexts()),
                         WishControllers.djPlan(wishes, helper, plans, settings, codesAsTexts()),
                         new DjPollsController(polls, helper, plans, codesAsTexts()),
-                        new DjDeviceController(devices(), deckWatch(), helper, plans))
+                        new DjDeviceController(devices(), deckWatch(), helper, plans, deckSet, settings))
                 .setViewResolvers(new InternalResourceViewResolver("/WEB-INF/views/", ".html")).build();
     }
 
@@ -138,6 +140,26 @@ class PlanFeatureEndpointsTest {
                 .param("minutes", "abc"))).isEqualTo(400);
         assertThat(perform(mvc(Plans.enforced(ORGANISER)), ORGANISER, post("/dj/devices/silence").param("partyCode", PUB)))
                 .as("no minutes").isEqualTo(400);
+    }
+
+    /**
+     * The program's card (V83, V84): {@code GET /dj/devices} says both switches as the party has them, and each switch saves its own
+     * — "Zapisuj set wieczoru" by the set's service (off deletes the set), "Pokazuj na TV i kiosku" one column of the settings.
+     */
+    @Test
+    void theCardsSwitches_areSaidAndSaved() throws Exception {
+        pub.setNowPlayingShown(false);
+        when(deckSet.kept(PUB)).thenReturn(false);
+        MockMvc mvc = mvc(Plans.enforced(ORGANISER));
+        String card = mvc.perform(get("/dj/devices").param("partyCode", PUB).principal(user(ORGANISER)).session(new MockHttpSession()))
+                .andReturn().getResponse().getContentAsString();
+        assertThat(card).contains("\"setKept\":false", "\"nowPlayingShown\":false", "\"silenceMinutes\":20");
+
+        assertThat(perform(mvc, ORGANISER, post("/dj/devices/set").param("partyCode", PUB).param("kept", "true"))).isEqualTo(204);
+        verify(deckSet).setKept(PUB, true);
+        assertThat(perform(mvc, ORGANISER, post("/dj/devices/now-playing").param("partyCode", PUB).param("shown", "true"))).isEqualTo(204);
+        verify(settings).setNowPlayingShown(PUB, true);
+        pub.setNowPlayingShown(true);
     }
 
     /** The answer's status: a request let through is answered (below 400), not only "nothing thrown" (the review of 2026-10-14). */
@@ -201,7 +223,11 @@ class PlanFeatureEndpointsTest {
                 Arguments.of(PlanFeature.DECK, true, post("/dj/devices/code").param("partyCode", PUB)),
                 Arguments.of(PlanFeature.DECK, true, get("/dj/devices").param("partyCode", PUB)),
                 // ... and "Ostrzeż po" (V81)
-                Arguments.of(PlanFeature.DECK, true, post("/dj/devices/silence").param("partyCode", PUB).param("minutes", "10")));
+                Arguments.of(PlanFeature.DECK, true, post("/dj/devices/silence").param("partyCode", PUB).param("minutes", "10")),
+                // ... and "Zapisuj set wieczoru" (V83)
+                Arguments.of(PlanFeature.DECK, true, post("/dj/devices/set").param("partyCode", PUB).param("kept", "false")),
+                // ... and "Pokazuj na TV i kiosku, co teraz leci" (V84)
+                Arguments.of(PlanFeature.DECK, true, post("/dj/devices/now-playing").param("partyCode", PUB).param("shown", "false")));
     }
 
     @ParameterizedTest(name = "{0}: {2}")
@@ -213,6 +239,8 @@ class PlanFeatureEndpointsTest {
         verify(settings, never()).updateSettings(anyString(), any());
         org.mockito.Mockito.verifyNoInteractions(wishes);
         org.mockito.Mockito.verifyNoInteractions(polls);
+        org.mockito.Mockito.verifyNoInteractions(deckSet);
+        verify(settings, never()).setNowPlayingShown(anyString(), org.mockito.ArgumentMatchers.anyBoolean());
     }
 
     @ParameterizedTest(name = "{0}: {2}")

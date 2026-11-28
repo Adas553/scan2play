@@ -69,7 +69,7 @@ class SongEvaluationServiceTest {
     void setUp() {
         // The Gemini client is not used here; the prompts are the real ones from the classpath.
         service = new SongEvaluationService(null, new ObjectMapper(), songRequestRepository, partySettingsQueryService,
-                messageSource, PromptBuilder.loaded(new DefaultResourceLoader()), new SongRequestCommandService(songRequestRepository, dedications, partyThere(), org.mockito.Mockito.mock(DjService.class)), aiHealth, pushNotifications, partyStaff, Plans.off(), refusals, freeAi);
+                messageSource, PromptBuilder.loaded(new DefaultResourceLoader()), new SongRequestCommandService(songRequestRepository, dedications, partyThere(), org.mockito.Mockito.mock(DjService.class)), aiHealth, pushNotifications, partyStaff, Plans.off(), refusals, freeAi, deckSet);
         service.init();
     }
 
@@ -298,11 +298,13 @@ class SongEvaluationServiceTest {
     /** The plans as the test sets them: not enforced unless it says (V35). */
     private PlanService plans = Plans.off();
     private FreeAiLimit freeAi = FreeAiLimit.off();
+    /** The night's set (V83): nothing played tonight unless a test says so. */
+    private final DeckSetService deckSet = org.mockito.Mockito.mock(DeckSetService.class);
 
     private SongEvaluationService answering(String json) {
         SongEvaluationService answering = new SongEvaluationService(null, new ObjectMapper(), songRequestRepository,
                 partySettingsQueryService, messageSource, PromptBuilder.loaded(new DefaultResourceLoader()),
-                new SongRequestCommandService(songRequestRepository, dedications, partyThere(), org.mockito.Mockito.mock(DjService.class)), aiHealth, pushNotifications, partyStaff, plans, refusals, freeAi) {
+                new SongRequestCommandService(songRequestRepository, dedications, partyThere(), org.mockito.Mockito.mock(DjService.class)), aiHealth, pushNotifications, partyStaff, plans, refusals, freeAi, deckSet) {
             @Override
             String askAi(String prompt, GenerateContentConfig config) {
                 prompts.add(prompt);
@@ -687,6 +689,7 @@ class SongEvaluationServiceTest {
             assertThat(refused.decision()).as(words).isEqualTo("rejected");
             assertThat(refused.comment()).isEqualTo("Played a moment ago");
             assertThat(refused.isUnchecked()).as("the guest reads the refusal, not \"PRZEKAZANE\"").isFalse();
+            assertThat(refused.isRepeat()).as("a song that played: shown gently, \"JUŻ GRAŁO\"").isTrue();
             assertThat(saved.getValue().getRejectReason()).isEqualTo(com.scan2play.model.RejectReason.DUPLICATE);
         }
 
@@ -776,6 +779,67 @@ class SongEvaluationServiceTest {
         answering(WILKI_ACCEPTED).evaluateAndSaveSong(PARTY_CODE, "wilki baśka", "ANY");
 
         assertThat(prompts).hasSize(2);
+    }
+
+    // ---- "Już leciało" (V83): a song of tonight's set among the DJ's last "Bez powtórek" ----
+
+    @Test
+    void aSongOfTonightsSet_namedByTheGuest_isRefusedBeforeTheAiIsAsked() {
+        aParty(15);
+        java.time.Instant at = java.time.Instant.parse("2026-11-28T20:30:00Z");
+        when(deckSet.playedLately(eq(PARTY_CODE), eq("Wilki - Baśka"), eq(15), any())).thenReturn(java.util.Optional.of(at));
+        when(messageSource.getMessage(eq("guest.already_played"), any(), any(Locale.class)))
+                .thenAnswer(call -> "Ta piosenka już leciała o " + ((Object[]) call.getArgument(1))[0]);
+
+        DjResponse response = answering(WILKI_ACCEPTED).evaluateAndSaveSong(PARTY_CODE, "Wilki - Baśka", "ANY");
+
+        assertThat(response.decision()).isEqualTo("rejected");
+        assertThat(response.comment()).isEqualTo("Ta piosenka już leciała o 21:30");
+        assertThat(response.isRepeat()).as("shown gently: \"JUŻ GRAŁO\"").isTrue();
+        assertThat(prompts).as("no Gemini call").isEmpty();
+        verify(songRequestRepository, never()).save(any());
+        verify(refusals).count(PARTY_CODE, com.scan2play.model.RefusalReason.ALREADY_PLAYED);
+    }
+
+    @Test
+    void aSongOfTonightsSet_thatTheAiWorkedOut_isRefusedToo_andTheRuleOffAsksNothing() {
+        aParty(15);
+        when(deckSet.playedLately(eq(PARTY_CODE), any(), eq(15), any())).thenReturn(java.util.Optional.empty());
+        when(deckSet.playedLately(eq(PARTY_CODE), eq("Wilki - Baśka"), eq(15), any()))
+                .thenReturn(java.util.Optional.of(java.time.Instant.parse("2026-11-28T20:30:00Z")));
+        when(messageSource.getMessage(eq("guest.already_played"), any(), any(Locale.class))).thenReturn("Już leciała");
+
+        DjResponse response = answering(WILKI_ACCEPTED).evaluateAndSaveSong(PARTY_CODE, "baśka wilki", "ANY");
+
+        assertThat(response.decision()).isEqualTo("rejected");
+        assertThat(response.comment()).isEqualTo("Już leciała");
+        assertThat(prompts).hasSize(1);
+        verify(songRequestRepository, never()).save(any());
+
+        // "Bez powtórek" 0: repeats are the DJ's choice — the set asked with 0, which says nothing (DeckSetService)
+        aParty(0);
+        when(songRequestRepository.save(any())).thenAnswer(call -> call.getArgument(0));
+        answering(WILKI_ACCEPTED).evaluateAndSaveSong(PARTY_CODE, "Wilki - Baśka", "ANY");
+        verify(deckSet, org.mockito.Mockito.atLeastOnce()).playedLately(eq(PARTY_CODE), any(), eq(0), any());
+    }
+
+    /** A song the AI rejected keeps the AI's own reason: the set is looked at again only for a song the AI let through. */
+    @Test
+    void aSongTheAiRejected_keepsItsReason_evenIfItWasInTheSet() {
+        aParty(15);
+        when(deckSet.playedLately(eq(PARTY_CODE), any(), eq(15), any())).thenReturn(java.util.Optional.empty());
+        org.mockito.Mockito.lenient().when(deckSet.playedLately(eq(PARTY_CODE), eq("Wilki - Baśka"), eq(15), any()))
+                .thenReturn(java.util.Optional.of(java.time.Instant.parse("2026-11-28T20:30:00Z")));
+        org.mockito.Mockito.lenient().when(messageSource.getMessage(eq("guest.already_played"), any(), any(Locale.class)))
+                .thenReturn("Już leciała");
+        when(songRequestRepository.save(any())).thenAnswer(call -> call.getArgument(0));
+
+        DjResponse response = answering("{\"decision\":\"rejected\",\"comment\":\"Nie ten klimat\",\"songName\":\"Wilki - Baśka\","
+                + "\"requestKind\":\"title\"}").evaluateAndSaveSong(PARTY_CODE, "baśka wilki", "ANY");
+
+        assertThat(response.decision()).isEqualTo("rejected");
+        assertThat(response.comment()).isEqualTo("Nie ten klimat");
+        verify(refusals, never()).count(PARTY_CODE, com.scan2play.model.RefusalReason.ALREADY_PLAYED);
     }
 
     // ---- The hosts' lists (V29) ----
@@ -1115,6 +1179,7 @@ class SongEvaluationServiceTest {
         assertThat(saved.getValue().isChecked()).as("the visitor's alone").isFalse();
         verify(dedications).save(any());
         assertThat(aiHealth.takeSummary()).as("the AI's health: nothing to count").isNull();
+        verify(deckSet, never()).playedLately(any(), any(), org.mockito.ArgumentMatchers.anyInt(), any());
     }
 
     /**

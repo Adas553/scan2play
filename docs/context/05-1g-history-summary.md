@@ -61,12 +61,14 @@ long the played requests waited (from the request to "played": the average and t
 piosenek" (the artist of the AI's "Artist - Title", grouped by `SongNames.comparable`, only those of two songs or more), "Nowe prośby co
 pół godziny" (each song's first request — the later votes and 👍 have no time of their own; bars of an SVG — attributes, not inline
 styles, for the CSP —, the busiest in the accent, the quiet half-hours between too; counted in time from 6:00, so the hour the clocks go
-back is two bars of "02:00"), what played in the order it played (folded on a phone, unfolded to print, two columns on paper); **why
+back is two bars of "02:00"), what played in the order it played (folded on a phone, unfolded to print, two columns on paper); **"Cały set"** (V83, `#wholeSet`):
+every song the DJ's program saw that evening, the played requests marked 🙋 (folded, unfolded to print; Section 5.1 `05-1d`); **why
 the AI rejected** (V62): "już grały: 4 · nie pasowały: 5" under its count, and "Odrzucone przez AI" — the songs it rejected each once,
 how many asked, 🔁 / ✗ (a kept one has no name, so it is not there); **"Zatrzymane, zanim zapytano AI"** (V63, one line, `#refusals`):
 the requests refused before the AI judged a song — never saved as requests — counted by reason in `evening_refusal` (`EveningRefusals`,
 one upsert a refusal off a transaction of its own, a failure only logged, the demo none): a song on the hosts' "nie grać" list, one the
-DJ skipped within two hours, a mood or a message ("nie piosenka"); no song and no word of the guest's; **"Ostatnie wieczory"** (screen only, `#compare`): the shown evening
+DJ skipped within two hours, a mood or a message ("nie piosenka"), a song of tonight's set among the DJ's last "Bez powtórek" ("już
+leciało", V83); no song and no word of the guest's; **"Ostatnie wieczory"** (screen only, `#compare`): the shown evening
 among up to 8 neighbours (`EveningSummaryService.compared`) — the votes, the played, the rejected, the first and last request, each row
 a link — from the evenings' own query (no read more). **The
 hosts'** (the couple, the client): three big numbers (the votes, the songs played on request, the busiest half-hour), the first request and

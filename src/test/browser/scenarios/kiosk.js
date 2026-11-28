@@ -611,6 +611,21 @@
     });
 
     S2P.scenario({
+        name: 'kiosk-now-playing-fits-1180x820',
+        title: '"🎶 Teraz: …" above ten songs, a tablet held across (1180 × 820): still one screen — "Wyślij" and "Następny gość" in view, the bar above the list\'s heading',
+        page: 'kiosk-full-now',
+        viewport: '1180,820',
+        run: async function (t) {
+            const now = document.getElementById('kioskNowPlaying');
+            t.check('"Teraz: …" on the kiosk', !!now);
+            if (now) {
+                t.check('above the list\'s heading', now.getBoundingClientRect().bottom <= document.getElementById('kioskListTitle').getBoundingClientRect().top);
+            }
+            fitsOneScreen(t, 'kioskNext');
+        }
+    });
+
+    S2P.scenario({
         name: 'kiosk-full-fits-1024x768',
         title: 'ten songs on the list, a small tablet held across (1024 × 768): one screen — "Wyślij" and "Następny gość" in view, the list scrolling in its card',
         page: 'kiosk-full',

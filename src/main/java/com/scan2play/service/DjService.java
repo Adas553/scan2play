@@ -52,6 +52,8 @@ public class DjService {
     private final SongRequestDedicationRepository dedicationRepository;
     private final CacheManager cacheManager;
     private final DjLibraryService libraryService;
+    /** The night's set (V83): after "Wyczyść historię" only what plays later is "Już leciało". */
+    private final DeckSetService deckSetService;
 
     // ---- Queue Queries ----
 
@@ -255,7 +257,8 @@ public class DjService {
      * The DJ clears the history ("Wyczyść historię" — a weekend's guests' words should not stay on the list): the party's requests
      * that played or were rejected are deleted. The waiting ones stay, and so do the ones the DJ skipped within
      * {@link SongRequestCommandService#SKIP_REMEMBERED} — deleting them would let the song back into the queue. The AI's duplicate
-     * rule reads the songs that played, so after this it no longer knows what played before.
+     * rule reads the songs that played, so after this it no longer knows what played before — and "Już leciało" of the night's set
+     * looks only at the songs played after it ({@link DeckSetService#historyCleared}); the set itself stays for the summary.
      * <p>
      * Under the party's lock of the guests' requests, as {@link #restoreSong}: a skip put back at the same moment is either
      * back in the queue or deleted, never half of each.
@@ -270,6 +273,7 @@ public class DjService {
                 Instant.now().minus(SongRequestCommandService.SKIP_REMEMBERED));
         // the songs' numbers start again from the highest one left — #1 with the queue empty (the owner, 2026-10-08)
         songRequestRepository.resetRequestCounter(ownerPartyCode);
+        deckSetService.historyCleared(ownerPartyCode, Instant.now());
         log.info("Party [{}]: the DJ cleared the history — {} request(s) deleted", ownerPartyCode, deleted);
         return deleted;
     }

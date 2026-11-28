@@ -123,6 +123,12 @@ public interface PartySettingsRepository extends JpaRepository<PartySettingsEnti
             + " AND owner_email IS NOT NULL ORDER BY created_at LIMIT :limit", nativeQuery = true)
     List<String> welcomesDue(@Param("since") Instant since, @Param("limit") int limit);
 
+    /** "Pokazuj na TV i kiosku, co teraz leci" (V84): one column, the row's other columns untouched. */
+    @Transactional
+    @Modifying
+    @Query(value = "UPDATE party_settings SET now_playing_shown = :on WHERE party_code = :partyCode", nativeQuery = true)
+    int setNowPlayingShown(@Param("partyCode") String partyCode, @Param("on") boolean on);
+
     /**
      * "Nowości mailem" (V80) switched on or off at {@code now} — the time is the proof of the consent. The news they have had is
      * {@link #markNewsKnown}'s: whoever says yes is logged in, so the news now is in their panel already. The caller empties the cache.

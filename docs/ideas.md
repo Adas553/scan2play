@@ -228,10 +228,9 @@ piece of work or when a task names an item. A finished item stays here until its
    (≤ 300, kept in memory), without the played, waiting and "🚫" ones, sent without the AI, "🎲 z propozycji" in the queue. Its variant
    0 is done: the hint to vote 👍 stands above the guests' list now, on the kiosk and the TV too (it was under the list, below a
    phone's screen). Measured: `TABLESAMPLE` samples the whole table, not one party's — no use. Open: B at all, Pro or Free, the list
-   uploaded apart or as a second playlist of the same file, the dedication with it, the limits. **Not now** (the owner): "Co to
-   było?" — the guests' list of what played tonight knows only the guests' requests, not the DJ's set (later perhaps the set's history
-   uploaded after the party); "🎶 Leci Twoja piosenka!" (the guest page would ask the server every half minute); 🔥 for the song that
-   plays. **Good, not started:** "Brakuje Ci" — the songs asked for at several parties of the last 30 days that the library has not.
+   uploaded apart or as a second playlist of the same file, the dedication with it, the limits. **Not now** (the owner): "🎶 Leci
+   Twoja piosenka!" (the guest page would ask the server every half minute); 🔥 for the song that plays. "Co to było?", parked here
+   for want of the DJ's set, is built with it (item 21, 4, V83). **Good, not started:** "Brakuje Ci" — the songs asked for at several parties of the last 30 days that the library has not.
 
 14. **The guests' song suggestions: a single word completed to an artist** (the owner, 2026-11-16: "shak" gave "Shik Shak Shok", not
    Shakira) — built on `claude/awesome-sagan-hhc11y`: a hand-written list of ~380 artists (~200 Polish) in `song-autocomplete.js`, only an addition
@@ -421,7 +420,13 @@ piece of work or when a task names an item. A finished item stays here until its
    `docs/history/review-2026-11-27-deck-watch-2.md` (after the release): a set is 30 min of songs or 10 with a guest's request in it (not
    a soundcheck), it goes on after a break of up to 4 h, the guests still asking are two requests 8 min and more after the last song
    (not the set's "one more!"), the DJ's own songs are no guests; the lead gone is amber in the card while guests ask, even after a
-   test only; "nigdy" keeps the line true; no migration. **Not built from the same list:** 3 "Teraz leci" on the
-   TV, 4 the night's set kept ("Już leciało", the summary, "Co to było?"), 5 "Chyba leciało — potwierdź", 6 the queue in the
-   program's window; small: the wait from request to play in the summary, "Masz starą wersję programu", Deezer / Apple Music on
+   test only; "nigdy" keeps the line true; no migration. **3 and 4 built** (the owner, 2026-11-27: "zbuduj 3 i 4", the picks below; V83;
+   review `docs/history/review-2026-11-27-now-playing-and-set.md`; details `docs/context/05-1d-panel-heading-queue.md`): **3 "🎶
+   Teraz: …"** on the TV and the kiosk for the guest's request the program marked (only the program's marks, not the DJ's "Zagrane";
+   the title only, no dedication — the guest's form promises "Zobaczy ją tylko DJ"; in memory, no query and no new fetch; 6 min or the
+   next song; the DJ may switch it off in the program's card — the owner, 2026-11-27, V84); **4 the night's set kept** — every song the program sends, while "Zapisuj set wieczoru" is on (on by default in Pro, a
+   switch in the card; kept 30 days like the requests): "Ta piosenka już leciała o 21:30" before the AI for a song among the DJ's last
+   "Bez powtórek z ostatnich N" (one rule the DJ knows; 0 = off; only info, no "Poproś jeszcze raz"), "Cały set" in the summary and its
+   count in the morning e-mail, "Co to było?" on the guest's page (the last 10, fetched when unfolded). Never in "Trendy" (16). **Not
+   built from the same list:** 5 "Chyba leciało — potwierdź", 6 the queue in the program's window; small: the wait from request to play in the summary, "Masz starą wersję programu", Deezer / Apple Music on
    Windows, "Na czym grasz?" to the DJs.

@@ -100,7 +100,7 @@ artist in common ("✓"); a title alone, a request without an artist, a song tha
 the sender did not say its clock; the computer's clock — moved by the difference between `sentAt` and the server's time, so a computer
 whose clock is off still matches) mark nothing; a song with no artist (a file without tags: Serato writes its name as the title) is
 read as "Artist - Title". Each mark is `DjService.markSongAsPlayed` (the conditional `UPDATE`). The privacy policy (PL / EN, section
-2) says what is sent and that nothing is kept. `DjDeviceService`: only the token's SHA-256 in `dj_device`; at most 3 computers a party
+2) says what is sent and what is kept (the night's set, V83, below). `DjDeviceService`: only the token's SHA-256 in `dj_device`; at most 3 computers a party
 (pairing a 4th forgets the one seen longest ago); a code used once, one at a time per party (a new one kills the earlier); 10 tries of
 a code per address and 1000 wrong codes in all per 10 minutes (reaching it: one WARN in the log), 30 calls a minute per computer (in
 memory); `last_seen_at` written once a minute at most. Browser scenarios `deck-reader-program-only`, `deck-connected-on-load`, `deck-computers*`;
@@ -139,6 +139,54 @@ when the minutes are raised above the silence warned about; a restart may repeat
 since its start, any song, with its program — kept on the computer only). `DeckWatchServiceTest`, `DeckWatchIT` (PostgreSQL), browser
 scenarios `deck-computer-lines(-en)`, `deck-silence-choice`, `deck-silence-not-saved(-en)`, `deck-older-answer-dropped`,
 `deck-list-not-loaded`, `deck-computer-row-800`.
+
+**"🎶 Teraz: …" on the TV and the kiosk (`docs/ideas.md` item 21, "Teraz leci"; no migration).** When the program marks a guest's
+request played (`DeckHistoryService.markPlayed`), the TV screen and the kiosk show above their list "🎶 Teraz: <song>" / "Now playing:"
+(`#tvNowPlaying`, `#kioskNowPlaying`) — the request's name only, never its dedication (the guest's form promises "Zobaczy ją tylko DJ";
+the owner, 2026-11-27) or the guest's words; only a request the AI judged, never the DJ's own "+ Dodaj piosenkę". Only the program sets
+it: the DJ's "Zagrane" is often tapped minutes later, when "now" would be untrue. `NowPlayingService` keeps the song and its start in
+memory (Caffeine, ≤ 10 000 parties): the TV and the kiosk already fetch their lists every 10 s, and the bar costs them a map's look-up,
+no query and no new fetch; a restart forgets at most one song's bar. It shows from the song's start for 6 min (`SHOWN`) and goes once a
+song that started more than 30 s later reaches the server (`SAME_SONG`: a song sent again is not the next one) — with VirtualDJ that is
+~45 s into the next song; Serato 2/3 writes a song when it is loaded on a deck, so there the bar may go a little early. A request whose
+song is not the newest of its call (a history read again) is over already. With the bar the TV's ten rows close up (`.tv-list-now`, a
+class, not `:has()`: a TV's browser may be old) so a window of 1280 × 720 still shows them all. Not on the guest's page (it would need a
+fetch of its own). The DJ may keep it off the room's screens: "Pokazuj na TV i kiosku, co teraz leci" in the program's card (V84,
+`party_settings.now_playing_shown`, on by default, mapped in the entity so the TV and the kiosk read it from the cached settings — no
+query of their own; `POST /dj/devices/now-playing`, QUEUE, Pro; `GET /dj/devices` says `nowPlayingShown`; scenario
+`deck-now-playing-switch`). `NowPlayingServiceTest`, `DeckHistoryServiceTest`, `TvScreenWebTest`, `KioskWebTest`; browser scenarios
+`tv-now-playing-*`, `kiosk-now-playing-fits-1180x820`.
+
+**The night's set kept (V83, `docs/ideas.md` item 21, 4; Pro — `DECK`).** Every song the program sends is kept for the party
+(`DeckSetService`, table `deck_play`: the song's start on the server's clock, the artist and title as written, their `LibraryKey`s, the
+program), not only those that mark a request — while "Zapisuj set wieczoru" is on (`#deviceSetKept`, a switch under "Ostrzeż po",
+`party_settings.deck_set_kept`, on by default — the owner, 2026-11-27; `POST /dj/devices/set`, QUEUE, Pro; `GET /dj/devices` says
+`setKept`; off — asked first in the card, since it deletes the sets of every evening — deletes the party's kept set at once). A call's songs are kept in one `INSERT … SELECT FROM unnest(…)` under the party's
+advisory lock, a song sent again (the same keys within 2 min) once, at most 600 a day per computer (in memory; one WARN when reached), a
+song older than 12 h, or without a title, never; a failure is logged and never fails the call. Kept 30 days (the nightly purge of
+`SongRequestRetentionService`, as the requests), gone with the party. Never in "Trendy próśb". Its uses: **"Już leciało o 21:30"**
+(`SongEvaluationService`, `DeckSetService.playedLately`) — a guest's song among the party's last N of tonight's set, N being the DJ's
+"Bez powtórek z ostatnich N" (0: repeats allowed, nothing checked; the owner, 2026-11-27: one rule the DJ knows), by its title and an
+artist in common (a title alone matches nothing), only songs since the evening's first guest's request (a soundcheck before the
+guests came is none; the first request checks nothing; after "Wyczyść historię" only the songs played later — V86
+`party_settings.history_cleared_at`): "Ta piosenka już dziś leciała — o 21:30. Poproś o coś innego!" under an amber "JUŻ GRAŁO", not a red
+"NIE" (`DjResponse.KIND_REPEAT`, the same for the unchecked "leciała przed chwilą"), nothing saved, counted as
+`ALREADY_PLAYED` in the summary's "Zatrzymane, zanim zapytano AI"; checked on the guest's own words before the AI (no Gemini call) and
+again on the AI's song name when it differs ("baśka wilki"); the kiosk the same. **"Co to było?"** on the guest's page
+(`#playedTonight`, folded under the list, only while the party keeps its set and a song came in the last 12 h): the last 10 songs, the
+newest first, with their times (`GET /p/{code}/played`, the fragment `guest-played :: playedList`), fetched by `guest-party.js` at each
+unfolding, never with the page nor by a timer; the list kept 30 s in memory per party, so a room of phones asks the database once
+(and the page's own check of "a song tonight" reads the same memory). **"Cały set"** in the evening summary (`EveningSummaryService.set`,
+`#wholeSet`, both versions, folded, unfolded to print): every song of the evening (≤ 1000), the requests that played marked 🙋; the
+morning e-mail says its count ("🎧 Cały set z programu DJ-a: 87 piosenek"). An evening with a set and no request is not in the summary's
+list (the evenings come from the requests). The cost at 1000 parties at once: a song every ~3.5 min each → ~300 inserts a minute
+(one statement a call); a guest's request reads one party's last N rows by `idx_deck_play_party_started` (twice at most: the words and the
+AI's name; 0.1 ms on 1.8 M rows) after the evening's first guest's request, kept in memory per party once found (an hour, while it is
+still tonight's; asked by `idx_song_requests_party_guest_time`, V85 — without it the planner went through every party's requests of
+12 h for a busy party, 59 ms), "Co to było?" one query per party per 30 s at most, the TV nothing. `DeckSetIT` (PostgreSQL: once,
+two computers and a call with "off" taking turns under the lock, the starts exact in the hour the clocks go back, off, 600 a day, "Już leciało", the evening, the purge, the plans), `DeviceApiControllerTest`,
+`SongEvaluationServiceTest`, `GuestPageRenderTest`, `SummaryPageTest`, `AutomaticEmailsTest`, `SongRequestRetentionServiceTest`;
+browser scenarios `deck-set-kept-switch`, `deck-set-kept-not-saved`, `guest-played-*`.
 
 **Parked: the panel reading the history folder itself** (variant E of `docs/ideas.md` item 18 — "Wskaż folder historii" in Chrome and
 Edge, `showDirectoryPicker`, the tab kept open, `POST /dj/dashboard/plays`). Removed 2026-11-21 after the program worked on the owner's

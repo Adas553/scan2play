@@ -25,10 +25,11 @@
                 class="text-secondary fw-normal"> · </span><span id="djName"><span th:text="#{party.dj.label}">🎧 Gra:</span> <span th:replace="~{fragments/components :: djNameText}">DJ Koko</span></span></th:block></p>
 
         <h2 class="mb-3 text-white" th:text="${response.songName}">Song Name</h2>
-        <!--/* unchecked: the AI could not be asked, and the request went on to the DJ unchecked */-->
-        <div th:class="${response.decision == 'accepted' ? 'accepted' : 'rejected'}">
+        <!--/* unchecked: the AI could not be asked, and the request went on to the DJ unchecked; repeat: the song played tonight
+             already — the guest chose well, only late: "JUŻ GRAŁO" in amber, not a red "NIE" */-->
+        <div th:class="${response.decision == 'accepted' ? 'accepted' : (response.repeat ? 'repeat' : 'rejected')}">
             <h1 class="s2p-verdict mb-0"
-                th:text="${response.unchecked} ? #{result.decision.to_dj} : (${response.decision == 'accepted'} ? #{result.decision.accepted} : #{result.decision.rejected})">
+                th:text="${response.unchecked} ? #{result.decision.to_dj} : (${response.decision == 'accepted'} ? #{result.decision.accepted} : (${response.repeat} ? #{result.decision.repeat} : #{result.decision.rejected}))">
                 STATUS
             </h1>
         </div>

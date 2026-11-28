@@ -119,6 +119,10 @@ public class MorningSummaryEmailService {
         variables.put("votes", summary.votes());
         variables.put("labels", labels(requests, summary.played(), summary.votes(), english));
         variables.put("top", top);
+        // the whole set of the DJ's program (V83): one line, the list is on the summary's page
+        int set = eveningSummaryService.setSize(partyCode, evening);
+        variables.put("setSize", set);
+        variables.put("setLabel", english ? (set == 1 ? "song" : "songs") : Texts.polishPlural(set, "piosenka", "piosenki", "piosenek"));
         variables.put("summaryUrl", mailer.siteUrl() + "/dj/summary?evening=" + evening + "&party=" + partyCode);
         variables.put("stopUrl", stopUrl);
         String html = mailer.render("morning", locale, variables);

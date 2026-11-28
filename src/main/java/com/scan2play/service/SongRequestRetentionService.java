@@ -27,7 +27,8 @@ import java.time.temporal.ChronoUnit;
  * It also removes the DJ history for good (played and rejected requests are the same rows), which is why that history reaches
  * back 30 days at most. What the evening summary needs of a deleted request goes to {@code evening_song} in the same statement
  * (V61, {@code SongRequestRepository.KEEP_FOR_THE_SUMMARY}); those songs, the evenings' titles and their hosts' links are deleted
- * {@value #SUMMARY_MONTHS} months after the evening, the same way.
+ * {@value #SUMMARY_MONTHS} months after the evening, the same way. The nights' sets of the DJs' programs (V83) go after
+ * {@value DeckSetService#KEPT_DAYS} days, as the requests.
  */
 @Service
 @RequiredArgsConstructor
@@ -48,6 +49,7 @@ public class SongRequestRetentionService {
 
     private final SongRequestRepository songRequestRepository;
     private final EveningSummaryRepository eveningSummaryRepository;
+    private final DeckSetService deckSetService;
 
     /**
      * Both cleanups after a start as well: a night the app was down at 04:40 (a deploy, a crash, a sleeping service) would leave
@@ -88,6 +90,27 @@ public class SongRequestRetentionService {
     public void purgeStaleRequests() {
         purgeRequestedBefore(Instant.now().minus(SongRequestEntity.MAX_AGE_DAYS, ChronoUnit.DAYS));
         purgeSummariesBefore(LocalDate.now(Times.DISPLAY_ZONE).minusMonths(SUMMARY_MONTHS));
+        purgeSetsBefore(Instant.now().minus(DeckSetService.KEPT_DAYS, ChronoUnit.DAYS));
+    }
+
+    /**
+     * Deletes the nights' sets (V83, {@link DeckSetService}) of songs that started before {@code cutoff}, batch by batch as the
+     * requests: the set is kept as long as the requests it is shown with.
+     *
+     * @return how many songs were deleted
+     */
+    int purgeSetsBefore(Instant cutoff) {
+        int deleted = 0;
+        for (int batch = 0; batch < MAX_BATCHES; batch++) {
+            int n = deckSetService.deleteStartedBefore(cutoff, BATCH_SIZE);
+            deleted += n;
+            if (n < BATCH_SIZE) {
+                break;
+            }
+        }
+        // a line also for none: the privacy policy promises the 30 days
+        log.info("Set cleanup: deleted {} song(s) of the DJs' sets played more than {} days ago", deleted, DeckSetService.KEPT_DAYS);
+        return deleted;
     }
 
     /**
