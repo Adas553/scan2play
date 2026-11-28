@@ -235,9 +235,14 @@ function computers() {
     });
 
     // "Zapisuj set wieczoru" and "Pokazuj na TV i kiosku, co teraz leci": saved at once; not saved, said, and the switch back as the
-    // server keeps it (the next list puts it)
+    // server keeps it (the next list puts it). A switch whose "off" deletes something (the sets of every evening) asks first
+    // (data-confirm-off); "Anuluj" puts it back on and sends nothing.
     function savedAtOnce(box, failed, path, field) {
         box.addEventListener('change', async function () {
+            if (!box.checked && box.dataset.confirmOff && !window.confirm(box.dataset.confirmOff)) {
+                box.checked = true;
+                return;
+            }
             box.disabled = true;
             failed.textContent = '';
             let saved = false;

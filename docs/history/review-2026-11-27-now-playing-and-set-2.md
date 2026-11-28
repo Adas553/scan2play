@@ -248,3 +248,46 @@ historię” a przewodnik; pasek TV ucina długi tytuł do samego wykonawcy; tek
 2. P2 (potwierdzenie przy wyłączaniu, opis).
 3. P5, P6, P8, P9, P11 — drobne, jednym PR-em.
 4. P4, P7, P10, P12, P13, P14 — przy okazji / do decyzji właściciela.
+
+## Poprawki (2026-11-28, na prośbę właściciela)
+
+Na gałęzi `claude/intelligent-faraday-q6k10d`, do której scalona jest `claude/optimistic-hopper-20ct09` (PR-y #319 / #320 jej nie
+mają, dopóki właściciel nie zdecyduje, którą gałąź wydać).
+
+- **P1 — poprawione.** V85 `idx_song_requests_party_guest_time (party_code, requested_at) WHERE NOT added_by_dj` i pierwsza prośba
+  gościa wieczoru trzymana w pamięci na imprezę (`DeckSetService.firstGuestRequest`, godzina, póki jest z ostatnich 12 h; brak — nie
+  trzymany). Sam indeks nie wystarczał: na małej tabeli bez VACUUM planista dalej brał `idx_song_requests_requested_at`. „Już leciało”
+  to teraz jedno zapytanie po `deck_play` (+ raz na godzinę na imprezę to po prośbach). `DeckSetIT` sprawdza plan podzapytania.
+- **P2 — poprawione.** Wyłączenie „Zapisuj set wieczoru” pyta (`data-confirm-off`, `dashboard.computer.set.confirm`: „…sety ze
+  wszystkich wieczorów z 30 dni zostaną usunięte, także »Cały set« w podsumowaniach. Tego nie da się cofnąć.”), „Anuluj” zostawia
+  włączone i nic nie wysyła; opis mówi o wszystkich wieczorach. Scenariusz `deck-set-off-asks-first`. Kto może (obsługa z QUEUE czy
+  tylko organizator) — bez zmian, do decyzji właściciela.
+- **P3 — poprawione.** Nowe testy: `DeckSetIT` (blokada trzymana z drugiego połączenia: zapis i wyłączenie czekają — czerwone bez
+  `lock`; strefa JVM `Europe/Warsaw` w noc zmiany czasu; wczorajsza prośba; limit 600 ucięty w połowie; tytuł > 200; pamięć „Co to
+  było?” po zapisie i po wyłączeniu; plan V85), `GuestControllerTest.whatWasThat_isPartOfPro`,
+  `GuestNoSessionWebTest.whatWasThat_isAnsweredWithoutASession_orA404`, `EveningSummaryServiceTest.theWholeSet_marksThePlayOfEachPlayedRequest`,
+  `SongEvaluationServiceTest` (demo nie czyta setu; odrzucenie przez AI zostaje), `DeckHistoryServiceTest` (dwie prośby w wywołaniu),
+  `PlanFeatureEndpointsTest.theCardsSwitches_areSaidAndSaved` (i odmowa bez Pro nie zapisuje przełączników).
+- **P4 — poprawione.** Czasy do `unnest` jako tekst ISO z `Z` (`?::text[]::timestamptz[]`), nie `Timestamp`.
+- **P5 — poprawione.** Javadoci na swoich miejscach (`PartySettingsRepository`, `SongEvaluationService`, także w `GuestNoSessionWebTest`).
+- **P6 — poprawione w przewodniku** (PL/EN, „Wyczyść historię”: set zostaje, „już leciała” działa dalej, wyłącza je „Bez powtórek” = 0).
+  Czy „Wyczyść historię” ma też czyścić dzisiejszy set — do decyzji.
+- **P7 — częściowo.** Javadoc `Card` mówi, skąd który przełącznik. `deck_set_kept` zostaje poza encją: odczyt z encji z pamięci wymagałby
+  czyszczenia pamięci ustawień w `setKept` — więcej sprzężenia za ~17 tanich zapytań/s.
+- **P8 — poprawione.** Komunikaty błędu w wierszu przełącznika (bez pustych linii), krótsze opisy (`po-poprawce-karta-800.png`,
+  `po-poprawce-karta-1280.png`).
+- **P9 — poprawione.** Pasek „Teraz” na TV do dwóch linii (`-webkit-line-clamp: 2`, `max-height` dla starych przeglądarek); 1280 × 720,
+  1366 × 768 i 1920 × 1080 bez przewijania (`po-poprawce-tv-1280x720-dlugi-tytul.png`); scenariusz
+  `tv-now-playing-long-name-fits-a-small-tv`.
+- **P11 — poprawione.** Przewodnik PL/EN: „📺 Ekran na TV”, „🖥 Kiosk”, „Podsumowanie wieczoru”, „Poranne podsumowanie”; `/pro` PL/EN
+  przy „Zagrane samo”. „Nowości” bez zmian.
+- **P13 — poprawione.** 🙋 tylko przy pierwszym zagraniu po prośbie (z zapasem zegara programu, 5 min).
+- **P10, P12 — bez zmian** (decyzje właściciela). **P14** — bez zmian (informacja).
+- Dokumenty: `05-1d` (koszt, pytanie przy wyłączaniu, testy), `10-2` (V85).
+
+Sprawdzenia po poprawkach: `check.py unit` **1600/1600**, `it` **262/262**, `browser` **503/504** (czerwony tylko znany
+`kiosk-full-fits-820x1180`). Mutacje R1–R20 (te, które wcześniej przeżyły, i nowe dla poprawek) — **wszystkie czerwone**: bez blokady
+w `keep` / `setKept`, stare kodowanie czasu, bez V85, „pierwsza prośba” z 7 dni, pamięć bez sprawdzenia 12 h, bez czyszczenia pamięci
+po zapisie / po wyłączeniu, limit w połowie, tytuł bez ucięcia, „Co to było?” bez Pro, 200 zamiast 404, 🙋 dla niezagranej i przed
+prośbą, drugie „Już leciało” po odrzuceniu przez AI, demo, „Teraz” = pierwsza prośba, `setKept` w karcie, bez pytania przy wyłączaniu,
+pasek w jednej linii. R7 przeżyła za pierwszym razem (`setKept(true)` sam czyścił pamięć) — test poprawiony, teraz czerwona.

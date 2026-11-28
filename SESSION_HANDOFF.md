@@ -22,6 +22,10 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
   TV and the kiosk (a switch in the program's card); the night's set kept ("Już leciało o 21:30" before the AI, "Cały set" in the summary, "Co to było?" for the guests;
   "Zapisuj set wieczoru" on by default, 30 days). Review `docs/history/review-2026-11-27-now-playing-and-set.md`. Waits for the owner:
   the merge, then Flyway at v83 in the deploy's log; a look on a phone and a TV. The program unchanged (no "Run workflow").
+- **2026-11-28 — `claude/intelligent-faraday-q6k10d` (that branch merged in, V85):** the second review
+  (`docs/history/review-2026-11-27-now-playing-and-set-2.md`) and its fixes: "Już leciało" fast for a busy party (V85, memory), "off"
+  of the set asked first, the starts exact in the hour the clocks go back, 🙋 on the right play, the TV's bar on two lines, the guide,
+  `/pro`, tests of the locks and Pro. Waits for the owner: P10, P12 (decisions); which branch goes to #319 / #320; Flyway at v85.
 - **Waits for the owner (from the releases):** "Run workflow" of "Program DJ-a (deck-agent)" from `main` (the window's "OSTATNIA
   PIOSENKA", the program's name sent); a try on a Mac (the program, Spotify) and a real Serato; a registration with a password on
   production (Brevo must send); on an iPhone Enter ("Idź") on `/login`; `TRENDS_EXCLUDE_PARTIES` on Railway (optional), then 2–4

@@ -140,6 +140,17 @@ class DeckHistoryServiceTest {
         assertThat(nowPlaying.now(PARTY, NOW.plus(NowPlayingService.SHOWN))).as("a few minutes, not for ever").isEmpty();
     }
 
+    /** Two requests marked by one call (a mix, a call late): the room's song is the one that started last, not the queue's first. */
+    @Test
+    void twoRequestsMarkedAtOnce_theOneThatStartedLast_isNowPlaying() {
+        waiting(request(1, "Kult - Arahja", Duration.ofMinutes(30)), request(2, "Sanah - Szampan", Duration.ofMinutes(20)));
+
+        service.markPlayed(PARTY, List.of(play("Kult", "Arahja", Duration.ofMinutes(4)), play("Sanah", "Szampan", Duration.ofSeconds(45))),
+                NOW, true);
+
+        assertThat(nowPlaying.now(PARTY, NOW)).contains(new NowPlayingService.Song("Sanah - Szampan", NOW.minusSeconds(45)));
+    }
+
     @Test
     void theDjsOwnSong_orAGuestsUncheckedWords_areNoNowPlaying() {
         SongRequestEntity own = request(1, "Sanah - Szampan", Duration.ofMinutes(10));

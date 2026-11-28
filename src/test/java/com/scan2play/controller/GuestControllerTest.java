@@ -542,6 +542,35 @@ class GuestControllerTest {
     }
 
     /**
+     * "Co to było?" (V83) is part of "Zagrane samo" (Pro): with it the page offers the list and {@code /played} gives the DJ's last
+     * songs; an organiser without Pro, the plans enforced, gets neither — and the set is not even read.
+     */
+    @Test
+    void whatWasThat_isPartOfPro() {
+        java.util.List<com.scan2play.service.DeckSetService.SetSong> songs = java.util.List.of(
+                new com.scan2play.service.DeckSetService.SetSong(java.time.Instant.now(), "Wilki", "Baśka", "VirtualDJ"));
+        when(deckSet.lastPlayed(eq(PARTY), any())).thenReturn(songs);
+        ExtendedModelMap page = new ExtendedModelMap();
+        controller.partyIndex(PARTY, page, request);
+        assertThat(page.get("playedTonight")).isEqualTo(true);
+        ExtendedModelMap list = new ExtendedModelMap();
+        assertThat(controller.played(PARTY, list)).isEqualTo("fragments/guest-played :: playedList");
+        assertThat(list.get("playedSongs")).isEqualTo(songs);
+
+        settings.setOwnerId("owner");
+        GuestController free = new GuestController(guestQueueService, partySettingsQueryService, guestSessionService,
+                guestVoteService, guestRequestLimiter, messageSource, Plans.enforced(), requests, com.scan2play.service.PartySchedules.texts(),
+                libraryHintService, new PollView(org.mockito.Mockito.mock(com.scan2play.service.PollService.class), Plans.enforced()), deckSet);
+        ExtendedModelMap freePage = new ExtendedModelMap();
+        free.partyIndex(PARTY, freePage, request);
+        assertThat(freePage.get("playedTonight")).isEqualTo(false);
+        ExtendedModelMap freeList = new ExtendedModelMap();
+        free.played(PARTY, freeList);
+        assertThat(freeList.get("playedSongs")).isEqualTo(java.util.List.of());
+        verify(deckSet, org.mockito.Mockito.times(2)).lastPlayed(eq(PARTY), any());
+    }
+
+    /**
      * The DJ's contact after the party (an idea from Rekwest, 2026-10-16): the page "party ended" — opened, or answering a request — and
      * the result page get the DJ's profiles, the ended page also who played; without Pro none (the profiles are a Pro feature, V35).
      */

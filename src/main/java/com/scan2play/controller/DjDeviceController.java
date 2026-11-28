@@ -42,7 +42,10 @@ public class DjDeviceController {
     private final DeckSetService deckSet;
     private final PartySettingsCommandService partySettingsCommandService;
 
-    /** The card's content: the computers, the minutes of "Ostrzeż po" and "Zapisuj set wieczoru" (V83). */
+    /**
+     * The card's content: the computers, the minutes of "Ostrzeż po" (V81), "Zapisuj set wieczoru" (V83; read from the table, as the
+     * set's own INSERT reads it — not mapped in the entity) and "Pokazuj na TV i kiosku, co teraz leci" (V84, from the cached settings).
+     */
     public record Card(List<DeckWatchService.Computer> computers, int silenceMinutes, boolean setKept, boolean nowPlayingShown) {
     }
 

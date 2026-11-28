@@ -161,7 +161,7 @@ query of their own; `POST /dj/devices/now-playing`, QUEUE, Pro; `GET /dj/devices
 (`DeckSetService`, table `deck_play`: the song's start on the server's clock, the artist and title as written, their `LibraryKey`s, the
 program), not only those that mark a request — while "Zapisuj set wieczoru" is on (`#deviceSetKept`, a switch under "Ostrzeż po",
 `party_settings.deck_set_kept`, on by default — the owner, 2026-11-27; `POST /dj/devices/set`, QUEUE, Pro; `GET /dj/devices` says
-`setKept`; off deletes the party's kept set at once). A call's songs are kept in one `INSERT … SELECT FROM unnest(…)` under the party's
+`setKept`; off — asked first in the card, since it deletes the sets of every evening — deletes the party's kept set at once). A call's songs are kept in one `INSERT … SELECT FROM unnest(…)` under the party's
 advisory lock, a song sent again (the same keys within 2 min) once, at most 600 a day per computer (in memory; one WARN when reached), a
 song older than 12 h, or without a title, never; a failure is logged and never fails the call. Kept 30 days (the nightly purge of
 `SongRequestRetentionService`, as the requests), gone with the party. Never in "Trendy próśb". Its uses: **"Już leciało o 21:30"**
@@ -179,8 +179,10 @@ unfolding, never with the page nor by a timer; the list kept 30 s in memory per 
 morning e-mail says its count ("🎧 Cały set z programu DJ-a: 87 piosenek"). An evening with a set and no request is not in the summary's
 list (the evenings come from the requests). The cost at 1000 parties at once: a song every ~3.5 min each → ~300 inserts a minute
 (one statement a call); a guest's request reads one party's last N rows by `idx_deck_play_party_started` (twice at most: the words and the
-AI's name; 0.08 ms on 1.5 M rows), "Co to było?" one query per party per 30 s at most, the TV nothing. `DeckSetIT` (PostgreSQL: once,
-two computers at once, off, 600 a day, "Już leciało", the evening, the purge, the plans), `DeviceApiControllerTest`,
+AI's name; 0.1 ms on 1.8 M rows) after the evening's first guest's request, kept in memory per party once found (an hour, while it is
+still tonight's; asked by `idx_song_requests_party_guest_time`, V85 — without it the planner went through every party's requests of
+12 h for a busy party, 59 ms), "Co to było?" one query per party per 30 s at most, the TV nothing. `DeckSetIT` (PostgreSQL: once,
+two computers and a call with "off" taking turns under the lock, the starts exact in the hour the clocks go back, off, 600 a day, "Już leciało", the evening, the purge, the plans), `DeviceApiControllerTest`,
 `SongEvaluationServiceTest`, `GuestPageRenderTest`, `SummaryPageTest`, `AutomaticEmailsTest`, `SongRequestRetentionServiceTest`;
 browser scenarios `deck-set-kept-switch`, `deck-set-kept-not-saved`, `guest-played-*`.
 

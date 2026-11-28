@@ -26,7 +26,6 @@ import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -674,26 +673,35 @@ public class EveningSummaryService {
     /**
      * "Cały set" (V83): every song the DJ's program saw that evening, the first first, at most {@value DeckSetService#EVENING_MAX} —
      * empty for an evening without the program or with the set not kept. A song is "requested" when a request of the evening that
-     * played is it (its title and an artist in common, the queue's "✓").
+     * played is it (its title and an artist in common, the queue's "✓") — the first play of it since the guest asked (the program's
+     * clock allowed {@link DeckHistoryService#CLOCK_SLACK}), so the same song played before the request, or again later, is not.
      */
     public List<SetRow> set(String partyCode, LocalDate evening, List<SongRequestEntity> requests) {
         List<DeckSetService.SetSong> songs = deckSetService.evening(partyCode, startOf(evening), startOf(evening.plusDays(1)));
         if (songs.isEmpty()) {
             return List.of();
         }
-        Map<String, List<LibraryKey>> played = new HashMap<>();
+        boolean[] requested = new boolean[songs.size()];
         for (SongRequestEntity request : requests) {
-            if (statusOf(request) == Status.PLAYED) {
-                LibraryKey key = LibraryKey.of(request.getSongName());
-                played.computeIfAbsent(key.title(), title -> new ArrayList<>()).add(key);
+            if (statusOf(request) != Status.PLAYED) {
+                continue;
+            }
+            LibraryKey wanted = LibraryKey.of(request.getSongName());
+            Instant asked = request.getRequestedAt() == null ? Instant.EPOCH : request.getRequestedAt().minus(DeckHistoryService.CLOCK_SLACK);
+            for (int i = 0; i < songs.size(); i++) {   // the set is in order: the first that is it, after the guest asked
+                DeckSetService.SetSong song = songs.get(i);
+                if (!song.startedAt().isBefore(asked) && song.key().title().equals(wanted.title())
+                        && wanted.matchIn(List.of(song.key()), Set.of()).mark() == LibraryMark.HAVE) {
+                    requested[i] = true;
+                    break;
+                }
             }
         }
-        return songs.stream().map(song -> {
-            LibraryKey key = song.key();
-            boolean requested = played.getOrDefault(key.title(), List.of()).stream()
-                    .anyMatch(asked -> asked.matchIn(List.of(key), Set.of()).mark() == LibraryMark.HAVE);
-            return new SetRow(song.startedAt(), song.name(), requested);
-        }).toList();
+        List<SetRow> rows = new ArrayList<>(songs.size());
+        for (int i = 0; i < songs.size(); i++) {
+            rows.add(new SetRow(songs.get(i).startedAt(), songs.get(i).name(), requested[i]));
+        }
+        return rows;
     }
 
     /** How many songs the evening's whole set has (V83; up to {@value DeckSetService#EVENING_MAX}): the morning e-mail's line. */

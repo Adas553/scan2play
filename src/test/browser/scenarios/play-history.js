@@ -398,11 +398,43 @@
             await t.waitFor(function () { return rows() === 1; }, 'the computer', 3000);
             toggle().click();
             t.step('nothing said yet, a status region', [failed().textContent, failed().getAttribute('role')], ['', 'status']);
+            window.confirm = function () { return true; };   // "off" asks first (deck-set-off-asks-first)
             box().click();
             await t.waitFor(function () { return failed().textContent !== ''; }, 'the refusal said', 3000);
             await t.waitFor(function () { return !box().disabled; }, 'the switch back', 3000);
             t.step('said, the switch as the server keeps it (on)', [failed().textContent.indexOf('Nie udało się') >= 0, box().checked],
                 [true, true]);
+        }
+    });
+
+    S2P.scenario({
+        name: 'deck-set-off-asks-first',
+        title: '"Zapisuj set wieczoru" off deletes the sets of every evening: asked first — "Anuluj" keeps it on and sends nothing, "OK" saves it off',
+        setup: { devices: [] },
+        run: async function (t) {
+            const box = function () { return document.getElementById('deviceSetKept'); };
+            const asked = [];
+            let answer = false;
+            window.confirm = function (text) { asked.push(text); return answer; };
+            await t.stand.config({ devices: [device(5)], setKept: true });
+            document.dispatchEvent(new Event('visibilitychange'));
+            await t.waitFor(function () { return rows() === 1 && box().checked; }, 'the computer, the set kept', 3000);
+            toggle().click();
+
+            box().click();
+            await t.sleep(300);
+            t.step('asked, with what goes; cancelled: still on, nothing sent', [asked.length, asked[0].indexOf('wszystkich wieczorów') >= 0,
+                box().checked, (await t.stand.requests('POST /dj/devices/set')).length], [1, true, true, 0]);
+
+            answer = true;
+            box().click();
+            await t.waitFor(function () { return !box().disabled; }, 'saved, the list asked again', 3000);
+            await t.sleep(300);
+            const saved = await t.stand.requests('POST /dj/devices/set');
+            t.step('asked again; said yes: saved off once', [asked.length, saved.length, saved.length && saved[0].q.kept], [2, 1, 'false']);
+            box().click();
+            await t.sleep(300);
+            t.check('on again: nothing asked', asked.length === 2);
         }
     });
 

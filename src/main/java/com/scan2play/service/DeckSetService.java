@@ -79,11 +79,17 @@ public class DeckSetService {
     private final Cache<String, AtomicInteger> keptToday;
     /** A party → its last songs, for the guests. */
     private final Cache<String, List<SetSong>> forGuests;
+    /**
+     * A party → the evening's first guest's request ({@link #playedLately}): once there, it changes only when it is more than
+     * {@link #TONIGHT} old (checked at each read), so each guest's request does not ask the database again.
+     */
+    private final Cache<String, Instant> firstGuestRequest;
 
     public DeckSetService(JdbcTemplate jdbc) {
         this.jdbc = jdbc;
         this.keptToday = Caffeine.newBuilder().expireAfterWrite(Duration.ofHours(25)).maximumSize(100_000).build();
         this.forGuests = Caffeine.newBuilder().expireAfterWrite(GUESTS_CACHED).maximumSize(10_000).build();
+        this.firstGuestRequest = Caffeine.newBuilder().expireAfterWrite(Duration.ofHours(1)).maximumSize(10_000).build();
     }
 
     /**
@@ -119,7 +125,7 @@ public class DeckSetService {
             var statement = connection.prepareStatement(
                     "INSERT INTO deck_play (party_code, started_at, artist, title, title_key, artists_key, program)"
                             + " SELECT ?, s.started_at, s.artist, s.title, s.title_key, s.artists_key, s.program"
-                            + " FROM unnest(?::timestamptz[], ?::text[], ?::text[], ?::text[], ?::text[], ?::text[])"
+                            + " FROM unnest(?::text[]::timestamptz[], ?::text[], ?::text[], ?::text[], ?::text[], ?::text[])"
                             + " AS s(started_at, artist, title, title_key, artists_key, program)"
                             + " WHERE EXISTS (SELECT 1 FROM party_settings p WHERE p.party_code = ? AND p.deck_set_kept)"
                             + " AND NOT EXISTS (SELECT 1 FROM deck_play d WHERE d.party_code = ?"
@@ -127,7 +133,9 @@ public class DeckSetService {
                             + " AND s.started_at + interval '" + SAME_PLAY.toSeconds() + " seconds'"
                             + " AND d.title_key = s.title_key AND d.artists_key = s.artists_key)");
             statement.setString(1, partyCode);
-            statement.setArray(2, connection.createArrayOf("timestamptz", sent.stream().map(s -> Timestamp.from(s.startedAt())).toArray()));
+            // the instants as ISO text with their "Z": the driver writes a Timestamp of an array in the JVM's own zone without its
+            // offset, which in the hour the clocks go back is ambiguous, and the database would read it an hour off
+            statement.setArray(2, texts(connection, sent.stream().map(s -> s.startedAt().toString()).toList()));
             statement.setArray(3, texts(connection, sent.stream().map(SetSong::artist).toList()));
             statement.setArray(4, texts(connection, sent.stream().map(SetSong::title).toList()));
             statement.setArray(5, texts(connection, sent.stream().map(s -> s.key().title()).toList()));
@@ -172,20 +180,43 @@ public class DeckSetService {
         if (window <= 0 || wanted.isEmpty() || wanted.artists().isEmpty()) {
             return Optional.empty();
         }
-        Timestamp tonight = Timestamp.from(now.minus(TONIGHT));
         // only what the guests heard: the songs since the evening's first guest's request (a soundcheck before they came is none;
-        // the evening's very first request checks nothing) — the DJ's own "+ Dodaj piosenkę" is no guest
+        // the evening's very first request checks nothing)
+        Optional<Instant> guestsCame = firstGuestRequest(partyCode, now);
+        if (guestsCame.isEmpty()) {
+            return Optional.empty();
+        }
         List<Kept> same = jdbc.query("SELECT started_at, title_key, artists_key FROM (SELECT started_at, title_key, artists_key"
-                        + " FROM deck_play WHERE party_code = ? AND started_at >= ? AND started_at >= COALESCE((SELECT min(r.requested_at)"
-                        + " FROM song_requests r WHERE r.party_code = ? AND r.requested_at >= ? AND NOT r.added_by_dj), 'infinity')"
-                        + " ORDER BY started_at DESC LIMIT ?) last WHERE title_key = ? ORDER BY started_at DESC",
+                        + " FROM deck_play WHERE party_code = ? AND started_at >= ? ORDER BY started_at DESC LIMIT ?) last"
+                        + " WHERE title_key = ? ORDER BY started_at DESC",
                 (row, n) -> new Kept(row.getTimestamp(1).toInstant(), new LibraryKey(row.getString(2), row.getString(3))),
-                partyCode, tonight, partyCode, tonight, Math.min(window, WINDOW_MAX), wanted.title());
+                partyCode, Timestamp.from(guestsCame.get()), Math.min(window, WINDOW_MAX), wanted.title());
         return same.stream().filter(kept -> wanted.matchIn(List.of(kept.key()), Set.of()).mark() == LibraryMark.HAVE)
                 .map(Kept::startedAt).findFirst();
     }
 
     private record Kept(Instant startedAt, LibraryKey key) {
+    }
+
+    /**
+     * The evening's first guest's request — the party's earliest of the last {@link #TONIGHT}, the DJ's own "+ Dodaj piosenkę" left
+     * out (no guest) — by {@code idx_song_requests_party_guest_time} (V85), then from memory while it is still tonight's. None: no
+     * guest has asked yet (not kept: the next request asks again).
+     */
+    private Optional<Instant> firstGuestRequest(String partyCode, Instant now) {
+        Instant tonight = now.minus(TONIGHT);
+        Instant known = firstGuestRequest.getIfPresent(partyCode);
+        if (known != null && !known.isBefore(tonight)) {
+            return Optional.of(known);
+        }
+        Timestamp first = jdbc.queryForObject("SELECT min(requested_at) FROM song_requests WHERE party_code = ? AND requested_at >= ?"
+                + " AND NOT added_by_dj", Timestamp.class, partyCode, Timestamp.from(tonight));
+        if (first == null) {
+            firstGuestRequest.invalidate(partyCode);
+            return Optional.empty();
+        }
+        firstGuestRequest.put(partyCode, first.toInstant());
+        return Optional.of(first.toInstant());
     }
 
     /** "Co to było?": tonight's last {@value #GUESTS_SHOWN} songs, the newest first; kept {@link #GUESTS_CACHED} in memory. */

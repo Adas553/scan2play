@@ -326,10 +326,6 @@ public class SongEvaluationService {
     // ---- Private helpers ----
 
     /**
-     * A request for a song on the hosts' "nie grać" list (V29): not saved, the guest is asked for another one — the way a song the
-     * DJ skipped is refused. The DJ does not see it: the hosts decided.
-     */
-    /**
      * "Już leciało o 21:30": the song among the party's last {@code duplicateCheckWindow} of tonight's set ({@link DeckSetService},
      * the same "Bez powtórek z ostatnich N" the AI keeps for the played requests; 0 — repeats allowed — never). Not saved, counted for
      * the summary as the other refusals before the AI. None for the demo party (no set).
@@ -346,6 +342,10 @@ public class SongEvaluationService {
         });
     }
 
+    /**
+     * A request for a song on the hosts' "nie grać" list (V29): not saved, the guest is asked for another one — the way a song the
+     * DJ skipped is refused. The DJ does not see it: the hosts decided.
+     */
     private DjResponse blockedByTheHosts(String partyCode, String songName, String requestKind, Locale locale) {
         log.info("Party [{}]: '{}' is on the hosts' do-not-play list — refused", partyCode, songName);
         eveningRefusals.count(partyCode, RefusalReason.HOSTS_BLOCKED);

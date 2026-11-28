@@ -821,6 +821,25 @@ class SongEvaluationServiceTest {
         verify(deckSet, org.mockito.Mockito.atLeastOnce()).playedLately(eq(PARTY_CODE), any(), eq(0), any());
     }
 
+    /** A song the AI rejected keeps the AI's own reason: the set is looked at again only for a song the AI let through. */
+    @Test
+    void aSongTheAiRejected_keepsItsReason_evenIfItWasInTheSet() {
+        aParty(15);
+        when(deckSet.playedLately(eq(PARTY_CODE), any(), eq(15), any())).thenReturn(java.util.Optional.empty());
+        org.mockito.Mockito.lenient().when(deckSet.playedLately(eq(PARTY_CODE), eq("Wilki - Baśka"), eq(15), any()))
+                .thenReturn(java.util.Optional.of(java.time.Instant.parse("2026-11-28T20:30:00Z")));
+        org.mockito.Mockito.lenient().when(messageSource.getMessage(eq("guest.already_played"), any(), any(Locale.class)))
+                .thenReturn("Już leciała");
+        when(songRequestRepository.save(any())).thenAnswer(call -> call.getArgument(0));
+
+        DjResponse response = answering("{\"decision\":\"rejected\",\"comment\":\"Nie ten klimat\",\"songName\":\"Wilki - Baśka\","
+                + "\"requestKind\":\"title\"}").evaluateAndSaveSong(PARTY_CODE, "baśka wilki", "ANY");
+
+        assertThat(response.decision()).isEqualTo("rejected");
+        assertThat(response.comment()).isEqualTo("Nie ten klimat");
+        verify(refusals, never()).count(PARTY_CODE, com.scan2play.model.RefusalReason.ALREADY_PLAYED);
+    }
+
     // ---- The hosts' lists (V29) ----
 
     @Test
@@ -1158,6 +1177,7 @@ class SongEvaluationServiceTest {
         assertThat(saved.getValue().isChecked()).as("the visitor's alone").isFalse();
         verify(dedications).save(any());
         assertThat(aiHealth.takeSummary()).as("the AI's health: nothing to count").isNull();
+        verify(deckSet, never()).playedLately(any(), any(), org.mockito.ArgumentMatchers.anyInt(), any());
     }
 
     /**

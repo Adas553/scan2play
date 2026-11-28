@@ -48,6 +48,38 @@ class EveningSummaryServiceTest {
         return request;
     }
 
+    /**
+     * "Cały set" (V83): the evening's songs in order, 🙋 on the first play of a played request's song after the guest asked — not on
+     * the same song played before the request or again later, not on a request that never played, not on another artist's title.
+     */
+    @Test
+    void theWholeSet_marksThePlayOfEachPlayedRequest() {
+        DeckSetService deckSet = mock(DeckSetService.class);
+        when(deckSet.evening(eq("SUMM1"), eq(EveningSummaryService.startOf(EVENING)), eq(EveningSummaryService.startOf(EVENING.plusDays(1)))))
+                .thenReturn(List.of(new DeckSetService.SetSong(at("19:30"), "Wilki", "Baśka", "VirtualDJ"),
+                        new DeckSetService.SetSong(at("20:40"), "Wilki", "Baśka", "VirtualDJ"),
+                        new DeckSetService.SetSong(at("21:00"), "Inny Zespół", "Szampan", "VirtualDJ"),
+                        new DeckSetService.SetSong(at("21:10"), null, "Sanah - Szampan", "Serato"),
+                        new DeckSetService.SetSong(at("23:50"), "Wilki", "Baśka", "VirtualDJ"),
+                        new DeckSetService.SetSong(at("23:55"), "Kult", "Arahja", "VirtualDJ")));
+        EveningSummaryService service = new EveningSummaryService(mock(SongRequestRepository.class), mock(DjLibraryService.class),
+                mock(com.scan2play.repository.EveningSummaryRepository.class), deckSet);
+
+        List<EveningSummaryService.SetRow> set = service.set("SUMM1", EVENING, List.of(
+                request("Wilki - Baśka", "played", "20:10", "20:41", 3),
+                request("Sanah - Szampan", "played", "20:50", "21:11", 1),
+                request("Kult - Arahja", "accepted", "23:00", null, 2)));
+
+        assertThat(set).extracting(EveningSummaryService.SetRow::name, EveningSummaryService.SetRow::requested).containsExactly(
+                org.assertj.core.groups.Tuple.tuple("Wilki - Baśka", false),
+                org.assertj.core.groups.Tuple.tuple("Wilki - Baśka", true),
+                org.assertj.core.groups.Tuple.tuple("Inny Zespół - Szampan", false),
+                org.assertj.core.groups.Tuple.tuple("Sanah - Szampan", true),
+                org.assertj.core.groups.Tuple.tuple("Wilki - Baśka", false),
+                org.assertj.core.groups.Tuple.tuple("Kult - Arahja", false));
+        assertThat(service.set("SUMM1", EVENING.minusDays(1), List.of())).as("an evening without the program").isEmpty();
+    }
+
     @Test
     void anEveningRunsFromSixToSix_inPolishTime() {
         assertThat(EveningSummaryService.eveningOf(at("20:00"))).isEqualTo(EVENING);

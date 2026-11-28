@@ -148,6 +148,17 @@ body {
     font-weight: 700;
 }
 
+/* the bar's song may take two lines: on one, beside the label, a long name was cut to its artist — the title is what the room looks
+   for. max-height for a TV's browser without line-clamp. */
+.tv-now .tv-name {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    max-height: 2.4em;
+    white-space: normal;
+}
+
 .tv-now-label .second {
     display: inline;
     margin-left: 0.4vw;
