@@ -2,6 +2,8 @@ package com.scan2play.controller;
 
 import com.scan2play.entity.PartySettingsEntity;
 import com.scan2play.model.DjResponse;
+import com.scan2play.model.PlanFeature;
+import com.scan2play.service.DeckSetService;
 import com.scan2play.service.GuestQueueService;
 import com.scan2play.service.GuestRequestLimiter;
 import com.scan2play.service.GuestRequestService;
@@ -55,6 +57,7 @@ public class GuestController {
     private final PartyScheduleService partyScheduleService;
     private final LibraryHintService libraryHintService;
     private final PollView pollView;
+    private final DeckSetService deckSetService;
 
     /**
      * The party page. It takes no {@code HttpSession} of its own (review 2026-10-14 W3): a parameter of that type made a session — a
@@ -85,6 +88,7 @@ public class GuestController {
             model.addAttribute(TIP_URL, settings.getTipUrl());
             model.addAttribute(GUEST_QUEUE, guestQueue(partyCode, request.getSession(false)));
             model.addAttribute(PARTY_CODE, partyCode);
+            model.addAttribute(PLAYED_TONIGHT, !playedTonight(settings).isEmpty());
             return "index";
         } catch (IllegalArgumentException e) {
             // DEBUG, not WARN: anyone can ask for any code, and a line for each filled the log (review 2026-10-14, M-2)
@@ -119,6 +123,26 @@ public class GuestController {
             throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS);
         }
         return libraryHintService.have(partyCode, songs == null ? List.of() : songs);
+    }
+
+    /**
+     * "Co to było?" (V83): tonight's last songs of the DJ's set, the newest first — fetched when the guest unfolds it, kept half a
+     * minute in memory ({@link DeckSetService#lastPlayed}), so a room of phones asks the database once. Empty without the plan's
+     * "Zagrane samo" (Pro); 404 for a code that is no party. No session is made.
+     */
+    @GetMapping("/{partyCode}/played")
+    public String played(@PathVariable String partyCode, Model model) {
+        try {
+            model.addAttribute(PLAYED_SONGS, playedTonight(partySettingsQueryService.getSettings(partyCode)));
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        return "fragments/guest-played :: playedList";
+    }
+
+    private List<DeckSetService.SetSong> playedTonight(PartySettingsEntity settings) {
+        return planService.allows(settings, PlanFeature.DECK) ? deckSetService.lastPlayed(settings.getPartyCode(), Instant.now())
+                : List.of();
     }
 
     /**

@@ -454,6 +454,8 @@ th[data-sort].sort-desc::after {
 .s2p-dedication { color: var(--s2p-text); }
 .s2p-dedication-count { display: none; }
 .page-guest .rejected { color: var(--s2p-red); }
+/* a song that played tonight already ("JUŻ GRAŁO"): refused, but no red — the guest chose well, only late */
+.page-guest .repeat { color: var(--s2p-warning); }
 /* The result's verdict ("TAK!", "NIE", "PRZEKAZANE"): as big as a phone's width allows — display-1 broke "PRZEKAZAN / E" */
 .s2p-verdict {
     font-size: clamp(2.25rem, 11vw, 5rem);
@@ -1849,6 +1851,12 @@ a.s2p-schedule-text:focus-visible { color: var(--s2p-white); text-decoration: un
 .s2p-wish-more-row .btn { min-height: 44px; }
 /* a row past the shown ones is hidden — its d-flex (display: flex !important, Bootstrap) would draw it anyway */
 [data-more-list] li[hidden] { display: none !important; }
+/* "🎶 Teraz: …" over the list (NowPlayingService): the song the room hears, edged in the party's action colour, as on the TV */
+.s2p-kiosk-now {
+    display: flex; align-items: center; gap: 0.75rem; margin: 0 0 1rem; padding: 0.75rem;
+    border: 2px solid var(--s2p-action); border-radius: var(--s2p-radius); background: var(--s2p-bg-row);
+}
+.s2p-kiosk-now-label { flex: none; color: var(--s2p-white); font-size: 1.15rem; font-weight: 700; }
 .s2p-kiosk-vote-hint { color: var(--s2p-light); font-size: 1rem; margin: -0.5rem 0 0.75rem; }
 .s2p-kiosk-songs {
     list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.5rem; counter-reset: kiosk;

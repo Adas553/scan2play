@@ -4,6 +4,7 @@ import com.scan2play.config.SecurityConfig;
 import com.scan2play.entity.PartySettingsEntity;
 import com.scan2play.entity.SongRequestEntity;
 import com.scan2play.service.GuestQueueService;
+import com.scan2play.service.NowPlayingService;
 import com.scan2play.service.PartySettingsQueryService;
 import com.scan2play.service.QrCodeService;
 import org.junit.jupiter.api.BeforeEach;
@@ -41,7 +42,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  */
 @WebMvcTest(TvScreenController.class)
 @Import({PollView.class, SecurityConfig.class, com.scan2play.service.PlansOffConfig.class,
-        com.scan2play.service.PartySchedulesConfig.class})
+        com.scan2play.service.PartySchedulesConfig.class, NowPlayingService.class})
 class TvScreenWebTest {
 
     @Autowired
@@ -56,6 +57,8 @@ class TvScreenWebTest {
     private GuestQueueService guestQueueService;
     @MockitoBean
     private QrCodeService qrCodeService;
+    @Autowired
+    private NowPlayingService nowPlaying;
 
     private static final List<String> SONGS = List.of("Zenek Martyniuk - Przez twe oczy zielone", "ABBA - Dancing Queen",
             "Dawid Podsiadło - Małomiasteczkowy", "Queen - Don't Stop Me Now", "Smash Mouth - All Star", "sanah - Szampan",
@@ -213,6 +216,45 @@ class TvScreenWebTest {
         write("tv-list-opens.html", list);
         assertThat(noSession(mockMvc.perform(get("/p/LATER/tv/list").param("lang", "en")).andExpect(status().isOk()).andReturn()))
                 .contains("<span lang=\"en\">Requests from 20:00</span>").doesNotContain("lang=\"pl\"");
+    }
+
+    /**
+     * "🎶 Teraz: …" (NowPlayingService): the guest's request the DJ's program plays now, above the list — its name only, never its
+     * guest's words or dedication; the next song takes it away. The pages of the browser tests: {@code tv-now.html} (the full list
+     * with the bar, at a small TV's height) and {@code tv-list-now.html} (the bar coming with a fetch).
+     */
+    @Test
+    void theRequestTheProgramPlays_standsAboveTheList_untilTheNextSong() throws Exception {
+        java.time.Instant started = java.time.Instant.now().minusSeconds(45);
+        nowPlaying.heard("ABC12", new NowPlayingService.Song("Golec uOrkiestra - Ściernisco (Radio Edit 2024)", started), started);
+        try {
+            String page = noSession(mockMvc.perform(get("/p/ABC12/tv")).andExpect(status().isOk()).andReturn());
+            assertThat(page).contains("id=\"tvNowPlaying\"", "<span lang=\"pl\">Teraz:</span>",
+                    "<span lang=\"en\" class=\"second\">Now playing:</span>", "Golec uOrkiestra - Ściernisco (Radio Edit 2024)");
+            assertThat(page.indexOf("id=\"tvNowPlaying\"")).as("above the list's heading").isLessThan(page.indexOf("Najczęściej wybierane"));
+            assertThat(page).doesNotContain("guest words", "💌");
+            write("tv-now.html", page);
+            String list = noSession(mockMvc.perform(get("/p/ABC12/tv/list")).andExpect(status().isOk()).andReturn());
+            assertThat(list).contains("id=\"tvNowPlaying\"");
+            write("tv-list-now.html", list);
+            assertThat(noSession(mockMvc.perform(get("/p/ABC12/tv/list").param("lang", "en")).andReturn()))
+                    .contains("<span lang=\"en\">Now playing:</span>").doesNotContain("Teraz:");
+            assertThat(noSession(mockMvc.perform(get("/p/ENDED/tv/list")).andReturn())).as("not for another party")
+                    .doesNotContain("tvNowPlaying");
+
+            // the DJ keeps it off the room's screens (V84): no bar, the list as before
+            doReturn(PartySettingsEntity.builder().partyCode("OFFNP").active(true).nowPlayingShown(false).build())
+                    .when(partySettingsQueryService).getSettings("OFFNP");
+            when(guestQueueService.mostWanted("OFFNP")).thenReturn(songs(0));
+            nowPlaying.heard("OFFNP", new NowPlayingService.Song("Wilki - Baśka", started), started);
+            String off = noSession(mockMvc.perform(get("/p/OFFNP/tv/list")).andReturn());
+            assertThat(off).doesNotContain("tvNowPlaying", "tv-list-now").contains("class=\"tv-song\"");
+
+            nowPlaying.heard("ABC12", null, started.plusSeconds(200));   // the next song, no request of it
+            assertThat(noSession(mockMvc.perform(get("/p/ABC12/tv/list")).andReturn())).doesNotContain("tvNowPlaying");
+        } finally {
+            nowPlaying.heard("ABC12", null, java.time.Instant.now().plusSeconds(3600));
+        }
     }
 
     @Test

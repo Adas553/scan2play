@@ -38,6 +38,9 @@ class GuestNoSessionWebTest {
     @Autowired
     private MockMvc mockMvc;
 
+    /** The night's set (V83): none kept, unless a test gives one. */
+    @MockitoBean
+    private com.scan2play.service.DeckSetService deckSetService;
     /** "Pytanie do gości" (V74): no question asked here (an empty Optional, the mock's default). */
     @MockitoBean
     private com.scan2play.service.PollService pollService;
@@ -133,6 +136,21 @@ class GuestNoSessionWebTest {
      * "Which of these does the DJ have" (V58): asked as the guest types, so never a session; a code that is no party, or a party with
      * nothing to tell, a 404; otherwise the true / false of each song, in their order.
      */
+    /** "Co to było?" (V83): a 404 for a code that is no party; the DJ's last songs for one — never a session, even on a phone. */
+    @Test
+    void whatWasThat_isAnsweredWithoutASession_orA404() throws Exception {
+        noSession(mockMvc.perform(get("/p/X7Q2Z/played")).andExpect(status().isNotFound()).andReturn());
+
+        doReturn(PartySettingsEntity.builder().partyCode("OPEN1").active(true).build()).when(partySettingsQueryService).getSettings("OPEN1");
+        doReturn(java.util.List.of(new com.scan2play.service.DeckSetService.SetSong(java.time.Instant.parse("2026-11-27T20:30:00Z"),
+                "Wilki", "Baśka", "VirtualDJ"))).when(deckSetService).lastPlayed(org.mockito.ArgumentMatchers.eq("OPEN1"),
+                org.mockito.ArgumentMatchers.any());
+        MvcResult list = mockMvc.perform(get("/p/OPEN1/played")).andExpect(status().isOk()).andReturn();
+        noSession(list);
+        assertThat(list.getResponse().getContentAsString()).contains("id=\"playedSongs\"", "Wilki - Baśka", ">21:30<")
+                .doesNotContain("_csrf");
+    }
+
     @Test
     void theLibrarysHints_areAnsweredWithoutASession_orA404() throws Exception {
         noSession(mockMvc.perform(get("/p/X7Q2Z/library/has").param("song", "Wilki - Baśka")).andExpect(status().isNotFound()).andReturn());

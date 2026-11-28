@@ -85,3 +85,61 @@ S2P.scenario({
         t.step('no songs once the party has ended', document.querySelectorAll('.tv-song').length, 0);
     }
 });
+
+/** "🎶 Teraz: …" (NowPlayingService) on at most two lines above the list's heading, and the whole screen still fitting it. */
+function nowPlayingFits(t) {
+    const now = document.getElementById('tvNowPlaying');
+    t.check('"Teraz: …" on the screen', !!now);
+    if (!now) return;
+    const name = now.querySelector('.tv-name');
+    t.step('the song\'s name on two lines at most', name.getBoundingClientRect().height <= parseFloat(getComputedStyle(name).fontSize) * 2.5, true);
+    t.check('above the list\'s heading', now.getBoundingClientRect().bottom <= document.querySelector('.tv-list h2').getBoundingClientRect().top);
+    screenFits(t);
+}
+
+S2P.scenario({
+    name: 'tv-now-playing-fits-a-small-tv',
+    title: '"🎶 Teraz: …" above the ten most wanted in a window of 1280 × 720: still nothing to scroll',
+    page: 'tv-now',
+    viewport: '1280,720',
+    run: async function (t) { nowPlayingFits(t); }
+});
+
+S2P.scenario({
+    name: 'tv-now-playing-long-name-fits-a-small-tv',
+    title: '"🎶 Teraz: …" with a long name at 1280 × 720: two lines — the title shown, not only the artist —, and still nothing to scroll',
+    page: 'tv-now',
+    viewport: '1280,720',
+    run: async function (t) {
+        const name = document.querySelector('#tvNowPlaying .tv-name');
+        name.textContent = 'Golec uOrkiestra & Gorale z Podhala - Ściernisco (Radio Edit 2024, wersja weselna na dwa akordeony i chór)';
+        await t.sleep(100);
+        const line = parseFloat(getComputedStyle(name).fontSize) * 1.2;
+        t.step('two lines, not one', Math.round(name.getBoundingClientRect().height / line), 2);
+        nowPlayingFits(t);
+    }
+});
+
+S2P.scenario({
+    name: 'tv-now-playing-fits-a-full-hd-tv',
+    title: '"🎶 Teraz: …" above the ten most wanted at 1920 × 1080: nothing to scroll',
+    page: 'tv-now',
+    viewport: '1920,1080',
+    run: async function (t) { nowPlayingFits(t); }
+});
+
+S2P.scenario({
+    name: 'tv-now-playing-comes-and-goes',
+    title: 'the DJ\'s program plays a guest\'s request: "🎶 Teraz: …" comes with the list\'s next fetch, and goes with the one after the next song',
+    page: 'tv',
+    viewport: '1920,1080',
+    setup: { tvList: 'tv-list-now' },
+    run: async function (t) {
+        t.check('nothing playing at first', !document.getElementById('tvNowPlaying'));
+        await t.waitFor(function () { return !!document.getElementById('tvNowPlaying'); }, '"Teraz: …" fetched', 13000);
+        t.step('the song', document.querySelector('#tvNowPlaying .tv-name').textContent.trim(), 'Golec uOrkiestra - Ściernisco (Radio Edit 2024)');
+        await t.stand.config({ tvList: 'tv-list' });
+        await t.waitFor(function () { return !document.getElementById('tvNowPlaying'); }, '"Teraz: …" gone', 13000);
+        t.step('the ten songs stay', document.querySelectorAll('.tv-song').length, 10);
+    }
+});

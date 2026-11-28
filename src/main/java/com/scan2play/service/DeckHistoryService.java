@@ -11,7 +11,9 @@ import org.springframework.stereotype.Service;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -24,6 +26,9 @@ import java.util.Set;
  * matched by ({@link LibraryKey}, V42) — "✓". The same title alone ("? Podobny"), a request with no artist, a song with neither
  * artist nor title: nothing. A song that played before the guest asked (the DJ's computer's clock, a little slack for it) never
  * marks the later request.
+ * <p>
+ * The guest's request it played last is the room's "🎶 Teraz: …" ({@link NowPlayingService}) — only from here: the DJ's own
+ * "Zagrane" says nothing of when the song played.
  */
 @Slf4j
 @Service
@@ -47,6 +52,7 @@ public class DeckHistoryService {
 
     private final SongRequestRepository songRequestRepository;
     private final DjService djService;
+    private final NowPlayingService nowPlaying;
 
     /** One song of the program's history: when it started (null: not known — taken as now), its artist and title as written there. */
     public record Play(Instant at, String artist, String title) {
@@ -82,16 +88,24 @@ public class DeckHistoryService {
             return List.of();
         }
         List<String> marked = new ArrayList<>();
+        NowPlayingService.Song shown = null;
         for (SongRequestEntity request : songRequestRepository.findTop400ByPartyCodeAndDecisionInOrderByRequestedAtAsc(
                 partyCode, List.of("accepted"))) {
             LibraryKey wanted = LibraryKey.of(request.getSongName());
             Instant asked = request.getRequestedAt() == null ? Instant.EPOCH : request.getRequestedAt().minus(slack);
-            boolean played = songs.stream().anyMatch(song -> !song.at().isBefore(asked)
-                    && wanted.matchIn(List.of(song.key()), Set.of()).mark() == LibraryMark.HAVE);
-            if (played && djService.markSongAsPlayed(request.getId(), partyCode)) {
+            Optional<Instant> played = songs.stream().filter(song -> !song.at().isBefore(asked)
+                    && wanted.matchIn(List.of(song.key()), Set.of()).mark() == LibraryMark.HAVE)
+                    .map(Matchable::at).max(Comparator.naturalOrder());
+            if (played.isPresent() && djService.markSongAsPlayed(request.getId(), partyCode)) {
                 marked.add(request.getSongName());
+                // the room's screen names a guest's request the AI judged: not the DJ's own song, not a guest's unchecked words
+                if (!request.isAddedByDj() && request.isChecked()
+                        && (shown == null || played.get().isAfter(shown.startedAt()))) {
+                    shown = new NowPlayingService.Song(request.getSongName(), played.get());
+                }
             }
         }
+        nowPlaying.heard(partyCode, shown, songs.stream().map(Matchable::at).max(Comparator.naturalOrder()).orElseThrow());
         if (!marked.isEmpty()) {
             log.info("The DJ's program played {} waiting request(s) at party {}", marked.size(), partyCode);
         }

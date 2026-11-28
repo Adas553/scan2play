@@ -135,6 +135,13 @@ public class PartySettingsCommandService {
         evictAfterCommit(partyCode);
     }
 
+    /** "Pokazuj na TV i kiosku, co teraz leci" (V84) on or off; the TV and the kiosk read it from the settings' cache, evicted here. */
+    @Transactional
+    public void setNowPlayingShown(String partyCode, boolean on) {
+        partySettingsRepository.setNowPlayingShown(partyCode, on);
+        evictAfterCommit(partyCode);
+    }
+
     /** The news {@code number} known from the organiser's own panel ({@link PartySettingsRepository#markNewsKnown}): no e-mail of it. */
     @Transactional
     public void markNewsKnown(String partyCode, int number) {

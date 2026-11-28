@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<body>
+<!--/* "Co to było?" (V83, DeckSetService.lastPlayed): the last songs the DJ's program saw tonight, the newest first, with their start
+     — GET /p/{code}/played renders it alone, guest-party.js puts it in the unfolded <details id="playedTonight"> of index.html.
+     The DJ's set as the room heard it: songs only, no guest's words. */-->
+<div th:fragment="playedList">
+    <ol th:unless="${#lists.isEmpty(playedSongs)}" class="list-group shadow-sm mt-2 s2p-played-songs" id="playedSongs">
+        <li th:each="song : ${playedSongs}" class="list-group-item bg-dark text-light border-secondary d-flex gap-2 align-items-baseline">
+            <span class="text-secondary flex-shrink-0 s2p-played-time" th:text="${T(com.scan2play.util.Times).clock(song.startedAt())}">21:30</span>
+            <span class="s2p-played-name" th:text="${song.name()}">Wilki - Baśka</span>
+        </li>
+    </ol>
+    <p th:if="${#lists.isEmpty(playedSongs)}" id="playedNone" class="small text-secondary text-center mt-2 mb-0"
+       th:text="#{guest.played.none}">Nothing played yet tonight.</p>
+</div>
+</body>
+</html>

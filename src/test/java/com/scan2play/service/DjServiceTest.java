@@ -31,6 +31,8 @@ class DjServiceTest {
     private CacheManager cacheManager;
     @Mock
     private DjLibraryService libraryService;
+    @Mock
+    private DeckSetService deckSetService;
 
     @InjectMocks
     private DjService djService;
@@ -206,6 +208,7 @@ class DjServiceTest {
         assertThat(skippedAfter.getValue()).as("a skip of the last 2 hours stays")
                 .isBetween(before.minus(SongRequestCommandService.SKIP_REMEMBERED), Instant.now().minus(SongRequestCommandService.SKIP_REMEMBERED));
         verifyNoInteractions(cacheManager);   // the queue is not touched
+        org.mockito.Mockito.verify(deckSetService).historyCleared(eq(PARTY_CODE), any());   // "Już leciało" starts again
     }
 
     @Test

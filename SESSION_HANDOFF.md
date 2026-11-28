@@ -7,21 +7,26 @@ words behind a decision — keep here only `main` and its deploy, open PRs and b
 The owner's numbered ideas ("item N") are in `docs/ideas.md`; traps seen before in `CLAUDE.md` ("Mind").
 
 **The history** (decisions, the owner's words, what was tried) is in `docs/history/session-handoff-<date>.md`, one file for each
-tidying, by date (from `-2026-09` on). The latest, `session-handoff-2026-11-27.md`: the releases #272 … #316 (the password login,
+tidying, by date (from `-2026-09` on). The latest, `session-handoff-2026-11-27.md`: the releases #272 … #318 (the password login,
 the polls, the settings' groups, the trends, the event plan, "Zagrane samo" and its watch, the news); before it `-2026-11-17.md`
 (the daily report, the wishes, the QR print, the owner's picks on the pricing).
 Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. Reviews: `docs/history/review-*.md` (the latest
-`review-2026-11-27-deck-watch-2.md`).
+`review-2026-11-27-now-playing-and-set.md`).
 
 ## Start here
 
-- **2026-11-27 — the state.** `main` = `2e332bb` (#315, "Zagrane samo" watched, V81, V82), `dev` = `a757b6e` (#316); every PR up to
-  #316 merged, none open. The deploy: 2026-11-27 14:34 UTC, SUCCESS (Railway, read only), Flyway at v82 (PostgreSQL 18.6), started in
-  5.7 s, no WARN, 0 × 5xx. The history of #272 … #316: `docs/history/session-handoff-2026-11-27.md`.
-- **2026-11-27 — `claude/modest-gauss-n1936m` (from `main` = `2e332bb`), PRs #317 (`main`) and #318 (`dev`), no migration:** the second review of
-  the deck watch (`docs/history/review-2026-11-27-deck-watch-2.md`) and its fixes P1–P12: no push for a soundcheck, the set's "one
-  more!" or the DJ's own songs; a set goes on after a break; the lead gone amber in the card after a test only. Waits for the owner:
-  the merge (the false pushes are on production until then).
+- **2026-11-27 — the state.** `main` = `693813f` (#317, the second deck watch review's fixes), `dev` = `8ab6f2e` (#318); every PR up to
+  #318 merged. The deploy of #315: 2026-11-27 14:34 UTC, SUCCESS, Flyway at v82 (#317 needs no migration). The history of #272 … #318:
+  `docs/history/session-handoff-2026-11-27.md`.
+- **2026-11-27 — `claude/optimistic-hopper-20ct09` (from `main` = `693813f`), PRs #319 (`main`) and #320 (`dev`), V83, V84:** "🎶 Teraz: …" on the
+  TV and the kiosk (a switch in the program's card); the night's set kept ("Już leciało o 21:30" before the AI, "Cały set" in the summary, "Co to było?" for the guests;
+  "Zapisuj set wieczoru" on by default, 30 days). Review `docs/history/review-2026-11-27-now-playing-and-set.md`. Waits for the owner:
+  the merge, then Flyway at v83 in the deploy's log; a look on a phone and a TV. The program unchanged (no "Run workflow").
+- **2026-11-28 — `claude/intelligent-faraday-q6k10d` (that branch merged in, V85):** the second review
+  (`docs/history/review-2026-11-27-now-playing-and-set-2.md`) and its fixes: "Już leciało" fast for a busy party (V85, memory), "off"
+  of the set asked first, the starts exact in the hour the clocks go back, 🙋 on the right play, the TV's bar on two lines, the guide,
+  `/pro`, tests of the locks and Pro; the owner's picks: "JUŻ GRAŁO" in amber instead of "NIE", "Wyczyść historię" starts
+  "Już leciało" again (V86). Waits for the owner: which branch goes to #319 / #320; Flyway at v86.
 - **Waits for the owner (from the releases):** "Run workflow" of "Program DJ-a (deck-agent)" from `main` (the window's "OSTATNIA
   PIOSENKA", the program's name sent); a try on a Mac (the program, Spotify) and a real Serato; a registration with a password on
   production (Brevo must send); on an iPhone Enter ("Idź") on `/login`; `TRENDS_EXCLUDE_PARTIES` on Railway (optional), then 2–4

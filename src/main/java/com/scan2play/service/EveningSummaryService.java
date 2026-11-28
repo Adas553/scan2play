@@ -204,6 +204,8 @@ public class EveningSummaryService {
     private final SongRequestRepository songRequestRepository;
     private final DjLibraryService libraryService;
     private final EveningSummaryRepository eveningSummaryRepository;
+    /** The night's set (V83): "Cały set" beside the requests. */
+    private final DeckSetService deckSetService;
 
     /** The party's evenings with requests, the latest first. */
     @Transactional(readOnly = true)
@@ -662,6 +664,49 @@ public class EveningSummaryService {
 
     private static Instant playedOrRequested(SongRequestEntity request) {
         return request.getPlayedAt() != null ? request.getPlayedAt() : request.getRequestedAt();
+    }
+
+    /** One song of the evening's whole set (V83): its start, its name, whether it answered a guest's request played that evening. */
+    public record SetRow(Instant startedAt, String name, boolean requested) {
+    }
+
+    /**
+     * "Cały set" (V83): every song the DJ's program saw that evening, the first first, at most {@value DeckSetService#EVENING_MAX} —
+     * empty for an evening without the program or with the set not kept. A song is "requested" when a request of the evening that
+     * played is it (its title and an artist in common, the queue's "✓") — the first play of it since the guest asked (the program's
+     * clock allowed {@link DeckHistoryService#CLOCK_SLACK}), so the same song played before the request, or again later, is not.
+     */
+    public List<SetRow> set(String partyCode, LocalDate evening, List<SongRequestEntity> requests) {
+        List<DeckSetService.SetSong> songs = deckSetService.evening(partyCode, startOf(evening), startOf(evening.plusDays(1)));
+        if (songs.isEmpty()) {
+            return List.of();
+        }
+        boolean[] requested = new boolean[songs.size()];
+        for (SongRequestEntity request : requests) {
+            if (statusOf(request) != Status.PLAYED) {
+                continue;
+            }
+            LibraryKey wanted = LibraryKey.of(request.getSongName());
+            Instant asked = request.getRequestedAt() == null ? Instant.EPOCH : request.getRequestedAt().minus(DeckHistoryService.CLOCK_SLACK);
+            for (int i = 0; i < songs.size(); i++) {   // the set is in order: the first that is it, after the guest asked
+                DeckSetService.SetSong song = songs.get(i);
+                if (!song.startedAt().isBefore(asked) && song.key().title().equals(wanted.title())
+                        && wanted.matchIn(List.of(song.key()), Set.of()).mark() == LibraryMark.HAVE) {
+                    requested[i] = true;
+                    break;
+                }
+            }
+        }
+        List<SetRow> rows = new ArrayList<>(songs.size());
+        for (int i = 0; i < songs.size(); i++) {
+            rows.add(new SetRow(songs.get(i).startedAt(), songs.get(i).name(), requested[i]));
+        }
+        return rows;
+    }
+
+    /** How many songs the evening's whole set has (V83; up to {@value DeckSetService#EVENING_MAX}): the morning e-mail's line. */
+    public int setSize(String partyCode, LocalDate evening) {
+        return deckSetService.countEvening(partyCode, startOf(evening), startOf(evening.plusDays(1)));
     }
 
     /** How a request ended — the summary's counts and the CSV's status column. */

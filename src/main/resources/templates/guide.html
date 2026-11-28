@@ -76,7 +76,7 @@
         <div class="s2p-guide-row">
             <span class="btn btn-sm btn-outline-secondary" aria-hidden="true">📺 Screen for a TV</span>
             <p>A page for a TV or a projector: a big QR code and the most wanted songs, refreshed by itself. Open it on a computer
-                connected to the screen.</p>
+                connected to the screen. With <a href="#guideDeckSet">the program for your DJ software</a>, “🎶 Now playing: …” shows above the list.</p>
         </div>
         <div class="s2p-guide-row">
             <span class="s2p-guide-row-name" aria-hidden="true">Settings</span>
@@ -216,7 +216,7 @@
             <span class="btn btn-sm btn-outline-secondary" aria-hidden="true">🖥 Guest kiosk</span>
             <p>Party settings → Guest kiosk (Pro): a link for a tablet at the bar. Guests without a phone type their requests and vote there,
                 with the most wanted beside them. "Next guest" starts afresh for the next person; the tablet does it by itself after a
-                minute without a touch (20 seconds after the AI's answer).</p>
+                minute without a touch (20 seconds after the AI's answer). With the DJ's program, “🎶 Now playing: …” is above the list, as on the TV.</p>
         </div>
         <details class="s2p-guide-more" id="guideKioskMore">
             <summary>Setting up the tablet and the kiosk's limits</summary>
@@ -266,6 +266,16 @@
                 the music stopped look like a fault. When you take turns with a band or make a long break without music, choose 30 min
                 or “never”, which turns the warnings off.</p>
         </div>
+        <div class="s2p-guide-row" id="guideDeckSet">
+            <span class="s2p-guide-row-name" aria-hidden="true">Now playing, the set</span>
+            <p>When the program marks a guest’s request, the TV screen and the kiosk show “🎶 Now playing: …” for a few minutes — the title
+                only, no dedication (your own “Played” does not: it is often clicked later); switch it off in the card: “Show on the TV
+                and the kiosk what plays now”. The program sends every song, not only the
+                requests: with “Keep the night’s set” in the card (on by default) the set is kept 30 days. A guest asking for one of the
+                last songs of “No repeats of the last N” is told at once, gently: “This song already played tonight — at 21:30” (without the AI; with 0,
+                repeats are allowed), the guests see “What was that?” with the last 10 songs under the list, and the evening summary (the hosts’ link too) the
+                whole set. Switching it off deletes the kept sets.</p>
+        </div>
         <div class="s2p-guide-row s2p-guide-text"><p>It reads VirtualDJ, Serato DJ (Pro and Lite) and the Spotify and TIDAL apps on the computer (TIDAL on Windows only; on a Mac,
             TIDAL inside VirtualDJ or Serato goes to their history). With rekordbox, Traktor and djay you
             click “Played” as before.</p></div>
@@ -308,8 +318,8 @@
             <div class="s2p-guide-row">
                 <span class="s2p-guide-row-name" aria-hidden="true">Privacy</span>
                 <p>The program only reads the history (and, from Spotify and TIDAL, what plays now) and changes nothing in VirtualDJ,
-                    Serato, Spotify or TIDAL. The files stay on the computer: only the artist, title and time of the songs reach Scan2Play, and none of it is
-                    kept.</p>
+                    Serato, Spotify or TIDAL. The files stay on the computer: only the artist, title and time of the songs reach Scan2Play, kept only with
+                    “Keep the night’s set” (30 days).</p>
             </div>
             </div>
         </details>
@@ -338,7 +348,8 @@
             AI (with its comment, why) or cleared, day by day, for 30 days.</p></div>
         <div class="s2p-guide-row">
             <span class="btn btn-sm btn-outline-light" aria-hidden="true">Evening summary</span>
-            <p>How many requests, what played, what guests wanted but didn't hear, the most requested artists. To print, as a PDF or a CSV.</p>
+            <p>How many requests, what played, what guests wanted but didn't hear, the most requested artists. With the DJ's program and
+                “Keep the night’s set”, the whole set in order too (🙋 by the guests' requests). To print, as a PDF or a CSV.</p>
         </div>
         <figure class="s2p-guide-picture" id="guidePicture3">
             <a href="/images/guide/summary-en.webp">
@@ -348,11 +359,12 @@
             <figcaption>The evening summary after a wedding.</figcaption>
         </figure>
         <div class="s2p-guide-row s2p-guide-text" id="guideMorning"><p><strong>Morning summary:</strong> the morning after an evening
-            with at least 5 guests' requests, at 10:00 Polish time, you get the evening's numbers and its top 3 by e-mail. You switch it
+            with at least 5 guests' requests, at 10:00 Polish time, you get the evening's numbers and its top 3 by e-mail (with the DJ's program, the number of songs of the whole set too). You switch it
             on in Party settings → You as the DJ (Pro).</p></div>
         <div class="s2p-guide-row">
             <span class="btn btn-sm btn-outline-danger" aria-hidden="true">Clear the history</span>
-            <p>Deletes the played and rejected requests with the guests' words. The AI then no longer knows what has played.</p>
+            <p>Deletes the played and rejected requests with the guests' words. The AI then no longer knows what has played. The kept set
+                stays in the summary, and “This song already played tonight” starts again — only songs played after the clear.</p>
         </div>
     </section>
 

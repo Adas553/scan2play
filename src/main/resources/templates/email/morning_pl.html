@@ -20,6 +20,7 @@
     <li th:each="song : ${top}"><span th:text="${song.name()}">Artysta - Tytuł</span> <span style="color:#555555;" th:text="'· ' + ${song.votes()} + ' 👍'">· 9 👍</span></li>
 </ol>
 </th:block>
+<p th:if="${setSize > 0}" style="margin:0 0 20px;">🎧 Cały set z programu DJ-a: <strong th:text="${setSize} + ' ' + ${setLabel}">87 piosenek</strong> — po kolei w podsumowaniu.</p>
 <p style="margin:0 0 28px;"><a th:href="${summaryUrl}" href="#" style="display:inline-block;background:#0a7f99;color:#ffffff;text-decoration:none;padding:12px 20px;border-radius:6px;font-weight:bold;">Zobacz całe podsumowanie</a></p>
 <p style="color:#666666;font-size:13px;">Wysyłamy je rano po wieczorze z co najmniej 5 prośbami gości. Wyłączysz je w „Ustawieniach imprezy” (Poranne podsumowanie)<th:block th:if="${stopUrl != null}"> albo jednym kliknięciem: <a th:href="${stopUrl}" href="#" style="color:#666666;">Nie wysyłaj mi tego</a></th:block>.</p>
 </div>
