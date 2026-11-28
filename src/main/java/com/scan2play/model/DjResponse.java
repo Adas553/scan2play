@@ -44,6 +44,11 @@ public record DjResponse(
     public static final String KIND_LYRICS = "lyrics";
     public static final String KIND_MOOD = "mood";
     public static final String KIND_UNCHECKED = "unchecked";
+    /**
+     * Not the AI's: a song that played tonight already (the night's set, V83, or the played requests while the AI could not be asked) —
+     * refused, but shown to the guest gently ("JUŻ GRAŁO", not "NIE"): the guest chose well, only late.
+     */
+    public static final String KIND_REPEAT = "repeat";
 
     /** A response without a word about a dedication. */
     public DjResponse(String decision, String comment, String songName, String requestKind, Long requestId,
@@ -85,6 +90,11 @@ public record DjResponse(
     /** Whether the request went to the DJ without the AI's check (the AI could not be asked). */
     public boolean isUnchecked() {
         return KIND_UNCHECKED.equals(requestKind);
+    }
+
+    /** Whether the song was refused as one that played tonight already ({@link #KIND_REPEAT}). */
+    public boolean isRepeat() {
+        return KIND_REPEAT.equals(requestKind);
     }
 
     /** Whether the request was counted as one more vote on the same song waiting in the queue. */

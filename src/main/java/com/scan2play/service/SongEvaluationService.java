@@ -249,7 +249,7 @@ public class SongEvaluationService {
         if (aiResponse.isUnchecked() && playedLately(songName, recentlyPlayed)) {
             log.info("Party [{}]: '{}' unchecked, but it played lately — refused", partyCode, songName);
             aiResponse = new DjResponse(DECISION_REJECTED, messageSource.getMessage("guest.played_lately", null, locale), songName,
-                    DjResponse.KIND_TITLE);
+                    DjResponse.KIND_REPEAT);
         }
         if (aiResponse.isMood()) {
             log.info("Party [{}]: '{}' reads as a mood, not a song — not saved", partyCode, songName);
@@ -338,7 +338,7 @@ public class SongEvaluationService {
             log.info("Party [{}]: '{}' played at {} tonight — refused before the AI", partyCode, songName, at);
             eveningRefusals.count(partyCode, RefusalReason.ALREADY_PLAYED);
             return new DjResponse(DECISION_REJECTED, messageSource.getMessage("guest.already_played",
-                    new Object[]{Times.clock(at)}, locale), songName, DjResponse.KIND_TITLE);
+                    new Object[]{Times.clock(at)}, locale), songName, DjResponse.KIND_REPEAT);
         });
     }
 

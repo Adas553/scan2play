@@ -282,7 +282,7 @@ mają, dopóki właściciel nie zdecyduje, którą gałąź wydać).
 - **P11 — poprawione.** Przewodnik PL/EN: „📺 Ekran na TV”, „🖥 Kiosk”, „Podsumowanie wieczoru”, „Poranne podsumowanie”; `/pro` PL/EN
   przy „Zagrane samo”. „Nowości” bez zmian.
 - **P13 — poprawione.** 🙋 tylko przy pierwszym zagraniu po prośbie (z zapasem zegara programu, 5 min).
-- **P10, P12 — bez zmian** (decyzje właściciela). **P14** — bez zmian (informacja).
+- **P10, P12** — zob. „Decyzje” niżej. **P14** — bez zmian (informacja).
 - Dokumenty: `05-1d` (koszt, pytanie przy wyłączaniu, testy), `10-2` (V85).
 
 Sprawdzenia po poprawkach: `check.py unit` **1600/1600**, `it` **262/262**, `browser` **503/504** (czerwony tylko znany
@@ -291,3 +291,28 @@ w `keep` / `setKept`, stare kodowanie czasu, bez V85, „pierwsza prośba” z 7
 po zapisie / po wyłączeniu, limit w połowie, tytuł bez ucięcia, „Co to było?” bez Pro, 200 zamiast 404, 🙋 dla niezagranej i przed
 prośbą, drugie „Już leciało” po odrzuceniu przez AI, demo, „Teraz” = pierwsza prośba, `setKept` w karcie, bez pytania przy wyłączaniu,
 pasek w jednej linii. R7 przeżyła za pierwszym razem (`setKept(true)` sam czyścił pamięć) — test poprawiony, teraz czerwona.
+
+## Decyzje i ich poprawki (2026-11-28)
+
+Właściciel: P10 — „chyba lepszy łagodniejszy”; P12, wyłączanie setu, P6 — „jak uważasz”.
+
+- **P10 — zrobione.** Piosenka, która dziś już leciała, nie dostaje czerwonego „NIE”, tylko pomarańczowe **„JUŻ GRAŁO”** / „ALREADY
+  PLAYED” (`DjResponse.KIND_REPEAT`, `result.decision.repeat`, `.page-guest .repeat` — kolor ostrzeżenia; kiosk ma ten kolor dla
+  odmów już wcześniej). Tekst: „Ta piosenka już dziś leciała — o 21:30. Poproś o coś innego!” (twarda spacja przed godziną) i „Ta
+  piosenka leciała przed chwilą. Poproś o coś innego!” — to drugie, gdy AI nie można było zapytać. Odmowa samego AI (także „grało
+  niedawno” w jego słowach) zostaje „NIE”: kod nie wie, czy AI odmówiło z tego powodu. Testy: `GuestPageRenderTest.aSongThatPlayedTonight_isRefusedGently`
+  (pisze `result-repeat.html`), `SongEvaluationServiceTest`; zrzut `po-poprawce-wynik-juz-gralo-390.png`.
+- **P12 — zostawione: gospodarze widzą „Cały set”.** To pamiątka z ich wesela, set nie ma danych gości, a DJ sam udostępnia link.
+  Przewodnik PL/EN mówi to teraz wprost („także w linku dla gospodarzy”).
+- **Wyłączanie setu — zostaje dla obsługi z prawem do kolejki.** Po P2 wyłączenie pyta, co usunie; organizator dał obsłudze
+  kolejkę, a karta programu jest jej narzędziem. Rozdzielanie uprawnień dla jednego przełącznika — więcej niż warte.
+- **P6 — „Wyczyść historię” zaczyna „Już leciało” od nowa.** V86 `party_settings.history_cleared_at` (w bazie, nie w pamięci —
+  restart w trakcie wieczoru nie przywraca starych piosenek); `DjService.clearHistory` → `DeckSetService.historyCleared`, a
+  „Już leciało” liczy piosenki setu od późniejszej z chwil: pierwsza prośba gościa wieczoru albo ostatnie wyczyszczenie. Set zostaje
+  w podsumowaniu. Zgodnie z tym, co przewodnik zawsze mówił: „Potem AI nie pamięta, co już grało”. Test
+  `DeckSetIT.afterTheHistoryCleared_onlyTheSongsPlayedLaterAreRepeats`, `DjServiceTest`.
+
+Sprawdzenia: `check.py unit` **1601/1601**, `it` **263/263** (po `pg_ctlcluster 16 main start` — PostgreSQL kontenera stanął między
+przebiegami), `browser` **503/504** (tylko znany `kiosk-full-fits-820x1180`). Mutacje S1–S6 — **wszystkie czerwone**: werdykt „NIE”
+zamiast „JUŻ GRAŁO”, `KIND_TITLE` zamiast `KIND_REPEAT` (oba miejsca), „Wyczyść historię” bez zapisu chwili, granica wyczyszczenia
+pominięta, pamięć pierwszej prośby nieczyszczona po wyczyszczeniu.

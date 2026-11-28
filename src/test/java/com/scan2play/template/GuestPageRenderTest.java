@@ -845,6 +845,20 @@ class GuestPageRenderTest {
                 .doesNotContain("djBooking", "Zarezerwuj");
     }
 
+    /**
+     * A song that played tonight already (V83, {@code DjResponse.KIND_REPEAT}): refused, but gently — "JUŻ GRAŁO" in amber, not a
+     * red "NIE"; the AI's own refusal stays "NIE". Writes {@code result-repeat.html}.
+     */
+    @Test
+    void aSongThatPlayedTonight_isRefusedGently() {
+        String repeat = renderResult(new com.scan2play.model.DjResponse("rejected", "Ta piosenka już dziś leciała — o 21:30. Poproś o coś innego!",
+                "sanah - Szampan", com.scan2play.model.DjResponse.KIND_REPEAT), Map.of());
+        writeForTheBrowserTests("result-repeat.html", repeat);
+        assertThat(repeat).contains("class=\"repeat\"", ">JUŻ GRAŁO<", "o 21:30").doesNotContain(">NIE<", "class=\"rejected\"", "??");
+        assertThat(renderResult(new com.scan2play.model.DjResponse("rejected", "Nie ten klimat", "Nirvana - Lithium", "title"), Map.of()))
+                .contains("class=\"rejected\"", ">NIE<").doesNotContain("JUŻ GRAŁO");
+    }
+
     private static String renderEnded(Locale locale, Map<String, Object> extra) {
         MockServletContext servletContext = new MockServletContext();
         WebContext context = new WebContext(JakartaServletWebApplication.buildApplication(servletContext)

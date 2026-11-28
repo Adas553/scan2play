@@ -689,6 +689,7 @@ class SongEvaluationServiceTest {
             assertThat(refused.decision()).as(words).isEqualTo("rejected");
             assertThat(refused.comment()).isEqualTo("Played a moment ago");
             assertThat(refused.isUnchecked()).as("the guest reads the refusal, not \"PRZEKAZANE\"").isFalse();
+            assertThat(refused.isRepeat()).as("a song that played: shown gently, \"JUŻ GRAŁO\"").isTrue();
             assertThat(saved.getValue().getRejectReason()).isEqualTo(com.scan2play.model.RejectReason.DUPLICATE);
         }
 
@@ -794,6 +795,7 @@ class SongEvaluationServiceTest {
 
         assertThat(response.decision()).isEqualTo("rejected");
         assertThat(response.comment()).isEqualTo("Ta piosenka już leciała o 21:30");
+        assertThat(response.isRepeat()).as("shown gently: \"JUŻ GRAŁO\"").isTrue();
         assertThat(prompts).as("no Gemini call").isEmpty();
         verify(songRequestRepository, never()).save(any());
         verify(refusals).count(PARTY_CODE, com.scan2play.model.RefusalReason.ALREADY_PLAYED);

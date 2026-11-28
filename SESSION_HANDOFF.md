@@ -25,7 +25,8 @@ Working agreements: `CLAUDE.md`. Architecture and rules: `PROJECT_CONTEXT.md`. R
 - **2026-11-28 — `claude/intelligent-faraday-q6k10d` (that branch merged in, V85):** the second review
   (`docs/history/review-2026-11-27-now-playing-and-set-2.md`) and its fixes: "Już leciało" fast for a busy party (V85, memory), "off"
   of the set asked first, the starts exact in the hour the clocks go back, 🙋 on the right play, the TV's bar on two lines, the guide,
-  `/pro`, tests of the locks and Pro. Waits for the owner: P10, P12 (decisions); which branch goes to #319 / #320; Flyway at v85.
+  `/pro`, tests of the locks and Pro; the owner's picks: "JUŻ GRAŁO" in amber instead of "NIE", "Wyczyść historię" starts
+  "Już leciało" again (V86). Waits for the owner: which branch goes to #319 / #320; Flyway at v86.
 - **Waits for the owner (from the releases):** "Run workflow" of "Program DJ-a (deck-agent)" from `main` (the window's "OSTATNIA
   PIOSENKA", the program's name sent); a try on a Mac (the program, Spotify) and a real Serato; a registration with a password on
   production (Brevo must send); on an iPhone Enter ("Idź") on `/login`; `TRENDS_EXCLUDE_PARTIES` on Railway (optional), then 2–4

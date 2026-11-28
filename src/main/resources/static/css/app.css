@@ -454,6 +454,8 @@ th[data-sort].sort-desc::after {
 .s2p-dedication { color: var(--s2p-text); }
 .s2p-dedication-count { display: none; }
 .page-guest .rejected { color: var(--s2p-red); }
+/* a song that played tonight already ("JUŻ GRAŁO"): refused, but no red — the guest chose well, only late */
+.page-guest .repeat { color: var(--s2p-warning); }
 /* The result's verdict ("TAK!", "NIE", "PRZEKAZANE"): as big as a phone's width allows — display-1 broke "PRZEKAZAN / E" */
 .s2p-verdict {
     font-size: clamp(2.25rem, 11vw, 5rem);

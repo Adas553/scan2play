@@ -54,7 +54,7 @@
                 <h1 id="kioskAskTitle" class="s2p-kiosk-song" th:text="${response.songName}">Wilki - Baśka</h1>
                 <p id="kioskVerdict" class="s2p-kiosk-verdict fw-bold"
                    th:classappend="${response.decision == 'accepted'} ? 'is-accepted' : 'is-rejected'"
-                   th:text="${response.unchecked} ? #{result.decision.to_dj} : (${response.decision == 'accepted'} ? #{result.decision.accepted} : #{result.decision.rejected})">Accepted</p>
+                   th:text="${response.unchecked} ? #{result.decision.to_dj} : (${response.decision == 'accepted'} ? #{result.decision.accepted} : (${response.repeat} ? #{result.decision.repeat} : #{result.decision.rejected}))">Accepted</p>
                 <p th:if="${response.vote}" id="voteAdded" class="s2p-kiosk-note" th:text="#{result.vote.added(${response.votes})}">Your vote is in!</p>
                 <p th:if="${response.ownSong}" id="voteOwn" class="s2p-kiosk-note" th:text="#{result.vote.own(${response.votes})}">Already waiting.</p>
                 <p class="s2p-kiosk-comment fst-italic" th:text="${response.comment}">The AI's comment</p>

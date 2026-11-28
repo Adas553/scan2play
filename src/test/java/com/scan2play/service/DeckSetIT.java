@@ -266,6 +266,22 @@ class DeckSetIT extends PostgresIntegrationTest {
         assertThat(sets.playedLately(party, "Wilki - Baśka", 15, NOW)).as("the soundcheck, before the guests").isEmpty();
     }
 
+    /** After "Wyczyść historię" (V86) only the songs played later are "already played"; the set itself stays for the summary. */
+    @Test
+    void afterTheHistoryCleared_onlyTheSongsPlayedLaterAreRepeats() {
+        String party = party();
+        guestAsked(party, Duration.ofMinutes(60), false);
+        sets.keep(1, party, List.of(song("Wilki", "Baśka", Duration.ofMinutes(40)), song("Sanah", "Szampan", Duration.ofMinutes(10))), NOW);
+        assertThat(sets.playedLately(party, "Wilki - Baśka", 15, NOW)).as("in memory now").isPresent();
+
+        sets.historyCleared(party, NOW.minus(Duration.ofMinutes(5)));
+        assertThat(sets.playedLately(party, "Wilki - Baśka", 15, NOW)).as("played before the clear").isEmpty();
+        assertThat(sets.playedLately(party, "Sanah - Szampan", 15, NOW)).isEmpty();
+        sets.keep(1, party, List.of(song("Kult", "Arahja", Duration.ofMinutes(2))), NOW);
+        assertThat(sets.playedLately(party, "Kult - Arahja", 15, NOW)).as("after it").contains(NOW.minus(Duration.ofMinutes(2)));
+        assertThat(rows(party)).as("the set stays for the summary").isEqualTo(3);
+    }
+
     @Test
     void theEvening_isItsSetInOrder_countedTheSame() {
         String party = party();

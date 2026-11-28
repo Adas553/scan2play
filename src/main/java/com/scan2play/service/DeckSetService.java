@@ -199,9 +199,10 @@ public class DeckSetService {
     }
 
     /**
-     * The evening's first guest's request — the party's earliest of the last {@link #TONIGHT}, the DJ's own "+ Dodaj piosenkę" left
-     * out (no guest) — by {@code idx_song_requests_party_guest_time} (V85), then from memory while it is still tonight's. None: no
-     * guest has asked yet (not kept: the next request asks again).
+     * From when tonight's set counts for "Już leciało": the evening's first guest's request — the party's earliest of the last
+     * {@link #TONIGHT}, the DJ's own "+ Dodaj piosenkę" left out (no guest), by {@code idx_song_requests_party_guest_time} (V85) —
+     * or the last "Wyczyść historię" when it is later (V86); then from memory while it is still tonight's. None: no guest has asked
+     * yet (not kept: the next request asks again).
      */
     private Optional<Instant> firstGuestRequest(String partyCode, Instant now) {
         Instant tonight = now.minus(TONIGHT);
@@ -209,14 +210,30 @@ public class DeckSetService {
         if (known != null && !known.isBefore(tonight)) {
             return Optional.of(known);
         }
-        Timestamp first = jdbc.queryForObject("SELECT min(requested_at) FROM song_requests WHERE party_code = ? AND requested_at >= ?"
-                + " AND NOT added_by_dj", Timestamp.class, partyCode, Timestamp.from(tonight));
-        if (first == null) {
+        Instant[] found = jdbc.queryForObject("SELECT (SELECT min(requested_at) FROM song_requests WHERE party_code = ?"
+                        + " AND requested_at >= ? AND NOT added_by_dj), (SELECT history_cleared_at FROM party_settings WHERE party_code = ?)",
+                (row, n) -> new Instant[]{instant(row.getTimestamp(1)), instant(row.getTimestamp(2))}, partyCode, Timestamp.from(tonight),
+                partyCode);
+        if (found == null || found[0] == null) {
             firstGuestRequest.invalidate(partyCode);
             return Optional.empty();
         }
-        firstGuestRequest.put(partyCode, first.toInstant());
-        return Optional.of(first.toInstant());
+        Instant from = found[1] != null && found[1].isAfter(found[0]) ? found[1] : found[0];
+        firstGuestRequest.put(partyCode, from);
+        return Optional.of(from);
+    }
+
+    private static Instant instant(Timestamp at) {
+        return at == null ? null : at.toInstant();
+    }
+
+    /**
+     * "Wyczyść historię" at {@code at} (V86, {@code DjService.clearHistory}): the played requests are gone, so "Już leciało" looks
+     * only at the songs played after it. The set itself stays (the summary's "Cały set").
+     */
+    public void historyCleared(String partyCode, Instant at) {
+        jdbc.update("UPDATE party_settings SET history_cleared_at = ? WHERE party_code = ?", Timestamp.from(at), partyCode);
+        AfterCommit.run(() -> firstGuestRequest.invalidate(partyCode));
     }
 
     /** "Co to było?": tonight's last {@value #GUESTS_SHOWN} songs, the newest first; kept {@link #GUESTS_CACHED} in memory. */
